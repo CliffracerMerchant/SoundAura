@@ -1,0 +1,30 @@
+<!-- This file is part of SoundObservatory, which is released under the Apache License 2.0. See
+   ~ license.md in the project's root directory or use an internet search engine to see the full license. -->
+
+<animated-vector
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    <aapt:attr name="android:drawable">
+        <vector
+            android:name="vector"
+            android:width="24dp"
+            android:height="24dp"
+            android:viewportWidth="24"
+            android:viewportHeight="24">
+            <path
+                android:name="path"
+                android:pathData="M 9.5 4 C 10.958 4 12.358 4.58 13.389 5.611 C 14.42 6.642 15 8.042 15 9.5 C 15 10.958 14.42 12.358 13.389 13.389 C 12.358 14.42 10.958 15 9.5 15 C 8.042 15 6.642 14.42 5.611 13.389 C 4.58 12.358 4 10.958 4 9.5 C 4 8.042 4.58 6.642 5.611 5.611 C 6.642 4.58 8.042 4 9.5 4 M 14 14 L 20 20"
+                android:strokeColor="#000000"
+                android:strokeWidth="2"/>
+        </vector>
+    </aapt:attr>
+    <target android:name="path">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="pathData"
+                android:valueType="pathType"
+                android:valueFrom="M 14 14 L 20 20 M 5.611 5.611 C 4.58 6.642 4 8.042 4 9.5 C 4 10.958 4.58 12.358 5.611 13.389 C 6.642 14.42 8.042 15 9.5 15 C 10.958 15 12.358 14.42 13.389 13.389 C 14.42 12.358 15 10.958 15 9.5 C 15 8.042 14.42 6.642 13.389 5.611 C 12.358 4.58 10.958 4 9.5 4 C 8.042 4 6.642 4.58 5.611 5.611"
+                android:valueTo="M 5.705 5.705 L 18.295 18.295 M 5.705 18.295 C 6.15 17.85 6.595 17.405 7.04 16.96 C 7.463 16.537 7.886 16.114 8.309 15.691 C 8.732 15.268 9.154 14.846 9.577 14.423 C 10.008 13.992 10.44 13.56 10.871 13.129 C 11.674 12.326 12.478 11.522 13.281 10.719 C 14.093 9.907 14.905 9.095 15.717 8.283 C 16.19 7.81 16.664 7.336 17.137 6.863 C 17.523 6.477 17.909 6.091 18.295 5.705" />
+        </aapt:attr>
+    </target>
+</animated-vector>

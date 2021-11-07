@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This file is part of SoundObservatory, which is released under the Apache License 2.0. See
+   ~ license.md in the project's root directory or use an internet search engine to see the full license. -->
+
+<animated-vector
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="32dp"
+    android:height="32dp"
+    android:viewportWidth="32"
+    android:viewportHeight="32">
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="32dp"
+            android:height="32dp"
+            android:viewportWidth="32"
+            android:viewportHeight="32">
+            <path android:name="path"
+                android:pathData="M 22,8 L 18,8 L 18,24 L 22,24 L 22,8 M 10,8 L 14,8 L 14,24 L 10,24 L 10,8 Z"
+                android:fillColor="#FF000000"/>
+        </vector>
+    </aapt:attr>
+    <target android:name="path">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="pathData"
+                android:valueFrom="M 22,24 L 18,24 L 18,8 L 22,8 L 22,24 M 10,24 L 14,24 L 14,8 L 10,8 L 10,24"
+                android:valueTo="M 11,24 L 11,16 L 25,16 L 25,16 L 11,24 M 11,8 L 11,16 L 25,16 L 25,16 L 11,8"
+                android:valueType="pathType"
+                android:duration="250" />
+        </aapt:attr>
+    </target>
+
+</animated-vector>

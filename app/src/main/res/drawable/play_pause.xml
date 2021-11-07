@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This file is part of SoundObservatory, which is released under the Apache License 2.0. See
+   ~ license.md in the project's root directory or use an internet search engine to see the full license. -->
+
+<animated-selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/pauseState"
+        android:state_checked="true"
+        android:drawable="@drawable/pause_to_play" />
+    <item android:id="@+id/playState"
+        android:drawable="@drawable/play_to_pause" />
+
+    <transition
+        android:fromId="@id/playState"
+        android:toId="@id/pauseState"
+        android:drawable="@drawable/play_to_pause" />
+
+    <transition
+        android:fromId="@id/pauseState"
+        android:toId="@id/playState"
+        android:drawable="@drawable/pause_to_play" />
+</animated-selector>
