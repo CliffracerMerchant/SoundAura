@@ -7,39 +7,20 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi
+import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
-import androidx.compose.material.ButtonDefaults.buttonColors
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.ContextCompat
 import com.cliffracertech.soundobservatory.ui.theme.SoundObservatoryTheme
 
 @ExperimentalAnimationApi
@@ -153,21 +134,14 @@ class MainActivity : ComponentActivity() {
             onConfirmRequest = { })
 }
 
-@Composable fun PlayPauseButton(playing: Boolean, tint: Color, onClick: () -> Unit) = Box(
-    modifier = Modifier.size(48.dp),
-    contentAlignment = Alignment.Center
-) {
-    AndroidView(
-        update = { it.isChecked = playing },
-        factory = {
-            android.widget.CheckBox(it).apply {
-                val drawable = ContextCompat.getDrawable(it, R.drawable.play_pause)
-                drawable?.setTint(tint.toArgb())
-                buttonDrawable = drawable
-                setOnClickListener { onClick() }
-            }
-        }
-    )
-}
+@ExperimentalAnimationGraphicsApi
+@Composable fun PlayPauseButton(playing: Boolean, tint: Color, onClick: () -> Unit) =
+    IconButton(onClick) {
+        val playToPause = animatedVectorResource(R.drawable.play_to_pause)
+        val pauseToPlay = animatedVectorResource(R.drawable.pause_to_play)
+        val vector = if (playing) playToPause.painterFor(playing)
+                     else         pauseToPlay.painterFor(!playing)
+        Icon(vector, "", tint = tint)
+    }
 
 
