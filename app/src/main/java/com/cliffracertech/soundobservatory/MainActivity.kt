@@ -79,8 +79,8 @@ class MainActivity : ComponentActivity() {
         modifier = Modifier.padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        TrackView(Track(path = "", title = "Audio clip 1", volume = 0.3f))
-        TrackView(Track(path = "", title = "Audio clip 2", volume = 0.8f))
+        TrackView(Track(path = "", name = "Audio clip 1", volume = 0.3f))
+        TrackView(Track(path = "", name = "Audio clip 2", volume = 0.8f))
     }
 
 @ExperimentalComposeUiApi
@@ -92,7 +92,7 @@ class MainActivity : ComponentActivity() {
         .background(MaterialTheme.colors.surface, MaterialTheme.shapes.large)
 ){
     var playing by remember { mutableStateOf(false) }
-    PlayPauseButton(playing, track.title,
+    PlayPauseButton(playing, track.name,
                     MaterialTheme.colors.primary)
                     { playing = !playing }
 
@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
     SliderBox(value = volume, onValueChange = { volume = it },
               modifier = Modifier.height(66.dp).weight(1f),
               sliderPadding = PaddingValues(top = 24.dp)) {
-        Text(text = track.title, style = MaterialTheme.typography.h6,
+        Text(text = track.name, style = MaterialTheme.typography.h6,
              modifier = Modifier.padding(8.dp, 6.dp, 0.dp, 0.dp))
     }
 
@@ -109,7 +109,7 @@ class MainActivity : ComponentActivity() {
     var showingDeleteDialog by remember { mutableStateOf(false) }
 
     IconButton(onClick = { showingOptionsMenu = !showingOptionsMenu }) {
-        val description = stringResource(R.string.item_options_button_description, track.title)
+        val description = stringResource(R.string.item_options_button_description, track.name)
         Icon(imageVector = Icons.Default.MoreVert,
              tint = MaterialTheme.colors.primaryVariant,
              contentDescription = description)
@@ -137,13 +137,13 @@ class MainActivity : ComponentActivity() {
 
     if (showingRenameDialog)
         RenameDialog(
-            track.title,
+            track.name,
             onDismissRequest = { showingRenameDialog = false },
             onConfirmRequest = {  })
 
     if (showingDeleteDialog)
         ConfirmDeleteDialog(
-            track.title,
+            track.name,
             onDismissRequest = { showingDeleteDialog = false },
             onConfirmRequest = { })
 }
