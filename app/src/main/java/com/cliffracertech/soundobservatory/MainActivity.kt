@@ -99,7 +99,7 @@ class MainActivity : ComponentActivity() {
     var volume by remember { mutableStateOf(track.volume) }
     SliderBox(value = volume, onValueChange = { volume = it },
               modifier = Modifier.height(66.dp).weight(1f),
-              sliderPadding = PaddingValues(top = 24.dp)) {
+              sliderPadding = PaddingValues(top = 28.dp)) {
         Text(text = track.name, style = MaterialTheme.typography.h6,
              modifier = Modifier.padding(8.dp, 6.dp, 0.dp, 0.dp))
     }
@@ -152,11 +152,10 @@ class MainActivity : ComponentActivity() {
 @Composable fun PlayPauseButton(playing: Boolean, itemName: String,
                                 tint: Color, onClick: () -> Unit) =
     IconButton(onClick) {
-        val playToPause = animatedVectorResource(R.drawable.play_to_pause)
-        val pauseToPlay = animatedVectorResource(R.drawable.pause_to_play)
-        val vector = if (playing) playToPause.painterFor(playing)
-                     else         pauseToPlay.painterFor(!playing)
-
+        val playToPause = animatedVectorResource(R.drawable.play_to_pause).painterFor(playing)
+        val pauseToPlay = animatedVectorResource(R.drawable.pause_to_play).painterFor(!playing)
+        val vector = if (playing) playToPause
+                     else         pauseToPlay
 
         val description = if (playing) stringResource(R.string.item_pause_description, itemName)
                           else         stringResource(R.string.item_play_description, itemName)
