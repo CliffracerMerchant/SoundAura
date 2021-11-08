@@ -39,7 +39,8 @@ import androidx.compose.ui.window.Dialog
         val focusRequester = FocusRequester()
         val keyboardController = LocalSoftwareKeyboardController.current
 
-        Text("Rename $itemName", style = MaterialTheme.typography.body1)
+        Text(stringResource(R.string.rename_dialog_title, itemName),
+             style = MaterialTheme.typography.body1)
         Spacer(Modifier.height(6.dp))
         TextField(
             value = currentName,
@@ -85,7 +86,7 @@ fun ConfirmDeleteDialog(
                     MaterialTheme.shapes.medium)
         .padding(16.dp, 16.dp, 16.dp, 0.dp)
     ) {
-        Text("Are you sure you want to delete $itemName? This cannot be undone.",
+        Text(stringResource(R.string.confirm_delete_message, itemName),
              style = MaterialTheme.typography.body1)
         Row {
             Spacer(Modifier.weight(1f))

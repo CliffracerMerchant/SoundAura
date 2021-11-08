@@ -93,10 +93,8 @@ inline fun <reified T : Enum<T>>ListViewActionBar(
     crossinline sortOptionNameFunc: (T) -> String,
 ) = Row(
     verticalAlignment = Alignment.CenterVertically,
-    modifier = Modifier
-        .fillMaxWidth(1f)
-        .height(56.dp)
-        .background(primaryColorHorizontalGradient())
+    modifier = Modifier.fillMaxWidth(1f).height(56.dp)
+                       .background(primaryColorHorizontalGradient())
 ){
     val contentTint = MaterialTheme.colors.onPrimary
 
@@ -107,7 +105,7 @@ inline fun <reified T : Enum<T>>ListViewActionBar(
         if (it) IconButton(onClick = onBackButtonClick) {
                     Icon(imageVector = Icons.Default.ArrowBack,
                     tint = contentTint,
-                    contentDescription = "Back")
+                    contentDescription = stringResource(R.string.back_description))
                 }
         else Spacer(Modifier.width(24.dp))
     }
@@ -123,14 +121,15 @@ inline fun <reified T : Enum<T>>ListViewActionBar(
     val animatedSearchIcon = animatedVectorResource(R.drawable.search_to_close)
     IconButton(onClick = onSearchButtonClicked) {
         Icon(painter = animatedSearchIcon.painterFor(searchQuery != null),
-             tint = contentTint, contentDescription = "Search")
+             tint = contentTint,
+             contentDescription = stringResource(R.string.search_description))
     }
 
     var sortMenuShown by remember {mutableStateOf(false) }
     IconButton(onClick = { sortMenuShown = !sortMenuShown }) {
         Icon(imageVector = Icons.Default.Sort,
              tint = contentTint,
-             contentDescription = "Change sort method")
+             contentDescription = stringResource(R.string.sort_options_button_description))
         EnumDropDownMenu(value = sortOption,
                          onValueChanged = onSortOptionChanged,
                          nameFunc = sortOptionNameFunc,
@@ -195,7 +194,8 @@ inline fun <reified T : Enum<T>>EnumDropDownMenu(
         textStyle = MaterialTheme.typography.h6.copy(color = MaterialTheme.colors.onPrimary),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search, ),
         keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-        modifier = Modifier.focusRequester(focusRequester)
+        modifier = Modifier
+            .focusRequester(focusRequester)
             .onFocusChanged { if (it.isFocused) keyboardController?.show() },
         singleLine = true,
         decorationBox = { innerTextField ->

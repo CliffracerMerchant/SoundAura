@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
                     onSearchButtonClicked = {
                         searchQuery = if (searchQuery == null) "" else null
                     })
-                SoundList()
+                TrackList()
             }
         }
     }
@@ -74,13 +74,13 @@ class MainActivity : ComponentActivity() {
 
 @ExperimentalComposeUiApi
 @ExperimentalAnimationGraphicsApi
-@Composable fun SoundList() =
+@Composable fun TrackList() =
     Column(
         modifier = Modifier.padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        TrackView(Track(path = "", title = "Audio clip 1", volume = 0.5f))
-        TrackView(Track(path = "", title = "Audio clip 2", volume = 0.5f))
+        TrackView(Track(path = "", title = "Audio clip 1", volume = 0.3f))
+        TrackView(Track(path = "", title = "Audio clip 2", volume = 0.8f))
     }
 
 @ExperimentalComposeUiApi
@@ -92,7 +92,9 @@ class MainActivity : ComponentActivity() {
         .background(MaterialTheme.colors.surface, MaterialTheme.shapes.large)
 ){
     var playing by remember { mutableStateOf(false) }
-    PlayPauseButton(playing, MaterialTheme.colors.primary) { playing = !playing }
+    PlayPauseButton(playing, track.title,
+                    MaterialTheme.colors.primary)
+                    { playing = !playing }
 
     var volume by remember { mutableStateOf(track.volume) }
     SliderBox(value = volume, onValueChange = { volume = it },
@@ -107,9 +109,10 @@ class MainActivity : ComponentActivity() {
     var showingDeleteDialog by remember { mutableStateOf(false) }
 
     IconButton(onClick = { showingOptionsMenu = !showingOptionsMenu }) {
+        val description = stringResource(R.string.item_options_button_description, track.title)
         Icon(imageVector = Icons.Default.MoreVert,
              tint = MaterialTheme.colors.primaryVariant,
-             contentDescription = "${track.title} options")
+             contentDescription = description)
 
         DropdownMenu(
             expanded = showingOptionsMenu,
@@ -119,13 +122,15 @@ class MainActivity : ComponentActivity() {
                 showingRenameDialog = true
                 showingOptionsMenu = false
             }) {
-                Text(text = "Rename", style = MaterialTheme.typography.button)
+                Text(text = stringResource(R.string.item_rename_description),
+                     style = MaterialTheme.typography.button)
             }
             DropdownMenuItem(onClick = {
                 showingDeleteDialog = true
                 showingOptionsMenu = false
             }) {
-                Text(text = "Delete", style = MaterialTheme.typography.button)
+                Text(text = stringResource(R.string.item_delete_desrciption),
+                     style = MaterialTheme.typography.button)
             }
         }
     }
@@ -144,13 +149,18 @@ class MainActivity : ComponentActivity() {
 }
 
 @ExperimentalAnimationGraphicsApi
-@Composable fun PlayPauseButton(playing: Boolean, tint: Color, onClick: () -> Unit) =
+@Composable fun PlayPauseButton(playing: Boolean, itemName: String,
+                                tint: Color, onClick: () -> Unit) =
     IconButton(onClick) {
         val playToPause = animatedVectorResource(R.drawable.play_to_pause)
         val pauseToPlay = animatedVectorResource(R.drawable.pause_to_play)
         val vector = if (playing) playToPause.painterFor(playing)
                      else         pauseToPlay.painterFor(!playing)
-        Icon(vector, "", tint = tint)
+
+
+        val description = if (playing) stringResource(R.string.item_pause_description, itemName)
+                          else         stringResource(R.string.item_play_description, itemName)
+        Icon(vector, description, tint = tint)
     }
 
 
