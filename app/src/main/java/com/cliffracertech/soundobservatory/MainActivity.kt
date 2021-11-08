@@ -10,6 +10,8 @@ import androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -21,15 +23,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundobservatory.ui.theme.SoundObservatoryTheme
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalAnimationApi
 @ExperimentalComposeUiApi
+@ExperimentalCoroutinesApi
 @ExperimentalAnimationGraphicsApi
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { MainActivityContent() }
+        setContent {
+            val viewModel: TrackViewModel = viewModel()
+            val tracks = viewModel.tracks.collectAsState()
+            MainActivityContent(tracks.value)
+        }
     }
 }
 
@@ -37,12 +47,15 @@ class MainActivity : ComponentActivity() {
 @ExperimentalAnimationGraphicsApi
 @ExperimentalAnimationApi
 @Preview(showBackground = true)
-@Composable fun MainActivityPreview() = MainActivityContent()
+@Composable fun MainActivityPreview() = MainActivityContent(listOf(
+    Track(path = "", name = "Audio clip 1", volume = 0.3f),
+    Track(path = "", name = "Audio clip 2", volume = 0.8f)
+))
 
 @ExperimentalComposeUiApi
 @ExperimentalAnimationGraphicsApi
 @ExperimentalAnimationApi
-@Composable fun MainActivityContent() {
+@Composable fun MainActivityContent(tracks: List<Track>) {
     val title = stringResource(R.string.app_name)
 
     SoundObservatoryTheme(true) {
@@ -66,7 +79,7 @@ class MainActivity : ComponentActivity() {
                     onSearchButtonClicked = {
                         searchQuery = if (searchQuery == null) "" else null
                     })
-                TrackList()
+                TrackList(tracks)
             }
         }
     }
@@ -74,13 +87,12 @@ class MainActivity : ComponentActivity() {
 
 @ExperimentalComposeUiApi
 @ExperimentalAnimationGraphicsApi
-@Composable fun TrackList() =
-    Column(
+@Composable fun TrackList(tracks: List<Track>) =
+    LazyColumn(
         modifier = Modifier.padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        TrackView(Track(path = "", name = "Audio clip 1", volume = 0.3f))
-        TrackView(Track(path = "", name = "Audio clip 2", volume = 0.8f))
+        items(tracks) { TrackView(it) }
     }
 
 @ExperimentalComposeUiApi

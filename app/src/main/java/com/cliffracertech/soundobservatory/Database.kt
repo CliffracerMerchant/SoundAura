@@ -46,13 +46,13 @@ class Track(
     abstract suspend fun delete(ids: List<Long>)
 
     @Query("SELECT * FROM track ORDER BY name COLLATE NOCASE ASC")
-    abstract suspend fun getAllTracksSortedByNameAsc(): Flow<List<Track>>
+    abstract fun getAllTracksSortedByNameAsc(): Flow<List<Track>>
 
     @Query("SELECT * FROM track ORDER BY name COLLATE NOCASE DESC")
-    abstract suspend fun getAllTracksSortedByNameDesc(): Flow<List<Track>>
+    abstract fun getAllTracksSortedByNameDesc(): Flow<List<Track>>
 
     @Query("SELECT * FROM track ORDER BY id")
-    abstract suspend fun getAllTracks(): Flow<List<Track>>
+    abstract fun getAllTracks(): Flow<List<Track>>
 
     @Query("UPDATE track SET name = :name WHERE id = :id")
     abstract suspend fun updateName(id: Long, name: String)
@@ -77,7 +77,7 @@ abstract class SoundObservatoryDatabase : RoomDatabase() {
     }
 }
 
-abstract class TrackViewModel(app: Application) : AndroidViewModel(app) {
+class TrackViewModel(app: Application) : AndroidViewModel(app) {
     private val dao = SoundObservatoryDatabase.get(app).trackDao()
 
     fun add(track: Track) = viewModelScope.launch { dao.insert(track) }
@@ -87,17 +87,15 @@ abstract class TrackViewModel(app: Application) : AndroidViewModel(app) {
     val trackSort = MutableStateFlow(Track.Sort.NameAsc)
 
     @ExperimentalCoroutinesApi
-    val tracks: Flow<List<Track>> = trackSort.transformLatest {
+    val tracks = trackSort.transformLatest<Track.Sort, List<Track>> {
         when (it) { Track.Sort.NameAsc ->    dao.getAllTracksSortedByNameAsc()
                     Track.Sort.NameDesc ->   dao.getAllTracksSortedByNameDesc()
                     Track.Sort.OrderAdded -> dao.getAllTracks() }
-    }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     fun updateName(id: Long, name: String) =
         viewModelScope.launch { dao.updateName(id, name) }
 
     fun updateVolume(id: Long, volume: Float) =
         viewModelScope.launch { dao.updateVolume(id, volume) }
-
-
 }
