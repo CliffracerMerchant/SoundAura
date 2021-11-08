@@ -43,9 +43,9 @@ import androidx.core.content.ContextCompat
 import com.cliffracertech.soundobservatory.ui.theme.SoundObservatoryTheme
 
 @ExperimentalAnimationApi
+@ExperimentalComposeUiApi
 @ExperimentalAnimationGraphicsApi
 class MainActivity : ComponentActivity() {
-    @ExperimentalComposeUiApi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent { MainActivityContent() }
@@ -86,56 +86,71 @@ class MainActivity : ComponentActivity() {
 @ExperimentalAnimationGraphicsApi
 @Composable fun SoundList() =
     Column(
-        modifier = Modifier.padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        modifier = Modifier.padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        AudioView("Audio clip 1")
-        AudioView("Audio clip 2")
+        TrackView(Track(path = "", title = "Audio clip 1", volume = 0.5f))
+        TrackView(Track(path = "", title = "Audio clip 2", volume = 0.5f))
     }
 
 @ExperimentalComposeUiApi
 @ExperimentalAnimationGraphicsApi
-@Composable fun AudioView(name: String) = Row(
+@Composable fun TrackView(track: Track) = Row(
     verticalAlignment = Alignment.CenterVertically,
     modifier = Modifier
         .fillMaxWidth(1f)
         .background(MaterialTheme.colors.surface, MaterialTheme.shapes.large)
 ){
     var playing by remember { mutableStateOf(false) }
-    PlayPauseButton(playing, MaterialTheme.colors.onSurface) { playing = !playing }
+    PlayPauseButton(playing, MaterialTheme.colors.primary) { playing = !playing }
 
-    var volume by remember { mutableStateOf(0.5f) }
+    var volume by remember { mutableStateOf(track.volume) }
     SliderBox(value = volume, onValueChange = { volume = it },
               modifier = Modifier.height(66.dp).weight(1f),
               sliderPadding = PaddingValues(top = 24.dp)) {
-        Text(text = name, style = MaterialTheme.typography.h6,
+        Text(text = track.title, style = MaterialTheme.typography.h6,
              modifier = Modifier.padding(8.dp, 6.dp, 0.dp, 0.dp))
     }
 
     var showingOptionsMenu by remember { mutableStateOf(false) }
+    var showingRenameDialog by remember { mutableStateOf(false) }
+    var showingDeleteDialog by remember { mutableStateOf(false) }
+
     IconButton(onClick = { showingOptionsMenu = !showingOptionsMenu }) {
         Icon(imageVector = Icons.Default.MoreVert,
-             contentDescription = "$name options")
-        DropdownMenu(expanded = showingOptionsMenu,
-                     onDismissRequest = { showingOptionsMenu = false }) {
-            var showingRenameDialog by remember { mutableStateOf(false) }
-            DropdownMenuItem(onClick = { showingRenameDialog = true }) {
-                Text(text = "Rename", style = MaterialTheme.typography.button)
-                if (showingRenameDialog)
-                    RenameDialog(name, onDismissRequest = { showingRenameDialog = false },
-                                 onConfirmRequest = {  })
-            }
+             tint = MaterialTheme.colors.primaryVariant,
+             contentDescription = "${track.title} options")
 
-            var showingDeleteDialog by remember { mutableStateOf(false) }
-            DropdownMenuItem(onClick = { showingDeleteDialog = true }) {
+        DropdownMenu(
+            expanded = showingOptionsMenu,
+            onDismissRequest = { showingOptionsMenu = false }
+        ) {
+            DropdownMenuItem(onClick = {
+                showingRenameDialog = true
+                showingOptionsMenu = false
+            }) {
+                Text(text = "Rename", style = MaterialTheme.typography.button)
+            }
+            DropdownMenuItem(onClick = {
+                showingDeleteDialog = true
+                showingOptionsMenu = false
+            }) {
                 Text(text = "Delete", style = MaterialTheme.typography.button)
-                if (showingDeleteDialog)
-                    ConfirmDeleteDialog(name,
-                        onDismissRequest = { showingDeleteDialog = false },
-                        onConfirmRequest = { })
             }
         }
     }
+
+    if (showingRenameDialog)
+        RenameDialog(
+            track.title,
+            onDismissRequest = { showingRenameDialog = false },
+            onConfirmRequest = {  })
+
+    if (showingDeleteDialog)
+        ConfirmDeleteDialog(
+            track.title,
+            onDismissRequest = { showingDeleteDialog = false },
+            onConfirmRequest = { })
 }
 
 @Composable fun PlayPauseButton(playing: Boolean, tint: Color, onClick: () -> Unit) = Box(
