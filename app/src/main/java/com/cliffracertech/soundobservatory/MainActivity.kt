@@ -50,13 +50,22 @@ class MainActivity : ComponentActivity() {
             color = MaterialTheme.colors.background,
             modifier = Modifier.fillMaxSize(1f)
         ) {
-            var actionModeTitle = remember { mutableStateOf<String?>(null) }
-            var searchQuery = remember { mutableStateOf<String?>(null) }
-            var sortOption = remember { mutableStateOf(Track.Sort.NameAsc) }
+            var actionModeTitle by remember { mutableStateOf<String?>(null) }
+            var searchQuery by remember { mutableStateOf<String?>(null) }
+            var sortOption by remember { mutableStateOf(Track.Sort.NameAsc) }
 
             Column {
-                RecyclerViewActionBar(backButtonVisible = false, backButtonOnClick = { },
-                                      title, actionModeTitle, searchQuery, sortOption)
+                ListViewActionBar(
+                    backButtonVisible = false,
+                    onBackButtonClick = { },
+                    title, actionModeTitle, searchQuery,
+                    onSearchQueryChanged = { searchQuery = it },
+                    sortOption = sortOption,
+                    onSortOptionChanged = { sortOption = it},
+                    sortOptionNameFunc = { string(it) },
+                    onSearchButtonClicked = {
+                        searchQuery = if (searchQuery == null) "" else null
+                    })
                 SoundList()
             }
         }

@@ -3,4 +3,8 @@
 
 <resources>
     <string name="app_name">SoundObservatory</string>
+
+    <string name="name_ascending_description">Name ascending</string>
+    <string name="name_descending_description">Name descending</string>
+    <string name="order_added_description">Order added</string>
 </resources>

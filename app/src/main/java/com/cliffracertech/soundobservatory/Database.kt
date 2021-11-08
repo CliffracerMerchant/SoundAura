@@ -3,6 +3,8 @@
 package com.cliffracertech.soundobservatory
 
 import androidx.annotation.FloatRange
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 import java.io.File
@@ -16,21 +18,16 @@ class Track(
     @FloatRange(from = 0.0, to = 1.0)
     @ColumnInfo(name="volume") val volume: Float = 1f
 ) {
-    enum class Sort {
-        NameAsc,
-        NameDesc;
+    enum class Sort { NameAsc, NameDesc, OrderAdded }
+}
 
-        override fun toString() = if (this == NameAsc) "Name Ascending"
-                                  else                 "Name Descending"
-
-        fun a() {
-            values()
-        }
-    }
+@Composable fun string(sort: Track.Sort) = when (sort) {
+    Track.Sort.NameAsc ->    stringResource(R.string.name_ascending_description)
+    Track.Sort.NameDesc ->   stringResource(R.string.name_descending_description)
+    Track.Sort.OrderAdded -> stringResource(R.string.order_added_description)
 }
 
 @Dao abstract class TrackDao() {
-
     @Insert abstract suspend fun insert(track: Track): Long
     @Insert abstract suspend fun insert(track: List<Track>)
 
@@ -51,5 +48,4 @@ class Track(
 
     @Query("UPDATE track SET volume = :volume WHERE id = :id")
     abstract suspend fun updateVolume(id: Long, volume: Float)
-
 }
