@@ -90,7 +90,7 @@ inline fun <reified T : Enum<T>>ListViewActionBar(
     noinline onSearchButtonClicked: () -> Unit,
     sortOption: T,
     crossinline onSortOptionChanged: (T) -> Unit,
-    crossinline sortOptionNameFunc: (T) -> String,
+    crossinline sortOptionNameFunc: @Composable (T) -> String,
 ) = Row(
     verticalAlignment = Alignment.CenterVertically,
     modifier = Modifier.fillMaxWidth(1f).height(56.dp)
@@ -156,7 +156,7 @@ inline fun <reified T : Enum<T>>EnumDropDownMenu(
     expanded: Boolean,
     value: T,
     crossinline onValueChanged: (T) -> Unit,
-    crossinline nameFunc: (T) -> String,
+    crossinline nameFunc: @Composable (T) -> String,
     noinline onDismissRequest: () -> Unit
 ) = DropdownMenu(expanded, onDismissRequest) {
     enumValues<T>().forEach {

@@ -68,6 +68,7 @@ class MainActivity : ComponentActivity() {
             var sortOption by remember { mutableStateOf(Track.Sort.NameAsc) }
 
             Column {
+                var addButtonExpanded by remember { mutableStateOf(false) }
                 ListViewActionBar(
                     backButtonVisible = false,
                     onBackButtonClick = { },
@@ -79,7 +80,15 @@ class MainActivity : ComponentActivity() {
                     onSearchButtonClicked = {
                         searchQuery = if (searchQuery == null) "" else null
                     })
-                TrackList(tracks)
+                Box(Modifier.fillMaxSize(1f)) {
+                    TrackList(tracks)
+                    DownloadOrAddLocalFileButton(
+                        expanded = addButtonExpanded,
+                        onClick = { addButtonExpanded = !addButtonExpanded },
+                        onAddDownloadClick = { addButtonExpanded = false },
+                        onAddLocalFileClick = { addButtonExpanded = false },
+                        modifier = Modifier.padding(8.dp).align(Alignment.BottomEnd))
+                }
             }
         }
     }
