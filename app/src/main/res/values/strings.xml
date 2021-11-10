@@ -16,7 +16,7 @@
     <string name="item_pause_description">Pause %1$s</string>
     <string name="item_options_button_description">%1$s more options</string>
     <string name="item_rename_description">Rename</string>
-    <string name="item_delete_desrciption">Delete</string>
+    <string name="item_delete_description">Delete</string>
 
     <string name="add_button_description">Add track</string>
     <string name="add_button_expanded_description">Cancel add track</string>
