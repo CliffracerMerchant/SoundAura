@@ -20,11 +20,12 @@ import java.io.File
 @Entity(tableName = "track")
 class Track(
     @PrimaryKey(autoGenerate = true)
-    @ColumnInfo(name="id")     val id: Long = 0,
-    @ColumnInfo(name="path")   val path: String,
-    @ColumnInfo(name="name")   val name: String = File(path).name,
+    @ColumnInfo(name="id")      val id: Long = 0,
+    @ColumnInfo(name="path")    val path: String,
+    @ColumnInfo(name="name")    val name: String = File(path).name,
+    @ColumnInfo(name="playing") val playing: Boolean = false,
     @FloatRange(from = 0.0, to = 1.0)
-    @ColumnInfo(name="volume") val volume: Float = 1f
+    @ColumnInfo(name="volume")  val volume: Float = 1f
 ) {
     enum class Sort { NameAsc, NameDesc, OrderAdded }
 }
@@ -54,11 +55,14 @@ class Track(
     @Query("SELECT * FROM track ORDER BY id")
     abstract fun getAllTracks(): Flow<List<Track>>
 
-    @Query("UPDATE track SET name = :name WHERE id = :id")
-    abstract suspend fun updateName(id: Long, name: String)
+    @Query("UPDATE track set playing = :playing WHERE id = :id")
+    abstract suspend fun updatePlaying(id: Long, playing: Boolean)
 
     @Query("UPDATE track SET volume = :volume WHERE id = :id")
     abstract suspend fun updateVolume(id: Long, volume: Float)
+
+    @Query("UPDATE track SET name = :name WHERE id = :id")
+    abstract suspend fun updateName(id: Long, name: String)
 }
 
 @Database(entities = [Track::class], version = 1, exportSchema = true)
@@ -80,9 +84,9 @@ abstract class SoundObservatoryDatabase : RoomDatabase() {
 class TrackViewModel(app: Application) : AndroidViewModel(app) {
     private val dao = SoundObservatoryDatabase.get(app).trackDao()
 
-    fun add(track: Track) = viewModelScope.launch { dao.insert(track) }
-    fun delete(id: Long) = viewModelScope.launch { dao.delete(id) }
-    fun delete(ids: List<Long>) = viewModelScope.launch { dao.delete(ids) }
+    fun add(track: Track) { viewModelScope.launch { dao.insert(track) } }
+    fun delete(id: Long) { viewModelScope.launch { dao.delete(id) } }
+    fun delete(ids: List<Long>) { viewModelScope.launch { dao.delete(ids) } }
 
     val trackSort = MutableStateFlow(Track.Sort.NameAsc)
 
@@ -93,9 +97,15 @@ class TrackViewModel(app: Application) : AndroidViewModel(app) {
                     Track.Sort.OrderAdded -> dao.getAllTracks() }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    fun updateName(id: Long, name: String) =
-        viewModelScope.launch { dao.updateName(id, name) }
+    fun updatePlaying(id: Long, playing: Boolean) {
+        viewModelScope.launch { dao.updatePlaying(id, playing) }
+    }
 
-    fun updateVolume(id: Long, volume: Float) =
+    fun updateVolume(id: Long, volume: Float) {
         viewModelScope.launch { dao.updateVolume(id, volume) }
+    }
+
+    fun updateName(id: Long, name: String) {
+        viewModelScope.launch { dao.updateName(id, name) }
+    }
 }
