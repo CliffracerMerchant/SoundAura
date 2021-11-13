@@ -2,9 +2,8 @@
  * license.md in the project's root directory or use an internet search engine to see the full license. */
 package com.cliffracertech.soundobservatory
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.foundation.background
@@ -98,14 +97,12 @@ inline fun <reified T : Enum<T>>ListViewActionBar(
 ){
     val contentTint = MaterialTheme.colors.onPrimary
 
-    val backButtonVisible = backButtonVisible ||
-                            actionModeTitle != null ||
-                            searchQuery != null
-    AnimatedContent(backButtonVisible) {
+    val backButtonVisible = backButtonVisible || actionModeTitle != null || searchQuery != null
+    AnimatedContent(backButtonVisible, transitionSpec = { fadeIn(tween()) with fadeOut(tween()) }) {
         if (it) IconButton(onClick = onBackButtonClick) {
                     Icon(imageVector = Icons.Default.ArrowBack,
-                    tint = contentTint,
-                    contentDescription = stringResource(R.string.back_description))
+                         tint = contentTint,
+                         contentDescription = stringResource(R.string.back_description))
                 }
         else Spacer(Modifier.width(24.dp))
     }
@@ -115,7 +112,8 @@ inline fun <reified T : Enum<T>>ListViewActionBar(
         if (it) AutoFocusUnderlinedSearchQuery(query = searchQuery ?: "",
                                                onQueryChanged = onSearchQueryChanged)
         else Text(text = actionModeTitle ?: title,
-                  color = contentTint, style = MaterialTheme.typography.h6)
+                  color = contentTint,
+                  style = MaterialTheme.typography.h6)
     }
 
     val animatedSearchIcon = animatedVectorResource(R.drawable.search_to_close)

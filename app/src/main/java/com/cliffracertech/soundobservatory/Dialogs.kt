@@ -5,10 +5,7 @@ package com.cliffracertech.soundobservatory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
-import androidx.compose.material.TextButton
-import androidx.compose.material.TextField
+import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -22,6 +19,23 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+
+@Composable fun CancelOkButtonRow(
+    onCancelClick: () -> Unit,
+    onOkClick: () -> Unit
+) = Row {
+    Spacer(Modifier.weight(1f))
+    TextButton(onCancelClick, Modifier.heightIn(48.dp, Dp.Infinity)) {
+        Text(text = stringResource(android.R.string.cancel).uppercase(),
+             style = MaterialTheme.typography.button,
+             color = MaterialTheme.colors.secondary)
+    }
+    TextButton(onOkClick, Modifier.heightIn(48.dp, Dp.Infinity)) {
+        Text(stringResource(android.R.string.ok),
+             style = MaterialTheme.typography.button,
+             color = MaterialTheme.colors.secondary)
+    }
+}
 
 @ExperimentalComposeUiApi
 @Composable fun RenameDialog(
@@ -57,23 +71,15 @@ import androidx.compose.ui.window.Dialog
             focusRequester.requestFocus()
             onDispose { }
         }
-        Row {
-            Spacer(Modifier.weight(1f))
-            TextButton(onClick = onDismissRequest,
-                       modifier = Modifier.heightIn(48.dp, Dp.Infinity)) {
-                Text(text = stringResource(android.R.string.cancel).uppercase(),
-                     style = MaterialTheme.typography.button,
-                     color = MaterialTheme.colors.secondary)
-            }
-            TextButton(onClick = { onConfirmRequest(currentName); onDismissRequest() },
-                       modifier = Modifier.heightIn(48.dp, Dp.Infinity)) {
-                Text(stringResource(android.R.string.ok),
-                     style = MaterialTheme.typography.button,
-                     color = MaterialTheme.colors.secondary)
-            }
-        }
+        CancelOkButtonRow(onCancelClick = onDismissRequest,
+                          onOkClick = { onConfirmRequest(currentName)
+                                        onDismissRequest() })
     }
 }
+
+@ExperimentalComposeUiApi
+@Preview @Composable
+fun RenameDialogPreview() = RenameDialog("Renameable thing", { }, { })
 
 @Composable
 fun ConfirmDeleteDialog(
@@ -88,27 +94,11 @@ fun ConfirmDeleteDialog(
     ) {
         Text(stringResource(R.string.confirm_delete_message, itemName),
              style = MaterialTheme.typography.body1)
-        Row {
-            Spacer(Modifier.weight(1f))
-            TextButton(onClick = onDismissRequest,
-                       modifier = Modifier.heightIn(48.dp, Dp.Infinity)) {
-                Text(stringResource(android.R.string.cancel).uppercase(),
-                     style = MaterialTheme.typography.button,
-                     color = MaterialTheme.colors.secondary)
-            }
-            TextButton(onClick = { onConfirmRequest(); onDismissRequest() },
-                       modifier = Modifier.heightIn(48.dp, Dp.Infinity)) {
-                Text(stringResource(android.R.string.ok),
-                     style = MaterialTheme.typography.button,
-                     color = MaterialTheme.colors.secondary)
-            }
-        }
+        CancelOkButtonRow(onCancelClick = onDismissRequest,
+                          onOkClick = { onConfirmRequest()
+                                        onDismissRequest() })
     }
 }
-
-@ExperimentalComposeUiApi
-@Preview @Composable
-fun RenameDialogPreview() = RenameDialog("Renameable thing", { }, { })
 
 @Preview @Composable
 fun ConfirmDeleteDialogPreview() = ConfirmDeleteDialog("Deleteable thing", { }, { })
