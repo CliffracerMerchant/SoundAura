@@ -9,8 +9,8 @@ import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -36,6 +36,10 @@ import androidx.compose.ui.unit.dp
  * @param modifier The modifier for the parent layout
  * @param childAlignment The alignment that will be used for the child content.
  *     The default value if Alignment.End
+ * @param childAppearanceDuration The duration for a given child's appearance animation.
+ * @param totalDuration The total duration over which all children will appear. If
+ *     longer than childAppearanceDuration, the children will have an appearance or
+ *     disappearance delay according to their position in the list of children.
  * @param childContent A list of each piece of child content that will appear
  *     when the layout is expanded.
  * @param content The content that will be displayed when the layout is collapsed.
@@ -46,25 +50,31 @@ import androidx.compose.ui.unit.dp
     expanded: Boolean,
     modifier: Modifier = Modifier,
     childAlignment: Alignment.Horizontal = Alignment.End,
+    childAppearanceDuration: Int = DefaultDurationMillis,
+    totalDuration: Int = DefaultDurationMillis,
     childContent: List<@Composable () -> Unit>,
     content: @Composable () -> Unit,
-) = Column(modifier, horizontalAlignment = childAlignment) {
+) = Column(modifier, Arrangement.spacedBy(8.dp), childAlignment) {
 
+    val delayFactor = (totalDuration - childAppearanceDuration) / childContent.size
     childContent.forEachIndexed { index, button ->
-        val exitDelay = index * 100
-        val enterDelay = childContent.lastIndex * 100 - exitDelay
+        val exitDelay = index * delayFactor
+        val enterDelay = childContent.lastIndex * delayFactor - exitDelay
         AnimatedVisibility(expanded,
-            enter = fadeIn(tween(delayMillis = enterDelay)) +
-                    scaleIn(overshootTweenSpec(delay = enterDelay), initialScale = 0.8f),
-            exit = fadeOut(tween(delayMillis = exitDelay)) +
-                   scaleOut(tween(delayMillis = exitDelay), targetScale = 0.8f)
+            enter = fadeIn(tween(childAppearanceDuration, enterDelay)) +
+                    scaleIn(overshootTweenSpec(childAppearanceDuration, enterDelay), initialScale = 0.8f),
+            exit = fadeOut(tween(childAppearanceDuration, exitDelay)) +
+                   scaleOut(tween(childAppearanceDuration, exitDelay), targetScale = 0.8f)
         ) { button() }
     }
     content()
 }
 
-private val overshootEasing = Easing { val t = it - 1
-                                       t * t * (3 * t + 2) + 1 }
+
+private val overshootEasing = Easing {
+    val t = it - 1
+    t * t * (3 * t + 2) + 1
+}
 
 @Composable fun <T>overshootTweenSpec(duration: Int = DefaultDurationMillis, delay: Int = 0) =
     tween<T>(duration, delay, overshootEasing)
@@ -89,26 +99,32 @@ private val overshootEasing = Easing { val t = it - 1
     onAddDownloadClick: () -> Unit,
     onAddLocalFileClick: () -> Unit,
     modifier: Modifier = Modifier,
-) = SpeedDialLayout(expanded, modifier, childContent = listOf(
-    { ExtendedFloatingActionButton(
-        text = { Text("download") },
-        onClick = onAddDownloadClick,
-        modifier = Modifier.padding(0.dp, 8.dp),
-        icon = { Icon(Icons.Default.Add, null) },
-        backgroundColor = MaterialTheme.colors.primaryVariant,
-        contentColor = MaterialTheme.colors.onPrimary)
-    }, { ExtendedFloatingActionButton(
-        text = { Text("local file") },
-        onClick = onAddLocalFileClick,
-        icon = { Icon(Icons.Default.Add, null) },
-        backgroundColor = MaterialTheme.colors.primaryVariant,
-        contentColor = MaterialTheme.colors.onPrimary)
-    })
+) = SpeedDialLayout(
+    expanded = expanded,
+    modifier = modifier,
+    childAppearanceDuration = 275,
+    totalDuration = 400,
+    childContent = listOf(
+        { ExtendedFloatingActionButton(
+            text = { Text("download") },
+            onClick = onAddDownloadClick,
+            icon = { Icon(Icons.Default.Add, null) },
+            backgroundColor = MaterialTheme.colors.primaryVariant,
+            contentColor = MaterialTheme.colors.onPrimary,
+            elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp))
+        }, { ExtendedFloatingActionButton(
+            text = { Text("local file") },
+            onClick = onAddLocalFileClick,
+            icon = { Icon(Icons.Default.Add, null) },
+            backgroundColor = MaterialTheme.colors.primaryVariant,
+            contentColor = MaterialTheme.colors.onPrimary,
+            elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp))
+        })
 ) { FloatingActionButton(
     onClick = onClick,
-    modifier = modifier,
     backgroundColor = MaterialTheme.colors.primaryVariant,
-    contentColor = MaterialTheme.colors.onPrimary
+    contentColor = MaterialTheme.colors.onPrimary,
+    elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp)
 ) {
     // The two angles are chosen between so that the icon always appears
     // to rotate clockwise, instead of clockwise and then counterclockwise.

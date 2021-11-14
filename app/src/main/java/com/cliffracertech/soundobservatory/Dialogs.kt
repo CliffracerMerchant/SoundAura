@@ -4,11 +4,8 @@ package com.cliffracertech.soundobservatory
 
 import android.content.Context
 import android.net.Uri
-import android.provider.MediaStore
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
@@ -20,14 +17,12 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.core.net.toFile
 import androidx.documentfile.provider.DocumentFile
 
 @Composable fun CancelOkButtonRow(
@@ -119,8 +114,7 @@ fun ConfirmDeleteDialogPreview() = ConfirmDeleteDialog("Deleteable thing", { }, 
 @Composable fun AddTrackFromLocalFileDialog(
     onDismissRequest: () -> Unit,
     onConfirmRequest: (Track) -> Unit
-) = Dialog(onDismissRequest = onDismissRequest) {
-
+) = Dialog(onDismissRequest) {
     var chosenUri by remember { mutableStateOf<Uri?>(null) }
     var trackName by remember { mutableStateOf("")}
     val context = LocalContext.current
@@ -128,7 +122,7 @@ fun ConfirmDeleteDialogPreview() = ConfirmDeleteDialog("Deleteable thing", { }, 
         chosenUri = it
         trackName = it?.getDisplayName(context) ?: ""
     }
-    Log.d("dialog", "add local file dialog composed / recomposed")
+
     if ((chosenUri == null))
         LaunchedEffect(true) { launcher.launch(arrayOf("audio/*")) }
     Column(Modifier

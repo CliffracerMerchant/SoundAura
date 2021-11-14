@@ -106,7 +106,7 @@ class MainActivity : ComponentActivity() {
                                                 //showingDownloadFileDialog = true },
                         onAddLocalFileClick = { addButtonExpanded = false
                                                 showingAddLocalFileDialog = true },
-                        modifier = Modifier.padding(8.dp).align(Alignment.BottomEnd))
+                        modifier = Modifier.padding(16.dp).align(Alignment.BottomEnd))
                 }
                 //if (showingDownloadFileDialog)
                 if (showingAddLocalFileDialog)
