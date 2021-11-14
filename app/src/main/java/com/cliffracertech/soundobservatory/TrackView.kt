@@ -77,6 +77,19 @@ fun TrackView(
         onDeleteRequest = { callback.onDeleteRequest(track.id) })
 }
 
+@ExperimentalAnimationGraphicsApi
+@Composable fun PlayPauseIcon(
+    playing: Boolean,
+    contentDescription: String,
+    tint: Color = LocalContentColor.current.copy(alpha = LocalContentAlpha.current)
+) {
+    val playToPause = animatedVectorResource(R.drawable.play_to_pause).painterFor(playing)
+    val pauseToPlay = animatedVectorResource(R.drawable.pause_to_play).painterFor(!playing)
+    val vector = if (playing) playToPause
+                 else         pauseToPlay
+    Icon(vector, contentDescription, tint = tint)
+}
+
 /**
  * A button that alternates between a pause icon and a playing icon depending on
  * the parameter playing.
@@ -90,18 +103,16 @@ fun TrackView(
  * @param onClick The callback that will be invoked when the button is clicked.
  */
 @ExperimentalAnimationGraphicsApi
-@Composable fun PlayPauseButton(playing: Boolean, itemName: String,
-                                tint: Color, onClick: () -> Unit) =
-    IconButton(onClick) {
-        val playToPause = animatedVectorResource(R.drawable.play_to_pause).painterFor(playing)
-        val pauseToPlay = animatedVectorResource(R.drawable.pause_to_play).painterFor(!playing)
-        val vector = if (playing) playToPause
-                     else         pauseToPlay
-
-        val description = if (playing) stringResource(R.string.item_pause_description, itemName)
-                          else         stringResource(R.string.item_play_description, itemName)
-        Icon(vector, description, tint = tint)
-    }
+@Composable fun PlayPauseButton(
+    playing: Boolean,
+    itemName: String,
+    tint: Color = LocalContentColor.current.copy(alpha = LocalContentAlpha.current),
+    onClick: () -> Unit
+) = IconButton(onClick) {
+    val description = if (playing) stringResource(R.string.item_pause_description, itemName)
+                      else         stringResource(R.string.item_play_description, itemName)
+    PlayPauseIcon(playing, description, tint)
+}
 
 /**
  * A more options button for an item in a list view.
