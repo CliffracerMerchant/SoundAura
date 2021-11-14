@@ -20,12 +20,17 @@ import java.io.File
 @Entity(tableName = "track")
 class Track(
     @PrimaryKey(autoGenerate = true)
-    @ColumnInfo(name="id")      val id: Long = 0,
-    @ColumnInfo(name="path")    val path: String,
-    @ColumnInfo(name="name")    val name: String = File(path).name,
-    @ColumnInfo(name="playing") val playing: Boolean = false,
+    @ColumnInfo(name="id")
+    val id: Long = 0,
+    @ColumnInfo(name="path")
+    val path: String,
+    @ColumnInfo(name="name")
+    val name: String = File(path).name,
+    @ColumnInfo(name="playing", defaultValue = "0")
+    val playing: Boolean = false,
     @FloatRange(from = 0.0, to = 1.0)
-    @ColumnInfo(name="volume")  val volume: Float = 1f
+    @ColumnInfo(name="volume", defaultValue = "1.0")
+    val volume: Float = 1f
 ) {
     enum class Sort { NameAsc, NameDesc, OrderAdded }
 }
@@ -91,7 +96,7 @@ class TrackViewModel(app: Application) : AndroidViewModel(app) {
     val trackSort = MutableStateFlow(Track.Sort.NameAsc)
 
     @ExperimentalCoroutinesApi
-    val tracks = trackSort.transformLatest<Track.Sort, List<Track>> {
+    val tracks = trackSort.flatMapLatest {
         when (it) { Track.Sort.NameAsc ->    dao.getAllTracksSortedByNameAsc()
                     Track.Sort.NameDesc ->   dao.getAllTracksSortedByNameDesc()
                     Track.Sort.OrderAdded -> dao.getAllTracks() }

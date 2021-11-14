@@ -51,7 +51,7 @@ import com.cliffracertech.soundobservatory.ui.theme.SoundObservatoryTheme
  * action mode, or a title otherwise.
  *
  * @param backButtonVisible Whether or not the back button should be
- *     visible to the user due to factors outside the ListViewActionBar's
+ *     visible to the user due to factors outside the ListActionBar's
  *     scope (e.g. a screen deeper in the navigation hierarchy is being
  *     displayed that the user should be able to back out of.
  * @param onBackButtonClick The callback that will be invoked when the
@@ -79,7 +79,7 @@ import com.cliffracertech.soundobservatory.ui.theme.SoundObservatoryTheme
 @ExperimentalAnimationApi
 @ExperimentalAnimationGraphicsApi
 @Composable
-inline fun <reified T : Enum<T>>ListViewActionBar(
+inline fun <reified T : Enum<T>>ListActionBar(
     backButtonVisible: Boolean = false,
     noinline onBackButtonClick: () -> Unit,
     title: String,
@@ -149,8 +149,7 @@ inline fun <reified T : Enum<T>>ListViewActionBar(
  * @param onDismissRequest The callback that will be invoked when the menu should
  *                         be dismissed.
  */
-@Composable
-inline fun <reified T : Enum<T>>EnumDropDownMenu(
+@Composable inline fun <reified T : Enum<T>>EnumDropDownMenu(
     expanded: Boolean,
     value: T,
     crossinline onValueChanged: (T) -> Unit,
@@ -158,10 +157,10 @@ inline fun <reified T : Enum<T>>EnumDropDownMenu(
     noinline onDismissRequest: () -> Unit
 ) = DropdownMenu(expanded, onDismissRequest) {
     enumValues<T>().forEach {
-        DropdownMenuItem(onClick = {
-            onValueChanged(it)
-            onDismissRequest()
-        }) {
+        DropdownMenuItem(
+            onClick = { onValueChanged(it)
+                        onDismissRequest() }
+        ) {
             Text(text = nameFunc(it), style = MaterialTheme.typography.button)
             val vector = if (value == it) Icons.Default.RadioButtonChecked
                          else             Icons.Default.RadioButtonUnchecked
@@ -204,10 +203,7 @@ inline fun <reified T : Enum<T>>EnumDropDownMenu(
             }
         }
     )
-    DisposableEffect(Unit) {
-        focusRequester.requestFocus()
-        onDispose { }
-    }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
 }
 
 @ExperimentalComposeUiApi
@@ -220,7 +216,7 @@ inline fun <reified T : Enum<T>>EnumDropDownMenu(
         var searchQuery by remember { mutableStateOf<String?>(null) }
         var sortOption by remember { mutableStateOf(Track.Sort.NameAsc) }
 
-        ListViewActionBar(
+        ListActionBar(
             backButtonVisible = false, onBackButtonClick = { },
             title, actionModeTitle, searchQuery,
             onSearchQueryChanged = { searchQuery = it },

@@ -61,16 +61,11 @@ import androidx.compose.ui.window.Dialog
             onValueChange = { currentName = it },
             singleLine = true,
             textStyle = MaterialTheme.typography.body1,
-            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
             modifier = Modifier
                 .fillMaxWidth(1f)
                 .focusRequester(focusRequester)
                 .onFocusChanged { if (it.isFocused) keyboardController?.show() })
-
-        DisposableEffect(Unit) {
-            focusRequester.requestFocus()
-            onDispose { }
-        }
+        LaunchedEffect(Unit) { focusRequester.requestFocus() }
         CancelOkButtonRow(onCancelClick = onDismissRequest,
                           onOkClick = { onConfirmRequest(currentName)
                                         onDismissRequest() })
