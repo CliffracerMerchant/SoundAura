@@ -72,18 +72,18 @@ class MainActivity : ComponentActivity() {
 ) {
     val title = stringResource(R.string.app_name)
 
-    SoundObservatoryTheme(true) {
+    SoundObservatoryTheme {
         Surface(
             color = MaterialTheme.colors.background,
             modifier = Modifier.fillMaxSize(1f)
         ) {
             var actionModeTitle by remember { mutableStateOf<String?>(null) }
             var searchQuery by remember { mutableStateOf<String?>(null) }
-            var sortOption by remember { mutableStateOf(Track.Sort.NameAsc) }
-
+            var showingAddLocalFileDialog by remember { mutableStateOf(false) }
+            //var showingDownloadFileDialog by remember { mutableStateOf(false) }
             Column {
                 var addButtonExpanded by remember { mutableStateOf(false) }
-                ListViewActionBar(
+                ListActionBar(
                     backButtonVisible = false,
                     onBackButtonClick = { },
                     title, actionModeTitle, searchQuery,
@@ -100,9 +100,17 @@ class MainActivity : ComponentActivity() {
                         expanded = addButtonExpanded,
                         onClick = { addButtonExpanded = !addButtonExpanded },
                         onAddDownloadClick = { addButtonExpanded = false },
-                        onAddLocalFileClick = { addButtonExpanded = false },
+                                                //showingDownloadFileDialog = true },
+                        onAddLocalFileClick = { addButtonExpanded = false
+                                                showingAddLocalFileDialog = true },
                         modifier = Modifier.padding(8.dp).align(Alignment.BottomEnd))
                 }
+                //if (showingDownloadFileDialog)
+                if (showingAddLocalFileDialog)
+                    AddTrackFromLocalFileDialog(
+                        onDismissRequest = { showingAddLocalFileDialog = false },
+                        onConfirmRequest = { onAddItemRequest(it)
+                                             showingAddLocalFileDialog = false })
             }
         }
     }

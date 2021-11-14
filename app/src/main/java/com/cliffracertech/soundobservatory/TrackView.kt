@@ -54,10 +54,8 @@ fun TrackView(
         .fillMaxWidth(1f)
         .background(MaterialTheme.colors.surface, MaterialTheme.shapes.large)
 ){
-    var playing by remember { mutableStateOf(track.playing) }
-    PlayPauseButton(playing, track.name, MaterialTheme.colors.primary) {
-        playing = !playing
-        callback.onPlayPauseButtonClick(track.id, !playing)
+    PlayPauseButton(track.playing, track.name, MaterialTheme.colors.primary) {
+        callback.onPlayPauseButtonClick(track.id, !track.playing)
     }
 
     var volume by remember { mutableStateOf(track.volume) }

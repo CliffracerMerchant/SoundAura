@@ -23,4 +23,5 @@
 
     <string name="rename_dialog_title">Rename %1$s</string>
     <string name="confirm_delete_message">Are you sure you want to delete %1$s? This cannot be undone.</string>
+    <string name="track_name_description">Track name</string>
 </resources>
