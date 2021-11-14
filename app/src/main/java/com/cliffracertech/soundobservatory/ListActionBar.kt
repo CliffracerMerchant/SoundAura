@@ -157,10 +157,7 @@ inline fun <reified T : Enum<T>>ListActionBar(
     noinline onDismissRequest: () -> Unit
 ) = DropdownMenu(expanded, onDismissRequest) {
     enumValues<T>().forEach {
-        DropdownMenuItem(
-            onClick = { onValueChanged(it)
-                        onDismissRequest() }
-        ) {
+        DropdownMenuItem({ onValueChanged(it); onDismissRequest() }) {
             Text(text = nameFunc(it), style = MaterialTheme.typography.button)
             val vector = if (value == it) Icons.Default.RadioButtonChecked
                          else             Icons.Default.RadioButtonUnchecked

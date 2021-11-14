@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundobservatory.ui.theme.SoundObservatoryTheme
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -31,6 +32,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.setBackgroundDrawable(
+            ContextCompat.getDrawable(this, R.drawable.background_gradient))
 
         setContent {
             val viewModel: TrackViewModel = viewModel()
