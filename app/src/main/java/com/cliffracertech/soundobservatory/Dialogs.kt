@@ -3,6 +3,8 @@
 package com.cliffracertech.soundobservatory
 
 import android.content.Context
+import android.content.Intent
+import android.content.Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -27,8 +29,8 @@ import androidx.documentfile.provider.DocumentFile
 
 @Composable fun CancelOkButtonRow(
     onCancelClick: () -> Unit,
-    onOkClick: () -> Unit,
     okButtonEnabled: Boolean = true,
+    onOkClick: () -> Unit,
 ) = Row {
     Spacer(Modifier.weight(1f))
     TextButton(onCancelClick, Modifier.heightIn(48.dp, Dp.Infinity)) {
@@ -105,11 +107,17 @@ fun ConfirmDeleteDialog(
     }
 }
 
+@Preview @Composable
+fun ConfirmDeleteDialogPreview() = ConfirmDeleteDialog("Deleteable thing", { }, { })
+
+
 fun Uri.getDisplayName(context: Context) =
     DocumentFile.fromSingleUri(context, this)?.name?.substringBeforeLast('.', "")
 
-@Preview @Composable
-fun ConfirmDeleteDialogPreview() = ConfirmDeleteDialog("Deleteable thing", { }, { })
+class OpenPersistableDocument : ActivityResultContracts.OpenDocument() {
+    override fun createIntent(context: Context, input: Array<String>) =
+        super.createIntent(context, input).setFlags(FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+}
 
 @Composable fun AddTrackFromLocalFileDialog(
     onDismissRequest: () -> Unit,
@@ -118,13 +126,14 @@ fun ConfirmDeleteDialogPreview() = ConfirmDeleteDialog("Deleteable thing", { }, 
     var chosenUri by remember { mutableStateOf<Uri?>(null) }
     var trackName by remember { mutableStateOf("")}
     val context = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {
+    val launcher = rememberLauncherForActivityResult(OpenPersistableDocument()) {
         chosenUri = it
         trackName = it?.getDisplayName(context) ?: ""
     }
 
     if ((chosenUri == null))
         LaunchedEffect(true) { launcher.launch(arrayOf("audio/*")) }
+
     Column(Modifier
         .alpha(if (chosenUri == null) 0f else 1f)
         .background(MaterialTheme.colors.surface,
@@ -143,8 +152,12 @@ fun ConfirmDeleteDialogPreview() = ConfirmDeleteDialog("Deleteable thing", { }, 
             modifier = Modifier.fillMaxWidth(1f))
         CancelOkButtonRow(
             onCancelClick = onDismissRequest,
-            onOkClick = { val path = chosenUri?.path ?: return@CancelOkButtonRow
-                          onConfirmRequest(Track(path = path, name = trackName)) },
-            okButtonEnabled = chosenUri != null)
+            okButtonEnabled = chosenUri != null,
+            onOkClick = {
+                val uri = chosenUri ?: return@CancelOkButtonRow
+                context.contentResolver.takePersistableUriPermission(
+                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                onConfirmRequest(Track(uriString = uri.toString(), name = trackName))
+            })
     }
 }

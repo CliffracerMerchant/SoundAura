@@ -70,8 +70,8 @@ class MainActivity : ComponentActivity() {
 @ExperimentalAnimationApi
 @Preview(showBackground = true)
 @Composable fun MainActivityPreview() = MainActivityContent(
-    listOf(Track(path = "", name = "Audio clip 1", volume = 0.3f),
-           Track(path = "", name = "Audio clip 2", volume = 0.8f)),
+    listOf(Track(uriString = "", name = "Audio clip 1", volume = 0.3f),
+           Track(uriString = "", name = "Audio clip 2", volume = 0.8f)),
     playing = true)
 
 @ExperimentalCoroutinesApi

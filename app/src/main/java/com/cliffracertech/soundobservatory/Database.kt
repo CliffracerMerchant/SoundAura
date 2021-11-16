@@ -11,22 +11,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.*
-import androidx.room.Database
-import androidx.room.RoomDatabase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.io.File
 
 @Entity(tableName = "track")
 class Track(
     @PrimaryKey(autoGenerate = true)
     @ColumnInfo(name="id")
     val id: Long = 0,
-    @ColumnInfo(name="path")
-    val path: String,
+    @ColumnInfo(name="uriString")
+    val uriString: String,
     @ColumnInfo(name="name")
-    val name: String = File(path).name,
+    val name: String,
     @ColumnInfo(name="playing", defaultValue = "0")
     val playing: Boolean = false,
     @FloatRange(from = 0.0, to = 1.0)
@@ -42,7 +39,7 @@ class Track(
     Track.Sort.OrderAdded -> stringResource(R.string.order_added_description)
 }
 
-data class PlayingTrack(val path: String, val volume: Float)
+data class PlayingTrack(val uriString: String, val volume: Float)
 
 @Dao abstract class TrackDao() {
     @Insert abstract suspend fun insert(track: Track): Long
@@ -63,7 +60,7 @@ data class PlayingTrack(val path: String, val volume: Float)
     @Query("SELECT * FROM track ORDER BY id")
     abstract fun getAllTracks(): Flow<List<Track>>
 
-    @Query("SELECT path, volume FROM track WHERE playing")
+    @Query("SELECT uriString, volume FROM track WHERE playing")
     abstract fun getCurrentComposition(): Flow<List<PlayingTrack>>
 
     @Query("UPDATE track set playing = :playing WHERE id = :id")
