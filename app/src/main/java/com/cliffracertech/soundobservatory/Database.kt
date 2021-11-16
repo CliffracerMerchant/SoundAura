@@ -4,6 +4,7 @@ package com.cliffracertech.soundobservatory
 
 import android.app.Application
 import android.content.Context
+import android.media.MediaPlayer
 import androidx.annotation.FloatRange
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
@@ -41,6 +42,8 @@ class Track(
     Track.Sort.OrderAdded -> stringResource(R.string.order_added_description)
 }
 
+data class PlayingTrack(val path: String, val volume: Float)
+
 @Dao abstract class TrackDao() {
     @Insert abstract suspend fun insert(track: Track): Long
     @Insert abstract suspend fun insert(track: List<Track>)
@@ -59,6 +62,9 @@ class Track(
 
     @Query("SELECT * FROM track ORDER BY id")
     abstract fun getAllTracks(): Flow<List<Track>>
+
+    @Query("SELECT path, volume FROM track WHERE playing")
+    abstract fun getCurrentComposition(): Flow<List<PlayingTrack>>
 
     @Query("UPDATE track set playing = :playing WHERE id = :id")
     abstract suspend fun updatePlaying(id: Long, playing: Boolean)
@@ -84,6 +90,21 @@ abstract class SoundObservatoryDatabase : RoomDatabase() {
                 "SoundObservatoryDb"
             ).build().also { instance = it }
     }
+}
+
+class PlayerViewModel(app: Application) : AndroidViewModel(app) {
+    private val dao = SoundObservatoryDatabase.get(app).trackDao()
+    private val mediaPlayer = MediaPlayer()
+
+    val playing = MutableStateFlow(false)
+
+    val currentComposition = dao.getCurrentComposition()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    // Since playing is a MutableStateFlow, setPlaying shouldn't be
+    // necessary. It is provided anyways because Jetpack Compose does
+    // not offer a mutable state equivalent to StateFlow.collectAsState
+    fun togglePlaying() { playing.value = !playing.value }
 }
 
 class TrackViewModel(app: Application) : AndroidViewModel(app) {

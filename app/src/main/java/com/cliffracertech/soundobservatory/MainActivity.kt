@@ -15,6 +15,7 @@ import androidx.compose.material.FloatingActionButtonDefaults
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -32,26 +33,33 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 @ExperimentalCoroutinesApi
 @ExperimentalAnimationGraphicsApi
 class MainActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.setBackgroundDrawable(
             ContextCompat.getDrawable(this, R.drawable.background_gradient))
 
         setContent {
-            val viewModel: TrackViewModel = viewModel()
-            val tracks by viewModel.tracks.collectAsState()
-            val trackSort by viewModel.trackSort.collectAsState()
+            val trackViewModel: TrackViewModel = viewModel()
+            val tracks by trackViewModel.tracks.collectAsState()
+            val trackSort by trackViewModel.trackSort.collectAsState()
+
+            val playerViewModel: PlayerViewModel = viewModel()
+            val playing by playerViewModel.playing.collectAsState()
+            val currentComposition by playerViewModel.currentComposition.collectAsState()
+
             val itemCallback = TrackViewCallback(
-                onPlayPauseButtonClick = { id, playing -> viewModel.updatePlaying(id, playing) },
-                onVolumeChangeRequest = { id, volume -> viewModel.updateVolume(id, volume) },
-                onRenameRequest = { id, name -> viewModel.updateName(id, name) },
-                onDeleteRequest = { id: Long -> viewModel.delete(id) })
-            MainActivityContent(tracks = tracks,
-                                trackSort = trackSort,
-                                itemCallback = itemCallback,
-                                onSortingChanged = { viewModel.trackSort.value = it },
-                                onAddItemRequest = { viewModel.add(it) })
+                onPlayPauseButtonClick = { id, playing -> trackViewModel.updatePlaying(id, playing) },
+                onVolumeChangeRequest = { id, volume -> trackViewModel.updateVolume(id, volume) },
+                onRenameRequest = { id, name -> trackViewModel.updateName(id, name) },
+                onDeleteRequest = { id: Long -> trackViewModel.delete(id) })
+            MainActivityContent(
+                tracks = tracks,
+                trackSort = trackSort,
+                playing = playing,
+                itemCallback = itemCallback,
+                onSortingChanged = { trackViewModel.trackSort.value = it },
+                onAddItemRequest = { trackViewModel.add(it) },
+                onPlayPauseRequest = { playerViewModel.togglePlaying() })
         }
     }
 }
@@ -63,7 +71,8 @@ class MainActivity : ComponentActivity() {
 @Preview(showBackground = true)
 @Composable fun MainActivityPreview() = MainActivityContent(
     listOf(Track(path = "", name = "Audio clip 1", volume = 0.3f),
-           Track(path = "", name = "Audio clip 2", volume = 0.8f)))
+           Track(path = "", name = "Audio clip 2", volume = 0.8f)),
+    playing = true)
 
 @ExperimentalCoroutinesApi
 @ExperimentalComposeUiApi
@@ -72,9 +81,11 @@ class MainActivity : ComponentActivity() {
 @Composable fun MainActivityContent(
     tracks: List<Track>,
     trackSort: Track.Sort = Track.Sort.NameAsc,
+    playing: Boolean,
     itemCallback: TrackViewCallback = TrackViewCallback(),
     onSortingChanged: (Track.Sort) -> Unit = { },
     onAddItemRequest: (Track) -> Unit = { },
+    onPlayPauseRequest: () -> Unit = { },
 ) {
     val title = stringResource(R.string.app_name)
 
@@ -83,17 +94,15 @@ class MainActivity : ComponentActivity() {
             color = MaterialTheme.colors.background,
             modifier = Modifier.fillMaxSize(1f)
         ) {
-            var actionModeTitle by remember { mutableStateOf<String?>(null) }
-            var searchQuery by remember { mutableStateOf<String?>(null) }
-            var showingAddLocalFileDialog by remember { mutableStateOf(false) }
-            //var showingDownloadFileDialog by remember { mutableStateOf(false) }
-            var playing by remember { mutableStateOf(false) }
+            var searchQuery by rememberSaveable { mutableStateOf<String?>(null) }
+            var showingAddLocalFileDialog by rememberSaveable { mutableStateOf(false) }
+            //var showingDownloadFileDialog by rememberSaveable { mutableStateOf(false) }
             Column {
                 var addButtonExpanded by remember { mutableStateOf(false) }
                 ListActionBar(
                     backButtonVisible = false,
                     onBackButtonClick = { },
-                    title, actionModeTitle, searchQuery,
+                    title, null, searchQuery,
                     onSearchQueryChanged = { searchQuery = it },
                     sortOption = trackSort,
                     onSortOptionChanged = onSortingChanged,
@@ -112,7 +121,7 @@ class MainActivity : ComponentActivity() {
                                                 showingAddLocalFileDialog = true },
                         modifier = Modifier.padding(16.dp).align(Alignment.BottomEnd))
                     FloatingActionButton(
-                        onClick = { playing = !playing },
+                        onClick = onPlayPauseRequest,
                         modifier = Modifier.padding(16.dp).align(Alignment.BottomCenter),
                         backgroundColor = lerp(MaterialTheme.colors.primary,
                                                MaterialTheme.colors.primaryVariant, 0.5f),
