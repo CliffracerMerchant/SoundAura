@@ -39,27 +39,24 @@ class MainActivity : ComponentActivity() {
             ContextCompat.getDrawable(this, R.drawable.background_gradient))
 
         setContent {
-            val trackViewModel: TrackViewModel = viewModel()
-            val tracks by trackViewModel.tracks.collectAsState()
-            val trackSort by trackViewModel.trackSort.collectAsState()
-
-            val playerViewModel: PlayerViewModel = viewModel()
-            val playing by playerViewModel.playing.collectAsState()
-            val currentComposition by playerViewModel.currentComposition.collectAsState()
+            val viewModel: ViewModel = viewModel()
+            val tracks by viewModel.tracks.collectAsState()
+            val trackSort by viewModel.trackSort.collectAsState()
+            val playing by viewModel.isPlaying.collectAsState()
 
             val itemCallback = TrackViewCallback(
-                onPlayPauseButtonClick = { id, playing -> trackViewModel.updatePlaying(id, playing) },
-                onVolumeChangeRequest = { id, volume -> trackViewModel.updateVolume(id, volume) },
-                onRenameRequest = { id, name -> trackViewModel.updateName(id, name) },
-                onDeleteRequest = { id: Long -> trackViewModel.delete(id) })
+                onPlayPauseButtonClick = { uri, playing -> viewModel.updatePlaying(uri, playing) },
+                onVolumeChangeRequest = { uri, volume -> viewModel.updateVolume(uri, volume) },
+                onRenameRequest = { uri, name -> viewModel.updateName(uri, name) },
+                onDeleteRequest = { uri: String -> viewModel.delete(uri) })
             MainActivityContent(
                 tracks = tracks,
                 trackSort = trackSort,
                 playing = playing,
                 itemCallback = itemCallback,
-                onSortingChanged = { trackViewModel.trackSort.value = it },
-                onAddItemRequest = { trackViewModel.add(it) },
-                onPlayPauseRequest = { playerViewModel.togglePlaying() })
+                onSortingChanged = { viewModel.trackSort.value = it },
+                onAddItemRequest = { viewModel.add(it) },
+                onPlayPauseRequest = { viewModel.toggleIsPlaying() })
         }
     }
 }

@@ -5,6 +5,7 @@ package com.cliffracertech.soundobservatory
 import android.app.Application
 import android.content.Context
 import android.media.MediaPlayer
+import android.net.Uri
 import androidx.annotation.FloatRange
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
@@ -14,21 +15,15 @@ import androidx.room.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.util.*
 
 @Entity(tableName = "track")
 class Track(
-    @PrimaryKey(autoGenerate = true)
-    @ColumnInfo(name="id")
-    val id: Long = 0,
-    @ColumnInfo(name="uriString")
-    val uriString: String,
-    @ColumnInfo(name="name")
-    val name: String,
-    @ColumnInfo(name="playing", defaultValue = "0")
-    val playing: Boolean = false,
+    @ColumnInfo(name="uriString") @PrimaryKey        val uriString: String,
+    @ColumnInfo(name="name")                         val name: String,
+    @ColumnInfo(name="playing", defaultValue = "0")  val playing: Boolean = false,
     @FloatRange(from = 0.0, to = 1.0)
-    @ColumnInfo(name="volume", defaultValue = "1.0")
-    val volume: Float = 1f
+    @ColumnInfo(name="volume", defaultValue = "1.0") val volume: Float = 1f
 ) {
     enum class Sort { NameAsc, NameDesc, OrderAdded }
 }
@@ -39,17 +34,15 @@ class Track(
     Track.Sort.OrderAdded -> stringResource(R.string.order_added_description)
 }
 
-data class PlayingTrack(val uriString: String, val volume: Float)
-
 @Dao abstract class TrackDao() {
     @Insert abstract suspend fun insert(track: Track): Long
     @Insert abstract suspend fun insert(track: List<Track>)
 
-    @Query("DELETE FROM track WHERE id = :id")
-    abstract suspend fun delete(id: Long)
+    @Query("DELETE FROM track WHERE uriString = :uriString")
+    abstract suspend fun delete(uriString: String)
 
-    @Query("DELETE FROM track WHERE id in (:ids)")
-    abstract suspend fun delete(ids: List<Long>)
+    @Query("DELETE FROM track WHERE uriString in (:uriStrings)")
+    abstract suspend fun delete(uriStrings: List<String>)
 
     @Query("SELECT * FROM track ORDER BY name COLLATE NOCASE ASC")
     abstract fun getAllTracksSortedByNameAsc(): Flow<List<Track>>
@@ -57,20 +50,20 @@ data class PlayingTrack(val uriString: String, val volume: Float)
     @Query("SELECT * FROM track ORDER BY name COLLATE NOCASE DESC")
     abstract fun getAllTracksSortedByNameDesc(): Flow<List<Track>>
 
-    @Query("SELECT * FROM track ORDER BY id")
+    @Query("SELECT * FROM track")
     abstract fun getAllTracks(): Flow<List<Track>>
 
-    @Query("SELECT uriString, volume FROM track WHERE playing")
-    abstract fun getCurrentComposition(): Flow<List<PlayingTrack>>
+    @Query("SELECT * FROM track WHERE playing")
+    abstract fun getAllPlayingTracks(): Flow<List<Track>>
 
-    @Query("UPDATE track set playing = :playing WHERE id = :id")
-    abstract suspend fun updatePlaying(id: Long, playing: Boolean)
+    @Query("UPDATE track set playing = :playing WHERE uriString = :uri")
+    abstract suspend fun updatePlaying(uri: String, playing: Boolean)
 
-    @Query("UPDATE track SET volume = :volume WHERE id = :id")
-    abstract suspend fun updateVolume(id: Long, volume: Float)
+    @Query("UPDATE track SET volume = :volume WHERE uriString = :uri")
+    abstract suspend fun updateVolume(uri: String, volume: Float)
 
-    @Query("UPDATE track SET name = :name WHERE id = :id")
-    abstract suspend fun updateName(id: Long, name: String)
+    @Query("UPDATE track SET name = :name WHERE uriString = :uri")
+    abstract suspend fun updateName(uri: String, name: String)
 }
 
 @Database(entities = [Track::class], version = 1, exportSchema = true)
@@ -89,27 +82,8 @@ abstract class SoundObservatoryDatabase : RoomDatabase() {
     }
 }
 
-class PlayerViewModel(app: Application) : AndroidViewModel(app) {
+class ViewModel(private val app: Application) : AndroidViewModel(app) {
     private val dao = SoundObservatoryDatabase.get(app).trackDao()
-    private val mediaPlayer = MediaPlayer()
-
-    val playing = MutableStateFlow(false)
-
-    val currentComposition = dao.getCurrentComposition()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-
-    // Since playing is a MutableStateFlow, setPlaying shouldn't be
-    // necessary. It is provided anyways because Jetpack Compose does
-    // not offer a mutable state equivalent to StateFlow.collectAsState
-    fun togglePlaying() { playing.value = !playing.value }
-}
-
-class TrackViewModel(app: Application) : AndroidViewModel(app) {
-    private val dao = SoundObservatoryDatabase.get(app).trackDao()
-
-    fun add(track: Track) { viewModelScope.launch { dao.insert(track) } }
-    fun delete(id: Long) { viewModelScope.launch { dao.delete(id) } }
-    fun delete(ids: List<Long>) { viewModelScope.launch { dao.delete(ids) } }
 
     val trackSort = MutableStateFlow(Track.Sort.NameAsc)
 
@@ -120,15 +94,74 @@ class TrackViewModel(app: Application) : AndroidViewModel(app) {
                     Track.Sort.OrderAdded -> dao.getAllTracks() }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    fun updatePlaying(id: Long, playing: Boolean) {
-        viewModelScope.launch { dao.updatePlaying(id, playing) }
+    fun add(track: Track) {
+        viewModelScope.launch { dao.insert(track) }
     }
 
-    fun updateVolume(id: Long, volume: Float) {
-        viewModelScope.launch { dao.updateVolume(id, volume) }
+    fun delete(uriString: String) {
+        viewModelScope.launch { dao.delete(uriString) }
     }
 
-    fun updateName(id: Long, name: String) {
-        viewModelScope.launch { dao.updateName(id, name) }
+    fun delete(uriStrings: List<String>) {
+        viewModelScope.launch { dao.delete(uriStrings) }
+    }
+
+    fun updatePlaying(uriString: String, playing: Boolean) {
+        viewModelScope.launch { dao.updatePlaying(uriString, playing) }
+    }
+
+    fun updateVolume(uriString: String, volume: Float) {
+        viewModelScope.launch {
+            uriPlayerMap[uriString]?.setVolume(volume, volume)
+            dao.updateVolume(uriString, volume)
+        }
+    }
+
+    fun updateName(uriString: String, name: String) {
+        viewModelScope.launch { dao.updateName(uriString, name) }
+    }
+
+
+
+    private val uriPlayerMap = mutableMapOf<String, MediaPlayer>()
+
+    private val _isPlaying = MutableStateFlow(false)
+    val isPlaying = _isPlaying.asStateFlow()
+
+    private val playingTracks = dao.getAllPlayingTracks()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    init {
+        viewModelScope.launch {
+            playingTracks.collect { updatePlayers() }
+        }
+    }
+
+    fun setIsPlaying(isPlaying: Boolean = true) {
+
+        _isPlaying.value = isPlaying
+        uriPlayerMap.forEach { it.value.setPaused(!isPlaying) }
+    }
+    fun toggleIsPlaying() = setIsPlaying(!_isPlaying.value)
+
+    private fun MediaPlayer.setPaused(paused: Boolean) = if (paused) pause()
+                                                         else        start()
+    private fun updatePlayers() {
+        val uris = playingTracks.value.map { it.uriString }
+        uriPlayerMap.keys.retainAll {
+            val result = it in uris
+            if (!result) uriPlayerMap[it]?.release()
+            result
+        }
+        playingTracks.value.forEachIndexed { index, track ->
+            val player = uriPlayerMap.getOrPut(track.uriString) {
+                MediaPlayer.create(app, Uri.parse(track.uriString)).apply {
+                    isLooping = true
+                } ?: return@forEachIndexed
+            }
+            player.setVolume(track.volume, track.volume)
+            if (isPlaying.value != player.isPlaying)
+                player.setPaused(!isPlaying.value)
+        }
     }
 }
