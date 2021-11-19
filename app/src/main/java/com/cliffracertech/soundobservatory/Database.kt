@@ -4,8 +4,6 @@ package com.cliffracertech.soundobservatory
 
 import android.app.Application
 import android.content.Context
-import android.media.MediaPlayer
-import android.net.Uri
 import androidx.annotation.FloatRange
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
@@ -15,7 +13,6 @@ import androidx.room.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.util.*
 
 @Entity(tableName = "track")
 class Track(
@@ -82,7 +79,7 @@ abstract class SoundObservatoryDatabase : RoomDatabase() {
     }
 }
 
-class ViewModel(private val app: Application) : AndroidViewModel(app) {
+class ViewModel(app: Application) : AndroidViewModel(app) {
     private val dao = SoundObservatoryDatabase.get(app).trackDao()
 
     val trackSort = MutableStateFlow(Track.Sort.NameAsc)
@@ -92,7 +89,10 @@ class ViewModel(private val app: Application) : AndroidViewModel(app) {
         when (it) { Track.Sort.NameAsc ->    dao.getAllTracksSortedByNameAsc()
                     Track.Sort.NameDesc ->   dao.getAllTracksSortedByNameDesc()
                     Track.Sort.OrderAdded -> dao.getAllTracks() }
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    val playingTracks = dao.getAllPlayingTracks()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun add(track: Track) {
         viewModelScope.launch { dao.insert(track) }
@@ -111,57 +111,10 @@ class ViewModel(private val app: Application) : AndroidViewModel(app) {
     }
 
     fun updateVolume(uriString: String, volume: Float) {
-        viewModelScope.launch {
-            uriPlayerMap[uriString]?.setVolume(volume, volume)
-            dao.updateVolume(uriString, volume)
-        }
+        viewModelScope.launch { dao.updateVolume(uriString, volume) }
     }
 
     fun updateName(uriString: String, name: String) {
         viewModelScope.launch { dao.updateName(uriString, name) }
-    }
-
-
-
-    private val uriPlayerMap = mutableMapOf<String, MediaPlayer>()
-
-    private val _isPlaying = MutableStateFlow(false)
-    val isPlaying = _isPlaying.asStateFlow()
-
-    private val playingTracks = dao.getAllPlayingTracks()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-
-    init {
-        viewModelScope.launch {
-            playingTracks.collect { updatePlayers() }
-        }
-    }
-
-    fun setIsPlaying(isPlaying: Boolean = true) {
-
-        _isPlaying.value = isPlaying
-        uriPlayerMap.forEach { it.value.setPaused(!isPlaying) }
-    }
-    fun toggleIsPlaying() = setIsPlaying(!_isPlaying.value)
-
-    private fun MediaPlayer.setPaused(paused: Boolean) = if (paused) pause()
-                                                         else        start()
-    private fun updatePlayers() {
-        val uris = playingTracks.value.map { it.uriString }
-        uriPlayerMap.keys.retainAll {
-            val result = it in uris
-            if (!result) uriPlayerMap[it]?.release()
-            result
-        }
-        playingTracks.value.forEachIndexed { index, track ->
-            val player = uriPlayerMap.getOrPut(track.uriString) {
-                MediaPlayer.create(app, Uri.parse(track.uriString)).apply {
-                    isLooping = true
-                } ?: return@forEachIndexed
-            }
-            player.setVolume(track.volume, track.volume)
-            if (isPlaying.value != player.isPlaying)
-                player.setPaused(!isPlaying.value)
-        }
     }
 }

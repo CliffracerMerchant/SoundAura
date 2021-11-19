@@ -1,8 +1,10 @@
-<!-- This file is part of SoundObservatory, which is released under the Apache License 2.0. See
-   ~ license.md in the project's root directory or use an internet search engine to see the full license. -->
+<!-- This file is part of SoundObservatory, which is released under the
+   ~ Apache License 2.0. See license.md in the project's root directory
+   ~ or use an internet search engine to see the full license. -->
 
 <resources>
     <string name="app_name">SoundObservatory</string>
+    <string name="app_player_service_description">A service to play the user\'s sound mix.</string>
 
     <string name="back_description">Back</string>
     <string name="search_description">Search</string>

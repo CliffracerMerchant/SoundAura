@@ -2,7 +2,11 @@
  * license.md in the project's root directory or use an internet search engine to see the full license. */
 package com.cliffracertech.soundobservatory
 
+import android.content.ComponentName
+import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Bundle
+import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -27,12 +31,47 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundobservatory.ui.theme.SoundObservatoryTheme
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
+
+@Composable
+fun <T> collectNullableFlowAsState(
+    flow: Flow<T>?,
+    default: T,
+    context: CoroutineContext = EmptyCoroutineContext
+) = produceState(default, flow, context) {  when {
+    flow == null -> value = default
+    context == EmptyCoroutineContext -> flow.collect { value = it }
+    else -> withContext(context) { flow.collect { value = it } } }
+}
 
 @ExperimentalAnimationApi
 @ExperimentalComposeUiApi
 @ExperimentalCoroutinesApi
 @ExperimentalAnimationGraphicsApi
 class MainActivity : ComponentActivity() {
+    private var boundPlayerService: PlayerService.Binder? = null
+
+    override fun onResume() {
+        super.onResume()
+        val intent = Intent(this, PlayerService::class.java)
+        val connection = object: ServiceConnection {
+            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                boundPlayerService = service as? PlayerService.Binder
+            }
+            override fun onServiceDisconnected(name: ComponentName?) { }
+        }
+        bindService(intent, connection, 0)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        boundPlayerService = null
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.setBackgroundDrawable(
@@ -42,21 +81,24 @@ class MainActivity : ComponentActivity() {
             val viewModel: ViewModel = viewModel()
             val tracks by viewModel.tracks.collectAsState()
             val trackSort by viewModel.trackSort.collectAsState()
-            val playing by viewModel.isPlaying.collectAsState()
+            val playing = collectNullableFlowAsState(boundPlayerService?.isPlaying, false)
 
             val itemCallback = TrackViewCallback(
                 onPlayPauseButtonClick = { uri, playing -> viewModel.updatePlaying(uri, playing) },
-                onVolumeChangeRequest = { uri, volume -> viewModel.updateVolume(uri, volume) },
                 onRenameRequest = { uri, name -> viewModel.updateName(uri, name) },
-                onDeleteRequest = { uri: String -> viewModel.delete(uri) })
+                onDeleteRequest = { uri: String -> viewModel.delete(uri) },
+                onVolumeChangeRequest = { uri, volume ->
+                    viewModel.updateVolume(uri, volume)
+                    boundPlayerService?.notifyTrackVolumeChanged(uri, volume)
+                })
             MainActivityContent(
                 tracks = tracks,
                 trackSort = trackSort,
-                playing = playing,
+                playing = playing.value,
                 itemCallback = itemCallback,
                 onSortingChanged = { viewModel.trackSort.value = it },
                 onAddItemRequest = { viewModel.add(it) },
-                onPlayPauseRequest = { viewModel.toggleIsPlaying() })
+                onPlayPauseRequest = { boundPlayerService?.toggleIsPlaying() })
         }
     }
 }
@@ -126,7 +168,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         val description = if (playing) stringResource(R.string.pause_description)
                                           else         stringResource(R.string.play_description)
-                        PlayPauseIcon(playing, description)
+                        PlayPauseIcon(playing, description, MaterialTheme.colors.onPrimary)
                     }
                 }
                 //if (showingDownloadFileDialog)
