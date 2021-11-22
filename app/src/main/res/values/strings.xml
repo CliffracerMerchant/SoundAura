@@ -5,6 +5,9 @@
 <resources>
     <string name="app_name">SoundObservatory</string>
     <string name="app_player_service_description">A service to play the user\'s sound mix.</string>
+    <string name="player_notification_channel_id">player_controls</string>
+    <string name="player_notification_channel_name">Player controls</string>
+    <string name="player_notification_channel_description">A notification that contains player controls.</string>
 
     <string name="back_description">Back</string>
     <string name="search_description">Search</string>
@@ -28,6 +31,8 @@
     <string name="confirm_delete_message">Are you sure you want to remove %1$s from your library? This cannot be undone.</string>
 
     <string name="track_name_description">Track name</string>
-    <string name="play_description">Play composition</string>
-    <string name="pause_description">Pause composition</string>
+    <string name="play_description">Play</string>
+    <string name="pause_description">Pause</string>
+    <string name="playing_description">Playing</string>
+    <string name="paused_description">Paused</string>
 </resources>

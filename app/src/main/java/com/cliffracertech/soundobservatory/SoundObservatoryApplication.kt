@@ -5,13 +5,20 @@ package com.cliffracertech.soundobservatory
 
 import android.app.Application
 import android.content.Intent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 
+@ExperimentalCoroutinesApi
+@ExperimentalAnimationApi
+@ExperimentalComposeUiApi
+@ExperimentalAnimationGraphicsApi
 class SoundObservatoryApplication: Application() {
     override fun onCreate() {
         super.onCreate()
         val playerServiceIntent = Intent(this, PlayerService::class.java)
-        //ContextCompat.startForegroundService(this, playerServiceIntent)
-        startService(playerServiceIntent)
+        ContextCompat.startForegroundService(this, playerServiceIntent)
     }
 }

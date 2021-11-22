@@ -1,0 +1,15 @@
+<!-- This file is part of SoundObservatory, which is released under the
+   ~ Apache License 2.0. See license.md in the project's root directory
+   ~ or use an internet search engine to see the full license. -->
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="2"
+      android:pathData="M 5.7,5.7 L 18.3,18.3 M 18.3,5.7 L 5.7,18.3"/>
+</vector>
