@@ -25,8 +25,53 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
+/**
+ * A service to play a set of audio tracks exposed by a com.cliffracertech.soundobservatory.ViewModel instance.
+ *
+ * PlayerService contains a state, isPlaying, that is exposed as a Flow<Boolean>
+ * in the property of the same name. Manipulation of the isPlaying state is
+ * achieved through the functions setIsPlaying and toggleIsPlaying. When the
+ * isPlaying state is equal to true, PLayerService will play all audio tracks
+ * exposed by a com.cliffracertech.soundobservatory.ViewModel instance's
+ * PlayingTracks property.
+ *
+ * PlayerService is designed to be run as both a started service when the
+ * application is launched, and a bound service bound to up to one activity at
+ * a time. Activities that attempt to bind to PlayerService will receive an
+ * instance of its Binder class, through which they can read and manipulate the
+ * isPlaying state through the Binder instance's isPlaying property and its
+ * setIsPlaying and toggleIsPlaying functions.
+ *
+ * PlayerService runs as a foreground service, and presents a notification to
+ * the user that displays its current isPlaying state in string form, along
+ * with actions to toggle the isPlaying state and to close the service. The
+ * play/pause action will always be visible, but the close action is hidden
+ * when the service is bound to an activity. This is to make it easier for
+ * bound activities to assume that they are connected to the service. So long
+ * as they connect to the service on startup, and do not attempt to stop the
+ * service themselves, it should be safe to assume that the PlayerService
+ * instance is bound to them.
+ *
+ * PlayerService will continue running as a foreground service when it is
+ * unbound from an activity until it is stopped with the notification stop
+ * action. PlayerService will also automatically stop itself when it is
+ * unbound from an activity if its isPlaying state was not changed to true at
+ * least once. This is due to the fact that the activity being unbound without
+ * the PlayerService playing audio at least once likely indicates that the user
+ * accidentally started the app and navigated away or closed it immediately.
+ * Closing the service automatically thus prevents the user from having to also
+ * close the service manually every time they accidentally start and close the
+ * activity this way.
+ *
+ * To ensure that the volume for already playing tracks is changed seamlessly
+ * and without perceptible lag, PlayerService will not respond to track volume
+ * updates for already playing tracks that are received through the view
+ * model's playingTracks property. Instead, the function setTrackVolume must be
+ * called with the Uri (in string form) of the track and the new volume. If a
+ * bound activity presents the user with, e.g, a slider to change a track's
+ * volume, the slider's onSlide callback should therefore call setTrackVolume.
+ */
 class PlayerService: LifecycleService() {
-
     private val uriPlayerMap = mutableMapOf<String, MediaPlayer>()
     private val _isPlaying = MutableStateFlow(false)
     private val viewModel by lazy { ViewModel(application) }
