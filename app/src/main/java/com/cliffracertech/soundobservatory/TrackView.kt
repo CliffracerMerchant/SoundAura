@@ -21,14 +21,17 @@ import androidx.compose.ui.unit.dp
 /**
  * A pseudo-interface that contains callbacks for track view interactions.
  *
- * @param onPlayPauseButtonClick The callback that will be invoked when the user clicks the view's play/pause button.
- * @param onVolumeChangeRequest The callback that will be invoked when the user changes the view's volume slider's value.
+ * @param onPlayPauseButtonClick The callback that will be invoked when the user clicks the play/pause button.
+ * @param onVolumeChange The callback that will be invoked when the user is changing the volume slider's value.
+ * @param onVolumeChangeFinished The callback that will be invoked when the user has
+ *     finished changing the volume slider's value by releasing the slider handle.
  * @param onRenameRequest The callback that will be invoked when the user requests a rename of the track.
  * @param onDeleteRequest The callback that will be invoked when the user requests that the track be deleted.
  */
 class TrackViewCallback(
     val onPlayPauseButtonClick: (String, Boolean) -> Unit = { _, _ -> },
-    val onVolumeChangeRequest: (String, Float) -> Unit = { _, _ -> },
+    val onVolumeChange: (String, Float) -> Unit = { _, _ -> },
+    val onVolumeChangeFinished: (String, Float) -> Unit = { _, _ -> },
     val onRenameRequest: (String, String) -> Unit = { _, _ -> },
     val onDeleteRequest: (String) -> Unit = { }
 )
@@ -59,8 +62,10 @@ fun TrackView(
         value = volume,
         onValueChange = {
             volume = it
-            callback.onVolumeChangeRequest(track.uriString, it)
-        }, modifier = Modifier.height(66.dp).weight(1f),
+            callback.onVolumeChange(track.uriString, it)
+        },
+        onValueChangeFinished = { callback.onVolumeChangeFinished(track.uriString, volume) },
+        modifier = Modifier.height(66.dp).weight(1f),
         sliderPadding = PaddingValues(top = 28.dp)
     ) {
         Text(text = track.name, style = MaterialTheme.typography.h6,

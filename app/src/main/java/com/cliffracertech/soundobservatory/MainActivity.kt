@@ -80,12 +80,10 @@ class MainActivity : ComponentActivity() {
 
             val itemCallback = TrackViewCallback(
                 onPlayPauseButtonClick = { uri, playing -> viewModel.updatePlaying(uri, playing) },
+                onVolumeChange = { uri, volume -> boundPlayerService?.setTrackVolume(uri, volume) },
+                onVolumeChangeFinished = { uri, volume -> viewModel.updateVolume(uri, volume) },
                 onRenameRequest = { uri, name -> viewModel.updateName(uri, name) },
-                onDeleteRequest = { uri: String -> viewModel.delete(uri) },
-                onVolumeChangeRequest = { uri, volume ->
-                    viewModel.updateVolume(uri, volume)
-                    boundPlayerService?.setTrackVolume(uri, volume)
-                })
+                onDeleteRequest = { uri: String -> viewModel.delete(uri) },)
             MainActivityContent(
                 tracks = tracks,
                 trackSort = trackSort,
