@@ -10,8 +10,6 @@ import android.os.IBinder
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,7 +20,6 @@ import androidx.compose.material.Surface
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
@@ -31,7 +28,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundobservatory.ui.theme.SoundObservatoryTheme
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
@@ -54,10 +50,6 @@ import kotlin.coroutines.EmptyCoroutineContext
     }
 }
 
-@ExperimentalAnimationApi
-@ExperimentalComposeUiApi
-@ExperimentalCoroutinesApi
-@ExperimentalAnimationGraphicsApi
 class MainActivity : ComponentActivity() {
     private var boundPlayerService: PlayerService.Binder? = null
 
@@ -106,20 +98,12 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@ExperimentalCoroutinesApi
-@ExperimentalComposeUiApi
-@ExperimentalAnimationGraphicsApi
-@ExperimentalAnimationApi
 @Preview(showBackground = true)
 @Composable fun MainActivityPreview() = MainActivityContent(
     listOf(Track(uriString = "", name = "Audio clip 1", volume = 0.3f),
            Track(uriString = "", name = "Audio clip 2", volume = 0.8f)),
     playing = true)
 
-@ExperimentalCoroutinesApi
-@ExperimentalComposeUiApi
-@ExperimentalAnimationGraphicsApi
-@ExperimentalAnimationApi
 @Composable fun MainActivityContent(
     tracks: List<Track>,
     trackSort: Track.Sort = Track.Sort.NameAsc,
@@ -185,8 +169,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@ExperimentalComposeUiApi
-@ExperimentalAnimationGraphicsApi
 @Composable fun TrackList(tracks: List<Track>, trackViewCallback: TrackViewCallback) =
     LazyColumn(
         modifier = Modifier.padding(8.dp),

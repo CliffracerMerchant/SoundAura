@@ -8,7 +8,6 @@ import androidx.compose.animation.core.AnimationConstants.DefaultDurationMillis
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material.*
@@ -44,8 +43,6 @@ import androidx.compose.ui.unit.dp
  *     when the layout is expanded.
  * @param content The content that will be displayed when the layout is collapsed.
  */
-@ExperimentalAnimationApi
-@ExperimentalAnimationGraphicsApi
 @Composable fun SpeedDialLayout(
     expanded: Boolean,
     modifier: Modifier = Modifier,
@@ -91,8 +88,6 @@ private val overshootEasing = Easing {
  * @param onAddLocalFileClick The callback that will be invoked when the add local file button is clicked.
  * @param modifier The modifier that will be used for the surrounding layout.
  */
-@ExperimentalAnimationGraphicsApi
-@ExperimentalAnimationApi
 @Composable fun DownloadOrAddLocalFileButton(
     expanded: Boolean,
     onClick: () -> Unit,
@@ -136,6 +131,4 @@ private val overshootEasing = Easing {
     Icon(Icons.Default.Add, description, Modifier.rotate(angle))
 }}
 
-@ExperimentalAnimationApi
-@ExperimentalAnimationGraphicsApi
 @Preview @Composable fun AddTrackButtonPreview() = DownloadOrAddLocalFileButton(true, {}, {}, {})

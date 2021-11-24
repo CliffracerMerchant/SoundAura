@@ -4,7 +4,6 @@ package com.cliffracertech.soundobservatory
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,7 +18,6 @@ import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -75,9 +73,6 @@ import com.cliffracertech.soundobservatory.ui.theme.SoundObservatoryTheme
  * @param sortOptionNameFunc A callback that should return a string
  *     representation of the provided value of the enum type parameter T.
  */
-@ExperimentalComposeUiApi
-@ExperimentalAnimationApi
-@ExperimentalAnimationGraphicsApi
 @Composable
 inline fun <reified T : Enum<T>>ListActionBar(
     backButtonVisible: Boolean = false,
@@ -174,7 +169,6 @@ inline fun <reified T : Enum<T>>ListActionBar(
  * @param query The current value of the search query
  * @param onQueryChanged The callback to be invoked when user input changes the query
  */
-@ExperimentalComposeUiApi
 @Composable fun AutoFocusUnderlinedSearchQuery(
     query: String,
     onQueryChanged: (String) -> Unit
@@ -203,9 +197,6 @@ inline fun <reified T : Enum<T>>ListActionBar(
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 }
 
-@ExperimentalComposeUiApi
-@ExperimentalAnimationGraphicsApi
-@ExperimentalAnimationApi
 @Preview @Composable fun PreviewRecyclerViewActionBar() =
     SoundObservatoryTheme {
         var title = stringResource(R.string.app_name)

@@ -10,7 +10,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.*
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -84,7 +83,6 @@ class ViewModel(app: Application) : AndroidViewModel(app) {
 
     val trackSort = MutableStateFlow(Track.Sort.NameAsc)
 
-    @ExperimentalCoroutinesApi
     val tracks = trackSort.flatMapLatest {
         when (it) { Track.Sort.NameAsc ->    dao.getAllTracksSortedByNameAsc()
                     Track.Sort.NameDesc ->   dao.getAllTracksSortedByNameDesc()

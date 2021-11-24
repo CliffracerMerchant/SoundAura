@@ -4,7 +4,6 @@
 
 package com.cliffracertech.soundobservatory
 
-import androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -13,7 +12,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -42,8 +40,6 @@ class TrackViewCallback(
  * @param track The Track instance that is being represented.
  * @param callback The TrackViewCallback that describes how to respond to user interactions.
  */
-@ExperimentalComposeUiApi
-@ExperimentalAnimationGraphicsApi
 @Composable
 fun TrackView(
     track: Track,
@@ -77,7 +73,6 @@ fun TrackView(
         onDeleteRequest = { callback.onDeleteRequest(track.uriString) })
 }
 
-@ExperimentalAnimationGraphicsApi
 @Composable fun PlayPauseIcon(
     playing: Boolean,
     contentDescription: String,
@@ -102,7 +97,6 @@ fun TrackView(
  * @param tint The tint that will be used for the icon.
  * @param onClick The callback that will be invoked when the button is clicked.
  */
-@ExperimentalAnimationGraphicsApi
 @Composable fun PlayPauseButton(
     playing: Boolean,
     itemName: String,
@@ -129,7 +123,6 @@ fun TrackView(
  * @param onDeleteRequest The callback that will be invoked when the user
  *     requests through the delete dialog that they wish to delete the item.
  */
-@ExperimentalComposeUiApi
 @Composable fun ItemMoreOptionsButton(
     itemName: String,
     onRenameRequest: (String) -> Unit,
@@ -173,8 +166,6 @@ fun TrackView(
         ConfirmDeleteDialog(itemName, { showingDeleteDialog = false }, onDeleteRequest)
 }
 
-@ExperimentalAnimationGraphicsApi
-@ExperimentalComposeUiApi
 @Preview(showBackground = true, backgroundColor = 0xFF00FF00)
 @Composable fun TrackViewPreview() =
     TrackView(Track(uriString = "", name = "Track 1", volume = 0.5f), TrackViewCallback())
