@@ -3,6 +3,7 @@
  * or use an internet search engine to see the full license. */
 package com.cliffracertech.soundobservatory
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -17,6 +18,7 @@ import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationCompat.Action
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
@@ -37,7 +39,11 @@ class PlayerService: LifecycleService() {
     private val _isPlaying = MutableStateFlow(false)
     private val viewModel by lazy { ViewModel(application) }
 
+    private var boundToActivity = false
+    private var playedAtLeastOnce = false
+
     val isPlaying = _isPlaying.asStateFlow()
+
     companion object {
         private const val requestCode = 1
         private const val playPauseKey = "playPause"
@@ -51,9 +57,7 @@ class PlayerService: LifecycleService() {
         val extras = intent?.extras
         if (action == actionStop) {
             Log.d("sounds", "stop request received")
-            uriPlayerMap.forEach { it.value.release() }
-            stopForeground(true)
-            stopSelf()
+            cleanupAndStopSelf()
         } else if (action == actionSetIsPlaying)
             extras?.getBoolean(playPauseKey)?.let { setIsPlaying(it); Log.d("sounds", "isPlaying set to $it")}
         else Log.d("sounds", "isPlaying initialized to false")
@@ -74,11 +78,27 @@ class PlayerService: LifecycleService() {
 
     override fun onBind(intent: Intent): Binder {
         super.onBind(intent)
+        boundToActivity = true
+        notificationManager.notify(notificationId, notification)
         return Binder()
+    }
+
+    override fun onUnbind(intent: Intent?): Boolean {
+        boundToActivity = false
+        if (!isPlaying.value && !playedAtLeastOnce)
+            cleanupAndStopSelf()
+        else notificationManager.notify(notificationId, notification)
+        return super.onUnbind(intent)
+    }
+
+    private fun cleanupAndStopSelf() {
+        uriPlayerMap.forEach { it.value.release() }
+        stopSelf()
     }
 
     fun setIsPlaying(isPlaying: Boolean) {
         _isPlaying.value = isPlaying
+        if (isPlaying) playedAtLeastOnce = true
         uriPlayerMap.forEach { it.value.setPaused(!isPlaying) }
         notificationManager.notify(notificationId, notification)
     }
@@ -157,41 +177,38 @@ class PlayerService: LifecycleService() {
             ))
     }
 
-    private val statusDescription get() = getString(
-        if (isPlaying.value) R.string.playing_description
-        else                 R.string.paused_description)
-
-    private val playPauseActionIcon get() =
-        if (isPlaying.value) R.drawable.pause_to_play
-        else                 R.drawable.play_to_pause
-
-    private val playPauseActionDescription get() = getString(
-        if (isPlaying.value) R.string.pause_description
-        else                 R.string.play_description)
-
-    /** Return a PendingIntent to set the isPlaying state to the value of @param playing. */
-    private fun playPausePendingIntent(playing: Boolean): PendingIntent {
+    /** A notification action that will toggle the service's isPlaying state. */
+    private val togglePlayPauseAction: Action  get() {
+        val icon = if (isPlaying.value) R.drawable.pause_to_play
+                   else                 R.drawable.play_to_pause
+        val description = getString(if (isPlaying.value) R.string.pause_description
+                                    else                 R.string.play_description)
         val intent = Intent(this, PlayerService::class.java)
                         .setAction(actionSetIsPlaying)
-                        .putExtra(playPauseKey, playing)
-        return PendingIntent.getService(this, requestCode, intent,
-                                        FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE)
+                        .putExtra(playPauseKey, !isPlaying.value)
+        val pendingIntent = PendingIntent.getService(this, requestCode, intent,
+                                                     FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE)
+        return Action(icon, description, pendingIntent)
     }
 
-    /** A PendingIntent that will stop the service when triggered. */
-    private val stopServicePendingIntent by lazy {
+    /** A notification action that will stop the service when triggered. */
+    private val stopServiceAction: Action get() {
         val intent = Intent(this, PlayerService::class.java).setAction(actionStop)
-        PendingIntent.getService(this, requestCode, intent, FLAG_IMMUTABLE)
+        return Action(R.drawable.ic_baseline_close_24,
+                      getString(R.string.close_description),
+                      PendingIntent.getService(this, requestCode, intent, FLAG_IMMUTABLE))
     }
 
     /** A notification to use as the foreground notification for the service */
-    private val notification get() = notificationBuilder
-        .setContentText(statusDescription)
-        .clearActions()
-        .addAction(NotificationCompat.Action(playPauseActionIcon, playPauseActionDescription,
-                                             playPausePendingIntent(!_isPlaying.value)))
-        .addAction(NotificationCompat.Action(R.drawable.ic_baseline_close_24,
-                                             getString(R.string.close_description),
-                                             stopServicePendingIntent))
-        .build()
+    private val notification: Notification get() {
+        val description = getString(if (isPlaying.value) R.string.playing_description
+                                    else                 R.string.paused_description)
+        val builder = notificationBuilder
+            .setContentText(description)
+            .clearActions()
+            .addAction(togglePlayPauseAction)
+        if (!boundToActivity)
+            builder.addAction(stopServiceAction)
+        return builder.build()
+    }
 }
