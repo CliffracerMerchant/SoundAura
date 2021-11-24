@@ -84,8 +84,8 @@ class PlayerService: LifecycleService() {
     companion object {
         private const val requestCode = 1
         private const val playPauseKey = "playPause"
-        private const val actionStop = "stop service"
-        private const val actionSetIsPlaying = "set paused/playing"
+        private const val actionPlayPause = "com.cliffracertech.soundobservatory.action.playPause"
+        private const val actionStop = "com.cliffracertech.soundobservatory.action.stop"
         private const val notificationId = 342654432
     }
 
@@ -95,7 +95,7 @@ class PlayerService: LifecycleService() {
         if (action == actionStop) {
             Log.d("sounds", "stop request received")
             cleanupAndStopSelf()
-        } else if (action == actionSetIsPlaying)
+        } else if (action == actionPlayPause)
             extras?.getBoolean(playPauseKey)?.let { setIsPlaying(it); Log.d("sounds", "isPlaying set to $it")}
         else Log.d("sounds", "isPlaying initialized to false")
 
@@ -202,7 +202,6 @@ class PlayerService: LifecycleService() {
 
     private val notificationBuilder by lazy {
         NotificationCompat.Builder(this, notificationChannelId)
-            .setContentTitle(getString(R.string.app_name))
             .setOngoing(true)
             .setSmallIcon(R.drawable.ic_launcher_background)
             .setContentIntent(PendingIntent.getActivity(this, 0,
@@ -221,7 +220,7 @@ class PlayerService: LifecycleService() {
         val description = getString(if (isPlaying.value) R.string.pause_description
                                     else                 R.string.play_description)
         val intent = Intent(this, PlayerService::class.java)
-                        .setAction(actionSetIsPlaying)
+                        .setAction(actionPlayPause)
                         .putExtra(playPauseKey, !isPlaying.value)
         val pendingIntent = PendingIntent.getService(this, requestCode, intent,
                                                      FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE)
@@ -241,7 +240,7 @@ class PlayerService: LifecycleService() {
         val description = getString(if (isPlaying.value) R.string.playing_description
                                     else                 R.string.paused_description)
         val builder = notificationBuilder
-            .setContentText(description)
+            .setContentTitle(description)
             .clearActions()
             .addAction(togglePlayPauseAction)
         if (!boundToActivity)
