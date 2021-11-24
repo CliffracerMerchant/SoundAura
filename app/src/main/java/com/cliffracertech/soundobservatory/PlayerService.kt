@@ -6,16 +6,21 @@ package com.cliffracertech.soundobservatory
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.PendingIntent.FLAG_IMMUTABLE
+import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.content.Intent
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.core.app.NotificationCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,23 +32,61 @@ import kotlinx.coroutines.launch
 @ExperimentalComposeUiApi
 @ExperimentalAnimationApi
 class PlayerService: LifecycleService() {
+
     private val uriPlayerMap = mutableMapOf<String, MediaPlayer>()
     private val _isPlaying = MutableStateFlow(false)
-    private lateinit var viewModel: ViewModel
+    private val viewModel by lazy { ViewModel(application) }
+
+    val isPlaying = _isPlaying.asStateFlow()
+    companion object {
+        private const val requestCode = 1
+        private const val playPauseKey = "playPause"
+        private const val actionStop = "stop service"
+        private const val actionSetIsPlaying = "set paused/playing"
+        private const val notificationId = 342654432
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        viewModel = ViewModel(application)
-        lifecycleScope.launch {
-            viewModel.playingTracks.collect { updatePlayers(it) }
-        }
+        val action = intent?.action
+        val extras = intent?.extras
+        if (action == actionStop) {
+            Log.d("sounds", "stop request received")
+            uriPlayerMap.forEach { it.value.release() }
+            stopForeground(true)
+            stopSelf()
+        } else if (action == actionSetIsPlaying)
+            extras?.getBoolean(playPauseKey)?.let { setIsPlaying(it); Log.d("sounds", "isPlaying set to $it")}
+        else Log.d("sounds", "isPlaying initialized to false")
 
-        startForeground(1, notification(_isPlaying.value))
+        startForeground(notificationId, notification)
+
         return super.onStartCommand(intent, flags, startId)
+    }
+
+    init {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                Log.d("sounds", "viewModel.playingTracks collected")
+                viewModel.playingTracks.collect { updatePlayers(it) }
+            }
+        }
     }
 
     override fun onBind(intent: Intent): Binder {
         super.onBind(intent)
         return Binder()
+    }
+
+    fun setIsPlaying(isPlaying: Boolean) {
+        _isPlaying.value = isPlaying
+        uriPlayerMap.forEach { it.value.setPaused(!isPlaying) }
+        notificationManager.notify(notificationId, notification)
+    }
+
+    fun toggleIsPlaying() = setIsPlaying(!_isPlaying.value)
+
+    fun setTrackVolume(uriString: String, volume: Float) {
+        uriPlayerMap[uriString]?.setVolume(volume, volume)
     }
 
     private fun updatePlayers(tracks: List<Track>) {
@@ -55,9 +98,9 @@ class PlayerService: LifecycleService() {
         }
         tracks.forEachIndexed { index, track ->
             val player = uriPlayerMap.getOrPut(track.uriString) {
-                MediaPlayer.create(this, Uri.parse(track.uriString)).apply {
-                    isLooping = true
-                } ?: return@forEachIndexed
+                val player = MediaPlayer.create(this, Uri.parse(track.uriString))
+                player?.isLooping = true
+                player ?: return@forEachIndexed
             }
             player.setVolume(track.volume, track.volume)
             if (_isPlaying.value != player.isPlaying)
@@ -69,26 +112,23 @@ class PlayerService: LifecycleService() {
         if (paused) pause() else start()
 
     inner class Binder: android.os.Binder() {
-        val isPlaying = _isPlaying.asStateFlow()
+        val isPlaying get() = this@PlayerService.isPlaying
 
-        fun setIsPlaying(isPlaying: Boolean) {
-            _isPlaying.value = isPlaying
-            uriPlayerMap.forEach { it.value.setPaused(!isPlaying) }
-            notificationManager.notify(1, notification(isPlaying))
-        }
+        fun setIsPlaying(isPlaying: Boolean) =
+            this@PlayerService.setIsPlaying(isPlaying)
 
-        fun toggleIsPlaying() { setIsPlaying(!_isPlaying.value) }
+        fun toggleIsPlaying() =
+            this@PlayerService.toggleIsPlaying()
 
-        fun notifyTrackVolumeChanged(uriString: String, volume: Float) {
-            uriPlayerMap[uriString]?.setVolume(volume, volume)
-        }
+        fun setTrackVolume(uriString: String, volume: Float) =
+            this@PlayerService.setTrackVolume(uriString, volume)
     }
 
     private val notificationManager by lazy {
         getSystemService(NOTIFICATION_SERVICE) as NotificationManager
     }
 
-    private val notificationChannelId  by lazy {
+    private val notificationChannelId by lazy {
         val channelId = getString(R.string.player_notification_channel_id)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
             notificationManager.getNotificationChannel(channelId) == null
@@ -113,19 +153,45 @@ class PlayerService: LifecycleService() {
                     action = Intent.ACTION_MAIN
                     addCategory(Intent.CATEGORY_LAUNCHER)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }, PendingIntent.FLAG_IMMUTABLE
+                }, FLAG_IMMUTABLE
             ))
     }
 
-//    private val playPauseAction = NotificationCompat.Action(
-//        R.drawable.pause_to_play,
-//        getString(R.string.play_description),
-//        PendingIntent.getService(this, ())
-//    )
+    private val statusDescription get() = getString(
+        if (isPlaying.value) R.string.playing_description
+        else                 R.string.paused_description)
 
-    private fun notification(playing: Boolean) = notificationBuilder
-        .setContentText(getString(if (playing) R.string.playing_description
-        else         R.string.paused_description))
-        //.addAction(playPauseAction)
+    private val playPauseActionIcon get() =
+        if (isPlaying.value) R.drawable.pause_to_play
+        else                 R.drawable.play_to_pause
+
+    private val playPauseActionDescription get() = getString(
+        if (isPlaying.value) R.string.pause_description
+        else                 R.string.play_description)
+
+    /** Return a PendingIntent to set the isPlaying state to the value of @param playing. */
+    private fun playPausePendingIntent(playing: Boolean): PendingIntent {
+        val intent = Intent(this, PlayerService::class.java)
+                        .setAction(actionSetIsPlaying)
+                        .putExtra(playPauseKey, playing)
+        return PendingIntent.getService(this, requestCode, intent,
+                                        FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE)
+    }
+
+    /** A PendingIntent that will stop the service when triggered. */
+    private val stopServicePendingIntent by lazy {
+        val intent = Intent(this, PlayerService::class.java).setAction(actionStop)
+        PendingIntent.getService(this, requestCode, intent, FLAG_IMMUTABLE)
+    }
+
+    /** A notification to use as the foreground notification for the service */
+    private val notification get() = notificationBuilder
+        .setContentText(statusDescription)
+        .clearActions()
+        .addAction(NotificationCompat.Action(playPauseActionIcon, playPauseActionDescription,
+                                             playPausePendingIntent(!_isPlaying.value)))
+        .addAction(NotificationCompat.Action(R.drawable.ic_baseline_close_24,
+                                             getString(R.string.close_description),
+                                             stopServicePendingIntent))
         .build()
 }

@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -31,21 +32,26 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundobservatory.ui.theme.SoundObservatoryTheme
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
-@Composable
-fun <T> collectNullableFlowAsState(
-    flow: Flow<T>?,
+/** Collect the nullable StateFlow<T> as a State<T>. This works similarly to
+ * the extension function StateFlow.collectAsState, except that the receiver
+ * can be null. In this case, the state value will be equal to the value of
+ * the parameter default.*/
+@Composable fun <T> StateFlow<T>?.collectAsState(
     default: T,
     context: CoroutineContext = EmptyCoroutineContext
-) = produceState(default, flow, context) {  when {
-    flow == null -> value = default
-    context == EmptyCoroutineContext -> flow.collect { value = it }
-    else -> withContext(context) { flow.collect { value = it } } }
+) = produceState(this?.value ?: default, this, context) {
+    val flow = this@collectAsState
+    when {
+        flow == null -> value = default
+        context == EmptyCoroutineContext -> flow.collect { value = it }
+        else -> withContext(context) { flow.collect { value = it } }
+    }
 }
 
 @ExperimentalAnimationApi
@@ -55,21 +61,14 @@ fun <T> collectNullableFlowAsState(
 class MainActivity : ComponentActivity() {
     private var boundPlayerService: PlayerService.Binder? = null
 
-    override fun onResume() {
-        super.onResume()
-        val intent = Intent(this, PlayerService::class.java)
-        val connection = object: ServiceConnection {
-            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-                boundPlayerService = service as? PlayerService.Binder
-            }
-            override fun onServiceDisconnected(name: ComponentName?) { }
+    private val serviceConnection = object: ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            boundPlayerService = service as? PlayerService.Binder
+            Log.d("sounds", "bound player service connection established")
         }
-        bindService(intent, connection, 0)
-    }
-
-    override fun onPause() {
-        super.onPause()
-        boundPlayerService = null
+        override fun onServiceDisconnected(name: ComponentName?) {
+            boundPlayerService = null
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,11 +76,15 @@ class MainActivity : ComponentActivity() {
         window.setBackgroundDrawable(
             ContextCompat.getDrawable(this, R.drawable.background_gradient))
 
+        val intent = Intent(this, PlayerService::class.java)
+        ContextCompat.startForegroundService(this, intent)
+        bindService(intent, serviceConnection, 0)
+
         setContent {
             val viewModel: ViewModel = viewModel()
             val tracks by viewModel.tracks.collectAsState()
             val trackSort by viewModel.trackSort.collectAsState()
-            val playing = collectNullableFlowAsState(boundPlayerService?.isPlaying, false)
+            val playing = boundPlayerService?.isPlaying.collectAsState(false)
 
             val itemCallback = TrackViewCallback(
                 onPlayPauseButtonClick = { uri, playing -> viewModel.updatePlaying(uri, playing) },
@@ -89,7 +92,7 @@ class MainActivity : ComponentActivity() {
                 onDeleteRequest = { uri: String -> viewModel.delete(uri) },
                 onVolumeChangeRequest = { uri, volume ->
                     viewModel.updateVolume(uri, volume)
-                    boundPlayerService?.notifyTrackVolumeChanged(uri, volume)
+                    boundPlayerService?.setTrackVolume(uri, volume)
                 })
             MainActivityContent(
                 tracks = tracks,

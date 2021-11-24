@@ -35,4 +35,5 @@
     <string name="pause_description">Pause</string>
     <string name="playing_description">Playing</string>
     <string name="paused_description">Paused</string>
+    <string name="close_description">Close</string>
 </resources>
