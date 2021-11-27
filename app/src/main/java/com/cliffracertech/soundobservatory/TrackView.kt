@@ -46,10 +46,11 @@ class TrackViewCallback(
 @Composable
 fun TrackView(
     track: Track,
-    callback: TrackViewCallback
+    callback: TrackViewCallback,
+    modifier: Modifier = Modifier
 ) = Row(
     verticalAlignment = Alignment.CenterVertically,
-    modifier = Modifier
+    modifier = modifier
         .fillMaxWidth(1f)
         .background(MaterialTheme.colors.surface, MaterialTheme.shapes.large)
 ){

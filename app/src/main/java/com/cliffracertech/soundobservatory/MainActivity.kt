@@ -172,7 +172,9 @@ class MainActivity : ComponentActivity() {
         modifier = Modifier.padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(tracks) { TrackView(it, trackViewCallback) }
+        items(tracks, { it.uriString }) {
+            TrackView(it, trackViewCallback, Modifier.animateItemPlacement())
+        }
     }
 
 
