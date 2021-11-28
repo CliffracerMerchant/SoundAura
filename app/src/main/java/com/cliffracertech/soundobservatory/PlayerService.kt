@@ -16,14 +16,20 @@ import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.Action
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleService
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.*
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+
+/** Repeat @param onStarted each time the LifecycleOwner's state moves to Lifecycle.State.STARTED. */
+fun LifecycleOwner.repeatWhenStarted(onStarted: suspend CoroutineScope.() -> Unit) {
+    lifecycleScope.launch {
+        repeatOnLifecycle(Lifecycle.State.STARTED, onStarted)
+    }
+}
 
 /**
  * A service to play a set of audio tracks exposed by a com.cliffracertech.soundobservatory.ViewModel instance.
@@ -35,33 +41,25 @@ import kotlinx.coroutines.launch
  * exposed by a com.cliffracertech.soundobservatory.ViewModel instance's
  * PlayingTracks property.
  *
- * PlayerService is designed to be run as both a started service when the
- * application is launched, and a bound service bound to up to one activity at
- * a time. Activities that attempt to bind to PlayerService will receive an
- * instance of its Binder class, through which they can read and manipulate the
- * isPlaying state through the Binder instance's isPlaying property and its
- * setIsPlaying and toggleIsPlaying functions.
- *
  * PlayerService runs as a foreground service, and presents a notification to
  * the user that displays its current isPlaying state in string form, along
  * with actions to toggle the isPlaying state and to close the service. The
  * play/pause action will always be visible, but the close action is hidden
- * when the service is bound to an activity. This is to make it easier for
- * bound activities to assume that they are connected to the service. So long
- * as they connect to the service on startup, and do not attempt to stop the
- * service themselves, it should be safe to assume that the PlayerService
- * instance is bound to them.
+ * when the service is bound to an activity.
  *
- * PlayerService will continue running as a foreground service when it is
- * unbound from an activity until it is stopped with the notification stop
- * action. PlayerService will also automatically stop itself when it is
- * unbound from an activity if its isPlaying state was not changed to true at
- * least once. This is due to the fact that the activity being unbound without
- * the PlayerService playing audio at least once likely indicates that the user
- * accidentally started the app and navigated away or closed it immediately.
- * Closing the service automatically thus prevents the user from having to also
- * close the service manually every time they accidentally start and close the
- * activity this way.
+ * PlayerService is designed to be started as a bound service, with the binding
+ * activity receiving an instance of its Binder class, through which they can
+ * read and manipulate the isPlaying state through the Binder instance's isPlaying
+ * property and its setIsPlaying and toggleIsPlaying functions. Bound
+ * activities should call unbind when they are paused. If the isPlaying state
+ * or a track volume was changed through the binder instance at least once
+ * before the unbind occurred, then PlayerService will automatically start
+ * itself as a started service, meaning that it will outlive the activity. If
+ * one of these changes did not occur before the activity was unbound, then the
+ * PlayerService will stop when the activity does as per normal for bound
+ * services. This behavior is intended so that if the user accidentally starts
+ * the app and closes it immediately without interacting with it, they won't
+ * also have to close the PlayerService through its notification.
  *
  * To ensure that the volume for already playing tracks is changed seamlessly
  * and without perceptible lag, PlayerService will not respond to track volume
@@ -73,12 +71,18 @@ import kotlinx.coroutines.launch
  */
 class PlayerService: LifecycleService() {
     private val uriPlayerMap = mutableMapOf<String, MediaPlayer>()
-    private val _isPlaying = MutableStateFlow(false)
     private val viewModel by lazy { ViewModel(application) }
 
     private var boundToActivity = false
-    private var playedAtLeastOnce = false
+    private var runWithoutActivity = false
+        set(value) {
+            if (value && !field)
+                ContextCompat.startForegroundService(
+                    this, Intent(this, this::class.java))
+            field = value
+        }
 
+    private val _isPlaying = MutableStateFlow(false)
     val isPlaying = _isPlaying.asStateFlow()
 
     companion object {
@@ -89,26 +93,43 @@ class PlayerService: LifecycleService() {
         private const val notificationId = 342654432
     }
 
+    override fun onDestroy() {
+        uriPlayerMap.forEach { it.value.release() }
+        super.onDestroy()
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val action = intent?.action
-        val extras = intent?.extras
-        if (action == actionStop) {
-            Log.d("sounds", "stop request received")
-            cleanupAndStopSelf()
+        if (action == actionStop && !boundToActivity) {
+            stopForeground(true)
+            stopSelf()
         } else if (action == actionPlayPause)
-            extras?.getBoolean(playPauseKey)?.let { setIsPlaying(it); Log.d("sounds", "isPlaying set to $it")}
-        else Log.d("sounds", "isPlaying initialized to false")
+            intent.extras?.getBoolean(playPauseKey)?.let { setIsPlaying(it) }
 
         startForeground(notificationId, notification)
-
         return super.onStartCommand(intent, flags, startId)
     }
 
     init {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                Log.d("sounds", "viewModel.playingTracks collected")
-                viewModel.playingTracks.collect { updatePlayers(it) }
+        repeatWhenStarted {
+            viewModel.playingTracks.collect { tracks ->
+                val uris = tracks.map { it.uriString }
+                uriPlayerMap.keys.retainAll {
+                    val result = it in uris
+                    if (!result) uriPlayerMap[it]?.release()
+                    result
+                }
+                tracks.forEach {
+                    val player = uriPlayerMap.getOrPut(it.uriString) {
+                        val player = MediaPlayer.create(this@PlayerService,
+                                                        Uri.parse(it.uriString))
+                        player?.isLooping = true
+                        player ?: return@forEach
+                    }
+                    player.setVolume(it.volume, it.volume)
+                    if (_isPlaying.value != player.isPlaying)
+                        player.setPaused(!_isPlaying.value)
+                }
             }
         }
     }
@@ -120,22 +141,23 @@ class PlayerService: LifecycleService() {
         return Binder()
     }
 
-    override fun onUnbind(intent: Intent?): Boolean {
-        boundToActivity = false
-        if (!isPlaying.value && !playedAtLeastOnce)
-            cleanupAndStopSelf()
-        else notificationManager.notify(notificationId, notification)
-        return super.onUnbind(intent)
+    override fun onRebind(intent: Intent?) {
+        boundToActivity = true
+        notificationManager.notify(notificationId, notification)
     }
 
-    private fun cleanupAndStopSelf() {
-        uriPlayerMap.forEach { it.value.release() }
-        stopSelf()
+    override fun onUnbind(intent: Intent?): Boolean {
+        boundToActivity = false
+        if (!runWithoutActivity) notificationManager.cancel(notificationId)
+        else notificationManager.notify(notificationId, notification)
+        return true
     }
 
     fun setIsPlaying(isPlaying: Boolean) {
         _isPlaying.value = isPlaying
-        if (isPlaying) playedAtLeastOnce = true
+        runWithoutActivity = true
+        Log.d("serviceOnly", "service isPlaying set to $isPlaying")
+        //if (isPlaying) playedAtLeastOnce = true
         uriPlayerMap.forEach { it.value.setPaused(!isPlaying) }
         notificationManager.notify(notificationId, notification)
     }
@@ -144,25 +166,7 @@ class PlayerService: LifecycleService() {
 
     fun setTrackVolume(uriString: String, volume: Float) {
         uriPlayerMap[uriString]?.setVolume(volume, volume)
-    }
-
-    private fun updatePlayers(tracks: List<Track>) {
-        val uris = tracks.map { it.uriString }
-        uriPlayerMap.keys.retainAll {
-            val result = it in uris
-            if (!result) uriPlayerMap[it]?.release()
-            result
-        }
-        tracks.forEachIndexed { index, track ->
-            val player = uriPlayerMap.getOrPut(track.uriString) {
-                val player = MediaPlayer.create(this, Uri.parse(track.uriString))
-                player?.isLooping = true
-                player ?: return@forEachIndexed
-            }
-            player.setVolume(track.volume, track.volume)
-            if (_isPlaying.value != player.isPlaying)
-                player.setPaused(!_isPlaying.value)
-        }
+        runWithoutActivity = true
     }
 
     private fun MediaPlayer.setPaused(paused: Boolean) =
@@ -243,7 +247,7 @@ class PlayerService: LifecycleService() {
             .setContentTitle(description)
             .clearActions()
             .addAction(togglePlayPauseAction)
-        if (!boundToActivity)
+        if (runWithoutActivity && !boundToActivity)
             builder.addAction(stopServiceAction)
         return builder.build()
     }

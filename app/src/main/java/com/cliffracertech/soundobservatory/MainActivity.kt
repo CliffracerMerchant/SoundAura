@@ -3,6 +3,7 @@
 package com.cliffracertech.soundobservatory
 
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Bundle
@@ -56,21 +57,26 @@ class MainActivity : ComponentActivity() {
     private val serviceConnection = object: ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             boundPlayerService = service as? PlayerService.Binder
-            Log.d("sounds", "bound player service connection established")
         }
-        override fun onServiceDisconnected(name: ComponentName?) {
-            boundPlayerService = null
-        }
+        override fun onServiceDisconnected(name: ComponentName?) {}
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val intent = Intent(this, PlayerService::class.java)
+        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        unbindService(serviceConnection)
+        boundPlayerService = null
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.setBackgroundDrawable(
             ContextCompat.getDrawable(this, R.drawable.background_gradient))
-
-        val intent = Intent(this, PlayerService::class.java)
-        ContextCompat.startForegroundService(this, intent)
-        bindService(intent, serviceConnection, 0)
 
         setContent {
             val viewModel: ViewModel = viewModel()
@@ -79,7 +85,7 @@ class MainActivity : ComponentActivity() {
             val playing = boundPlayerService?.isPlaying.collectAsState(false)
 
             val itemCallback = TrackViewCallback(
-                onPlayPauseButtonClick = { uri, playing -> viewModel.updatePlaying(uri, playing) },
+                onPlayPauseButtonClick = { uri, trackIsPlaying -> viewModel.updatePlaying(uri, trackIsPlaying) },
                 onVolumeChange = { uri, volume -> boundPlayerService?.setTrackVolume(uri, volume) },
                 onVolumeChangeFinished = { uri, volume -> viewModel.updateVolume(uri, volume) },
                 onRenameRequest = { uri, name -> viewModel.updateName(uri, name) },
