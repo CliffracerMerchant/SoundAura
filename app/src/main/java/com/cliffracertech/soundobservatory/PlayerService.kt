@@ -13,7 +13,6 @@ import android.content.Intent
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.Action
 import androidx.core.content.ContextCompat
@@ -127,8 +126,8 @@ class PlayerService: LifecycleService() {
                         player ?: return@forEach
                     }
                     player.setVolume(it.volume, it.volume)
-                    if (_isPlaying.value != player.isPlaying)
-                        player.setPaused(!_isPlaying.value)
+                    if (player.isPlaying != isPlaying.value)
+                        player.setPaused(!isPlaying.value)
                 }
             }
         }
@@ -156,8 +155,6 @@ class PlayerService: LifecycleService() {
     fun setIsPlaying(isPlaying: Boolean) {
         _isPlaying.value = isPlaying
         runWithoutActivity = true
-        Log.d("serviceOnly", "service isPlaying set to $isPlaying")
-        //if (isPlaying) playedAtLeastOnce = true
         uriPlayerMap.forEach { it.value.setPaused(!isPlaying) }
         notificationManager.notify(notificationId, notification)
     }

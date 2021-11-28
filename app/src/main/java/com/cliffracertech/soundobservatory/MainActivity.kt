@@ -1,5 +1,6 @@
-/* This file is part of SoundObservatory, which is released under the Apache License 2.0. See
- * license.md in the project's root directory or use an internet search engine to see the full license. */
+/* This file is part of SoundObservatory, which is released under the
+ * Apache License 2.0. See license.md in the project's root directory
+ *  or use an internet search engine to see the full license. */
 package com.cliffracertech.soundobservatory
 
 import android.content.ComponentName
@@ -8,7 +9,6 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -29,30 +29,10 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundobservatory.ui.theme.SoundObservatoryTheme
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.withContext
-import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.EmptyCoroutineContext
-
-/** Collect the nullable StateFlow<T> as a State<T>. This works similarly to
- * the extension function StateFlow.collectAsState, except that the receiver
- * can be null. In this case, the state value will be equal to the value of
- * the parameter default.*/
-@Composable fun <T> StateFlow<T>?.collectAsState(
-    default: T,
-    context: CoroutineContext = EmptyCoroutineContext
-) = produceState(this?.value ?: default, this, context) {
-    val flow = this@collectAsState
-    when {
-        flow == null -> value = default
-        context == EmptyCoroutineContext -> flow.collect { value = it }
-        else -> withContext(context) { flow.collect { value = it } }
-    }
-}
 
 class MainActivity : ComponentActivity() {
-    private var boundPlayerService: PlayerService.Binder? = null
+    private var boundPlayerService by mutableStateOf<PlayerService.Binder?>(null)
 
     private val serviceConnection = object: ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -82,18 +62,22 @@ class MainActivity : ComponentActivity() {
             val viewModel: ViewModel = viewModel()
             val tracks by viewModel.tracks.collectAsState()
             val trackSort by viewModel.trackSort.collectAsState()
-            val playing = boundPlayerService?.isPlaying.collectAsState(false)
+            val isPlaying by produceState(false, boundPlayerService) {
+                val service = boundPlayerService
+                if (service == null) value = false
+                else service.isPlaying.collect { value = it }
+            }
 
             val itemCallback = TrackViewCallback(
                 onPlayPauseButtonClick = { uri, trackIsPlaying -> viewModel.updatePlaying(uri, trackIsPlaying) },
                 onVolumeChange = { uri, volume -> boundPlayerService?.setTrackVolume(uri, volume) },
                 onVolumeChangeFinished = { uri, volume -> viewModel.updateVolume(uri, volume) },
                 onRenameRequest = { uri, name -> viewModel.updateName(uri, name) },
-                onDeleteRequest = { uri: String -> viewModel.delete(uri) },)
+                onDeleteRequest = { uri -> viewModel.delete(uri) })
             MainActivityContent(
                 tracks = tracks,
                 trackSort = trackSort,
-                playing = playing.value,
+                playing = isPlaying,
                 itemCallback = itemCallback,
                 onSortingChanged = { viewModel.trackSort.value = it },
                 onAddItemRequest = { viewModel.add(it) },
