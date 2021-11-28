@@ -213,8 +213,8 @@ class PlayerService: LifecycleService() {
                     action = Intent.ACTION_MAIN
                     addCategory(Intent.CATEGORY_LAUNCHER)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }, FLAG_IMMUTABLE
-            ))
+                }, FLAG_IMMUTABLE))
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
     }
 
     /** A notification action that will toggle the service's isPlaying state. */
@@ -247,8 +247,13 @@ class PlayerService: LifecycleService() {
             .setContentTitle(description)
             .clearActions()
             .addAction(togglePlayPauseAction)
-        if (runWithoutActivity && !boundToActivity)
+
+        val style = androidx.media.app.NotificationCompat.MediaStyle()
+        if (runWithoutActivity && !boundToActivity) {
             builder.addAction(stopServiceAction)
-        return builder.build()
+            style.setShowActionsInCompactView(0, 1)
+        } else style.setShowActionsInCompactView(0)
+
+        return builder.setStyle(style).build()
     }
 }
