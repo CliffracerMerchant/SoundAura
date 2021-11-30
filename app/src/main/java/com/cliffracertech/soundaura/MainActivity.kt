@@ -1,7 +1,7 @@
-/* This file is part of SoundObservatory, which is released under the
- * Apache License 2.0. See license.md in the project's root directory
- *  or use an internet search engine to see the full license. */
-package com.cliffracertech.soundobservatory
+/* This file is part of SoundAura, which is released under
+ * the terms of the Apache License 2.0. See license.md in
+ * the project's root directory to see the full license. */
+package com.cliffracertech.soundaura
 
 import android.content.ComponentName
 import android.content.Context
@@ -28,7 +28,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.cliffracertech.soundobservatory.ui.theme.SoundObservatoryTheme
+import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlinx.coroutines.flow.collect
 
 class MainActivity : ComponentActivity() {
@@ -103,7 +103,7 @@ class MainActivity : ComponentActivity() {
 ) {
     val title = stringResource(R.string.app_name)
 
-    SoundObservatoryTheme {
+    SoundAuraTheme {
         Surface(
             color = MaterialTheme.colors.background,
             modifier = Modifier.fillMaxSize(1f)

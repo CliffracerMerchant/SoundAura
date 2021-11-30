@@ -1,3 +1,8 @@
+/* The original Slider AOSP class has been modified to make the class SliderBox.
+ * The SliderRange class has been removed, and the SliderColors class has been
+ * modified to support gradients for the slider track and thumb. */
+package com.cliffracertech.soundaura
+
 /*
  * Copyright 2019 The Android Open Source Project
  *
@@ -13,11 +18,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-/* The original Slider AOSP class has been modified to make the class SliderBox.
-* The SliderRange class has been removed, and the SliderColors class has been
-* modified to support gradients for the slider track and thumb. */
-package com.cliffracertech.soundobservatory
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.TweenSpec

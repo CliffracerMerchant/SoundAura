@@ -1,7 +1,7 @@
-/* This file is part of SoundObservatory, which is released under the
- * Apache License 2.0. See license.md in the project's root directory
- * or use an internet search engine to see the full license. */
-package com.cliffracertech.soundobservatory
+/* This file is part of SoundAura, which is released under
+ * the terms of the Apache License 2.0. See license.md in
+ * the project's root directory to see the full license. */
+package com.cliffracertech.soundaura
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -31,13 +31,13 @@ fun LifecycleOwner.repeatWhenStarted(onStarted: suspend CoroutineScope.() -> Uni
 }
 
 /**
- * A service to play a set of audio tracks exposed by a com.cliffracertech.soundobservatory.ViewModel instance.
+ * A service to play a set of audio tracks exposed by a com.cliffracertech.soundaura.ViewModel instance.
  *
  * PlayerService contains a state, isPlaying, that is exposed as a Flow<Boolean>
  * in the property of the same name. Manipulation of the isPlaying state is
  * achieved through the functions setIsPlaying and toggleIsPlaying. When the
  * isPlaying state is equal to true, PLayerService will play all audio tracks
- * exposed by a com.cliffracertech.soundobservatory.ViewModel instance's
+ * exposed by a com.cliffracertech.soundaura.ViewModel instance's
  * PlayingTracks property.
  *
  * PlayerService runs as a foreground service, and presents a notification to
@@ -87,8 +87,8 @@ class PlayerService: LifecycleService() {
     companion object {
         private const val requestCode = 1
         private const val playPauseKey = "playPause"
-        private const val actionPlayPause = "com.cliffracertech.soundobservatory.action.playPause"
-        private const val actionStop = "com.cliffracertech.soundobservatory.action.stop"
+        private const val actionPlayPause = "com.cliffracertech.soundaura.action.playPause"
+        private const val actionStop = "com.cliffracertech.soundaura.action.stop"
         private const val notificationId = 342654432
     }
 

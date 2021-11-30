@@ -1,6 +1,7 @@
-/* This file is part of SoundObservatory, which is released under the Apache License 2.0. See
- * license.md in the project's root directory or use an internet search engine to see the full license. */
-package com.cliffracertech.soundobservatory
+/* This file is part of SoundAura, which is released under
+ * the terms of the Apache License 2.0. See license.md in
+ * the project's root directory to see the full license. */
+package com.cliffracertech.soundaura
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
@@ -29,7 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.cliffracertech.soundobservatory.ui.theme.SoundObservatoryTheme
+import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 
 @Composable fun primaryColorHorizontalGradient() =
     Brush.horizontalGradient(listOf(MaterialTheme.colors.primary,
@@ -198,7 +199,7 @@ inline fun <reified T : Enum<T>>ListActionBar(
 }
 
 @Preview @Composable fun PreviewRecyclerViewActionBar() =
-    SoundObservatoryTheme {
+    SoundAuraTheme {
         var title = stringResource(R.string.app_name)
         var actionModeTitle by remember { mutableStateOf<String?>(null) }
         var searchQuery by remember { mutableStateOf<String?>(null) }

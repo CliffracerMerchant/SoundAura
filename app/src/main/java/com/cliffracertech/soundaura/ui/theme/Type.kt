@@ -1,6 +1,7 @@
-/* This file is part of SoundObservatory, which is released under the Apache License 2.0. See
- * license.md in the project's root directory or use an internet search engine to see the full license. */
-package com.cliffracertech.soundobservatory.ui.theme
+/* This file is part of SoundAura, which is released under
+ * the terms of the Apache License 2.0. See license.md in
+ * the project's root directory to see the full license. */
+package com.cliffracertech.soundaura.ui.theme
 
 import androidx.compose.material.Typography
 import androidx.compose.ui.text.TextStyle
@@ -13,18 +14,15 @@ val Typography = Typography(
     body1 = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
-        fontSize = 18.sp
-    )
+        fontSize = 18.sp)
     /* Other default text styles to override
     button = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.W500,
-        fontSize = 14.sp
-    ),
+        fontSize = 14.sp),
     caption = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
-        fontSize = 12.sp
-    )
+        fontSize = 12.sp)
     */
 )

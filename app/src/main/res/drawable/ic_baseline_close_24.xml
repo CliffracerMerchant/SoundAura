@@ -1,6 +1,6 @@
-<!-- This file is part of SoundObservatory, which is released under the
-   ~ Apache License 2.0. See license.md in the project's root directory
-   ~ or use an internet search engine to see the full license. -->
+<!-- This file is part of SoundAura, which is released under
+   ~ the terms of the Apache License 2.0. See license.md in
+   ~ the project's root directory to see the full license. -->
 
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"

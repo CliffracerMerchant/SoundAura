@@ -1,6 +1,7 @@
-/* This file is part of SoundObservatory, which is released under the Apache License 2.0. See
- * license.md in the project's root directory or use an internet search engine to see the full license. */
-package com.cliffracertech.soundobservatory
+/* This file is part of SoundAura, which is released under
+ * the terms of the Apache License 2.0. See license.md in
+ * the project's root directory to see the full license. */
+package com.cliffracertech.soundaura
 
 import android.app.Application
 import android.content.Context
@@ -63,23 +64,23 @@ class Track(
 }
 
 @Database(entities = [Track::class], version = 1, exportSchema = true)
-abstract class SoundObservatoryDatabase : RoomDatabase() {
+abstract class SoundAuraDatabase : RoomDatabase() {
     abstract fun trackDao(): TrackDao
 
     companion object {
-        var instance: SoundObservatoryDatabase? = null
+        var instance: SoundAuraDatabase? = null
 
         fun get(context: Context) = instance ?:
             Room.databaseBuilder(
                 context.applicationContext,
-                SoundObservatoryDatabase::class.java,
-                "SoundObservatoryDb"
+                SoundAuraDatabase::class.java,
+                "SoundAuraDb"
             ).build().also { instance = it }
     }
 }
 
 class ViewModel(app: Application) : AndroidViewModel(app) {
-    private val dao = SoundObservatoryDatabase.get(app).trackDao()
+    private val dao = SoundAuraDatabase.get(app).trackDao()
 
     val trackSort = MutableStateFlow(Track.Sort.NameAsc)
 

@@ -1,6 +1,7 @@
-/* This file is part of SoundObservatory, which is released under the Apache License 2.0. See
- * license.md in the project's root directory or use an internet search engine to see the full license. */
-package com.cliffracertech.soundobservatory.ui.theme
+/* This file is part of SoundAura, which is released under
+ * the terms of the Apache License 2.0. See license.md in
+ * the project's root directory to see the full license. */
+package com.cliffracertech.soundaura.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.MaterialTheme
@@ -35,7 +36,7 @@ private val LightColorPalette = lightColors(
 )
 
 @Composable
-fun SoundObservatoryTheme(
+fun SoundAuraTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable() () -> Unit
 ) {
