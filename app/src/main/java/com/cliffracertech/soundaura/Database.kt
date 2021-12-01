@@ -25,7 +25,8 @@ class Track(
     enum class Sort { NameAsc, NameDesc, OrderAdded }
 }
 
-@Composable fun string(sort: Track.Sort) = when (sort) {
+/** Return a string to describe the given Track.Sort value. */
+@Composable fun composeString(sort: Track.Sort) = when (sort) {
     Track.Sort.NameAsc ->    stringResource(R.string.name_ascending_description)
     Track.Sort.NameDesc ->   stringResource(R.string.name_descending_description)
     Track.Sort.OrderAdded -> stringResource(R.string.order_added_description)

@@ -6,7 +6,7 @@ package com.cliffracertech.soundaura.ui.theme
 import androidx.compose.ui.graphics.Color
 
 val LightThemeGradientStart = Color(0xFF55D69A)
-val LightThemeGradientEnd = Color(0xFF45D6D1)
+val LightThemeGradientEnd = Color(0xFF3EC2BD)
 val LightThemeSecondary = Color(0xFF46A8FF)
 val LightBackground = Color(0xFFF1F3F5)
 val LightSurface = Color(0xFFDEE2E6)
@@ -20,4 +20,3 @@ val DarkBackground = Color(0xFF212529)
 val DarkSurface = Color(0xFF2F3335)
 val DarkOnSurface = Color(0xFFADB5BD)
 val DarkOnPrimary = Color(0xFF2E3236)
-

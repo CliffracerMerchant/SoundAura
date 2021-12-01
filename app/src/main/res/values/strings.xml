@@ -12,6 +12,7 @@
     <string name="back_description">Back</string>
     <string name="search_description">Search</string>
     <string name="sort_options_button_description">Open sorting options menu</string>
+    <string name="settings_description">App settings</string>
 
     <string name="name_ascending_description">Name ascending</string>
     <string name="name_descending_description">Name descending</string>

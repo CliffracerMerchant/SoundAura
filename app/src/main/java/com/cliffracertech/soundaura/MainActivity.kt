@@ -114,16 +114,15 @@ class MainActivity : ComponentActivity() {
             Column {
                 var addButtonExpanded by remember { mutableStateOf(false) }
                 ListActionBar(
-                    backButtonVisible = false,
-                    onBackButtonClick = { },
-                    title, null, searchQuery,
+                    title, searchQuery,
                     onSearchQueryChanged = { searchQuery = it },
-                    sortOption = trackSort,
-                    onSortOptionChanged = onSortingChanged,
-                    sortOptionNameFunc = { string(it) },
                     onSearchButtonClicked = {
                         searchQuery = if (searchQuery == null) "" else null
-                    })
+                    }, sortOptions = enumValues(),
+                    sortOption = trackSort,
+                    onSortOptionChanged = onSortingChanged,
+                    sortOptionNameFunc = { composeString(it) },
+                     onSettingsButtonClicked = { })
                 Box(Modifier.fillMaxSize(1f)) {
                     TrackList(tracks, itemCallback)
                     DownloadOrAddLocalFileButton(
