@@ -5,7 +5,7 @@
 
 <resources>
     <color name="lightThemeGradientStart">#FF55D69A</color>
-    <color name="lightThemeGradientEnd">#FF45D6D1</color>
+    <color name="lightThemeGradientEnd">#FF3EC2BD</color>
     <color name="lightThemeSecondary">#FF46A8FF</color>
     <color name="lightBackground">#FFF1F3F5</color>
     <color name="lightSurface">#FFDEE2E6</color>

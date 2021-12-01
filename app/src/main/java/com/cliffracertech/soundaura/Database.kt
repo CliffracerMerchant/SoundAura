@@ -80,7 +80,7 @@ abstract class SoundAuraDatabase : RoomDatabase() {
     }
 }
 
-class ViewModel(app: Application) : AndroidViewModel(app) {
+class TrackViewModel(app: Application) : AndroidViewModel(app) {
     private val dao = SoundAuraDatabase.get(app).trackDao()
 
     val trackSort = MutableStateFlow(Track.Sort.NameAsc)

@@ -38,7 +38,7 @@ fun LifecycleOwner.repeatWhenStarted(onStarted: suspend CoroutineScope.() -> Uni
  * achieved through the functions setIsPlaying and toggleIsPlaying. When the
  * isPlaying state is equal to true, PLayerService will play all audio tracks
  * exposed by a com.cliffracertech.soundaura.ViewModel instance's
- * PlayingTracks property.
+ * PlayingSounds property.
  *
  * PlayerService runs as a foreground service, and presents a notification to
  * the user that displays its current isPlaying state in string form, along
@@ -70,7 +70,7 @@ fun LifecycleOwner.repeatWhenStarted(onStarted: suspend CoroutineScope.() -> Uni
  */
 class PlayerService: LifecycleService() {
     private val uriPlayerMap = mutableMapOf<String, MediaPlayer>()
-    private val viewModel by lazy { ViewModel(application) }
+    private val viewModel by lazy { TrackViewModel(application) }
 
     private var boundToActivity = false
     private var runWithoutActivity = false

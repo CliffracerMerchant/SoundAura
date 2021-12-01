@@ -18,14 +18,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 /**
- * A pseudo-interface that contains callbacks for track view interactions.
+ * A pseudo-interface that contains callbacks for TrackView interactions.
  *
- * @param onPlayPauseButtonClick The callback that will be invoked when the user clicks the play/pause button.
- * @param onVolumeChange The callback that will be invoked when the user is changing the volume slider's value.
- * @param onVolumeChangeFinished The callback that will be invoked when the user has
- *     finished changing the volume slider's value by releasing the slider handle.
- * @param onRenameRequest The callback that will be invoked when the user requests a rename of the track.
- * @param onDeleteRequest The callback that will be invoked when the user requests that the track be deleted.
+ * @param onPlayPauseButtonClick The callback that will be invoked when the play/pause button is clicked.
+ * @param onVolumeChange The callback that will be invoked when the volume slider's value is changing.
+ * @param onVolumeChangeFinished The callback that will be invoked when the volume slider's handle is released.
+ * @param onRenameRequest The callback that will be invoked when a rename of the track is requested.
+ * @param onDeleteRequest The callback that will be invoked when the deletion of the track is requested.
  */
 class TrackViewCallback(
     val onPlayPauseButtonClick: (String, Boolean) -> Unit = { _, _ -> },

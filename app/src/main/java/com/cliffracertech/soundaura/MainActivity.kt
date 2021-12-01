@@ -58,8 +58,8 @@ class MainActivity : ComponentActivity() {
         window.setBackgroundDrawable(
             ContextCompat.getDrawable(this, R.drawable.background_gradient))
 
-        setContent {
-            val viewModel: ViewModel = viewModel()
+        setContent { SoundAuraTheme {
+            val viewModel: TrackViewModel = viewModel()
             val tracks by viewModel.tracks.collectAsState()
             val trackSort by viewModel.trackSort.collectAsState()
             val isPlaying by produceState(false, boundPlayerService) {
@@ -68,13 +68,13 @@ class MainActivity : ComponentActivity() {
                 else service.isPlaying.collect { value = it }
             }
 
-            val itemCallback = TrackViewCallback(
+            val itemCallback = remember { TrackViewCallback(
                 onPlayPauseButtonClick = { uri, trackIsPlaying -> viewModel.updatePlaying(uri, trackIsPlaying) },
                 onVolumeChange = { uri, volume -> boundPlayerService?.setTrackVolume(uri, volume) },
                 onVolumeChangeFinished = { uri, volume -> viewModel.updateVolume(uri, volume) },
                 onRenameRequest = { uri, name -> viewModel.updateName(uri, name) },
-                onDeleteRequest = { uri -> viewModel.delete(uri) })
-            MainActivityContent(
+                onDeleteRequest = { uri -> viewModel.delete(uri) }) }
+            SoundMixEditor(
                 tracks = tracks,
                 trackSort = trackSort,
                 playing = isPlaying,
@@ -82,17 +82,38 @@ class MainActivity : ComponentActivity() {
                 onSortingChanged = { viewModel.trackSort.value = it },
                 onAddItemRequest = { viewModel.add(it) },
                 onPlayPauseRequest = { boundPlayerService?.toggleIsPlaying() })
-        }
+        }}
     }
 }
 
 @Preview(showBackground = true)
-@Composable fun MainActivityPreview() = MainActivityContent(
+@Composable fun MainActivityPreview() = SoundMixEditor(
     listOf(Track(uriString = "", name = "Audio clip 1", volume = 0.3f),
            Track(uriString = "", name = "Audio clip 2", volume = 0.8f)),
     playing = true)
 
-@Composable fun MainActivityContent(
+/**
+ * A combination of a ListActionBar to search and filter the available tracks,
+ * a TrackList to display all tracks that match the sorting and filtering
+ * options selected in the ListActionBar, and controls to play/pause the sound
+ * mix and add new tracks.
+ *
+ * @param tracks A list of all of the tracks that should be displayed in the TrackList.
+ * @param trackSort A value of the Track.Sort enum that describes how the
+ *                  tracks listed in the TrackList should be sorted.
+ * @param playing Whether the play/pause button will display its
+ *                pause icon (as opposed to its play icon).
+ * @param itemCallback A TrackViewCallback instance that contains the callbacks
+ *                     to be invoked when the TrackView instances inside the
+ *                     TrackList are interacted with.
+ * @param onSortingChanged A callback to be invoked when the a new sorting
+ *                         option is selected within the ListActionBar.
+ * @param onAddItemRequest A callback that will be invoked when a new Track
+ *                         is added through the various add track dialogs.
+ * @param onPlayPauseRequest A callback that will be invoked when the play /
+ *                           pause button is clicked.
+ */
+@Composable fun SoundMixEditor(
     tracks: List<Track>,
     trackSort: Track.Sort = Track.Sort.NameAsc,
     playing: Boolean,
@@ -103,55 +124,53 @@ class MainActivity : ComponentActivity() {
 ) {
     val title = stringResource(R.string.app_name)
 
-    SoundAuraTheme {
-        Surface(
-            color = MaterialTheme.colors.background,
-            modifier = Modifier.fillMaxSize(1f)
-        ) {
-            var searchQuery by rememberSaveable { mutableStateOf<String?>(null) }
-            var showingAddLocalFileDialog by rememberSaveable { mutableStateOf(false) }
-            //var showingDownloadFileDialog by rememberSaveable { mutableStateOf(false) }
-            Column {
-                var addButtonExpanded by remember { mutableStateOf(false) }
-                ListActionBar(
-                    title, searchQuery,
-                    onSearchQueryChanged = { searchQuery = it },
-                    onSearchButtonClicked = {
-                        searchQuery = if (searchQuery == null) "" else null
-                    }, sortOptions = enumValues(),
-                    sortOption = trackSort,
-                    onSortOptionChanged = onSortingChanged,
-                    sortOptionNameFunc = { composeString(it) },
-                     onSettingsButtonClicked = { })
-                Box(Modifier.fillMaxSize(1f)) {
-                    TrackList(tracks, itemCallback)
-                    DownloadOrAddLocalFileButton(
-                        expanded = addButtonExpanded,
-                        onClick = { addButtonExpanded = !addButtonExpanded },
-                        onAddDownloadClick = { addButtonExpanded = false },
-                                                //showingDownloadFileDialog = true },
-                        onAddLocalFileClick = { addButtonExpanded = false
-                                                showingAddLocalFileDialog = true },
-                        modifier = Modifier.padding(16.dp).align(Alignment.BottomEnd))
-                    FloatingActionButton(
-                        onClick = onPlayPauseRequest,
-                        modifier = Modifier.padding(16.dp).align(Alignment.BottomCenter),
-                        backgroundColor = lerp(MaterialTheme.colors.primary,
-                                               MaterialTheme.colors.primaryVariant, 0.5f),
-                        elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp)
-                    ) {
-                        val description = if (playing) stringResource(R.string.pause_description)
-                                          else         stringResource(R.string.play_description)
-                        PlayPauseIcon(playing, description, MaterialTheme.colors.onPrimary)
-                    }
+    Surface(
+        color = MaterialTheme.colors.background,
+        modifier = Modifier.fillMaxSize(1f)
+    ) {
+        var searchQuery by rememberSaveable { mutableStateOf<String?>(null) }
+        var showingAddLocalFileDialog by rememberSaveable { mutableStateOf(false) }
+        //var showingDownloadFileDialog by rememberSaveable { mutableStateOf(false) }
+        Column {
+            var addButtonExpanded by remember { mutableStateOf(false) }
+            ListActionBar(
+                title, searchQuery,
+                onSearchQueryChanged = { searchQuery = it },
+                onSearchButtonClicked = {
+                    searchQuery = if (searchQuery == null) "" else null
+                }, sortOptions = enumValues(),
+                sortOption = trackSort,
+                onSortOptionChanged = onSortingChanged,
+                sortOptionNameFunc = { composeString(it) },
+                 onSettingsButtonClicked = { })
+            Box(Modifier.fillMaxSize(1f)) {
+                TrackList(tracks, itemCallback)
+                DownloadOrAddLocalFileButton(
+                    expanded = addButtonExpanded,
+                    onClick = { addButtonExpanded = !addButtonExpanded },
+                    onAddDownloadClick = { addButtonExpanded = false },
+                                            //showingDownloadFileDialog = true },
+                    onAddLocalFileClick = { addButtonExpanded = false
+                                            showingAddLocalFileDialog = true },
+                    modifier = Modifier.padding(16.dp).align(Alignment.BottomEnd))
+                FloatingActionButton(
+                    onClick = onPlayPauseRequest,
+                    modifier = Modifier.padding(16.dp).align(Alignment.BottomCenter),
+                    backgroundColor = lerp(MaterialTheme.colors.primary,
+                                           MaterialTheme.colors.primaryVariant, 0.5f),
+                    elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp)
+                ) {
+                    val description = if (playing) stringResource(R.string.pause_description)
+                                      else         stringResource(R.string.play_description)
+                    PlayPauseIcon(playing, description, MaterialTheme.colors.onPrimary)
                 }
-                //if (showingDownloadFileDialog)
-                if (showingAddLocalFileDialog)
-                    AddTrackFromLocalFileDialog(
-                        onDismissRequest = { showingAddLocalFileDialog = false },
-                        onConfirmRequest = { onAddItemRequest(it)
-                                             showingAddLocalFileDialog = false })
             }
+            //if (showingDownloadFileDialog)
+            if (showingAddLocalFileDialog)
+                AddTrackFromLocalFileDialog(
+                    onDismissRequest = { showingAddLocalFileDialog = false },
+                    onConfirmRequest = { onAddItemRequest(it)
+                                         showingAddLocalFileDialog = false })
         }
     }
 }
