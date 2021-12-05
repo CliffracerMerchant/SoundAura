@@ -4,6 +4,14 @@
 
 <resources>
     <string name="app_name">SoundAura</string>
+    <string name="app_settings_description">SoundAura settings</string>
+    <string name="settings_description">Settings</string>
+
+    <string name="app_theme_description">App Theme</string>
+    <string name="use_system_theme_description">System</string>
+    <string name="light_theme_description">Light</string>
+    <string name="dark_theme_description">Dark</string>
+
     <string name="app_player_service_description">A service to play the user\'s sound mix.</string>
     <string name="player_notification_channel_id">player_controls</string>
     <string name="player_notification_channel_name">Player controls</string>
@@ -11,8 +19,7 @@
 
     <string name="back_description">Back</string>
     <string name="search_description">Search</string>
-    <string name="sort_options_button_description">Open sorting options menu</string>
-    <string name="settings_description">App settings</string>
+    <string name="sort_options_description">Open sorting options</string>
 
     <string name="name_ascending_description">Name ascending</string>
     <string name="name_descending_description">Name descending</string>

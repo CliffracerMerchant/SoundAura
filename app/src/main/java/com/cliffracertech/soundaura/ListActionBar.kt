@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -29,96 +30,115 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 
-@Composable fun primaryColorHorizontalGradient() =
-    Brush.horizontalGradient(listOf(MaterialTheme.colors.primary,
-                                    MaterialTheme.colors.primaryVariant))
+/** A Modifier extension function that will give the composable a 56.dp height
+ * background that fills its parent's max width and has a horizontal gradient
+ * brush that goes from the local theme's primary color to its primaryVariant. */
+fun Modifier.gradientActionBarModifier() = composed {
+    fillMaxWidth(1f).height(56.dp).background(Brush.horizontalGradient(
+        listOf(MaterialTheme.colors.primary, MaterialTheme.colors.primaryVariant)))
+}
 
 /**
- * A bar that is suitable to be used as a top action bar when displaying a
- * list of items. The bar integrates a navigation title / search query, a
- * search button, a button to open a list of sorting options, and a settings
- * button. The bar will display a back button if there is an active search
- * query (i.e. searchQuery is not null). The title will be replaced by the
- * search query if it is not null.
+ * A horizontal bar that is suitable to be used as a top action bar when
+ * displaying a list of items. The bar integrates an optional back button, a
+ * navigation title / search query, an optional search button and a button to
+ * open a list of sorting options, and any other content passed in through the
+ * parameter otherContent. The bar will always display a back button if there
+ * is an active search query (i.e. searchQuery is not null), but will otherwise
+ * only display it if backButtonShouldBeVisible is true. The title will be
+ * replaced by the search query if it is not null.
  *
+ * @param backButtonShouldBeVisible Whether or not the back button should be
+ * visible due to other state held outside the action bar. If searchQuery is
+ * not null, the back button will be shown regardless.
+ * @param onBackButtonClick The callback that will be invoked when the back
+ * button is clicked while backButtonShouldBeVisible is true. If the back
+ * button is shown due to there being a non-null search query, the back button
+ * will close the search query and onBackButtonClicked will not be called.
  * @param title The title that will be displayed when there is no search query.
  * @param searchQuery The current search query that will be displayed if not null.
- * @param onSearchQueryChanged The callback that will be invoked when
- *     the user input should modify the value of the search query.
- * @param onSearchButtonClicked The callback that will be invoked when
- *     the user clicks the search button. Typically this should set the
- *     search query to an empty string if it is already null so that
- *     the search query entry will appear, or set it to null if it is
- *     not null so that the search query entry will be closed.
- * @param sortOptions An array of all possible sorting enum values
- *                    (usually accessed with enumValues<>()
- * @param sortOption A value of the type parameter that indicates
- *                   the currently selected sort option.
- * @param sortOptionNameFunc A function that should return a string
- *     representation of the provided value of the enum type parameter T.
- * @param onSettingsButtonClicked A callback that will be invoked when
- *     the user clicks the settings button.
+ * @param onSearchQueryChanged The callback that will be invoked when the user
+ * input should modify the value of the search query.
+ * @param onSearchButtonClicked The callback that will be invoked when the user
+ * clicks the search button. Typically this should set the search query to an
+ * empty string if it is already null so that the search query entry will appear,
+ * or set it to null if it is not null so that the search query entry will be closed.
+ * @param sortOptions An array of all possible sorting enum values (usually
+ * accessed with enumValues<>()
+ * @param sortOptionNames An array containing the string values that should
+ * represent each sorting option.
+ * @param currentSortOption A value of the type parameter that indicates the
+ * currently selected sort option.
+ * @param otherContent A composable containing other contents that should be
+ * placed at the end of the action bar.
  */
 @Composable
 fun <T> ListActionBar(
+    backButtonShouldBeVisible: Boolean = false,
+    onBackButtonClick: () -> Unit,
     title: String,
     searchQuery: String?,
     onSearchQueryChanged: (String?) -> Unit,
+    showSearchAndChangeSortButtons: Boolean = true,
     onSearchButtonClicked: () -> Unit,
     sortOptions: Array<T>,
-    sortOption: T,
+    sortOptionNames: Array<String>,
+    currentSortOption: T,
     onSortOptionChanged: (T) -> Unit,
-    sortOptionNameFunc: @Composable (T) -> String,
-    onSettingsButtonClicked: () -> Unit,
-) = Row(
-    verticalAlignment = Alignment.CenterVertically,
-    modifier = Modifier.fillMaxWidth(1f).height(56.dp)
-                       .background(primaryColorHorizontalGradient())
-){
-    val contentTint = MaterialTheme.colors.onPrimary
+    otherContent: @Composable () -> Unit = { },
+) = Row(Modifier.gradientActionBarModifier(), verticalAlignment = Alignment.CenterVertically) {
+    CompositionLocalProvider(LocalContentColor provides MaterialTheme.colors.onPrimary) {
 
-    AnimatedContent(
-        targetState = searchQuery != null,
-        transitionSpec = { fadeIn(tween()) with fadeOut(tween()) }
-    ) { backButtonVisible ->
-        if (!backButtonVisible)
-            Spacer(Modifier.width(24.dp))
-        else IconButton(onClick = { onSearchQueryChanged(null) }) {
-            Icon(imageVector = Icons.Default.ArrowBack, tint = contentTint,
-                 contentDescription = stringResource(R.string.back_description))
+        // Back button
+        val backButtonIsVisible = backButtonShouldBeVisible || searchQuery != null
+        AnimatedContent(
+            targetState = backButtonIsVisible,
+            contentAlignment = Alignment.Center,
+            transitionSpec = { ContentTransform(
+                slideInHorizontally(tween()) { -it },
+                slideOutHorizontally(tween()) { -it },
+                0f, SizeTransform(false) { _, _ -> tween() },
+            )}
+        ) {
+            if (!it) Spacer(Modifier.width(24.dp))
+            else BackButton { if (searchQuery == null) onBackButtonClick()
+                              else onSearchQueryChanged(null) }
         }
-    }
 
-    Crossfade(searchQuery != null, Modifier.weight(1f)) {
-        if (it) AutoFocusSearchQuery(query = searchQuery ?: "",
-                                     onQueryChanged = onSearchQueryChanged)
-        else Text(text = title, color = contentTint,
-                  style = MaterialTheme.typography.h6)
-    }
+        // Title / search query
+        Crossfade(searchQuery != null, Modifier.weight(1f)) {
+            if (it) AutoFocusSearchQuery(searchQuery ?: "", onSearchQueryChanged)
+            else Crossfade(title) { Text(it, style = MaterialTheme.typography.h6) }
+        }
 
-    val animatedSearchIcon = animatedVectorResource(R.drawable.search_to_close)
-    IconButton(onClick = onSearchButtonClicked) {
-        Icon(painter = animatedSearchIcon.painterFor(searchQuery != null),
-             tint = contentTint,
-             contentDescription = stringResource(R.string.search_description))
-    }
-
-    var sortMenuShown by remember {mutableStateOf(false) }
-    IconButton(onClick = { sortMenuShown = !sortMenuShown }) {
-        Icon(imageVector = Icons.Default.Sort, tint = contentTint,
-             contentDescription = stringResource(R.string.sort_options_button_description))
-        EnumDropDownMenu(
-            expanded = sortMenuShown,
-            values = sortOptions,
-            value = sortOption,
-            onValueChanged = onSortOptionChanged,
-            nameFunc = sortOptionNameFunc,
-            onDismissRequest = { sortMenuShown = false })
-    }
-
-    IconButton(onClick = onSettingsButtonClicked) {
-        Icon(imageVector = Icons.Default.Settings, tint = contentTint,
-             contentDescription = stringResource(R.string.settings_description))
+        AnimatedVisibility(
+            visible = showSearchAndChangeSortButtons,
+            enter = slideInHorizontally(tween()) { it },
+            exit = slideOutHorizontally(tween()) { it },
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Search button
+                val animatedSearchIcon = animatedVectorResource(R.drawable.search_to_close)
+                IconButton(onClick = onSearchButtonClicked) {
+                    Icon(animatedSearchIcon.painterFor(searchQuery != null),
+                         stringResource(R.string.search_description))
+                }
+                // Change sort button
+                var sortMenuShown by remember { mutableStateOf(false) }
+                IconButton(onClick = { sortMenuShown = !sortMenuShown }) {
+                    Icon(imageVector = Icons.Default.Sort,
+                         stringResource(R.string.sort_options_description))
+                    EnumDropDownMenu(
+                        expanded = sortMenuShown,
+                        values = sortOptions,
+                        valueNames = sortOptionNames,
+                        currentValue = currentSortOption,
+                        onValueChanged = onSortOptionChanged,
+                        onDismissRequest = { sortMenuShown = false })
+                }
+                otherContent()
+            }
+        }
     }
 }
 
@@ -130,28 +150,30 @@ fun <T> ListActionBar(
  * @param expanded Whether the dropdown menu is displayed
  * @param values An array of all possible values for the enum type
  *               (usually accessed with enumValues<T>()
- * @param value The currently selected enum value
+ * @param valueNames A string array containing string values to use to
+ *                   represent each value of the parameter enum type T.
+ * @param currentValue The currently selected enum value
  * @param onValueChanged The callback that will be invoked when the user taps an item.
- * @param nameFunc A function that will return a string representation of the
- *                 provided value of the parameter enum type T.
  * @param onDismissRequest The callback that will be invoked when the menu should
  *                         be dismissed.
  */
 @Composable fun <T> EnumDropDownMenu(
     expanded: Boolean,
     values: Array<T>,
-    value: T,
+    valueNames: Array<String>,
+    currentValue: T,
     onValueChanged: (T) -> Unit,
-    nameFunc: @Composable (T) -> String,
     onDismissRequest: () -> Unit
 ) = DropdownMenu(expanded, onDismissRequest) {
-    values.forEach {
-        DropdownMenuItem({ onValueChanged(it); onDismissRequest() }) {
-            Text(text = nameFunc(it), style = MaterialTheme.typography.button)
+    values.forEachIndexed { index, value ->
+        DropdownMenuItem({ onValueChanged(value); onDismissRequest() }) {
+            val name = valueNames.getOrNull(index) ?: "Error"
+            Text(text = name, style = MaterialTheme.typography.button)
             Spacer(Modifier.weight(1f))
-            val vector = if (value == it) Icons.Default.RadioButtonChecked
-                         else             Icons.Default.RadioButtonUnchecked
-            Icon(vector, nameFunc(it), Modifier.size(36.dp).padding(8.dp))
+            val vector = if (value == currentValue)
+                             Icons.Default.RadioButtonChecked
+                         else Icons.Default.RadioButtonUnchecked
+            Icon(vector, name, Modifier.size(36.dp).padding(8.dp))
         }
     }
 }
@@ -183,29 +205,59 @@ fun <T> ListActionBar(
         decorationBox = { innerTextField ->
             Box {
                 innerTextField()
-                Divider(color = MaterialTheme.colors.onPrimary, thickness = (1.5).dp,
-                        modifier = Modifier.padding(0.dp, 26.dp, 0.dp, 0.dp))
+                Divider(Modifier.padding(0.dp, 26.dp, 0.dp, 0.dp),
+                        LocalContentColor.current.copy(LocalContentAlpha.current),
+                        thickness = (1.5).dp,)
             }
         }
     )
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 }
 
-@Preview @Composable fun PreviewRecyclerViewActionBar() =
-    SoundAuraTheme {
-        val title = stringResource(R.string.app_name)
-        var searchQuery by remember { mutableStateOf<String?>(null) }
-        var sortOption by remember { mutableStateOf(Track.Sort.NameAsc) }
+@Preview @Composable fun PreviewListActionBarWithTitle() =
+    SoundAuraTheme { ListActionBar(
+        backButtonShouldBeVisible = false,
+        onBackButtonClick = { },
+        title = stringResource(R.string.app_name),
+        searchQuery = null,
+        onSearchQueryChanged = { },
+        sortOptions = Track.Sort.values(),
+        sortOptionNames = Track.Sort.stringValues(),
+        currentSortOption = Track.Sort.NameAsc,
+        onSortOptionChanged = { },
+        onSearchButtonClicked = { }
+    ) {
+        IconButton({ }) { Icon(Icons.Default.MoreVert, null) }
+    }}
 
-        ListActionBar(
-            title, searchQuery,
-            onSearchQueryChanged = { searchQuery = it },
-            sortOption = sortOption,
-            sortOptions = enumValues(),
-            onSortOptionChanged = { sortOption = it},
-            sortOptionNameFunc = { composeString(it) },
-            onSearchButtonClicked = {
-                searchQuery = if (searchQuery == null) "" else null
-            }, onSettingsButtonClicked = { })
-    }
+@Preview @Composable fun PreviewListActionBarWithSearchQuery() =
+    SoundAuraTheme { ListActionBar(
+        backButtonShouldBeVisible = false,
+        onBackButtonClick = { },
+        title = "",
+        searchQuery = "search query",
+        onSearchQueryChanged = { },
+        sortOptions = Track.Sort.values(),
+        sortOptionNames = Track.Sort.stringValues(),
+        currentSortOption = Track.Sort.NameAsc,
+        onSortOptionChanged = { },
+        onSearchButtonClicked = { }
+    ) {
+        IconButton({ }) { Icon(Icons.Default.MoreVert, null) }
+    }}
+
+@Preview @Composable fun PreviewListActionBarInNestedScreen() =
+    SoundAuraTheme { ListActionBar(
+        backButtonShouldBeVisible = true,
+        onBackButtonClick = { },
+        title = "Nested screen",
+        searchQuery = null,
+        onSearchQueryChanged = { },
+        showSearchAndChangeSortButtons = false,
+        sortOptions = Track.Sort.values(),
+        sortOptionNames = Track.Sort.stringValues(),
+        currentSortOption = Track.Sort.NameAsc,
+        onSortOptionChanged = { },
+        onSearchButtonClicked = { }
+    )}
 

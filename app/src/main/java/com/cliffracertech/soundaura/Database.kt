@@ -7,7 +7,8 @@ import android.app.Application
 import android.content.Context
 import androidx.annotation.FloatRange
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.*
@@ -22,14 +23,16 @@ class Track(
     @FloatRange(from = 0.0, to = 1.0)
     @ColumnInfo(name="volume", defaultValue = "1.0") val volume: Float = 1f
 ) {
-    enum class Sort { NameAsc, NameDesc, OrderAdded }
-}
+    enum class Sort { NameAsc, NameDesc, OrderAdded;
 
-/** Return a string to describe the given Track.Sort value. */
-@Composable fun composeString(sort: Track.Sort) = when (sort) {
-    Track.Sort.NameAsc ->    stringResource(R.string.name_ascending_description)
-    Track.Sort.NameDesc ->   stringResource(R.string.name_descending_description)
-    Track.Sort.OrderAdded -> stringResource(R.string.order_added_description)
+        companion object {
+            @Composable fun stringValues() = with(LocalContext.current) {
+                remember { arrayOf(getString(R.string.name_ascending_description),
+                                   getString(R.string.name_descending_description),
+                                   getString(R.string.order_added_description)) }
+            }
+        }
+    }
 }
 
 @Dao abstract class TrackDao() {
