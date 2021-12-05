@@ -23,7 +23,7 @@ val appThemeKey = intPreferencesKey("app_theme")
 class SettingsViewModel(private val app: Application) : AndroidViewModel(app) {
     val prefs = app.dataStore.data.stateIn(viewModelScope, SharingStarted.Lazily, null)
 
-    fun writePreference(actions: suspend (MutablePreferences) -> Unit) {
+    fun writePreferences(actions: suspend (MutablePreferences) -> Unit) {
         viewModelScope.launch {
             app.dataStore.edit { actions(it) }
         }

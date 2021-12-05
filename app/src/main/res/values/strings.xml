@@ -44,4 +44,6 @@
     <string name="playing_description">Playing</string>
     <string name="paused_description">Paused</string>
     <string name="close_description">Close</string>
+    <string name="checked_description">Checked</string>
+    <string name="unchecked_description">Unchecked</string>
 </resources>

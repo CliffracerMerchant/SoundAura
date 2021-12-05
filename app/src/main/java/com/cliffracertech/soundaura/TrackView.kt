@@ -48,9 +48,7 @@ fun TrackView(
     modifier: Modifier = Modifier
 ) = Row(
     verticalAlignment = Alignment.CenterVertically,
-    modifier = modifier
-        .fillMaxWidth(1f)
-        .background(MaterialTheme.colors.surface, MaterialTheme.shapes.large)
+    modifier = modifier.fillMaxWidth(1f).largeSurfaceBackground()
 ){
     PlayPauseButton(track.playing, track.name, MaterialTheme.colors.primary) {
         callback.onPlayPauseButtonClick(track.uriString, !track.playing)
