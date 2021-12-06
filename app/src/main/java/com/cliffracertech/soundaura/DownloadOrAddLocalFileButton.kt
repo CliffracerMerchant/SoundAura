@@ -5,7 +5,6 @@ package com.cliffracertech.soundaura
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.AnimationConstants.DefaultDurationMillis
-import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
@@ -66,15 +65,6 @@ import androidx.compose.ui.unit.dp
     }
     content()
 }
-
-
-private val overshootEasing = Easing {
-    val t = it - 1
-    t * t * (3 * t + 2) + 1
-}
-
-@Composable fun <T>overshootTweenSpec(duration: Int = DefaultDurationMillis, delay: Int = 0) =
-    tween<T>(duration, delay, overshootEasing)
 
 /**
  * An implementation of SpeedDialLayout whose main content is a floating action

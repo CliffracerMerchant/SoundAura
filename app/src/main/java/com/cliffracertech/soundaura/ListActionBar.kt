@@ -86,7 +86,9 @@ fun <T> ListActionBar(
     currentSortOption: T,
     onSortOptionChanged: (T) -> Unit,
     otherContent: @Composable () -> Unit = { },
-) = Row(Modifier.gradientActionBarModifier(), verticalAlignment = Alignment.CenterVertically) {
+) = Row(modifier = Modifier.gradientActionBarModifier(),
+        verticalAlignment = Alignment.CenterVertically
+) {
     CompositionLocalProvider(LocalContentColor provides MaterialTheme.colors.onPrimary) {
 
         // Back button

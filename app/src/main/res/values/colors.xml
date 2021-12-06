@@ -12,11 +12,11 @@
     <color name="lightOnSurface">#FF2E3236</color>
     <color name="lightOnPrimary">#FF2E3236</color>
 
-    <color name="darkThemeGradientStart">#FF358560</color>
-    <color name="darkThemeGradientEnd">#FF2B867B</color>
+    <color name="darkThemeGradientStart">#FF4EC18B</color>
+    <color name="darkThemeGradientEnd">#FF38AAA6</color>
     <color name="darkThemeSecondary">#FF3174AF</color>
     <color name="darkBackground">#FF212529</color>
     <color name="darkSurface">#FF2F3335</color>
-    <color name="darkOnSurface">#FFADB5BD</color>
-    <color name="darkOnPrimary">#FF2E3236</color>
+    <color name="darkOnSurface">#FFBEC5CC</color>
+    <color name="darkOnPrimary">#FF2B2F32</color>
 </resources>
