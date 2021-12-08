@@ -12,8 +12,11 @@ import android.os.Bundle
 import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.with
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -73,11 +76,24 @@ class MainActivity : ComponentActivity() {
                 val trackViewModel: TrackViewModel = viewModel()
                 SetAndRememberWindowBackground(usingDarkTheme)
 
-                SoundAuraActionBar(
-                    viewModel = trackViewModel,
-                    showingAppSettings = showingAppSettings,
-                    onSettingsButtonClick = { showingAppSettings = true },
-                    onBackButtonClick = { showingAppSettings = false })
+                ListActionBar(
+                    backButtonShouldBeVisible = showingAppSettings,
+                    onBackButtonClick = { showingAppSettings = false },
+                    title = if (!showingAppSettings) stringResource(R.string.app_name)
+                    else stringResource(R.string.app_settings_description),
+                    searchQuery = trackViewModel.searchFilter,
+                    onSearchQueryChanged = { trackViewModel.searchFilter = it },
+                    showSearchAndChangeSortButtons = !showingAppSettings,
+                    onSearchButtonClicked = {
+                        trackViewModel.searchFilter = if (trackViewModel.searchFilter == null) ""
+                        else null
+                    }, sortOptions = Track.Sort.values(),
+                    sortOptionNames = Track.Sort.stringValues(),
+                    currentSortOption = trackViewModel.trackSort,
+                    onSortOptionChanged = { trackViewModel.trackSort = it }
+                ) {
+                    SettingsButton{ showingAppSettings = true }
+                }
 
                 val enterOffset = remember { { size: Int -> size * if (showingAppSettings) -1 else 1 } }
                 val exitOffset = remember { { size: Int -> size * if (showingAppSettings) 1 else -1 } }
@@ -89,8 +105,6 @@ class MainActivity : ComponentActivity() {
                     if(showingSettings)
                         AppSettings()
                     else {
-                        val tracks by trackViewModel.tracks.collectAsState()
-
                         val isPlaying by produceState(false, boundPlayerService) {
                             val service = boundPlayerService
                             if (service == null) value = false
@@ -105,7 +119,7 @@ class MainActivity : ComponentActivity() {
                             onDeleteRequest = { uri -> trackViewModel.delete(uri) }) }
 
                         SoundMixEditor(
-                            tracks = tracks,
+                            tracks = trackViewModel.tracks,
                             playing = isPlaying,
                             itemCallback = itemCallback,
                             onAddItemRequest = { trackViewModel.add(it) },
@@ -162,47 +176,6 @@ class MainActivity : ComponentActivity() {
         (windowBackground as GradientDrawable).colors =
             intArrayOf(colorPrimary.toArgb(), colorPrimaryVariant.toArgb())
         window.setBackgroundDrawable(windowBackground)
-    }
-}
-
-/**
- * An implementation of a ListActionBar intended to be paired with a SoundMixEditor
- * displaying the list of Track objects exposed by a TrackViewModel instance's
- * tracks property. SoundAuraActionBar will also add a settings button to the
- * end of the bar.
- *
- * @param viewModel The same instance of TrackViewModel used by the paired SoundMixEditor.
- * @param showingAppSettings Whether the app settings are being displayed
- * instead of the SoundMixEditor.
- * @param onSettingsButtonClick The callback that will be invoked when the
- * action bar's settings button is clicked.
- * @param onBackButtonClick The callback that will be invoked when the back
- * button is clicked when showingAppSettings is true.
- */
-@Composable fun SoundAuraActionBar(
-    viewModel: TrackViewModel,
-    showingAppSettings: Boolean,
-    onSettingsButtonClick: () -> Unit,
-    onBackButtonClick: () -> Unit
-) {
-    var searchQuery by remember { mutableStateOf<String?>(null) }
-    val trackSort by viewModel.trackSort.collectAsState()
-    ListActionBar(
-        backButtonShouldBeVisible = showingAppSettings,
-        onBackButtonClick = onBackButtonClick,
-        title = if (!showingAppSettings) stringResource(R.string.app_name)
-                else stringResource(R.string.app_settings_description),
-        searchQuery = searchQuery,
-        onSearchQueryChanged = { searchQuery = it },
-        showSearchAndChangeSortButtons = !showingAppSettings,
-        onSearchButtonClicked = {
-            searchQuery = if (searchQuery == null) "" else null
-        }, sortOptions = Track.Sort.values(),
-        sortOptionNames = Track.Sort.stringValues(),
-        currentSortOption = trackSort,
-        onSortOptionChanged = { viewModel.trackSort.value = it }
-    ) {
-        SettingsButton(onSettingsButtonClick)
     }
 }
 

@@ -6,8 +6,7 @@ package com.cliffracertech.soundaura
 import android.app.Application
 import android.content.Context
 import androidx.annotation.FloatRange
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -35,7 +34,7 @@ class Track(
     }
 }
 
-@Dao abstract class TrackDao() {
+@Dao abstract class TrackDao {
     @Insert abstract suspend fun insert(track: Track): Long
     @Insert abstract suspend fun insert(track: List<Track>)
 
@@ -45,14 +44,14 @@ class Track(
     @Query("DELETE FROM track WHERE uriString in (:uriStrings)")
     abstract suspend fun delete(uriStrings: List<String>)
 
-    @Query("SELECT * FROM track ORDER BY name COLLATE NOCASE ASC")
-    abstract fun getAllTracksSortedByNameAsc(): Flow<List<Track>>
+    @Query("SELECT * FROM track WHERE name LIKE :filter ORDER BY name COLLATE NOCASE ASC")
+    abstract fun getAllTracksSortedByNameAsc(filter: String): Flow<List<Track>>
 
-    @Query("SELECT * FROM track ORDER BY name COLLATE NOCASE DESC")
-    abstract fun getAllTracksSortedByNameDesc(): Flow<List<Track>>
+    @Query("SELECT * FROM track WHERE name LIKE :filter ORDER BY name COLLATE NOCASE DESC")
+    abstract fun getAllTracksSortedByNameDesc(filter: String): Flow<List<Track>>
 
-    @Query("SELECT * FROM track")
-    abstract fun getAllTracks(): Flow<List<Track>>
+    @Query("SELECT * FROM track WHERE name LIKE :filter")
+    abstract fun getAllTracks(filter: String): Flow<List<Track>>
 
     @Query("SELECT * FROM track WHERE playing")
     abstract fun getAllPlayingTracks(): Flow<List<Track>>
@@ -86,13 +85,21 @@ abstract class SoundAuraDatabase : RoomDatabase() {
 class TrackViewModel(app: Application) : AndroidViewModel(app) {
     private val dao = SoundAuraDatabase.get(app).trackDao()
 
-    val trackSort = MutableStateFlow(Track.Sort.NameAsc)
+    var trackSort by mutableStateOf(Track.Sort.NameAsc)
+    var searchFilter by mutableStateOf<String?>(null)
+    var tracks by mutableStateOf<List<Track>>(emptyList())
+        private set
 
-    val tracks = trackSort.flatMapLatest {
-        when (it) { Track.Sort.NameAsc ->    dao.getAllTracksSortedByNameAsc()
-                    Track.Sort.NameDesc ->   dao.getAllTracksSortedByNameDesc()
-                    Track.Sort.OrderAdded -> dao.getAllTracks() }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    init {
+        snapshotFlow { trackSort to searchFilter }.flatMapLatest {
+            val filter = "%${it.second ?: ""}%"
+            when (it.first) {
+                Track.Sort.NameAsc ->    dao.getAllTracksSortedByNameAsc(filter)
+                Track.Sort.NameDesc ->   dao.getAllTracksSortedByNameDesc(filter)
+                Track.Sort.OrderAdded -> dao.getAllTracks(filter)
+            }
+        }.onEach { tracks = it }.launchIn(viewModelScope)
+    }
 
     val playingTracks = dao.getAllPlayingTracks()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
