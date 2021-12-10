@@ -8,16 +8,20 @@
     android:height="108dp"
     android:viewportWidth="30"
     android:viewportHeight="30">
-    <group>
+    <group
+        android:scaleX="0.9"
+        android:scaleY="0.9"
+        android:translateX="1.5"
+        android:translateY="1.5"  >
         <path
             android:pathData="M 15 13 A 2 2 0 0 0 15 17 A 2 2 0 0 0 15 13"
             android:strokeLineCap="butt">
             <aapt:attr name="android:fillColor">
                 <gradient
-                    android:startX="1"
-                    android:startY="10"
-                    android:endX="19"
-                    android:endY="10"
+                    android:startX="6"
+                    android:startY="15"
+                    android:endX="24"
+                    android:endY="15"
                     android:type="linear">
                     <item android:offset="0" android:color="#55D69A"/>
                     <item android:offset="1" android:color="#3EC2BD"/>
@@ -30,10 +34,10 @@
             android:strokeLineCap="round">
             <aapt:attr name="android:strokeColor">
                 <gradient
-                    android:startX="1"
-                    android:startY="10"
-                    android:endX="19"
-                    android:endY="10"
+                    android:startX="6"
+                    android:startY="15"
+                    android:endX="24"
+                    android:endY="15"
                     android:type="linear">
                     <item android:offset="0" android:color="#55D69A"/>
                     <item android:offset="1" android:color="#3EC2BD"/>

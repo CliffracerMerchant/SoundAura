@@ -184,7 +184,7 @@ class MainActivity : ComponentActivity() {
  * provided @param trackViewCallback for callbacks. */
 @Composable fun TrackList(tracks: List<Track>, trackViewCallback: TrackViewCallback) =
     LazyColumn(
-        modifier = Modifier.padding(8.dp),
+        contentPadding = PaddingValues(8.dp, 8.dp, 8.dp, 70.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(tracks, { it.uriString }) {
