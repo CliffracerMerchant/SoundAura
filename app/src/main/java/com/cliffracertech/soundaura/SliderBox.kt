@@ -167,7 +167,7 @@ fun SliderBox(
         }
 
         val press = Modifier.sliderPressModifier(
-            draggableState, interactionSource, maxPx, isRtl, rawOffset, gestureEndAction, enabled
+            draggableState, interactionSource, maxPx, isRtl, gestureEndAction, enabled
         )
 
         val drag = Modifier.draggable(
@@ -189,10 +189,7 @@ fun SliderBox(
             colors,
             maxPx,
             interactionSource,
-            modifier = press
-                .then(drag)
-                .padding(sliderPadding)
-        )
+            modifier = press.then(drag).padding(sliderPadding))
         content()
     }
 }
@@ -606,38 +603,25 @@ private fun Modifier.sliderPressModifier(
     interactionSource: MutableInteractionSource,
     maxPx: Float,
     isRtl: Boolean,
-    rawOffset: State<Float>,
     gestureEndAction: State<(Float) -> Unit>,
     enabled: Boolean
-): Modifier =
-    if (enabled) {
-        pointerInput(draggableState, interactionSource, maxPx, isRtl) {
-            detectTapGestures(
-                onPress = { pos ->
-                    draggableState.drag(MutatePriority.UserInput) {
-                        val to = if (isRtl) maxPx - pos.x else pos.x
-                        dragBy(to - rawOffset.value)
-                    }
-                    val interaction = PressInteraction.Press(pos)
-                    interactionSource.emit(interaction)
-                    val finishInteraction =
-                        try {
-                            val success = tryAwaitRelease()
-                            gestureEndAction.value.invoke(0f)
-                            if (success) {
-                                PressInteraction.Release(interaction)
-                            } else {
-                                PressInteraction.Cancel(interaction)
-                            }
-                        } catch (c: CancellationException) {
-                            PressInteraction.Cancel(interaction)
-                        }
-                    interactionSource.emit(finishInteraction)
+): Modifier = if (!enabled) this else
+    pointerInput(draggableState, interactionSource, maxPx, isRtl) {
+        detectTapGestures(
+            onPress = { pos ->
+                val interaction = PressInteraction.Press(pos)
+                interactionSource.emit(interaction)
+                val finishInteraction = try {
+                    val success = tryAwaitRelease()
+                    gestureEndAction.value.invoke(0f)
+                    if (success) PressInteraction.Release(interaction)
+                    else         PressInteraction.Cancel(interaction)
+                } catch (c: CancellationException) {
+                    PressInteraction.Cancel(interaction)
                 }
-            )
-        }
-    } else {
-        this
+                interactionSource.emit(finishInteraction)
+            }
+        )
     }
 
 private suspend fun animateToTarget(
