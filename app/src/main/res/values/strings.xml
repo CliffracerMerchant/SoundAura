@@ -46,4 +46,6 @@
     <string name="close_description">Close</string>
     <string name="checked_description">Checked</string>
     <string name="unchecked_description">Unchecked</string>
+    <string name="dismiss_description">Dismiss</string>
+    <string name="track_already_exists_error_message">This file is already in the library</string>
 </resources>

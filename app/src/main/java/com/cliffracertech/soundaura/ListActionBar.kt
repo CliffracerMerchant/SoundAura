@@ -6,6 +6,8 @@ package com.cliffracertech.soundaura
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.graphics.res.animatedVectorResource
+import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
+import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
@@ -120,10 +122,10 @@ fun <T> ListActionBar(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Search button
-                val animatedSearchIcon = animatedVectorResource(R.drawable.search_to_close)
+                val vector = AnimatedImageVector.animatedVectorResource(R.drawable.search_to_close)
+                val painter = rememberAnimatedVectorPainter(vector, searchQuery != null)
                 IconButton(onClick = onSearchButtonClicked) {
-                    Icon(animatedSearchIcon.painterFor(searchQuery != null),
-                         stringResource(R.string.search_description))
+                    Icon(painter, stringResource(R.string.search_description))
                 }
                 // Change sort button
                 var sortMenuShown by remember { mutableStateOf(false) }
@@ -262,4 +264,33 @@ fun <T> ListActionBar(
         onSortOptionChanged = { },
         onSearchButtonClicked = { }
     )}
+
+@Composable fun <T> ListActionBarWithSettingsButton(
+    backButtonShouldBeVisible: Boolean = false,
+    onBackButtonClick: () -> Unit,
+    title: String,
+    searchQuery: String?,
+    onSearchQueryChanged: (String?) -> Unit,
+    showSearchAndChangeSortButtons: Boolean = true,
+    onSearchButtonClicked: () -> Unit,
+    sortOptions: Array<T>,
+    sortOptionNames: Array<String>,
+    currentSortOption: T,
+    onSortOptionChanged: (T) -> Unit,
+    onSettingsButtonClick: () ->Unit,
+) = ListActionBar(
+    backButtonShouldBeVisible,
+    onBackButtonClick,
+    title,
+    searchQuery,
+    onSearchQueryChanged,
+    showSearchAndChangeSortButtons,
+    onSearchButtonClicked,
+    sortOptions,
+    sortOptionNames,
+    currentSortOption,
+    onSortOptionChanged,
+) {
+    SettingsButton(onClick = onSettingsButtonClick)
+}
 

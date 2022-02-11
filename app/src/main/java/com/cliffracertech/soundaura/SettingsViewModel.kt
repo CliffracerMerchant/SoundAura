@@ -5,7 +5,10 @@ package com.cliffracertech.soundaura
 import android.app.Application
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.edit
@@ -13,15 +16,26 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 val Context.dataStore by preferencesDataStore(name = "settings")
 val appThemeKey = intPreferencesKey("app_theme")
 
 class SettingsViewModel(private val app: Application) : AndroidViewModel(app) {
-    val prefs = app.dataStore.data.stateIn(viewModelScope, SharingStarted.Lazily, null)
+    var appTheme by mutableStateOf(
+        runBlocking {
+            val firstIndex = app.dataStore.data.first()[appThemeKey]
+            AppTheme.values()[firstIndex ?: 0]
+        })
+        private set
+
+    init {
+        app.dataStore.data.map { it[appThemeKey] }
+            .onEach { appTheme = AppTheme.values()[it ?: 0] }
+            .launchIn(viewModelScope)
+    }
 
     fun writePreferences(actions: suspend (MutablePreferences) -> Unit) {
         viewModelScope.launch {

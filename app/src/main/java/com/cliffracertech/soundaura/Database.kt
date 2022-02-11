@@ -5,22 +5,28 @@ package com.cliffracertech.soundaura
 
 import android.app.Application
 import android.content.Context
+import android.database.sqlite.SQLiteConstraintException
 import androidx.annotation.FloatRange
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.*
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 @Entity(tableName = "track")
 class Track(
-    @ColumnInfo(name="uriString") @PrimaryKey        val uriString: String,
-    @ColumnInfo(name="name")                         val name: String,
-    @ColumnInfo(name="playing", defaultValue = "0")  val playing: Boolean = false,
+    @ColumnInfo(name="uriString") @PrimaryKey
+    val uriString: String,
+    @ColumnInfo(name="name")
+    val name: String,
+    @ColumnInfo(name="playing", defaultValue = "0")
+    val playing: Boolean = false,
     @FloatRange(from = 0.0, to = 1.0)
-    @ColumnInfo(name="volume", defaultValue = "1.0") val volume: Float = 1f
+    @ColumnInfo(name="volume", defaultValue = "1.0")
+    val volume: Float = 1f
 ) {
     enum class Sort { NameAsc, NameDesc, OrderAdded;
 
@@ -89,6 +95,9 @@ class TrackViewModel(app: Application) : AndroidViewModel(app) {
     var searchFilter by mutableStateOf<String?>(null)
     var tracks by mutableStateOf<List<Track>>(emptyList())
         private set
+    private val _messages = MutableSharedFlow<StringResource>(replay = 0, extraBufferCapacity = 1,
+                                                              onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    val messages = _messages.asSharedFlow()
 
     init {
         snapshotFlow { trackSort to searchFilter }.flatMapLatest {
@@ -105,7 +114,12 @@ class TrackViewModel(app: Application) : AndroidViewModel(app) {
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun add(track: Track) {
-        viewModelScope.launch { dao.insert(track) }
+        viewModelScope.launch {
+            try { dao.insert(track) }
+            catch(e: SQLiteConstraintException) {
+                _messages.tryEmit(StringResource(R.string.track_already_exists_error_message))
+            }
+        }
     }
 
     fun delete(uriString: String) {

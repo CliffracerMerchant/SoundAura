@@ -64,70 +64,90 @@ class MainActivity : ComponentActivity() {
                      theme == AppTheme.Dark
             }
 
-            SoundAuraTheme(usingDarkTheme) { Column {
+            SoundAuraTheme(usingDarkTheme) {
                 var showingAppSettings by remember { mutableStateOf(false) }
                 val trackViewModel: TrackViewModel = viewModel()
                 SetAndRememberWindowBackground(usingDarkTheme)
+                val scaffoldState = rememberScaffoldState()
 
-                ListActionBar(
-                    backButtonShouldBeVisible = showingAppSettings,
-                    onBackButtonClick = { showingAppSettings = false },
-                    title = if (!showingAppSettings) stringResource(R.string.app_name)
-                    else stringResource(R.string.app_settings_description),
-                    searchQuery = trackViewModel.searchFilter,
-                    onSearchQueryChanged = { trackViewModel.searchFilter = it },
-                    showSearchAndChangeSortButtons = !showingAppSettings,
-                    onSearchButtonClicked = {
-                        trackViewModel.searchFilter = if (trackViewModel.searchFilter == null) ""
-                        else null
-                    }, sortOptions = Track.Sort.values(),
-                    sortOptionNames = Track.Sort.stringValues(),
-                    currentSortOption = trackViewModel.trackSort,
-                    onSortOptionChanged = { trackViewModel.trackSort = it }
-                ) {
-                    SettingsButton{ showingAppSettings = true }
+                val isPlaying by produceState(false, boundPlayerService) {
+                    val service = boundPlayerService
+                    if (service == null) value = false
+                    else service.isPlaying.collect { value = it }
                 }
 
-                val enterOffset = remember { { size: Int -> size * if (showingAppSettings) -1 else 1 } }
-                val exitOffset = remember { { size: Int -> size * if (showingAppSettings) 1 else -1 } }
-                AnimatedContent(showingAppSettings, transitionSpec = {
-                    slideInHorizontally(tween(), enterOffset) with
-                    slideOutHorizontally(tween(), exitOffset)
-                }) { showingSettings ->
+                Scaffold(
+                    scaffoldState = scaffoldState,
+                    floatingActionButtonPosition = FabPosition.Center,
+                    topBar = {
+                        ListActionBarWithSettingsButton(
+                            backButtonShouldBeVisible = showingAppSettings,
+                            onBackButtonClick = { showingAppSettings = false },
+                            title = if (!showingAppSettings) stringResource(R.string.app_name)
+                                    else                     stringResource(R.string.app_settings_description),
+                            searchQuery = trackViewModel.searchFilter,
+                            onSearchQueryChanged = { trackViewModel.searchFilter = it },
+                            showSearchAndChangeSortButtons = !showingAppSettings,
+                            onSearchButtonClicked = { trackViewModel.searchFilter =
+                                if (trackViewModel.searchFilter == null) "" else null
+                            }, sortOptions = Track.Sort.values(),
+                            sortOptionNames = Track.Sort.stringValues(),
+                            currentSortOption = trackViewModel.trackSort,
+                            onSortOptionChanged = { trackViewModel.trackSort = it },
+                            onSettingsButtonClick = { showingAppSettings = true })
+                    },
+                    floatingActionButton = {
+                        FloatingActionButton(
+                            onClick = { boundPlayerService?.toggleIsPlaying() },
+                            backgroundColor = lerp(MaterialTheme.colors.primary,
+                                                   MaterialTheme.colors.primaryVariant, 0.5f),
+                            elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp)
+                        ) { PlayPauseIcon(isPlaying, tint = MaterialTheme.colors.onPrimary) }
+                    }
+                ) {
+                    val enterOffset = remember { { size: Int -> size * if (showingAppSettings) -1 else 1 } }
+                    val exitOffset = remember { { size: Int -> size * if (showingAppSettings) 1 else -1 } }
+                    AnimatedContent(showingAppSettings, transitionSpec = {
+                        slideInHorizontally(tween(), enterOffset) with
+                        slideOutHorizontally(tween(), exitOffset)
+                    }) { showingSettings ->
+                        if(showingSettings)
+                            AppSettings()
+                        else {
+                            val itemCallback = remember { TrackViewCallback(
+                                onPlayPauseButtonClick = trackViewModel::updatePlaying,
+                                onVolumeChange = { uri, volume ->
+                                    boundPlayerService?.setTrackVolume(uri, volume)
+                                }, onVolumeChangeFinished = trackViewModel::updateVolume,
+                                onRenameRequest = trackViewModel::updateName,
+                                onDeleteRequest = trackViewModel::delete) }
 
-                    if(showingSettings)
-                        AppSettings()
-                    else {
-                        val isPlaying by produceState(false, boundPlayerService) {
-                            val service = boundPlayerService
-                            if (service == null) value = false
-                            else service.isPlaying.collect { value = it }
+                            SoundMixEditor(
+                                tracks = trackViewModel.tracks,
+                                itemCallback = itemCallback,
+                                onAddItemRequest = { trackViewModel.add(it) })
+
+                            val dismissLabel = stringResource(R.string.dismiss_description)
+                            LaunchedEffect(Unit) {
+                                trackViewModel.messages.collect {
+                                    scaffoldState.snackbarHostState.showSnackbar(
+                                        message = it.resolve(this@MainActivity),
+                                        actionLabel = dismissLabel.uppercase(),
+                                        duration = SnackbarDuration.Short)
+                                }
+                            }
                         }
-
-                        val itemCallback = remember { TrackViewCallback(
-                            onPlayPauseButtonClick = { uri, trackIsPlaying -> trackViewModel.updatePlaying(uri, trackIsPlaying) },
-                            onVolumeChange = { uri, volume -> boundPlayerService?.setTrackVolume(uri, volume) },
-                            onVolumeChangeFinished = { uri, volume -> trackViewModel.updateVolume(uri, volume) },
-                            onRenameRequest = { uri, name -> trackViewModel.updateName(uri, name) },
-                            onDeleteRequest = { uri -> trackViewModel.delete(uri) }) }
-
-                        SoundMixEditor(
-                            tracks = trackViewModel.tracks,
-                            playing = isPlaying,
-                            itemCallback = itemCallback,
-                            onAddItemRequest = { trackViewModel.add(it) },
-                            onPlayPauseRequest = { boundPlayerService?.toggleIsPlaying() })
                     }
                 }
-            }}
+            }
         }
     }
 }
 
 @Composable fun MainActivityPreview(usingDarkTheme: Boolean) =
     SoundAuraTheme(usingDarkTheme) {
-        Column {
-            ListActionBar(
+        Scaffold(
+            topBar = { ListActionBarWithSettingsButton(
                 backButtonShouldBeVisible = false,
                 onBackButtonClick = { },
                 title = stringResource(R.string.app_name),
@@ -137,15 +157,25 @@ class MainActivity : ComponentActivity() {
                 sortOptionNames = Track.Sort.stringValues(),
                 currentSortOption = Track.Sort.NameAsc,
                 onSortOptionChanged = { },
-                onSearchButtonClicked = { }
-            ) { SettingsButton{ } }
-
-            SoundMixEditor(playing = true, tracks = listOf(
+                onSearchButtonClicked = { },
+                onSettingsButtonClick = { }
+            )},
+            floatingActionButtonPosition = FabPosition.Center,
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = { },
+                    backgroundColor = lerp(MaterialTheme.colors.primary,
+                                           MaterialTheme.colors.primaryVariant, 0.5f),
+                    elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp),
+                ) { PlayPauseIcon(playing = true, tint = MaterialTheme.colors.onPrimary) }
+            }
+        ) {
+            SoundMixEditor(tracks = listOf(
                 Track(uriString = "0", name = "Audio clip 1", volume = 0.3f),
                 Track(uriString = "1", name = "Audio clip 2", volume = 0.8f),
                 Track(uriString = "2", name = "Audio clip 3", volume = 0.5f)))
         }
-    }
+}
 
 @Preview @Composable fun MainActivityLightThemePreview() =
     MainActivityPreview(usingDarkTheme = false)
@@ -175,37 +205,33 @@ class MainActivity : ComponentActivity() {
 /** A LazyColumn to display all of the Tracks provided in @param tracks
  * with an instance of TrackView. The created TrackViews will use the
  * provided @param trackViewCallback for callbacks. */
-@Composable fun TrackList(tracks: List<Track>, trackViewCallback: TrackViewCallback) =
-    LazyColumn(
-        contentPadding = PaddingValues(8.dp, 8.dp, 8.dp, 70.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(tracks, { it.uriString }) {
-            TrackView(it, trackViewCallback, Modifier.animateItemPlacement())
-        }
+@Composable fun TrackList(
+    tracks: List<Track>,
+    trackViewCallback: TrackViewCallback = TrackViewCallback()
+) = LazyColumn(
+    contentPadding = PaddingValues(8.dp, 8.dp, 8.dp, 70.dp),
+    verticalArrangement = Arrangement.spacedBy(8.dp)
+) {
+    items(tracks, { it.uriString }) {
+        TrackView(it, trackViewCallback, Modifier.animateItemPlacement())
     }
+}
 
 /**
  * A combination of a TrackList to display all of the provided tracks and
- * controls to play/pause the sound mix and add new tracks.
+ * and a button to add new tracks.
  *
  * @param tracks A list of all of the tracks that should be displayed in the TrackList.
- * @param playing Whether the play/pause button will display its
- *                pause icon (as opposed to its play icon).
  * @param itemCallback A TrackViewCallback instance that contains the callbacks
  *                     to be invoked when the TrackView instances inside the
  *                     TrackList are interacted with.
- * @param onAddItemRequest A callback that will be invoked when a new Track
- *                         is added through the various add track dialogs.
- * @param onPlayPauseRequest A callback that will be invoked when the play /
- *                           pause button is clicked.
+ * @param onAddItemRequest The callback that will be invoked when one of the
+ *                         various add track dialogs has been confirmed.
  */
 @Composable fun SoundMixEditor(
     tracks: List<Track>,
-    playing: Boolean,
     itemCallback: TrackViewCallback = TrackViewCallback(),
     onAddItemRequest: (Track) -> Unit = { },
-    onPlayPauseRequest: () -> Unit = { },
 ) = Surface(
     color = MaterialTheme.colors.background,
     modifier = Modifier.fillMaxSize(1f)
@@ -220,32 +246,21 @@ class MainActivity : ComponentActivity() {
         DownloadOrAddLocalFileButton(
             expanded = addButtonExpanded,
             onClick = { addButtonExpanded = !addButtonExpanded },
+            modifier = Modifier.padding(16.dp).align(Alignment.BottomEnd),
             onAddDownloadClick = { addButtonExpanded = false },
                                     //showingDownloadFileDialog = true },
             onAddLocalFileClick = { addButtonExpanded = false
-                                    showingAddLocalFileDialog = true },
-            modifier = Modifier.padding(16.dp).align(Alignment.BottomEnd))
+                                    showingAddLocalFileDialog = true })
 
-        FloatingActionButton(
-            onClick = onPlayPauseRequest,
-            modifier = Modifier.padding(16.dp).align(Alignment.BottomCenter),
-            backgroundColor = lerp(MaterialTheme.colors.primary,
-                                   MaterialTheme.colors.primaryVariant, 0.5f),
-            elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp)
-        ) {
-            val description = if (playing) stringResource(R.string.pause_description)
-                              else         stringResource(R.string.play_description)
-            PlayPauseIcon(playing, description, MaterialTheme.colors.onPrimary)
-        }
+        //if (showingDownloadFileDialog)
+
+        if (showingAddLocalFileDialog)
+            AddTrackFromLocalFileDialog(
+                onDismissRequest = { showingAddLocalFileDialog = false },
+                onConfirmRequest = { onAddItemRequest(it)
+                                     showingAddLocalFileDialog = false })
     }
 
-    //if (showingDownloadFileDialog)
-
-    if (showingAddLocalFileDialog)
-        AddTrackFromLocalFileDialog(
-            onDismissRequest = { showingAddLocalFileDialog = false },
-            onConfirmRequest = { onAddItemRequest(it)
-                                 showingAddLocalFileDialog = false })
 }
 
 
