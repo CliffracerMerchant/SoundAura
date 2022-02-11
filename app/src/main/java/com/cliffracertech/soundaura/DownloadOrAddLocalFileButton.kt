@@ -25,10 +25,10 @@ import androidx.compose.ui.unit.dp
  * A layout that acts as an implementation of the speed dial floating action button concept.
  *
  * SpeedDialLayout displays only its @param content when @param expanded ==
- * false, but will animate the appearance of each piece of child content
- * (usually a button) above the main content in order when expanded == true.
- * The child contents will appear above the main content, so a bottom
- * alignment for the SpeedDialLayout in its parent is recommended.
+ * false, but will animate the appearance of each of its children (usually
+ * a button) above the main content in order when expanded == true. The
+ * children will appear above the main content, so a bottom alignment for
+ * the SpeedDialLayout in its parent is recommended.
  *
  * @param expanded Whether or not the child contents will be displayed.
  * @param modifier The modifier for the parent layout
@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.dp
  * @param totalDuration The total duration over which all children will appear. If
  *     longer than childAppearanceDuration, the children will have an appearance or
  *     disappearance delay according to their position in the list of children.
- * @param childContent A list of each piece of child content that will appear
+ * @param children A list of each piece of child content that will appear
  *     when the layout is expanded.
  * @param content The content that will be displayed when the layout is collapsed.
  */
@@ -48,20 +48,20 @@ import androidx.compose.ui.unit.dp
     childAlignment: Alignment.Horizontal = Alignment.End,
     childAppearanceDuration: Int = DefaultDurationMillis,
     totalDuration: Int = DefaultDurationMillis,
-    childContent: List<@Composable () -> Unit>,
+    children: List<@Composable () -> Unit>,
     content: @Composable () -> Unit,
 ) = Column(modifier, Arrangement.spacedBy(8.dp), childAlignment) {
 
-    val delayFactor = (totalDuration - childAppearanceDuration) / childContent.size
-    childContent.forEachIndexed { index, button ->
+    val delayFactor = (totalDuration - childAppearanceDuration) / children.size
+    children.forEachIndexed { index, child ->
         val exitDelay = index * delayFactor
-        val enterDelay = childContent.lastIndex * delayFactor - exitDelay
+        val enterDelay = children.lastIndex * delayFactor - exitDelay
         AnimatedVisibility(expanded,
             enter = fadeIn(tween(childAppearanceDuration, enterDelay)) +
                     scaleIn(overshootTweenSpec(childAppearanceDuration, enterDelay), initialScale = 0.8f),
             exit = fadeOut(tween(childAppearanceDuration, exitDelay)) +
                    scaleOut(tween(childAppearanceDuration, exitDelay), targetScale = 0.8f)
-        ) { button() }
+        ) { child() }
     }
     content()
 }
@@ -89,21 +89,26 @@ import androidx.compose.ui.unit.dp
     modifier = modifier,
     childAppearanceDuration = 275,
     totalDuration = 400,
-    childContent = listOf(
+    children = listOf(
+        // The button elevations will be set to 0 for the time being
+        // to work around an AnimatedVisibility bug where the button's
+        // shadows are clipped.
         { ExtendedFloatingActionButton(
             text = { Text("download") },
             onClick = onAddDownloadClick,
             icon = { Icon(Icons.Default.Add, null) },
             backgroundColor = MaterialTheme.colors.primaryVariant,
             contentColor = MaterialTheme.colors.onPrimary,
-            elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp))
+//            elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp))
+            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp))
         }, { ExtendedFloatingActionButton(
             text = { Text("local file") },
             onClick = onAddLocalFileClick,
             icon = { Icon(Icons.Default.Add, null) },
             backgroundColor = MaterialTheme.colors.primaryVariant,
             contentColor = MaterialTheme.colors.onPrimary,
-            elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp))
+//            elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp))
+            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp))
         })
 ) { FloatingActionButton(
     onClick = onClick,
