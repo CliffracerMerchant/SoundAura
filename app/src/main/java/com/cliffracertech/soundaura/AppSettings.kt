@@ -38,24 +38,18 @@ fun Context.isSystemInDarkTheme() = Configuration.UI_MODE_NIGHT_YES ==
     valueNames: Array<String>,
     currentValue: T,
     onValueSelected: (T) -> Unit,
-) = Row(modifier) {
-
-    Column(verticalArrangement = Arrangement.Center) {
-        values.forEachIndexed { index, value ->
-            Row(Modifier.height(36.dp).clickable { onValueSelected(value) },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val name = valueNames.getOrNull(index) ?: "Error"
-                Text(text = name, style = MaterialTheme.typography.body1)
-                Spacer(Modifier.width(24.dp))
-            }
+) = Column(modifier) {
+    values.forEachIndexed { index, value ->
+        Row(Modifier.height(48.dp).clickable { onValueSelected(value) },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            RadioButton(value == currentValue,
+                        Modifier.size(36.dp).padding(8.dp))
+            val name = valueNames.getOrNull(index) ?: "Error"
+            Text(text = name, style = MaterialTheme.typography.body1)
         }
     }
-    Column { values.forEach{
-        val modifier = Modifier.size(36.dp).padding(8.dp)
-                        .clickable { onValueSelected(it) }
-        RadioButton(it == currentValue, modifier)
-    }}
 }
 
 /**
