@@ -3,7 +3,6 @@
 package com.cliffracertech.soundaura
 
 import androidx.compose.animation.core.AnimationConstants.DefaultDurationMillis
-import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.material.Icon
@@ -44,22 +43,17 @@ fun Modifier.largeSurfaceBackground() = composed {
     Icon(Icons.Default.Settings, stringResource(R.string.settings_description))
 }
 
-private val overshootEasing = Easing {
+@Composable fun <T>overshootTweenSpec(
+    duration: Int = DefaultDurationMillis,
+    delay: Int = 0,
+) = tween<T>(duration, delay) {
     val t = it - 1
     t * t * (3 * t + 2) + 1
 }
 
-private val anticipateEasing = Easing {
-    it * it * (3 * it - 2)
-}
-
-@Composable fun <T>overshootTweenSpec(
-    duration: Int = DefaultDurationMillis,
-    delay: Int = 0,
-) = tween<T>(duration, delay, overshootEasing)
-
 @Composable fun <T>anticipateTweenSpec(
     duration: Int = DefaultDurationMillis,
     delay: Int = 0,
-) = tween<T>(duration, delay, anticipateEasing)
-
+) = tween<T>(duration, delay) {
+    it * it * (3 * it - 2)
+}

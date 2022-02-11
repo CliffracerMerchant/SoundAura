@@ -4,6 +4,8 @@
 package com.cliffracertech.soundaura
 
 import androidx.compose.animation.graphics.res.animatedVectorResource
+import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
+import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -78,14 +80,19 @@ fun TrackView(
 
 @Composable fun PlayPauseIcon(
     playing: Boolean,
-    contentDescription: String,
+    contentDescription: String =
+        if (playing) stringResource(R.string.pause_description)
+        else         stringResource(R.string.play_description),
     tint: Color = LocalContentColor.current.copy(alpha = LocalContentAlpha.current)
 ) {
-    val playToPause = animatedVectorResource(R.drawable.play_to_pause).painterFor(playing)
-    val pauseToPlay = animatedVectorResource(R.drawable.pause_to_play).painterFor(!playing)
-    val vector = if (playing) playToPause
-                 else         pauseToPlay
-    Icon(vector, contentDescription, tint = tint)
+    val playToPause = AnimatedImageVector.animatedVectorResource(R.drawable.play_to_pause)
+    val playToPausePainter = rememberAnimatedVectorPainter(playToPause, atEnd = playing)
+    val pauseToPlay = AnimatedImageVector.animatedVectorResource(R.drawable.pause_to_play)
+    val pauseToPlayPainter = rememberAnimatedVectorPainter(pauseToPlay, atEnd = !playing)
+    Icon(painter = if (playing) playToPausePainter
+                   else         pauseToPlayPainter,
+         contentDescription = contentDescription,
+         tint = tint)
 }
 
 /**
