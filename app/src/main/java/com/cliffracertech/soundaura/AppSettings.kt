@@ -10,9 +10,6 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -75,9 +72,8 @@ fun Context.isSystemInDarkTheme() = Configuration.UI_MODE_NIGHT_YES ==
 
     Column(Modifier.weight(1f)) {
         Text(title, style = MaterialTheme.typography.h6)
-        description?.let {
-            Text(it, style = MaterialTheme.typography.body2)
-        }
+        if (description != null)
+            Text(description, style = MaterialTheme.typography.body2)
     }
     content()
 }
@@ -89,16 +85,12 @@ fun AppSettings() = Surface(
 ) {
     Column(Modifier.padding(12.dp, 8.dp)) {
         val viewModel: SettingsViewModel = viewModel()
-        val preferences by viewModel.prefs.collectAsState()
-        val appTheme by derivedStateOf {
-            AppTheme.values()[preferences?.get(appThemeKey) ?: 0]
-        }
 
         Setting(title = stringResource(R.string.app_theme_description)) {
             EnumRadioButtonGroup(
                 values = AppTheme.values(),
                 valueNames = AppTheme.stringValues(),
-                currentValue = appTheme,
+                currentValue = viewModel.appTheme,
                 onValueSelected = { theme ->
                     viewModel.writePreferences { prefs ->
                         prefs[appThemeKey] = theme.ordinal
