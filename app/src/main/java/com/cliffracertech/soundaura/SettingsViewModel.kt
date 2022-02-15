@@ -19,7 +19,6 @@ import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 val Context.dataStore by preferencesDataStore(name = "settings")
-val appThemeKey = intPreferencesKey("app_theme")
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -35,9 +34,9 @@ class SettingsViewModel @Inject constructor(
         dataStore.awaitEnumPreferenceState<AppTheme>(appThemeKey, viewModelScope)
     }
 
-    fun writePreferences(actions: suspend (MutablePreferences) -> Unit) {
+    fun onAppThemeSelected(theme: AppTheme) {
         viewModelScope.launch {
-            app.dataStore.edit { actions(it) }
+            dataStore.edit { it[appThemeKey] = theme.ordinal }
         }
     }
 }

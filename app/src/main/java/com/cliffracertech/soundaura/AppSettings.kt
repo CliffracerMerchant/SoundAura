@@ -2,8 +2,6 @@
  * License 2.0. See license.md in the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import android.content.Context
-import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.MaterialTheme
@@ -15,10 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-
-fun Context.isSystemInDarkTheme() = Configuration.UI_MODE_NIGHT_YES ==
-    (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK)
-
 /**
  * A radio button group to select a particular value of an enum.
  *
@@ -88,14 +82,11 @@ fun AppSettings() = Surface(
 
         Setting(title = stringResource(R.string.app_theme_description)) {
             EnumRadioButtonGroup(
+                modifier = Modifier.padding(end = 24.dp),
                 values = AppTheme.values(),
                 valueNames = AppTheme.stringValues(),
                 currentValue = viewModel.appTheme,
-                onValueSelected = { theme ->
-                    viewModel.writePreferences { prefs ->
-                        prefs[appThemeKey] = theme.ordinal
-                    }
-                })
+                onValueSelected = viewModel::onAppThemeSelected)
         }
     }
 }
