@@ -7,6 +7,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.res.Configuration
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.IBinder
@@ -14,24 +15,31 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
+import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collect
+import javax.inject.Inject
 
+@HiltViewModel
+class MainActivityViewModel @Inject constructor(
+    messageHandler: MessageHandler
+) : ViewModel() {
+    val messages = messageHandler.messages
+}
+
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private var boundPlayerService by mutableStateOf<PlayerService.Binder?>(null)
 
@@ -57,53 +65,24 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val settingsViewModel: SettingsViewModel = viewModel()
-            val usingDarkTheme by derivedStateOf {
-                 val theme = settingsViewModel.appTheme
-                 (theme == AppTheme.UseSystem && isSystemInDarkTheme()) ||
-                     theme == AppTheme.Dark
-            }
-
-            SoundAuraTheme(usingDarkTheme) {
-                var showingAppSettings by remember { mutableStateOf(false) }
-                val trackViewModel: TrackViewModel = viewModel()
-                SetAndRememberWindowBackground(usingDarkTheme)
-                val scaffoldState = rememberScaffoldState()
+            ThemeContainer {
+                var showingAppSettings by rememberSaveable { mutableStateOf(false) }
 
                 val isPlaying by produceState(false, boundPlayerService) {
                     val service = boundPlayerService
                     if (service == null) value = false
                     else service.isPlaying.collect { value = it }
                 }
+                val scaffoldState = rememberScaffoldState()
+                MessageHandler(scaffoldState)
 
                 Scaffold(
                     scaffoldState = scaffoldState,
                     floatingActionButtonPosition = FabPosition.Center,
-                    topBar = {
-                        ListActionBarWithSettingsButton(
-                            backButtonShouldBeVisible = showingAppSettings,
-                            onBackButtonClick = { showingAppSettings = false },
-                            title = if (!showingAppSettings) stringResource(R.string.app_name)
-                                    else                     stringResource(R.string.app_settings_description),
-                            searchQuery = trackViewModel.searchFilter,
-                            onSearchQueryChanged = { trackViewModel.searchFilter = it },
-                            showSearchAndChangeSortButtons = !showingAppSettings,
-                            onSearchButtonClicked = { trackViewModel.searchFilter =
-                                if (trackViewModel.searchFilter == null) "" else null
-                            }, sortOptions = Track.Sort.values(),
-                            sortOptionNames = Track.Sort.stringValues(),
-                            currentSortOption = trackViewModel.trackSort,
-                            onSortOptionChanged = { trackViewModel.trackSort = it },
-                            onSettingsButtonClick = { showingAppSettings = true })
-                    },
-                    floatingActionButton = {
-                        FloatingActionButton(
-                            onClick = { boundPlayerService?.toggleIsPlaying() },
-                            backgroundColor = lerp(MaterialTheme.colors.primary,
-                                                   MaterialTheme.colors.primaryVariant, 0.5f),
-                            elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp)
-                        ) { PlayPauseIcon(isPlaying, tint = MaterialTheme.colors.onPrimary) }
-                    }
+                    topBar = { ActionBar(showingAppSettings = showingAppSettings,
+                                         onBackButtonClick = { showingAppSettings = false },
+                                         onSettingsButtonClick = { showingAppSettings = true }) },
+                    floatingActionButton = { PlayPauseButton(isPlaying) }
                 ) {
                     val enterOffset = remember { { size: Int -> size * if (showingAppSettings) -1 else 1 } }
                     val exitOffset = remember { { size: Int -> size * if (showingAppSettings) 1 else -1 } }
@@ -113,52 +92,141 @@ class MainActivity : ComponentActivity() {
                     }) { showingSettings ->
                         if(showingSettings)
                             AppSettings()
-                        else {
-                            val itemCallback = remember { TrackViewCallback(
-                                onPlayPauseButtonClick = trackViewModel::updatePlaying,
-                                onVolumeChange = { uri, volume ->
-                                    boundPlayerService?.setTrackVolume(uri, volume)
-                                }, onVolumeChangeFinished = trackViewModel::updateVolume,
-                                onRenameRequest = trackViewModel::updateName,
-                                onDeleteRequest = trackViewModel::delete) }
-
-                            SoundMixEditor(
-                                tracks = trackViewModel.tracks,
-                                itemCallback = itemCallback,
-                                onAddItemRequest = { trackViewModel.add(it) })
-
-                            val dismissLabel = stringResource(R.string.dismiss_description)
-                            LaunchedEffect(Unit) {
-                                trackViewModel.messages.collect {
-                                    scaffoldState.snackbarHostState.showSnackbar(
-                                        message = it.resolve(this@MainActivity),
-                                        actionLabel = dismissLabel.uppercase(),
-                                        duration = SnackbarDuration.Short)
-                                }
-                            }
-                        }
+                        else SoundMixEditor(onTrackVolumeChange = { uri: String, volume: Float ->
+                            boundPlayerService?.setTrackVolume(uri, volume)
+                        })
                     }
                 }
             }
         }
+    }
+
+    /** Read the app's theme from a SettingsViewModel instance and invoke
+     * the provided @param content using the theme. */
+    @Composable private fun ThemeContainer(
+        content: @Composable () -> Unit
+    ) {
+        val settingsViewModel: SettingsViewModel = viewModel()
+        val usingDarkTheme by derivedStateOf {
+            val theme = settingsViewModel.appTheme
+            if (theme == AppTheme.Dark)
+                true
+            else {
+                val systemDarkThemeActive = Configuration.UI_MODE_NIGHT_YES ==
+                    (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK)
+                theme == AppTheme.UseSystem && systemDarkThemeActive
+            }
+        }
+        SoundAuraTheme(usingDarkTheme) {
+            val windowBackground = remember {
+                ContextCompat.getDrawable(this, R.drawable.background_gradient)
+            }
+            val colorPrimary = MaterialTheme.colors.primary
+            val colorPrimaryVariant = MaterialTheme.colors.primaryVariant
+
+            LaunchedEffect(usingDarkTheme) {
+                (windowBackground as GradientDrawable).colors =
+                    intArrayOf(colorPrimary.toArgb(), colorPrimaryVariant.toArgb())
+                window.setBackgroundDrawable(windowBackground)
+            }
+            content()
+        }
+    }
+
+    /** Compose a message handler that will read messages emitted from a
+     * MainActivityViewModel's messages member and display them using snack bars.*/
+    @Composable private fun MessageHandler(scaffoldState: ScaffoldState) {
+        val viewModel: MainActivityViewModel = viewModel()
+        val dismissLabel = stringResource(R.string.dismiss_description)
+        LaunchedEffect(Unit) {
+            viewModel.messages.collect {
+                scaffoldState.snackbarHostState.showSnackbar(
+                    message = it.stringResource.resolve(this@MainActivity),
+                    actionLabel = it.actionStringResource?.resolve(this@MainActivity)
+                        ?: dismissLabel.uppercase(),
+                    duration = SnackbarDuration.Short
+                )
+            }
+        }
+    }
+
+    /** Compose a ListActionBar that switches between a normal state with all
+     * buttons enabled, and an alternative state with most buttons disabled
+     * according to the value of @param showingAppSettings. Back and settings
+     * button clicks will invoke @param onBackButtonClick and @param
+     * onSettingsButtonClick, respectively. */
+    @Composable private fun ActionBar(
+        showingAppSettings: Boolean,
+        onBackButtonClick: () -> Unit,
+        onSettingsButtonClick: () -> Unit,
+    ) {
+        val viewModel: ActionBarViewModel = viewModel()
+        val title = if (!showingAppSettings) stringResource(R.string.app_name)
+                    else stringResource(R.string.app_settings_description)
+        ListActionBar(
+            backButtonShouldBeVisible = showingAppSettings,
+            onBackButtonClick = onBackButtonClick,
+            title = title,
+            searchQuery = viewModel.searchQuery,
+            onSearchQueryChanged = { viewModel.searchQuery = it },
+            showSearchAndChangeSortButtons = !showingAppSettings,
+            onSearchButtonClick = viewModel::onSearchButtonClick,
+            sortOptions = Track.Sort.values(),
+            sortOptionNames = Track.Sort.stringValues(),
+            currentSortOption = viewModel.trackSort,
+            onSortOptionClick = viewModel::ontrackSortOptionClick,
+        ) {
+            SettingsButton(onClick = onSettingsButtonClick)
+        }
+    }
+
+    /** Compose a play / pause floating action button. */
+    @Composable private fun PlayPauseButton(isPlaying: Boolean) {
+        FloatingActionButton(
+            onClick = { boundPlayerService?.toggleIsPlaying() },
+            backgroundColor = lerp(MaterialTheme.colors.primary,
+                                   MaterialTheme.colors.primaryVariant, 0.5f),
+            elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp)
+        ) { PlayPauseIcon(isPlaying, tint = MaterialTheme.colors.onPrimary) }
+    }
+
+
+    /** Compose a SoundMixEditor, using an instance of SoundMixEditorViewModel
+     * to obtain the list of tracks and to respond to item related callbacks.
+     * @param onTrackVolumeChange The callback that will be invoked when a track's
+     *     volume slider is in the process of being changed. */
+    @Composable private fun SoundMixEditor(
+        onTrackVolumeChange: (String, Float) -> Unit
+    ) {
+        val viewModel: SoundMixEditorViewModel = viewModel()
+        val itemCallback = remember {
+            TrackViewCallback(
+                onPlayPauseButtonClick = viewModel::onTrackPlayPauseClick,
+                onVolumeChange = onTrackVolumeChange,
+                //            boundPlayerService?.setTrackVolume(uri, volume)
+                onVolumeChangeFinished = viewModel::onTrackVolumeChangeRequest,
+                onRenameRequest = viewModel::onTrackRenameRequest,
+                onDeleteRequest = viewModel::onDeleteTrackDialogConfirmation)
+        }
+        SoundMixEditor(tracks = viewModel.tracks, itemCallback = itemCallback,
+                       onConfirmAddTrackDialog = viewModel::onConfirmAddTrackDialog)
     }
 }
 
 @Composable fun MainActivityPreview(usingDarkTheme: Boolean) =
     SoundAuraTheme(usingDarkTheme) {
         Scaffold(
-            topBar = { ListActionBarWithSettingsButton(
+            topBar = { ListActionBar(
                 backButtonShouldBeVisible = false,
                 onBackButtonClick = { },
                 title = stringResource(R.string.app_name),
-                searchQuery = null,
                 onSearchQueryChanged = { },
+                onSearchButtonClick = { },
                 sortOptions = Track.Sort.values(),
                 sortOptionNames = Track.Sort.stringValues(),
-                currentSortOption = Track.Sort.NameAsc,
-                onSortOptionChanged = { },
-                onSearchButtonClicked = { },
-                onSettingsButtonClick = { }
+                currentSortOption = Track.Sort.OrderAdded,
+                onSortOptionClick = { },
+                otherContent = { SettingsButton{ } }
             )},
             floatingActionButtonPosition = FabPosition.Center,
             floatingActionButton = {
@@ -171,9 +239,9 @@ class MainActivity : ComponentActivity() {
             }
         ) {
             SoundMixEditor(tracks = listOf(
-                Track(uriString = "0", name = "Audio clip 1", volume = 0.3f),
-                Track(uriString = "1", name = "Audio clip 2", volume = 0.8f),
-                Track(uriString = "2", name = "Audio clip 3", volume = 0.5f)))
+                Track(uriString = "0", name = "Audio track 1", volume = 0.3f),
+                Track(uriString = "1", name = "Audio track 2", volume = 0.8f),
+                Track(uriString = "2", name = "Audio track 3", volume = 0.5f)))
         }
 }
 
@@ -181,88 +249,3 @@ class MainActivity : ComponentActivity() {
     MainActivityPreview(usingDarkTheme = false)
 @Preview @Composable fun MainActivityDarkThemePreview() =
     MainActivityPreview(usingDarkTheme = true)
-
-/**
- * Set the window background to be a horizontal gradient made from
- * the theme colors primary and primaryVariant.
- *
- * @param key A value that should change when the app's theme does.
- */
-@Composable fun MainActivity.SetAndRememberWindowBackground(key: Any?) {
-    val windowBackground = remember {
-        ContextCompat.getDrawable(this, R.drawable.background_gradient)
-    }
-    val colorPrimary = MaterialTheme.colors.primary
-    val colorPrimaryVariant = MaterialTheme.colors.primaryVariant
-
-    LaunchedEffect(key) {
-        (windowBackground as GradientDrawable).colors =
-            intArrayOf(colorPrimary.toArgb(), colorPrimaryVariant.toArgb())
-        window.setBackgroundDrawable(windowBackground)
-    }
-}
-
-/** A LazyColumn to display all of the Tracks provided in @param tracks
- * with an instance of TrackView. The created TrackViews will use the
- * provided @param trackViewCallback for callbacks. */
-@Composable fun TrackList(
-    tracks: List<Track>,
-    trackViewCallback: TrackViewCallback = TrackViewCallback()
-) = LazyColumn(
-    contentPadding = PaddingValues(8.dp, 8.dp, 8.dp, 70.dp),
-    verticalArrangement = Arrangement.spacedBy(8.dp)
-) {
-    items(tracks, { it.uriString }) {
-        TrackView(it, trackViewCallback, Modifier.animateItemPlacement())
-    }
-}
-
-/**
- * A combination of a TrackList to display all of the provided tracks and
- * and a button to add new tracks.
- *
- * @param tracks A list of all of the tracks that should be displayed in the TrackList.
- * @param itemCallback A TrackViewCallback instance that contains the callbacks
- *                     to be invoked when the TrackView instances inside the
- *                     TrackList are interacted with.
- * @param onAddItemRequest The callback that will be invoked when one of the
- *                         various add track dialogs has been confirmed.
- */
-@Composable fun SoundMixEditor(
-    tracks: List<Track>,
-    itemCallback: TrackViewCallback = TrackViewCallback(),
-    onAddItemRequest: (Track) -> Unit = { },
-) = Surface(
-    color = MaterialTheme.colors.background,
-    modifier = Modifier.fillMaxSize(1f)
-) {
-    var showingAddLocalFileDialog by rememberSaveable { mutableStateOf(false) }
-    //var showingDownloadFileDialog by rememberSaveable { mutableStateOf(false) }
-    var addButtonExpanded by remember { mutableStateOf(false) }
-
-    Box(Modifier.fillMaxSize(1f)) {
-        TrackList(tracks, itemCallback)
-
-        DownloadOrAddLocalFileButton(
-            expanded = addButtonExpanded,
-            onClick = { addButtonExpanded = !addButtonExpanded },
-            modifier = Modifier.padding(16.dp).align(Alignment.BottomEnd),
-            onAddDownloadClick = { addButtonExpanded = false },
-                                    //showingDownloadFileDialog = true },
-            onAddLocalFileClick = { addButtonExpanded = false
-                                    showingAddLocalFileDialog = true })
-
-        //if (showingDownloadFileDialog)
-
-        if (showingAddLocalFileDialog)
-            AddTrackFromLocalFileDialog(
-                onDismissRequest = { showingAddLocalFileDialog = false },
-                onConfirmRequest = { onAddItemRequest(it)
-                                     showingAddLocalFileDialog = false })
-    }
-
-}
-
-
-
-

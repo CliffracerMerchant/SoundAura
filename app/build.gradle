@@ -2,6 +2,7 @@ plugins {
     id 'com.android.application'
     id 'kotlin-android'
     id 'kotlin-kapt'
+    id 'dagger.hilt.android.plugin'
 }
 
 android {
@@ -55,12 +56,12 @@ android {
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
     kotlinOptions {
         freeCompilerArgs += [
-                '-Xopt-in=kotlin.RequiresOptIn',
-                '-Xopt-in=kotlinx.coroutines.ExperimentalCoroutinesApi',
-                '-Xopt-in=androidx.compose.animation.ExperimentalAnimationApi',
-                '-Xopt-in=androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi',
-                '-Xopt-in=androidx.compose.ui.ExperimentalComposeUiApi',
-                '-Xopt-in=androidx.compose.foundation.ExperimentalFoundationApi'
+            '-Xopt-in=kotlin.RequiresOptIn',
+            '-Xopt-in=kotlinx.coroutines.ExperimentalCoroutinesApi',
+            '-Xopt-in=androidx.compose.animation.ExperimentalAnimationApi',
+            '-Xopt-in=androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi',
+            '-Xopt-in=androidx.compose.ui.ExperimentalComposeUiApi',
+            '-Xopt-in=androidx.compose.foundation.ExperimentalFoundationApi'
         ]
     }
 }
@@ -77,7 +78,6 @@ dependencies {
     implementation 'androidx.activity:activity-compose:1.4.0'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.4.1'
     implementation 'androidx.lifecycle:lifecycle-service:2.4.1'
-    kapt "androidx.room:room-compiler:2.4.1"
     implementation 'androidx.room:room-runtime:2.4.1'
     implementation 'androidx.room:room-ktx:2.4.1'
     implementation 'androidx.compose.material:material-icons-extended:1.1.0'
@@ -86,6 +86,9 @@ dependencies {
     implementation "com.google.accompanist:accompanist-systemuicontroller:0.17.0"
     implementation "androidx.media:media:1.5.0"
     implementation "androidx.datastore:datastore-preferences:1.0.0"
+    implementation "com.google.dagger:hilt-android:2.40.5"
+    kapt "androidx.room:room-compiler:2.4.1"
+    kapt "com.google.dagger:hilt-compiler:2.40.5"
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'

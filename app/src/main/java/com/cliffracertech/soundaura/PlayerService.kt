@@ -17,17 +17,24 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.Action
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.*
+import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 /** Repeat @param onStarted each time the LifecycleOwner's state moves to Lifecycle.State.STARTED. */
 fun LifecycleOwner.repeatWhenStarted(onStarted: suspend CoroutineScope.() -> Unit) {
     lifecycleScope.launch {
         repeatOnLifecycle(Lifecycle.State.STARTED, onStarted)
     }
+}
+
+@HiltViewModel
+class PlayerServiceViewModel @Inject constructor(trackDao: TrackDao) : ViewModel() {
+    val playingTracks = trackDao.getAllPlayingTracks()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 }
 
 /**
@@ -68,9 +75,10 @@ fun LifecycleOwner.repeatWhenStarted(onStarted: suspend CoroutineScope.() -> Uni
  * bound activity presents the user with, e.g, a slider to change a track's
  * volume, the slider's onSlide callback should therefore call setTrackVolume.
  */
+@AndroidEntryPoint
 class PlayerService: LifecycleService() {
     private val uriPlayerMap = mutableMapOf<String, MediaPlayer>()
-    private val viewModel by lazy { TrackViewModel(application) }
+    @Inject lateinit var viewModel: PlayerServiceViewModel
 
     private var boundToActivity = false
     private var runWithoutActivity = false

@@ -48,4 +48,6 @@
     <string name="unchecked_description">Unchecked</string>
     <string name="dismiss_description">Dismiss</string>
     <string name="track_already_exists_error_message">This file is already in the library</string>
+
+    <string name="pref_sort_key">track_sort</string>
 </resources>

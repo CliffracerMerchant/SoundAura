@@ -61,7 +61,9 @@ fun Modifier.gradientActionBarModifier() = composed {
  * @param searchQuery The current search query that will be displayed if not null.
  * @param onSearchQueryChanged The callback that will be invoked when the user
  * input should modify the value of the search query.
- * @param onSearchButtonClicked The callback that will be invoked when the user
+ * @param showSearchAndChangeSortButtons Whether or not the search and change
+ * sort buttons should be visible.
+ * @param onSearchButtonClick The callback that will be invoked when the user
  * clicks the search button. Typically this should set the search query to an
  * empty string if it is already null so that the search query entry will appear,
  * or set it to null if it is not null so that the search query entry will be closed.
@@ -79,20 +81,19 @@ fun <T> ListActionBar(
     backButtonShouldBeVisible: Boolean = false,
     onBackButtonClick: () -> Unit,
     title: String,
-    searchQuery: String?,
+    searchQuery: String? = null,
     onSearchQueryChanged: (String?) -> Unit,
     showSearchAndChangeSortButtons: Boolean = true,
-    onSearchButtonClicked: () -> Unit,
+    onSearchButtonClick: () -> Unit,
     sortOptions: Array<T>,
     sortOptionNames: Array<String>,
     currentSortOption: T,
-    onSortOptionChanged: (T) -> Unit,
+    onSortOptionClick: (T) -> Unit,
     otherContent: @Composable () -> Unit = { },
 ) = Row(modifier = Modifier.gradientActionBarModifier(),
         verticalAlignment = Alignment.CenterVertically
 ) {
     CompositionLocalProvider(LocalContentColor provides MaterialTheme.colors.onPrimary) {
-
         // Back button
         val backButtonIsVisible = backButtonShouldBeVisible || searchQuery != null
         AnimatedContent(
@@ -124,7 +125,7 @@ fun <T> ListActionBar(
                 // Search button
                 val vector = AnimatedImageVector.animatedVectorResource(R.drawable.search_to_close)
                 val painter = rememberAnimatedVectorPainter(vector, searchQuery != null)
-                IconButton(onClick = onSearchButtonClicked) {
+                IconButton(onClick = onSearchButtonClick) {
                     Icon(painter, stringResource(R.string.search_description))
                 }
                 // Change sort button
@@ -137,7 +138,7 @@ fun <T> ListActionBar(
                         values = sortOptions,
                         valueNames = sortOptionNames,
                         currentValue = currentSortOption,
-                        onValueChanged = onSortOptionChanged,
+                        onValueChanged = onSortOptionClick,
                         onDismissRequest = { sortMenuShown = false })
                 }
                 otherContent()
@@ -228,8 +229,8 @@ fun <T> ListActionBar(
         sortOptions = Track.Sort.values(),
         sortOptionNames = Track.Sort.stringValues(),
         currentSortOption = Track.Sort.NameAsc,
-        onSortOptionChanged = { },
-        onSearchButtonClicked = { }
+        onSortOptionClick = { },
+        onSearchButtonClick = { }
     ) {
         IconButton({ }) { Icon(Icons.Default.MoreVert, null) }
     }}
@@ -244,8 +245,8 @@ fun <T> ListActionBar(
         sortOptions = Track.Sort.values(),
         sortOptionNames = Track.Sort.stringValues(),
         currentSortOption = Track.Sort.NameAsc,
-        onSortOptionChanged = { },
-        onSearchButtonClicked = { }
+        onSortOptionClick = { },
+        onSearchButtonClick = { }
     ) {
         IconButton({ }) { Icon(Icons.Default.MoreVert, null) }
     }}
@@ -261,36 +262,7 @@ fun <T> ListActionBar(
         sortOptions = Track.Sort.values(),
         sortOptionNames = Track.Sort.stringValues(),
         currentSortOption = Track.Sort.NameAsc,
-        onSortOptionChanged = { },
-        onSearchButtonClicked = { }
+        onSortOptionClick = { },
+        onSearchButtonClick = { }
     )}
-
-@Composable fun <T> ListActionBarWithSettingsButton(
-    backButtonShouldBeVisible: Boolean = false,
-    onBackButtonClick: () -> Unit,
-    title: String,
-    searchQuery: String?,
-    onSearchQueryChanged: (String?) -> Unit,
-    showSearchAndChangeSortButtons: Boolean = true,
-    onSearchButtonClicked: () -> Unit,
-    sortOptions: Array<T>,
-    sortOptionNames: Array<String>,
-    currentSortOption: T,
-    onSortOptionChanged: (T) -> Unit,
-    onSettingsButtonClick: () ->Unit,
-) = ListActionBar(
-    backButtonShouldBeVisible,
-    onBackButtonClick,
-    title,
-    searchQuery,
-    onSearchQueryChanged,
-    showSearchAndChangeSortButtons,
-    onSearchButtonClicked,
-    sortOptions,
-    sortOptionNames,
-    currentSortOption,
-    onSortOptionChanged,
-) {
-    SettingsButton(onClick = onSettingsButtonClick)
-}
 

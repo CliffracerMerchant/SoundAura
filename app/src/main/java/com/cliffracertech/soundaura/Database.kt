@@ -3,18 +3,20 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import android.app.Application
 import android.content.Context
-import android.database.sqlite.SQLiteConstraintException
 import androidx.annotation.FloatRange
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.room.*
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.flow.Flow
+import javax.inject.Qualifier
+import javax.inject.Singleton
 
 @Entity(tableName = "track")
 class Track(
@@ -57,7 +59,16 @@ class Track(
     abstract fun getAllTracksSortedByNameDesc(filter: String): Flow<List<Track>>
 
     @Query("SELECT * FROM track WHERE name LIKE :filter")
-    abstract fun getAllTracks(filter: String): Flow<List<Track>>
+    abstract fun getAllTracksSortedByOrderAdded(filter: String): Flow<List<Track>>
+
+    fun getAllTracks(sort: Track.Sort, searchFilter: String?): Flow<List<Track>> {
+        val filter = "%${searchFilter ?: ""}%"
+        return when (sort) {
+            Track.Sort.NameAsc ->    getAllTracksSortedByNameAsc(filter)
+            Track.Sort.NameDesc ->   getAllTracksSortedByNameDesc(filter)
+            Track.Sort.OrderAdded -> getAllTracksSortedByOrderAdded(filter)
+        }
+    }
 
     @Query("SELECT * FROM track WHERE playing")
     abstract fun getAllPlayingTracks(): Flow<List<Track>>
@@ -88,57 +99,18 @@ abstract class SoundAuraDatabase : RoomDatabase() {
     }
 }
 
-class TrackViewModel(app: Application) : AndroidViewModel(app) {
-    private val dao = SoundAuraDatabase.get(app).trackDao()
+@Module @InstallIn(SingletonComponent::class)
+class DatabaseModule {
+    @Singleton @Provides
+    fun provideDatabase(@ApplicationContext app: Context) =
+        Room.databaseBuilder(app, SoundAuraDatabase::class.java, "SoundAuraDb").build()
 
-    var trackSort by mutableStateOf(Track.Sort.NameAsc)
-    var searchFilter by mutableStateOf<String?>(null)
-    var tracks by mutableStateOf<List<Track>>(emptyList())
-        private set
-    private val _messages = MutableSharedFlow<StringResource>(replay = 0, extraBufferCapacity = 1,
-                                                              onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    val messages = _messages.asSharedFlow()
+    @Qualifier @Retention(AnnotationRetention.BINARY)
+    annotation class InMemoryDatabase
 
-    init {
-        snapshotFlow { trackSort to searchFilter }.flatMapLatest {
-            val filter = "%${it.second ?: ""}%"
-            when (it.first) {
-                Track.Sort.NameAsc ->    dao.getAllTracksSortedByNameAsc(filter)
-                Track.Sort.NameDesc ->   dao.getAllTracksSortedByNameDesc(filter)
-                Track.Sort.OrderAdded -> dao.getAllTracks(filter)
-            }
-        }.onEach { tracks = it }.launchIn(viewModelScope)
-    }
+    @InMemoryDatabase @Singleton @Provides
+    fun provideInMemoryDatabase(@ApplicationContext app: Context) =
+        Room.inMemoryDatabaseBuilder(app, SoundAuraDatabase::class.java).build()
 
-    val playingTracks = dao.getAllPlayingTracks()
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
-    fun add(track: Track) {
-        viewModelScope.launch {
-            try { dao.insert(track) }
-            catch(e: SQLiteConstraintException) {
-                _messages.tryEmit(StringResource(R.string.track_already_exists_error_message))
-            }
-        }
-    }
-
-    fun delete(uriString: String) {
-        viewModelScope.launch { dao.delete(uriString) }
-    }
-
-    fun delete(uriStrings: List<String>) {
-        viewModelScope.launch { dao.delete(uriStrings) }
-    }
-
-    fun updatePlaying(uriString: String, playing: Boolean) {
-        viewModelScope.launch { dao.updatePlaying(uriString, playing) }
-    }
-
-    fun updateVolume(uriString: String, volume: Float) {
-        viewModelScope.launch { dao.updateVolume(uriString, volume) }
-    }
-
-    fun updateName(uriString: String, name: String) {
-        viewModelScope.launch { dao.updateName(uriString, name) }
-    }
+    @Provides fun provideTrackDao(db: SoundAuraDatabase) = db.trackDao()
 }
