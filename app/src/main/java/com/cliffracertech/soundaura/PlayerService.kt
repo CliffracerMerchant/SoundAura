@@ -31,12 +31,6 @@ fun LifecycleOwner.repeatWhenStarted(onStarted: suspend CoroutineScope.() -> Uni
     }
 }
 
-@HiltViewModel
-class PlayerServiceViewModel @Inject constructor(trackDao: TrackDao) : ViewModel() {
-    val playingTracks = trackDao.getAllPlayingTracks()
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-}
-
 /**
  * A service to play a set of audio tracks exposed by a com.cliffracertech.soundaura.ViewModel instance.
  *
@@ -44,8 +38,7 @@ class PlayerServiceViewModel @Inject constructor(trackDao: TrackDao) : ViewModel
  * in the property of the same name. Manipulation of the isPlaying state is
  * achieved through the functions setIsPlaying and toggleIsPlaying. When the
  * isPlaying state is equal to true, PLayerService will play all audio tracks
- * exposed by a com.cliffracertech.soundaura.ViewModel instance's
- * PlayingSounds property.
+ * in the application's database with MediaPlayer instances.
  *
  * PlayerService runs as a foreground service, and presents a notification to
  * the user that displays its current isPlaying state in string form, along
@@ -78,7 +71,7 @@ class PlayerServiceViewModel @Inject constructor(trackDao: TrackDao) : ViewModel
 @AndroidEntryPoint
 class PlayerService: LifecycleService() {
     private val uriPlayerMap = mutableMapOf<String, MediaPlayer>()
-    @Inject lateinit var viewModel: PlayerServiceViewModel
+    @Inject lateinit var trackDao: TrackDao
 
     private var boundToActivity = false
     private var runWithoutActivity = false
@@ -119,7 +112,7 @@ class PlayerService: LifecycleService() {
 
     init {
         repeatWhenStarted {
-            viewModel.playingTracks.collect { tracks ->
+            trackDao.getAllPlayingTracks().collect { tracks ->
                 val uris = tracks.map { it.uriString }
                 uriPlayerMap.keys.retainAll {
                     val result = it in uris

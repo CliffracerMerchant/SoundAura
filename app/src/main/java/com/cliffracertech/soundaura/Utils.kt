@@ -110,4 +110,3 @@ inline fun <reified T: Enum<*>> DataStore<Preferences>.enumPreferenceFlow(
     val index = prefs[key] ?: defaultValue.ordinal
     enumValues<T>().getOrNull(index) ?: defaultValue
 }
-
