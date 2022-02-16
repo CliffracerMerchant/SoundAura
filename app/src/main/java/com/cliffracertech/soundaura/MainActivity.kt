@@ -68,13 +68,11 @@ class MainActivity : ComponentActivity() {
             ThemeContainer {
                 var showingAppSettings by rememberSaveable { mutableStateOf(false) }
 
-                val isPlaying by produceState(false, boundPlayerService) {
-                    val service = boundPlayerService
-                    if (service == null) value = false
-                    else service.isPlaying.collect { value = it }
-                }
-                val scaffoldState = rememberScaffoldState()
-                MessageHandler(scaffoldState)
+            val isPlaying by produceState(false, boundPlayerService?.isPlaying) {
+                value = boundPlayerService?.isPlaying ?: false
+            }
+            val scaffoldState = rememberScaffoldState()
+            MessageHandler(scaffoldState)
 
                 Scaffold(
                     scaffoldState = scaffoldState,
