@@ -2,6 +2,7 @@
  * License 2.0. See license.md in the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
+import androidx.compose.animation.*
 import androidx.compose.animation.core.AnimationConstants.DefaultDurationMillis
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.res.stringResource
@@ -56,4 +58,30 @@ fun Modifier.largeSurfaceBackground() = composed {
     delay: Int = 0,
 ) = tween<T>(duration, delay) {
     it * it * (3 * it - 2)
+}
+
+/**
+ * An AnimatedContent with predefined slide left/right transitions.
+ * @param targetState The key that will cause a change in the SlideAnimatedContent's
+ *     content when its value changes.
+ * @param leftToRight Whether the existing content should be slid off screen
+ *     to the left with the new content sliding in from the right, or the
+ *     other way around.
+ * @param content The composable that itself composes the contents depending
+ *     on the value of targetState, e.g. if (targetState) A() else B().
+ */
+@Composable fun<S> SlideAnimatedContent(
+    targetState: S,
+    leftToRight: Boolean,
+    content: @Composable (AnimatedVisibilityScope.(S) -> Unit)
+) {
+    val transition = remember(leftToRight) {
+        val enterOffset = { size: Int -> size * if (leftToRight) 1 else -1 }
+        val exitOffset = { size: Int -> size * if (leftToRight) -1 else 1 }
+        slideInHorizontally(tween(), enterOffset) with
+        slideOutHorizontally(tween(), exitOffset)
+    }
+    AnimatedContent(targetState,
+                    transitionSpec = { transition },
+                    content = content)
 }

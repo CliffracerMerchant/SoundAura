@@ -64,9 +64,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            ThemeContainer {
-                var showingAppSettings by rememberSaveable { mutableStateOf(false) }
+        setContentWithTheme {
+            var showingAppSettings by rememberSaveable { mutableStateOf(false) }
 
             val isPlaying by produceState(false, boundPlayerService?.isPlaying) {
                 value = boundPlayerService?.isPlaying ?: false
@@ -74,36 +73,31 @@ class MainActivity : ComponentActivity() {
             val scaffoldState = rememberScaffoldState()
             MessageHandler(scaffoldState)
 
-                Scaffold(
-                    scaffoldState = scaffoldState,
-                    floatingActionButtonPosition = FabPosition.Center,
-                    topBar = { ActionBar(showingAppSettings = showingAppSettings,
-                                         onBackButtonClick = { showingAppSettings = false },
-                                         onSettingsButtonClick = { showingAppSettings = true }) },
-                    floatingActionButton = { PlayPauseButton(isPlaying) }
-                ) {
-                    val enterOffset = remember { { size: Int -> size * if (showingAppSettings) -1 else 1 } }
-                    val exitOffset = remember { { size: Int -> size * if (showingAppSettings) 1 else -1 } }
-                    AnimatedContent(showingAppSettings, transitionSpec = {
-                        slideInHorizontally(tween(), enterOffset) with
-                        slideOutHorizontally(tween(), exitOffset)
-                    }) { showingSettings ->
-                        if(showingSettings)
-                            AppSettings()
-                        else SoundMixEditor(onTrackVolumeChange = { uri: String, volume: Float ->
-                            boundPlayerService?.setTrackVolume(uri, volume)
-                        })
-                    }
+            Scaffold(
+                scaffoldState = scaffoldState,
+                floatingActionButtonPosition = FabPosition.Center,
+                topBar = { ActionBar(showingAppSettings = showingAppSettings,
+                                     onBackButtonClick = { showingAppSettings = false },
+                                     onSettingsButtonClick = { showingAppSettings = true }) },
+                floatingActionButton = { PlayPauseButton(isPlaying) }
+            ) {
+                SlideAnimatedContent(
+                    targetState = showingAppSettings,
+                    leftToRight = !showingAppSettings
+                ) { showingAppSettings ->
+                    if (showingAppSettings) AppSettings()
+                    else SoundMixEditor(boundPlayerService)
                 }
             }
         }
     }
 
-    /** Read the app's theme from a SettingsViewModel instance and invoke
-     * the provided @param content using the theme. */
-    @Composable private fun ThemeContainer(
+    /** Read the app's theme from a SettingsViewModel instance
+     * and compose the provided content using the theme. */
+    private fun setContentWithTheme(
+        parent: CompositionContext? = null,
         content: @Composable () -> Unit
-    ) {
+    ) = setContent(parent) {
         val settingsViewModel: SettingsViewModel = viewModel()
         val usingDarkTheme by derivedStateOf {
             val theme = settingsViewModel.appTheme
@@ -191,18 +185,17 @@ class MainActivity : ComponentActivity() {
 
     /** Compose a SoundMixEditor, using an instance of SoundMixEditorViewModel
      * to obtain the list of tracks and to respond to item related callbacks.
-     * @param onTrackVolumeChange The callback that will be invoked when a track's
-     *     volume slider is in the process of being changed. */
+     * @param boundPlayerService The MainActivity's PlayerService.Binder instance. */
     @Composable private fun SoundMixEditor(
-        onTrackVolumeChange: (String, Float) -> Unit
+        boundPlayerService: PlayerService.Binder? = null
     ) {
         val viewModel: SoundMixEditorViewModel = viewModel()
         val itemCallback = remember {
             TrackViewCallback(
                 onPlayPauseButtonClick = viewModel::onTrackPlayPauseClick,
-                onVolumeChange = onTrackVolumeChange,
-                //            boundPlayerService?.setTrackVolume(uri, volume)
-                onVolumeChangeFinished = viewModel::onTrackVolumeChangeRequest,
+                onVolumeChange = { uri, volume ->
+                    boundPlayerService?.setTrackVolume(uri, volume)
+                }, onVolumeChangeFinished = viewModel::onTrackVolumeChangeRequest,
                 onRenameRequest = viewModel::onTrackRenameRequest,
                 onDeleteRequest = viewModel::onDeleteTrackDialogConfirmation)
         }
