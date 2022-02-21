@@ -64,6 +64,7 @@ fun Modifier.largeSurfaceBackground() = composed {
  * An AnimatedContent with predefined slide left/right transitions.
  * @param targetState The key that will cause a change in the SlideAnimatedContent's
  *     content when its value changes.
+ * @param modifier The modifier that will be applied to the content.
  * @param leftToRight Whether the existing content should be slid off screen
  *     to the left with the new content sliding in from the right, or the
  *     other way around.
@@ -72,6 +73,7 @@ fun Modifier.largeSurfaceBackground() = composed {
  */
 @Composable fun<S> SlideAnimatedContent(
     targetState: S,
+    modifier: Modifier = Modifier,
     leftToRight: Boolean,
     content: @Composable (AnimatedVisibilityScope.(S) -> Unit)
 ) {
@@ -81,7 +83,5 @@ fun Modifier.largeSurfaceBackground() = composed {
         slideInHorizontally(tween(), enterOffset) with
         slideOutHorizontally(tween(), exitOffset)
     }
-    AnimatedContent(targetState,
-                    transitionSpec = { transition },
-                    content = content)
+    AnimatedContent(targetState, modifier, { transition }, content = content)
 }

@@ -2,17 +2,17 @@
  * License 2.0. See license.md in the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
+import androidx.compose.runtime.mutableStateOf
 import dagger.hilt.android.scopes.ActivityRetainedScoped
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import javax.inject.Inject
 
 /** A state holder for a search query entry. */
 @ActivityRetainedScoped
 class SearchQueryState @Inject constructor() {
-    val query = MutableStateFlow<String?>(null)
+    val query = mutableStateOf<String?>(null)
 }
 
 /**

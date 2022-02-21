@@ -15,13 +15,16 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
@@ -66,29 +69,25 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContentWithTheme {
             var showingAppSettings by rememberSaveable { mutableStateOf(false) }
-
-            val isPlaying by produceState(false, boundPlayerService?.isPlaying) {
-                value = boundPlayerService?.isPlaying ?: false
-            }
             val scaffoldState = rememberScaffoldState()
+            val isPlaying by boundPlayerService?.isPlaying.mapToNonNullState(false)
+
             MessageHandler(scaffoldState)
 
-            Scaffold(
-                scaffoldState = scaffoldState,
-                floatingActionButtonPosition = FabPosition.Center,
-                topBar = { ActionBar(showingAppSettings = showingAppSettings,
-                                     onBackButtonClick = { showingAppSettings = false },
-                                     onSettingsButtonClick = { showingAppSettings = true }) },
-                floatingActionButton = { PlayPauseButton(isPlaying) }
-            ) {
-                SlideAnimatedContent(
-                    targetState = showingAppSettings,
-                    leftToRight = !showingAppSettings
-                ) { showingAppSettings ->
-                    if (showingAppSettings) AppSettings()
-                    else SoundMixEditor(boundPlayerService)
-                }
+            val actionBar = @Composable {
+                SoundAuraActionBar(showingAppSettings = showingAppSettings,
+                                   onBackButtonClick = { showingAppSettings = false },
+                                   onSettingsButtonClick = { showingAppSettings = true })
             }
+            val playPauseButton = @Composable {
+                PlayPauseButton(showing = !showingAppSettings, isPlaying = isPlaying)
+            }
+
+            Scaffold(scaffoldState = scaffoldState,
+                     floatingActionButtonPosition = FabPosition.Center,
+                     topBar = actionBar,
+                     floatingActionButton = playPauseButton,
+                     content = { MainContent(showingAppSettings) })
         }
     }
 
@@ -130,113 +129,60 @@ class MainActivity : ComponentActivity() {
     @Composable private fun MessageHandler(scaffoldState: ScaffoldState) {
         val viewModel: MainActivityViewModel = viewModel()
         val dismissLabel = stringResource(R.string.dismiss_description)
+
         LaunchedEffect(Unit) {
-            viewModel.messages.collect {
+            viewModel.messages.collect { message ->
+                val context = this@MainActivity
+                val messageText = message.stringResource.resolve(context)
+                val actionLabel = message.actionStringResource?.resolve(context)
+                                                    ?: dismissLabel.uppercase()
                 scaffoldState.snackbarHostState.showSnackbar(
-                    message = it.stringResource.resolve(this@MainActivity),
-                    actionLabel = it.actionStringResource?.resolve(this@MainActivity)
-                        ?: dismissLabel.uppercase(),
-                    duration = SnackbarDuration.Short
-                )
+                    message = messageText,
+                    actionLabel = actionLabel,
+                    duration = SnackbarDuration.Short)
             }
         }
     }
 
-    /** Compose a ListActionBar that switches between a normal state with all
-     * buttons enabled, and an alternative state with most buttons disabled
-     * according to the value of @param showingAppSettings. Back and settings
-     * button clicks will invoke @param onBackButtonClick and @param
-     * onSettingsButtonClick, respectively. */
-    @Composable private fun ActionBar(
-        showingAppSettings: Boolean,
-        onBackButtonClick: () -> Unit,
-        onSettingsButtonClick: () -> Unit,
+    /** Compose a play / pause floating action button inside an AnimatedVisibility. */
+    @Composable private fun PlayPauseButton(
+        showing: Boolean,
+        isPlaying: Boolean
+    ) = AnimatedVisibility(showing,
+        enter = fadeIn(tween()) + scaleIn(overshootTweenSpec()),
+        exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTweenSpec())
     ) {
-        val viewModel: ActionBarViewModel = viewModel()
-        val title = if (!showingAppSettings) stringResource(R.string.app_name)
-                    else stringResource(R.string.app_settings_description)
-        ListActionBar(
-            backButtonShouldBeVisible = showingAppSettings,
-            onBackButtonClick = onBackButtonClick,
-            title = title,
-            searchQuery = viewModel.searchQuery,
-            onSearchQueryChanged = { viewModel.searchQuery = it },
-            showSearchAndChangeSortButtons = !showingAppSettings,
-            onSearchButtonClick = viewModel::onSearchButtonClick,
-            sortOptions = Track.Sort.values(),
-            sortOptionNames = Track.Sort.stringValues(),
-            currentSortOption = viewModel.trackSort,
-            onSortOptionClick = viewModel::ontrackSortOptionClick,
-        ) {
-            SettingsButton(onClick = onSettingsButtonClick)
-        }
-    }
-
-    /** Compose a play / pause floating action button. */
-    @Composable private fun PlayPauseButton(isPlaying: Boolean) {
         FloatingActionButton(
             onClick = { boundPlayerService?.toggleIsPlaying() },
             backgroundColor = lerp(MaterialTheme.colors.primary,
                                    MaterialTheme.colors.primaryVariant, 0.5f),
-            elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp)
-        ) { PlayPauseIcon(isPlaying, tint = MaterialTheme.colors.onPrimary) }
-    }
-
-
-    /** Compose a SoundMixEditor, using an instance of SoundMixEditorViewModel
-     * to obtain the list of tracks and to respond to item related callbacks.
-     * @param boundPlayerService The MainActivity's PlayerService.Binder instance. */
-    @Composable private fun SoundMixEditor(
-        boundPlayerService: PlayerService.Binder? = null
-    ) {
-        val viewModel: SoundMixEditorViewModel = viewModel()
-        val itemCallback = remember {
-            TrackViewCallback(
-                onPlayPauseButtonClick = viewModel::onTrackPlayPauseClick,
-                onVolumeChange = { uri, volume ->
-                    boundPlayerService?.setTrackVolume(uri, volume)
-                }, onVolumeChangeFinished = viewModel::onTrackVolumeChangeRequest,
-                onRenameRequest = viewModel::onTrackRenameRequest,
-                onDeleteRequest = viewModel::onDeleteTrackDialogConfirmation)
-        }
-        SoundMixEditor(tracks = viewModel.tracks, itemCallback = itemCallback,
-                       onConfirmAddTrackDialog = viewModel::onConfirmAddTrackDialog)
-    }
-}
-
-@Composable fun MainActivityPreview(usingDarkTheme: Boolean) =
-    SoundAuraTheme(usingDarkTheme) {
-        Scaffold(
-            topBar = { ListActionBar(
-                backButtonShouldBeVisible = false,
-                onBackButtonClick = { },
-                title = stringResource(R.string.app_name),
-                onSearchQueryChanged = { },
-                onSearchButtonClick = { },
-                sortOptions = Track.Sort.values(),
-                sortOptionNames = Track.Sort.stringValues(),
-                currentSortOption = Track.Sort.OrderAdded,
-                onSortOptionClick = { },
-                otherContent = { SettingsButton{ } }
-            )},
-            floatingActionButtonPosition = FabPosition.Center,
-            floatingActionButton = {
-                FloatingActionButton(
-                    onClick = { },
-                    backgroundColor = lerp(MaterialTheme.colors.primary,
-                                           MaterialTheme.colors.primaryVariant, 0.5f),
-                    elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp),
-                ) { PlayPauseIcon(playing = true, tint = MaterialTheme.colors.onPrimary) }
-            }
+//            elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp)
+            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
         ) {
-            SoundMixEditor(tracks = listOf(
-                Track(uriString = "0", name = "Audio track 1", volume = 0.3f),
-                Track(uriString = "1", name = "Audio track 2", volume = 0.8f),
-                Track(uriString = "2", name = "Audio track 3", volume = 0.5f)))
+            PlayPauseIcon(isPlaying, tint = MaterialTheme.colors.onPrimary)
         }
-}
+    }
 
-@Preview @Composable fun MainActivityLightThemePreview() =
-    MainActivityPreview(usingDarkTheme = false)
-@Preview @Composable fun MainActivityDarkThemePreview() =
-    MainActivityPreview(usingDarkTheme = true)
+    @Composable private fun MainContent(
+        showingAppSettings: Boolean
+    ) = Box(Modifier.fillMaxSize(1f)) {
+        SlideAnimatedContent(
+            targetState = showingAppSettings,
+            leftToRight = !showingAppSettings
+        ) { showingAppSettings ->
+            if (showingAppSettings)
+                AppSettings()
+            else StatefulTrackList(onVolumeChange = { uri, volume ->
+                boundPlayerService?.setTrackVolume(uri, volume)
+            })
+        }
+        AnimatedVisibility(
+            visible = !showingAppSettings,
+            modifier = Modifier.align(Alignment.BottomEnd),
+            enter = fadeIn(tween()) + scaleIn(overshootTweenSpec()),
+            exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTweenSpec())
+        ) {
+            StatefulAddTrackButton()
+        }
+    }
+}

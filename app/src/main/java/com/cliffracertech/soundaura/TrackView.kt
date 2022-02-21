@@ -179,4 +179,3 @@ fun TrackView(
 @Preview(showBackground = true, backgroundColor = 0xFF00FF00)
 @Composable fun TrackViewPreview() =
     TrackView(Track(uriString = "", name = "Track 1", volume = 0.5f), TrackViewCallback())
-

@@ -2,26 +2,37 @@
  * License 2.0. See license.md in the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.*
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import kotlin.reflect.KProperty
-
-operator fun <T> State<T>.getValue(receiver: Any, property: KProperty<*>) = value
-operator fun <T> MutableState<T>.setValue(receiver: Any, property: KProperty<*>, value: T) {
-    this.value = value
-}
 
 operator fun <T> StateFlow<T>.getValue(receiver: Any, property: KProperty<*>) = value
 operator fun <T> MutableStateFlow<T>.setValue(receiver: Any, property: KProperty<*>, value: T) {
     this.value = value
 }
 
+/** Produce a State<T> instance from the receiver T? instance. When the
+ * receiver is null, the State<T> value will be equal to @param defaultValue. */
+@Composable fun <T> T?.mapToNonNullState(
+    defaultValue: T
+) = produceState(initialValue = defaultValue, key1 = this) {
+    value = this@mapToNonNullState ?: defaultValue
+}
+
+/** Repeat @param onStarted each time the LifecycleOwner's state moves to Lifecycle.State.STARTED. */
+fun LifecycleOwner.repeatWhenStarted(onStarted: suspend CoroutineScope.() -> Unit) {
+    lifecycleScope.launch {
+        repeatOnLifecycle(Lifecycle.State.STARTED, onStarted)
+    }
+}
 
 /** Return a State<T> that contains the most recent value for the DataStore
  * preference pointed to by @param key, with an initial value of @param
