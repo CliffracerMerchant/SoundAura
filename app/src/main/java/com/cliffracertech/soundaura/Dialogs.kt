@@ -124,42 +124,47 @@ class OpenPersistableDocument : ActivityResultContracts.OpenDocument() {
 @Composable fun AddTrackFromLocalFileDialog(
     onDismissRequest: () -> Unit,
     onConfirmRequest: (Track) -> Unit
-) = Dialog(onDismissRequest) {
+) {
     var chosenUri by remember { mutableStateOf<Uri?>(null) }
-    var trackName by remember { mutableStateOf("")}
-    val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(OpenPersistableDocument()) {
         chosenUri = it
-        trackName = it?.getDisplayName(context) ?: ""
+        if (it == null)
+            onDismissRequest()
     }
 
     if ((chosenUri == null))
         LaunchedEffect(true) { launcher.launch(arrayOf("audio/*")) }
+    else Dialog(onDismissRequest) {
+        Column(Modifier
+            //.alpha(if (chosenUri == null) 0f else 1f)
+            .background(MaterialTheme.colors.surface,
+                        MaterialTheme.shapes.medium)
+            .padding(16.dp, 16.dp, 16.dp, 0.dp)
+        ) {
+            Text(text = stringResource(R.string.track_name_description),
+                 modifier = Modifier.padding(8.dp, 0.dp, 0.dp, 0.dp),
+                 style = MaterialTheme.typography.body1)
+            Spacer(Modifier.height(6.dp))
 
-    Column(Modifier
-        .alpha(if (chosenUri == null) 0f else 1f)
-        .background(MaterialTheme.colors.surface,
-                    MaterialTheme.shapes.medium)
-        .padding(16.dp, 16.dp, 16.dp, 0.dp)
-    ) {
-        Text(stringResource(R.string.track_name_description),
-             modifier = Modifier.padding(8.dp, 0.dp, 0.dp, 0.dp),
-             style = MaterialTheme.typography.body1)
-        Spacer(Modifier.height(6.dp))
-        TextField(
-            value = trackName,
-            onValueChange = { trackName = it },
-            textStyle = MaterialTheme.typography.body1,
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(1f))
-        CancelOkButtonRow(
-            onCancelClick = onDismissRequest,
-            okButtonEnabled = chosenUri != null,
-            onOkClick = {
-                val uri = chosenUri ?: return@CancelOkButtonRow
-                context.contentResolver.takePersistableUriPermission(
-                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                onConfirmRequest(Track(uriString = uri.toString(), name = trackName))
-            })
+            val context = LocalContext.current
+            var trackName by remember {
+                mutableStateOf(chosenUri?.getDisplayName(context) ?: "")
+            }
+            TextField(
+                value = trackName,
+                onValueChange = { trackName = it },
+                textStyle = MaterialTheme.typography.body1,
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(1f))
+            CancelOkButtonRow(
+                onCancelClick = onDismissRequest,
+                okButtonEnabled = chosenUri != null && trackName.isNotBlank(),
+                onOkClick = {
+                    val uri = chosenUri ?: return@CancelOkButtonRow
+                    context.contentResolver.takePersistableUriPermission(
+                        uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    onConfirmRequest(Track(uri.toString(), trackName))
+                })
+        }
     }
 }
