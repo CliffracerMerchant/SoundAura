@@ -82,7 +82,7 @@ fun AppSettings() = Surface(
 
         Setting(title = stringResource(R.string.app_theme_description)) {
             EnumRadioButtonGroup(
-                modifier = Modifier.padding(end = 24.dp),
+                modifier = Modifier.padding(end = 16.dp),
                 values = AppTheme.values(),
                 valueNames = AppTheme.stringValues(),
                 currentValue = viewModel.appTheme,

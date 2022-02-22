@@ -55,7 +55,7 @@ class ActionBarViewModel @Inject constructor(
 ) {
     val viewModel: ActionBarViewModel = viewModel()
     val title = if (!showingAppSettings) stringResource(R.string.app_name)
-                else stringResource(R.string.app_settings_description)
+                else                     stringResource(R.string.app_settings_description)
     ListActionBar(
         showBackButtonForNavigation = showingAppSettings,
         onBackButtonClick = onBackButtonClick,
@@ -69,6 +69,9 @@ class ActionBarViewModel @Inject constructor(
         currentSortOption = viewModel.trackSort,
         onSortOptionClick = viewModel::ontrackSortOptionClick,
     ) {
-        SettingsButton(onClick = onSettingsButtonClick)
+        SettingsButton(onClick = {
+            viewModel.searchQuery = null
+            onSettingsButtonClick()
+        })
     }
 }

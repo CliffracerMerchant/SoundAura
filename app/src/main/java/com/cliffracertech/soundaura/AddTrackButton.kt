@@ -43,7 +43,7 @@ import javax.inject.Inject
  * @param expanded Whether or not the child contents will be displayed.
  * @param modifier The modifier for the parent layout
  * @param childAlignment The alignment that will be used for the child content.
- *     The default value if Alignment.End
+ *     The default value is Alignment.End
  * @param childAppearanceDuration The duration for a given child's appearance animation.
  * @param totalDuration The total duration over which all children will appear. If
  *     longer than childAppearanceDuration, the children will have an appearance or
@@ -61,7 +61,7 @@ import javax.inject.Inject
     children: List<@Composable () -> Unit>,
     content: @Composable () -> Unit,
 ) = Column(modifier, Arrangement.spacedBy(8.dp), childAlignment) {
-
+    require(totalDuration >= childAppearanceDuration)
     val delayFactor = (totalDuration - childAppearanceDuration) / children.size
     children.forEachIndexed { index, child ->
         val exitDelay = index * delayFactor
@@ -137,7 +137,8 @@ import javax.inject.Inject
     Icon(Icons.Default.Add, description, Modifier.rotate(angle))
 }}
 
-@Preview @Composable fun AddTrackButtonPreview() = AddTrackButton(true, {}, {}, {})
+@Preview @Composable
+fun AddTrackButtonPreview() = AddTrackButton(true, {}, {}, {})
 
 @HiltViewModel
 class AddTrackButtonViewModel @Inject constructor(
