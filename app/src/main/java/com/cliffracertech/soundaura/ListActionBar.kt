@@ -19,7 +19,6 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -32,12 +31,22 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 
-/** A Modifier extension function that will give the composable a 56.dp height
- * background that fills its parent's max width and has a horizontal gradient
- * brush that goes from the local theme's primary color to its primaryVariant. */
-fun Modifier.gradientActionBarModifier() = composed {
-    fillMaxWidth(1f).height(56.dp).background(Brush.horizontalGradient(
-        listOf(MaterialTheme.colors.primary, MaterialTheme.colors.primaryVariant)))
+/** Compose a Row with a gradient background and vertically centered content,
+ * while providing the current theme's onPrimary color as the LocalContentColor. */
+@Composable fun GradientToolBar(
+    modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit
+) = Row(
+    modifier = modifier
+        .fillMaxWidth(1f).height(56.dp)
+        .background(Brush.horizontalGradient(listOf(
+            MaterialTheme.colors.primary,
+            MaterialTheme.colors.primaryVariant))),
+    verticalAlignment = Alignment.CenterVertically,
+) {
+    CompositionLocalProvider(LocalContentColor provides MaterialTheme.colors.onPrimary) {
+        content()
+    }
 }
 
 /**
@@ -50,13 +59,13 @@ fun Modifier.gradientActionBarModifier() = composed {
  * only display it if backButtonShouldBeVisible is true. The title will be
  * replaced by the search query if it is not null.
  *
- * @param backButtonShouldBeVisible Whether or not the back button should be
+ * @param showBackButtonForNavigation Whether or not the back button should be
  * visible due to other state held outside the action bar. If searchQuery is
  * not null, the back button will be shown regardless.
  * @param onBackButtonClick The callback that will be invoked when the back
- * button is clicked while backButtonShouldBeVisible is true. If the back
+ * button is clicked while showBackButtonForNavigation is true. If the back
  * button is shown due to there being a non-null search query, the back button
- * will close the search query and onBackButtonClicked will not be called.
+ * will close the search query and onBackButtonClick will not be called.
  * @param title The title that will be displayed when there is no search query.
  * @param searchQuery The current search query that will be displayed if not null.
  * @param onSearchQueryChanged The callback that will be invoked when the user
@@ -78,7 +87,7 @@ fun Modifier.gradientActionBarModifier() = composed {
  */
 @Composable
 fun <T> ListActionBar(
-    backButtonShouldBeVisible: Boolean = false,
+    showBackButtonForNavigation: Boolean = false,
     onBackButtonClick: () -> Unit,
     title: String,
     searchQuery: String? = null,
@@ -90,59 +99,75 @@ fun <T> ListActionBar(
     currentSortOption: T,
     onSortOptionClick: (T) -> Unit,
     otherContent: @Composable () -> Unit = { },
-) = Row(modifier = Modifier.gradientActionBarModifier(),
-        verticalAlignment = Alignment.CenterVertically
-) {
-    CompositionLocalProvider(LocalContentColor provides MaterialTheme.colors.onPrimary) {
-        // Back button
-        val backButtonIsVisible = backButtonShouldBeVisible || searchQuery != null
-        AnimatedContent(
-            targetState = backButtonIsVisible,
-            contentAlignment = Alignment.Center,
-            transitionSpec = { ContentTransform(
-                slideInHorizontally(tween()) { -it },
-                slideOutHorizontally(tween()) { -it },
-                0f, SizeTransform(false) { _, _ -> tween() },
-            )}
-        ) {
-            if (!it) Spacer(Modifier.width(24.dp))
-            else BackButton { if (searchQuery == null) onBackButtonClick()
-                              else onSearchQueryChanged(null) }
-        }
+) = GradientToolBar {
+    // Back button
+    AnimatedContent(
+        targetState = showBackButtonForNavigation || searchQuery != null,
+        contentAlignment = Alignment.Center,
+        transitionSpec = { ContentTransform(
+            slideInHorizontally(tween()) { -it },
+            slideOutHorizontally(tween()) { -it },
+            0f, SizeTransform(false) { _, _ -> tween() },
+        )}
+    ) { backButtonIsVisible ->
+        if (!backButtonIsVisible)
+            Spacer(Modifier.width(24.dp))
+        else BackButton(onClick = {
+            if (searchQuery == null)
+                onBackButtonClick()
+            else onSearchQueryChanged(null)
+        })
+    }
 
-        // Title / search query
-        Crossfade(searchQuery != null, Modifier.weight(1f)) {
-            if (it) AutoFocusSearchQuery(searchQuery ?: "", onSearchQueryChanged)
-            else Crossfade(title) { Text(it, style = MaterialTheme.typography.h6) }
+    // Title / search query
+    // This outer crossfade is for when the search query appears/disappears.
+    Crossfade(searchQuery != null, Modifier.weight(1f)) { searchQueryIsNotNull ->
+        // lastSearchQuery is used so that when the search query changes from a
+        // non-null non-blank value to null, the search query will be recomposed
+        // with the value of lastSearchQuery instead of null during the search
+        // query's fade out animation. This allows the last non-null search
+        // query text to fade out with the rest of the search query (i.e. the
+        // underline) instead of abruptly disappearing.
+        var lastSearchQuery by remember { mutableStateOf("") }
+        if (searchQueryIsNotNull) {
+            val text = searchQuery ?: lastSearchQuery
+            AutoFocusSearchQuery(text, onSearchQueryChanged)
+            if (searchQuery != null)
+                lastSearchQuery = searchQuery
+        // This inner crossfade is for when the title changes.
+        } else Crossfade(title) {
+            Text(it, style = MaterialTheme.typography.h6)
         }
+    }
 
-        AnimatedVisibility(
-            visible = showSearchAndChangeSortButtons,
-            enter = slideInHorizontally(tween()) { it },
-            exit = slideOutHorizontally(tween()) { it },
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Search button
-                val vector = AnimatedImageVector.animatedVectorResource(R.drawable.search_to_close)
-                val painter = rememberAnimatedVectorPainter(vector, searchQuery != null)
-                IconButton(onClick = onSearchButtonClick) {
-                    Icon(painter, stringResource(R.string.search_description))
-                }
-                // Change sort button
-                var sortMenuShown by remember { mutableStateOf(false) }
-                IconButton(onClick = { sortMenuShown = !sortMenuShown }) {
-                    Icon(imageVector = Icons.Default.Sort,
-                         stringResource(R.string.sort_options_description))
-                    EnumDropDownMenu(
-                        expanded = sortMenuShown,
-                        values = sortOptions,
-                        valueNames = sortOptionNames,
-                        currentValue = currentSortOption,
-                        onValueChanged = onSortOptionClick,
-                        onDismissRequest = { sortMenuShown = false })
-                }
-                otherContent()
+    AnimatedVisibility(
+        visible = showSearchAndChangeSortButtons,
+        enter = slideInHorizontally(tween()) { it },
+        exit = slideOutHorizontally(tween()) { it },
+    ) {
+        // This inner row is used so that the search and change sort buttons
+        // as well as any additional content are all animated together.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Search button
+            val vector = AnimatedImageVector.animatedVectorResource(R.drawable.search_to_close)
+            val painter = rememberAnimatedVectorPainter(vector, searchQuery != null)
+            IconButton(onClick = onSearchButtonClick) {
+                Icon(painter, stringResource(R.string.search_description))
             }
+            // Change sort button
+            var sortMenuShown by remember { mutableStateOf(false) }
+            IconButton(onClick = { sortMenuShown = !sortMenuShown }) {
+                Icon(imageVector = Icons.Default.Sort,
+                     stringResource(R.string.sort_options_description))
+                EnumDropDownMenu(
+                    expanded = sortMenuShown,
+                    values = sortOptions,
+                    valueNames = sortOptionNames,
+                    currentValue = currentSortOption,
+                    onValueChanged = onSortOptionClick,
+                    onDismissRequest = { sortMenuShown = false })
+            }
+            otherContent()
         }
     }
 }
@@ -199,8 +224,9 @@ fun <T> ListActionBar(
     val keyboardController = LocalSoftwareKeyboardController.current
 
     BasicTextField(
-        value = query, onValueChange = { onQueryChanged(it) },
-        textStyle = MaterialTheme.typography.h6.copy(color = MaterialTheme.colors.onPrimary),
+        value = query, onValueChange = onQueryChanged,
+        textStyle = MaterialTheme.typography.h6
+            .copy(color = MaterialTheme.colors.onPrimary),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search, ),
         keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
         modifier = Modifier
@@ -210,9 +236,8 @@ fun <T> ListActionBar(
         decorationBox = { innerTextField ->
             Box {
                 innerTextField()
-                Divider(Modifier.padding(0.dp, 26.dp, 0.dp, 0.dp),
-                        LocalContentColor.current.copy(LocalContentAlpha.current),
-                        thickness = (1.5).dp,)
+                Divider(Modifier.align(Alignment.BottomStart),
+                        LocalContentColor.current, thickness = (1.5).dp)
             }
         }
     )
@@ -221,7 +246,7 @@ fun <T> ListActionBar(
 
 @Preview @Composable fun PreviewListActionBarWithTitle() =
     SoundAuraTheme { ListActionBar(
-        backButtonShouldBeVisible = false,
+        showBackButtonForNavigation = false,
         onBackButtonClick = { },
         title = stringResource(R.string.app_name),
         searchQuery = null,
@@ -237,7 +262,7 @@ fun <T> ListActionBar(
 
 @Preview @Composable fun PreviewListActionBarWithSearchQuery() =
     SoundAuraTheme { ListActionBar(
-        backButtonShouldBeVisible = false,
+        showBackButtonForNavigation = false,
         onBackButtonClick = { },
         title = "",
         searchQuery = "search query",
@@ -253,7 +278,7 @@ fun <T> ListActionBar(
 
 @Preview @Composable fun PreviewListActionBarInNestedScreen() =
     SoundAuraTheme { ListActionBar(
-        backButtonShouldBeVisible = true,
+        showBackButtonForNavigation = true,
         onBackButtonClick = { },
         title = "Nested screen",
         searchQuery = null,
@@ -265,4 +290,3 @@ fun <T> ListActionBar(
         onSortOptionClick = { },
         onSearchButtonClick = { }
     )}
-
