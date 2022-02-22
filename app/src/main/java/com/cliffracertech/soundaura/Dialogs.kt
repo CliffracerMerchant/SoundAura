@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -34,7 +35,7 @@ import androidx.documentfile.provider.DocumentFile
 ) = Row {
     Spacer(Modifier.weight(1f))
     TextButton(onCancelClick, Modifier.heightIn(48.dp, Dp.Infinity)) {
-        Text(text = stringResource(android.R.string.cancel).uppercase(),
+        Text(text = stringResource(android.R.string.cancel),
              style = MaterialTheme.typography.button,
              color = MaterialTheme.colors.secondary)
     }
@@ -45,7 +46,9 @@ import androidx.documentfile.provider.DocumentFile
     ) {
         Text(stringResource(android.R.string.ok),
              style = MaterialTheme.typography.button,
-             color = MaterialTheme.colors.secondary)
+             color = if (okButtonEnabled)
+                         MaterialTheme.colors.secondary
+                     else Color.Unspecified)
     }
 }
 
@@ -78,6 +81,7 @@ import androidx.documentfile.provider.DocumentFile
                 .onFocusChanged { if (it.isFocused) keyboardController?.show() })
         LaunchedEffect(Unit) { focusRequester.requestFocus() }
         CancelOkButtonRow(onCancelClick = onDismissRequest,
+                          okButtonEnabled = currentName.isNotBlank(),
                           onOkClick = { onConfirmRequest(currentName)
                                         onDismissRequest() })
     }
