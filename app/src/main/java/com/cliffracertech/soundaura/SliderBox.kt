@@ -86,7 +86,7 @@ import com.google.android.material.math.MathUtils.lerp
  * @param onValueChange lambda in which value should be updated
  * @param modifier modifiers for the Slider layout
  * @param sliderPadding padding for the slider control within the SliderBox; set as needed to
- * prevent overlap of the slider controls with other composables in the SliderBox
+ * prevent overlap of the slider controls with other composables in the SliderBox's content.
  * @param enabled whether or not component is enabled and can we interacted with or not
  * @param valueRange range of values that Slider value can take. Passed [value] will be coerced to
  * this range
@@ -102,8 +102,8 @@ import com.google.android.material.math.MathUtils.lerp
  * appearance / behavior of this Slider in different [Interaction]s.
  * @param colors [SliderColors] that will be used to determine the color of the Slider parts in
  * different state. See [SliderDefaults.colors] to customize.
- * @param content A composable function that contains the other decorative composables to
- * be included in the SliderBox.
+ * @param sliderThumbContents The contents of the slider's thumb, if any.
+ * @param content Other decorative composables to include in the SliderBox.
  */
 @Composable
 fun SliderBox(
@@ -118,7 +118,8 @@ fun SliderBox(
     onValueChangeFinished: (() -> Unit)? = null,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     colors: SliderColors = SliderDefaults.colors(),
-    content: @Composable (() -> Unit)
+    sliderThumbContents: (@Composable () -> Unit)? = null,
+    content: @Composable () -> Unit
 ) {
     require(steps >= 0) { "steps should be >= 0" }
     val onValueChangeState = rememberUpdatedState(onValueChange)
@@ -189,7 +190,8 @@ fun SliderBox(
             colors,
             maxPx,
             interactionSource,
-            modifier = press.then(drag).padding(sliderPadding))
+            modifier = press.then(drag).padding(sliderPadding),
+            sliderThumbContents = sliderThumbContents)
         content()
     }
 }
@@ -355,7 +357,8 @@ private fun SliderImpl(
     colors: SliderColors,
     width: Float,
     interactionSource: MutableInteractionSource,
-    modifier: Modifier
+    modifier: Modifier,
+    sliderThumbContents: (@Composable () -> Unit)? = null,
 ) {
     Box(modifier.then(DefaultSliderConstraints)) {
         val trackStrokeWidth: Float
@@ -381,7 +384,8 @@ private fun SliderImpl(
             thumbPx,
             trackStrokeWidth
         )
-        SliderThumb(center, offset, interactionSource, colors, enabled, thumbSize, positionFraction)
+        SliderThumb(center, offset, interactionSource, colors, enabled,
+                    thumbSize, positionFraction, sliderThumbContents)
     }
 }
 
@@ -393,7 +397,8 @@ private fun SliderThumb(
     colors: SliderColors,
     enabled: Boolean,
     thumbSize: Dp,
-    positionFraction: Float
+    positionFraction: Float,
+    contents: (@Composable () -> Unit)? = null,
 ) {
     Box(modifier.padding(start = offset)) {
         val interactions = remember { mutableStateListOf<Interaction>() }
@@ -423,16 +428,13 @@ private fun SliderThumb(
                                             thumbColorEnd.toArgb(),
                                             positionFraction))
         }
-        Spacer(
-            Modifier
-                .size(thumbSize, thumbSize)
-                .indication(
-                    interactionSource = interactionSource,
-                    indication = rememberRipple(bounded = false, radius = ThumbRippleRadius)
-                )
-                .shadow(if (enabled) elevation else 0.dp, CircleShape, clip = false)
-                .background(thumbColor, CircleShape)
-        )
+        Box(Modifier
+            .size(thumbSize, thumbSize)
+            .indication(interactionSource,
+                rememberRipple(bounded = false, radius = ThumbRippleRadius))
+            .shadow(if (enabled) elevation else 0.dp, CircleShape, clip = false)
+            .background(thumbColor, CircleShape)
+        ) { contents?.invoke() }
     }
 }
 

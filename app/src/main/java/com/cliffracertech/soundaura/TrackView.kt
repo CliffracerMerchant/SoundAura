@@ -9,7 +9,7 @@ import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,7 +65,14 @@ fun TrackView(
         },
         onValueChangeFinished = { callback.onVolumeChangeFinished(track.uriString, volume) },
         modifier = Modifier.height(68.dp).weight(1f),
-        sliderPadding = PaddingValues(top = 30.dp)
+        sliderPadding = PaddingValues(top = 30.dp),
+        sliderThumbContents = {
+            Icon(contentDescription = null, imageVector = when {
+                volume == 0f ->   Icons.Default.VolumeMute
+                volume <= 0.5f -> Icons.Default.VolumeDown
+                else ->           Icons.Default.VolumeUp
+            })
+        }
     ) {
         Text(text = track.name, style = MaterialTheme.typography.h6,
              maxLines = 1, overflow = TextOverflow.Ellipsis,

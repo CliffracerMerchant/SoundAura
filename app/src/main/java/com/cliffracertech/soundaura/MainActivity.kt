@@ -71,23 +71,21 @@ class MainActivity : ComponentActivity() {
             var showingAppSettings by rememberSaveable { mutableStateOf(false) }
             val scaffoldState = rememberScaffoldState()
             val isPlaying by boundPlayerService?.isPlaying.mapToNonNullState(false)
-
             MessageHandler(scaffoldState)
 
-            val actionBar = @Composable {
-                SoundAuraActionBar(showingAppSettings = showingAppSettings,
-                                   onBackButtonClick = { showingAppSettings = false },
-                                   onSettingsButtonClick = { showingAppSettings = true })
-            }
-            val playPauseButton = @Composable {
-                PlayPauseButton(showing = !showingAppSettings, isPlaying = isPlaying)
-            }
-
-            Scaffold(scaffoldState = scaffoldState,
-                     floatingActionButtonPosition = FabPosition.Center,
-                     topBar = actionBar,
-                     floatingActionButton = playPauseButton,
-                     content = { MainContent(showingAppSettings) })
+            Scaffold(
+                scaffoldState = scaffoldState,
+                floatingActionButtonPosition = FabPosition.Center,
+                topBar = {
+                    SoundAuraActionBar(
+                        showingAppSettings = showingAppSettings,
+                        onBackButtonClick = { showingAppSettings = false },
+                        onSettingsButtonClick = { showingAppSettings = true })
+                }, floatingActionButton = {
+                    PlayPauseButton(showing = !showingAppSettings, isPlaying)
+                }, content = {
+                    MainContent(showingAppSettings)
+                })
         }
     }
 
