@@ -112,10 +112,12 @@ class MainActivity : ComponentActivity() {
             }
             val colorPrimary = MaterialTheme.colors.primary
             val colorPrimaryVariant = MaterialTheme.colors.primaryVariant
+            val colorSurface = MaterialTheme.colors.background
 
             LaunchedEffect(usingDarkTheme) {
                 (windowBackground as GradientDrawable).colors =
                     intArrayOf(colorPrimary.toArgb(), colorPrimaryVariant.toArgb())
+                window.navigationBarColor = colorSurface.toArgb()
                 window.setBackgroundDrawable(windowBackground)
             }
             content()
