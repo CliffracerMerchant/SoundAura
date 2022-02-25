@@ -71,7 +71,7 @@ fun TrackView(
                 volume == 0f ->   Icons.Default.VolumeMute
                 volume <= 0.5f -> Icons.Default.VolumeDown
                 else ->           Icons.Default.VolumeUp
-            })
+            }, tint = MaterialTheme.colors.surface)
         }
     ) {
         Text(text = track.name, style = MaterialTheme.typography.h6,

@@ -10,9 +10,14 @@ import android.app.PendingIntent
 import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.content.Intent
+import android.database.ContentObserver
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
+import android.provider.Settings.System.CONTENT_URI
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -48,6 +53,13 @@ import javax.inject.Inject
  * closes it immediately without interacting with it, they won't also have to
  * close the PlayerService through its notification.
  *
+ * If the media volume is changed to zero when isPlaying is true (whether it is
+ * due to volume buttons or sliders, or due to a audio device change), PlayerService
+ * will automatically pause itself to preserve battery life. If the media
+ * volume is thereafter changed to be above zero, and isPlaying has not been
+ * called manually since PlayerService was auto-paused, it will also
+ * automatically unpause itself.
+ *
  * To ensure that the volume for already playing tracks is changed seamlessly
  * and without perceptible lag, PlayerService will not respond to track volume
  * updates for already playing tracks that are received through the view
@@ -71,6 +83,8 @@ class PlayerService: LifecycleService() {
         }
 
     private var isPlaying by mutableStateOf(false)
+    private var wasAutoPaused = false
+    private lateinit var audioManager: AudioManager
 
     companion object {
         private const val requestCode = 1
@@ -99,7 +113,27 @@ class PlayerService: LifecycleService() {
         return super.onStartCommand(intent, flags, startId)
     }
 
-    init {
+    override fun onCreate() {
+        super.onCreate()
+        audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+
+        contentResolver.registerContentObserver(CONTENT_URI, true, object: ContentObserver(null) {
+            override fun onChange(selfChange: Boolean) {
+                super.onChange(selfChange)
+                checkAutoPause()
+            }
+        })
+        audioManager.registerAudioDeviceCallback(object: AudioDeviceCallback() {
+            override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) {
+                super.onAudioDevicesAdded(addedDevices)
+                checkAutoPause()
+            }
+            override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) {
+                super.onAudioDevicesRemoved(removedDevices)
+                checkAutoPause()
+            }
+        }, null)
+
         repeatWhenStarted {
             trackDao.getAllPlayingTracks().collect { tracks ->
                 val uris = tracks.map { it.uriString }
@@ -119,6 +153,17 @@ class PlayerService: LifecycleService() {
                         player.setPaused(!isPlaying)
                 }
             }
+        }
+    }
+
+    private fun checkAutoPause() {
+        val volume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        if (volume == 0 && isPlaying) {
+            setIsPlaying(false)
+            wasAutoPaused = true
+        } else if (volume > 0 && !isPlaying && wasAutoPaused) {
+            setIsPlaying(true)
+            wasAutoPaused = false
         }
     }
 
@@ -146,6 +191,7 @@ class PlayerService: LifecycleService() {
         runWithoutActivity = true
         uriPlayerMap.forEach { it.value.setPaused(!isPlaying) }
         notificationManager.notify(notificationId, notification)
+        wasAutoPaused = false
     }
 
     private fun MediaPlayer.setPaused(paused: Boolean) =
