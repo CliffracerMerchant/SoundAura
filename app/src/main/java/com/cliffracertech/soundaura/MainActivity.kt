@@ -150,7 +150,7 @@ class MainActivity : ComponentActivity() {
         isPlaying: Boolean
     ) = AnimatedVisibility(showing,
         enter = fadeIn(tween()) + scaleIn(overshootTweenSpec()),
-        exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTweenSpec())
+        exit = fadeOut(tween(delayMillis = 125)) + scaleOut(anticipateTweenSpec(delay = 75))
     ) {
         FloatingActionButton(
             onClick = { boundPlayerService?.toggleIsPlaying() },
@@ -179,7 +179,7 @@ class MainActivity : ComponentActivity() {
         AnimatedVisibility(
             visible = !showingAppSettings,
             modifier = Modifier.align(Alignment.BottomEnd),
-            enter = fadeIn(tween()) + scaleIn(overshootTweenSpec()),
+            enter = fadeIn(tween(delayMillis = 75)) + scaleIn(overshootTweenSpec(delay = 75)),
             exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTweenSpec())
         ) {
             StatefulAddTrackButton()
