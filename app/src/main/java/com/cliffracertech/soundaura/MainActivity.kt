@@ -13,13 +13,13 @@ import android.os.Bundle
 import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.lerp
@@ -40,11 +40,23 @@ class MainActivityViewModel @Inject constructor(
     messageHandler: MessageHandler
 ) : ViewModel() {
     val messages = messageHandler.messages
+
+    private var _showingAppSettings by mutableStateOf(false)
+    val showingAppSettings get() = _showingAppSettings
+
+    fun onSettingsButtonClick() { _showingAppSettings = true }
+
+    fun onBackButtonClick() =
+        if (showingAppSettings) {
+            _showingAppSettings = false
+            true
+        } else false
 }
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private var boundPlayerService by mutableStateOf<PlayerService.Binder?>(null)
+    private val viewModel: MainActivityViewModel by viewModels()
 
     private val serviceConnection = object: ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -65,22 +77,27 @@ class MainActivity : ComponentActivity() {
         boundPlayerService = null
     }
 
+    override fun onBackPressed() {
+        if (!viewModel.onBackButtonClick())
+            super.onBackPressed()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentWithTheme {
-            var showingAppSettings by rememberSaveable { mutableStateOf(false) }
             val scaffoldState = rememberScaffoldState()
             val isPlaying by boundPlayerService?.isPlaying.mapToNonNullState(false)
             MessageHandler(scaffoldState)
 
+            val showingAppSettings = viewModel.showingAppSettings
             Scaffold(
                 scaffoldState = scaffoldState,
                 floatingActionButtonPosition = FabPosition.Center,
                 topBar = {
                     SoundAuraActionBar(
                         showingAppSettings = showingAppSettings,
-                        onBackButtonClick = { showingAppSettings = false },
-                        onSettingsButtonClick = { showingAppSettings = true })
+                        onBackButtonClick = viewModel::onBackButtonClick,
+                        onSettingsButtonClick = viewModel::onSettingsButtonClick)
                 }, floatingActionButton = {
                     PlayPauseButton(showing = !showingAppSettings, isPlaying)
                 }, content = {
@@ -127,7 +144,6 @@ class MainActivity : ComponentActivity() {
     /** Compose a message handler that will read messages emitted from a
      * MainActivityViewModel's messages member and display them using snack bars.*/
     @Composable private fun MessageHandler(scaffoldState: ScaffoldState) {
-        val viewModel: MainActivityViewModel = viewModel()
         val dismissLabel = stringResource(R.string.dismiss_description)
 
         LaunchedEffect(Unit) {
