@@ -1,6 +1,11 @@
-/* The original Slider AOSP class has been modified to make the class SliderBox.
- * The SliderRange class has been removed, and the SliderColors class has been
- * modified to support gradients for the slider track and thumb. */
+/* This file is part of SoundAura, which is released under the terms of the Apache
+ * License 2.0. See license.md in the project's root directory to see the full license.
+ *
+ * The original Slider AOSP class has been modified to make the class SliderBox.
+ * The SliderRange class has been removed, the SliderColors class has been
+ * modified to support gradients for the slider track and thumb, and the
+ * sliderThumbContents parameter has been added to support contents inside
+ * the slider's thumb.*/
 package com.cliffracertech.soundaura
 
 /*

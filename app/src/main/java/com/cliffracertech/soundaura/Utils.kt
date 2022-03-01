@@ -2,7 +2,11 @@
  * License 2.0. See license.md in the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.runtime.*
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.Lifecycle
@@ -10,6 +14,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlin.reflect.KProperty
@@ -120,4 +125,15 @@ inline fun <reified T: Enum<*>> DataStore<Preferences>.enumPreferenceFlow(
 ) = data.map { prefs ->
     val index = prefs[key] ?: defaultValue.ordinal
     enumValues<T>().getOrNull(index) ?: defaultValue
+}
+
+suspend fun PointerInputScope.detectTapWithoutConsuming(
+    onTap: (Offset) -> Unit
+) {
+    forEachGesture {
+        awaitPointerEventScope {
+            val down = awaitFirstDown(requireUnconsumed = false)
+            onTap.invoke(down.position)
+        }
+    }
 }

@@ -19,10 +19,7 @@ class SearchQueryState @Inject constructor() {
  * A manager of messages to be displayed to the user, e.g. through a SnackBar.
  *
  * New messages can be posted using the postMessage function. MessageHandler
- * users can listen to the SharedFlow member messages for new messages. The
- * function postItemsDeletedMessage is provided for convenience for the common
- * use case of showing an X item(s) deleted message after items are deleted
- * from a list, along with an undo action.
+ * users can collect the SharedFlow member messages for new messages.
  */
 @ActivityRetainedScoped
 class MessageHandler @Inject constructor() {

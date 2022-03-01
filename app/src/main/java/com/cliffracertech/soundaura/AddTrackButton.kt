@@ -10,17 +10,20 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -41,26 +44,34 @@ import javax.inject.Inject
  * the SpeedDialLayout in its parent is recommended.
  *
  * @param expanded Whether or not the child contents will be displayed.
- * @param modifier The modifier for the parent layout
+ * @param onBoundsChange The callback that will be invoked when the bounds of the
+ *     layout change. These bounds can optionally be used to detect whether taps
+ *     fall outside the bounds of the layout, useful when, e.g., an automatic
+ *     collapsing of the layout when a click occurs outside its bounds is desired.
  * @param childAlignment The alignment that will be used for the child content.
- *     The default value is Alignment.End
+ *     The default value is Alignment.End.
  * @param childAppearanceDuration The duration for a given child's appearance animation.
  * @param totalDuration The total duration over which all children will appear. If
- *     longer than childAppearanceDuration, the children will have an appearance or
- *     disappearance delay according to their position in the list of children.
+ *     longer than childAppearanceDuration, the appearance or disappearance of
+ *     children will be staggered according to their position in the list of children.
  * @param children A list of each piece of child content that will appear
  *     when the layout is expanded.
- * @param content The content that will be displayed when the layout is collapsed.
+ * @param content The content that will be displayed even when the layout is collapsed.
  */
 @Composable fun SpeedDialLayout(
     expanded: Boolean,
-    modifier: Modifier = Modifier,
+    onBoundsChange: (Rect) -> Unit = {},
     childAlignment: Alignment.Horizontal = Alignment.End,
     childAppearanceDuration: Int = DefaultDurationMillis,
     totalDuration: Int = DefaultDurationMillis,
     children: List<@Composable () -> Unit>,
     content: @Composable () -> Unit,
-) = Column(modifier, Arrangement.spacedBy(8.dp), childAlignment) {
+) = Column(
+     modifier = Modifier.onGloballyPositioned {
+        onBoundsChange(it.boundsInRoot())
+    }, verticalArrangement = Arrangement.spacedBy(8.dp),
+    horizontalAlignment = childAlignment
+) {
     require(totalDuration >= childAppearanceDuration)
     val delayFactor = (totalDuration - childAppearanceDuration) / children.size
     children.forEachIndexed { index, child ->
@@ -83,20 +94,23 @@ import javax.inject.Inject
  * internet via download or through a local file .
  *
  * @param expanded Whether the add download or add local file buttons will be displayed.
+ * @param onBoundsChange The callback that will be invoked when the bounds of the
+ *     layout change. These bounds can optionally be used to detect whether taps
+ *     fall outside the bounds of the layout, useful when, e.g., an automatic
+ *     collapsing of the layout when a click occurs outside its bounds is desired.
  * @param onClick The callback that will be invoked when the main content FAB is clicked.
  * @param onAddDownloadClick The callback that will be invoked when the download button is clicked.
  * @param onAddLocalFileClick The callback that will be invoked when the add local file button is clicked.
- * @param modifier The modifier that will be used for the surrounding layout.
  */
 @Composable fun AddTrackButton(
     expanded: Boolean,
-    onClick: () -> Unit,
-    onAddDownloadClick: () -> Unit,
-    onAddLocalFileClick: () -> Unit,
-    modifier: Modifier = Modifier,
+    onBoundsChange: (Rect) -> Unit = {},
+    onClick: () -> Unit = {},
+    onAddDownloadClick: () -> Unit = {},
+    onAddLocalFileClick: () -> Unit = {},
 ) = SpeedDialLayout(
     expanded = expanded,
-    modifier = modifier,
+    onBoundsChange = onBoundsChange,
     childAppearanceDuration = 275,
     totalDuration = 400,
     children = listOf(
@@ -138,7 +152,7 @@ import javax.inject.Inject
 }}
 
 @Preview @Composable
-fun AddTrackButtonPreview() = AddTrackButton(true, {}, {}, {})
+fun AddTrackButtonPreview() = AddTrackButton(expanded = true)
 
 @HiltViewModel
 class AddTrackButtonViewModel @Inject constructor(
@@ -155,7 +169,16 @@ class AddTrackButtonViewModel @Inject constructor(
     private var _showingDownloadFileDialog by mutableStateOf(false)
     val showingDownloadFileDialog get() = _showingDownloadFileDialog
 
+    private var lastBounds = Rect(0f, 0f, 0f, 0f)
+
     fun onClick() { _expanded = !expanded }
+
+    fun onBoundsChange(bounds: Rect) { lastBounds = bounds }
+
+    fun onGlobalClick(pos: Offset) {
+        if (!lastBounds.contains(pos))
+            _expanded = false
+    }
 
     private fun addTrack(track: Track) {
         viewModelScope.launch {
@@ -201,8 +224,8 @@ class AddTrackButtonViewModel @Inject constructor(
     val viewModel: AddTrackButtonViewModel = viewModel()
 
     AddTrackButton(
-        modifier = Modifier.padding(16.dp),
         expanded = viewModel.expanded,
+        onBoundsChange = viewModel::onBoundsChange,
         onClick = viewModel::onClick,
         onAddDownloadClick = viewModel::onDownloadFileButtonClick,
         onAddLocalFileClick = viewModel::onAddLocalFileButtonClick)
