@@ -5,6 +5,7 @@ package com.cliffracertech.soundaura
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
@@ -14,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.ViewModel
@@ -31,11 +33,12 @@ import javax.inject.Inject
 @Composable
 fun TrackList(
     modifier: Modifier = Modifier,
+    bottomPadding: Dp,
     tracks: List<Track>,
     trackViewCallback: TrackViewCallback = TrackViewCallback()
 ) = LazyColumn(
     modifier = modifier,
-    contentPadding = PaddingValues(8.dp, 8.dp, 8.dp, 70.dp),
+    contentPadding = PaddingValues(8.dp, 8.dp, 8.dp, 8.dp + bottomPadding),
     verticalArrangement = Arrangement.spacedBy(8.dp)
 ) {
     items(items = tracks, key = { it.uriString }) {
@@ -85,6 +88,7 @@ class TrackListViewModel @Inject constructor(
  * @param onVolumeChange The callback that will be invoked when
  *                       a TrackView's volume slider is moved. */
 @Composable fun StatefulTrackList(
+    bottomPadding: Dp,
     onVolumeChange: (String, Float) -> Unit,
 ) {
     val viewModel: TrackListViewModel = viewModel()
@@ -96,5 +100,8 @@ class TrackListViewModel @Inject constructor(
             onRenameRequest = viewModel::onTrackRenameRequest,
             onDeleteRequest = viewModel::onDeleteTrackDialogConfirmation)
     }
-    TrackList(tracks = viewModel.tracks, trackViewCallback = itemCallback)
+    TrackList(
+        tracks = viewModel.tracks,
+        bottomPadding = bottomPadding,
+        trackViewCallback = itemCallback)
 }

@@ -3,7 +3,7 @@
    ~ the project's root directory to see the full license. -->
 
 <resources>
-    <style name="Theme.SoundAura" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+    <style name="Theme.SoundAura" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">@color/lightThemeGradientStart</item>
         <item name="colorPrimaryVariant">@color/lightThemeGradientEnd</item>
         <item name="colorOnPrimary">@color/lightOnPrimary</item>
@@ -18,8 +18,4 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
     </style>
-
-    <style name="Theme.SoundAura.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
-
-    <style name="Theme.SoundAura.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 </resources>

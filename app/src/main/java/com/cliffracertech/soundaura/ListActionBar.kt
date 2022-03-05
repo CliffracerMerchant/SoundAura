@@ -28,24 +28,28 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
+import com.google.accompanist.insets.statusBarsPadding
 
-/** Compose a Row with a gradient background and vertically centered content,
- * while providing the current theme's onPrimary color as the LocalContentColor. */
+/** Compose a Row with a gradient background and vertically centered
+ * content, while providing the current theme's onPrimary color as the
+ * LocalContentColor. The default height of 56.dp can be overridden
+ * via the parameter height. */
 @Composable fun GradientToolBar(
-    modifier: Modifier = Modifier,
     content: @Composable RowScope.() -> Unit
-) = Row(
-    modifier = modifier
-        .fillMaxWidth(1f).height(56.dp)
-        .background(Brush.horizontalGradient(listOf(
-            MaterialTheme.colors.primary,
-            MaterialTheme.colors.primaryVariant))),
-    verticalAlignment = Alignment.CenterVertically,
+) = Column(Modifier
+    .fillMaxWidth(1f)
+    .background(Brush.horizontalGradient(listOf(
+        MaterialTheme.colors.primary,
+        MaterialTheme.colors.primaryVariant)))
+    .statusBarsPadding()
 ) {
-    CompositionLocalProvider(LocalContentColor provides MaterialTheme.colors.onPrimary) {
-        content()
+    Row(Modifier.height(56.dp), verticalAlignment = Alignment.CenterVertically) {
+        CompositionLocalProvider(LocalContentColor provides MaterialTheme.colors.onPrimary) {
+            content()
+        }
     }
 }
 
@@ -85,8 +89,7 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
  * @param otherContent A composable containing other contents that should be
  * placed at the end of the action bar.
  */
-@Composable
-fun <T> ListActionBar(
+@Composable fun <T> ListActionBar(
     showBackButtonForNavigation: Boolean = false,
     onBackButtonClick: () -> Unit,
     title: String,

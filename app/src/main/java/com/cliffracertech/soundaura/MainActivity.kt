@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.res.Configuration
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.IBinder
 import androidx.activity.ComponentActivity
@@ -16,22 +15,24 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
+import com.google.accompanist.insets.ProvideWindowInsets
+import com.google.accompanist.insets.navigationBarsHeight
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collect
@@ -86,6 +87,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentWithTheme {
             val scaffoldState = rememberScaffoldState()
             val isPlaying by boundPlayerService?.isPlaying.mapToNonNullState(false)
@@ -97,18 +99,20 @@ class MainActivity : ComponentActivity() {
             Scaffold(
                 modifier = Modifier.pointerInput(Unit) {
                     detectTapWithoutConsuming(addTrackButtonViewModel::onGlobalClick)
-                },
-                scaffoldState = scaffoldState,
+                }, scaffoldState = scaffoldState,
                 floatingActionButtonPosition = FabPosition.Center,
                 topBar = {
                     SoundAuraActionBar(
                         showingAppSettings = showingAppSettings,
                         onBackButtonClick = viewModel::onBackButtonClick,
                         onSettingsButtonClick = viewModel::onSettingsButtonClick)
+                }, bottomBar = {
+                    Spacer(Modifier.navigationBarsHeight().fillMaxWidth())
                 }, floatingActionButton = {
                     PlayPauseButton(showing = !showingAppSettings, isPlaying)
                 }, content = {
-                    MainContent(showingAppSettings)
+                    val bottomPadding = it.calculateBottomPadding()
+                    MainContent(showingAppSettings, bottomPadding)
                 })
         }
     }
@@ -131,20 +135,16 @@ class MainActivity : ComponentActivity() {
             }
         }
         SoundAuraTheme(usingDarkTheme) {
-            val windowBackground = remember {
-                ContextCompat.getDrawable(this, R.drawable.background_gradient)
+            ProvideWindowInsets {
+                val transparent = Color.Transparent
+                val systemUiController = rememberSystemUiController()
+                val useDarkIcons = MaterialTheme.colors.isLight
+                LaunchedEffect(usingDarkTheme) {
+                    systemUiController.setStatusBarColor(transparent, useDarkIcons)
+                    systemUiController.setNavigationBarColor(transparent, useDarkIcons)
+                }
+                content()
             }
-            val colorPrimary = MaterialTheme.colors.primary
-            val colorPrimaryVariant = MaterialTheme.colors.primaryVariant
-            val colorSurface = MaterialTheme.colors.background
-
-            LaunchedEffect(usingDarkTheme) {
-                (windowBackground as GradientDrawable).colors =
-                    intArrayOf(colorPrimary.toArgb(), colorPrimaryVariant.toArgb())
-                window.navigationBarColor = colorSurface.toArgb()
-                window.setBackgroundDrawable(windowBackground)
-            }
-            content()
         }
     }
 
@@ -187,25 +187,35 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable private fun MainContent(
-        showingAppSettings: Boolean
+        showingAppSettings: Boolean,
+        bottomPadding: Dp
     ) = Box(Modifier.fillMaxSize(1f)) {
+        // The bottomPadding parameter only accounts for the navigation bar.
+        // The extra 16dp for the add track button is the standard floating
+        // action button edge margin. The extra 72dp for the track list is
+        // the 16dp margin for the FAB, plus 56dp for the FAB itself.
+        val trackListBottomPadding = bottomPadding + 72.dp
+        val addTrackButtonBottomPadding = bottomPadding + 16.dp
+
         SlideAnimatedContent(
             targetState = showingAppSettings,
             leftToRight = !showingAppSettings
         ) { showingAppSettings ->
             if (showingAppSettings)
                 AppSettings()
-            else StatefulTrackList(onVolumeChange = { uri, volume ->
-                boundPlayerService?.setTrackVolume(uri, volume)
-            })
+            else StatefulTrackList(
+                bottomPadding = trackListBottomPadding,
+                onVolumeChange = { uri, volume ->
+                    boundPlayerService?.setTrackVolume(uri, volume)
+                })
         }
         AnimatedVisibility(
             visible = !showingAppSettings,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = addTrackButtonBottomPadding),
             enter = fadeIn(tween(delayMillis = 75)) + scaleIn(overshootTweenSpec(delay = 75)),
             exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTweenSpec())
-        ) {
-            StatefulAddTrackButton()
-        }
+        ) { StatefulAddTrackButton() }
     }
 }
