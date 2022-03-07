@@ -124,7 +124,7 @@ fun SliderBox(
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     colors: SliderColors = SliderDefaults.colors(),
     sliderThumbContents: (@Composable () -> Unit)? = null,
-    content: @Composable () -> Unit
+    content: @Composable BoxWithConstraintsScope.() -> Unit
 ) {
     require(steps >= 0) { "steps should be >= 0" }
     val onValueChangeState = rememberUpdatedState(onValueChange)
@@ -865,7 +865,7 @@ private val ThumbDefaultElevation = 1.dp
 private val ThumbPressedElevation = 6.dp
 
 // Internal to be referred to in tests
-internal val TrackHeight = 4.dp
+internal val TrackHeight = 10.dp
 private val SliderHeight = 48.dp
 private val SliderMinWidth = 144.dp
 private val DefaultSliderConstraints =

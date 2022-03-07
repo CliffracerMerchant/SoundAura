@@ -57,26 +57,32 @@ fun TrackView(
     }
 
     var volume by remember { mutableStateOf(track.volume) }
+    val iconSize = 20.dp
+    val sliderTopPadding = 20.dp
     SliderBox(
         value = volume,
         onValueChange = {
             volume = it
             callback.onVolumeChange(track.uriString, it)
-        },
-        onValueChangeFinished = { callback.onVolumeChangeFinished(track.uriString, volume) },
-        modifier = Modifier.height(68.dp).weight(1f),
-        sliderPadding = PaddingValues(top = 30.dp),
-        sliderThumbContents = {
-            Icon(contentDescription = null, imageVector = when {
-                volume == 0f ->   Icons.Default.VolumeMute
-                volume <= 0.5f -> Icons.Default.VolumeDown
-                else ->           Icons.Default.VolumeUp
-            }, tint = MaterialTheme.colors.surface)
-        }
+        }, onValueChangeFinished = {
+            callback.onVolumeChangeFinished(track.uriString, volume)
+        }, modifier = Modifier.padding(0.dp, 6.dp, 0.dp, 0.dp).weight(1f),
+        sliderPadding = PaddingValues(start = iconSize,
+                                      top = sliderTopPadding,
+                                      end = iconSize)
     ) {
         Text(text = track.name, style = MaterialTheme.typography.h6,
              maxLines = 1, overflow = TextOverflow.Ellipsis,
-             modifier = Modifier.padding(8.dp, 8.dp, 0.dp, 0.dp))
+             modifier = Modifier.padding(start = 4.dp))
+        Icon(Icons.Default.VolumeMute, null,
+             Modifier.padding(top = sliderTopPadding + 14.dp)
+                 .size(iconSize),
+             MaterialTheme.colors.primary)
+        Icon(Icons.Default.VolumeUp, null,
+             Modifier.padding(top = sliderTopPadding + 14.dp,
+                              start = maxWidth - iconSize)
+                 .size(iconSize),
+             MaterialTheme.colors.primaryVariant)
     }
 
     ItemMoreOptionsButton(
