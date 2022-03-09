@@ -48,8 +48,8 @@ class TrackViewCallback(
          modifier = Modifier.size(20.dp),
          tint = MaterialTheme.colors.primary)
     GradientSlider(value = volume, onValueChange = onVolumeChange,
-           modifier = Modifier.padding(start = 2.dp, end = 0.dp),
-           onValueChangeFinished = onVolumeChangeFinished)
+                   modifier = Modifier.padding(start = 2.dp, end = 0.dp),
+                   onValueChangeFinished = onVolumeChangeFinished)
     }
 
 @Preview @Composable fun TrackVolumeSliderPreview() =
