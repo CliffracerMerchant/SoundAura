@@ -1,7 +1,8 @@
 /* This file is part of SoundAura, which is released under the terms of the Apache
  * License 2.0. See license.md in the project's root directory to see the full license.
  *
- * The original Slider AOSP class has been modified in the following ways:
+ * The original Slider AOSP class has been modified in the
+ * following ways to make the GradientSlider class:
  * - The SliderRange class has been removed
  * - The steps/ticks functionality has been removed
  * - The SliderColors class has been modified to support gradients for
@@ -78,28 +79,27 @@ import com.google.android.material.math.MathUtils.lerp
  * You can allow the user to choose only between predefined set of values by specifying the amount
  * of steps between min and max values: @sample androidx.compose.material.samples.StepsSliderSample
  *
- * com.cliffracertech.soundaura.Slider acts as the standard Compose Slider, except
- * that it adds support for gradient colors to the slider's thumb and track, and
- * it removes the ticks/steps functionality.
+ * GradientSlider acts as the standard Compose Slider, except that it adds support for gradient
+ * colors to the slider's thumb and track, and it removes the ticks/steps functionality.
  *
- * @param value current value of the Slider. If outside of [valueRange] provided, value will be
- * coerced to this range.
+ * @param value current value of the GradientSlider. If outside of [valueRange] provided,
+ * value will be coerced to this range.
  * @param onValueChange lambda in which value should be updated
  * @param modifier modifiers for the Slider layout
  * @param enabled whether or not component is enabled and can we interacted with or not
- * @param valueRange range of values that Slider value can take. Passed [value] will be coerced to
- * this range
+ * @param valueRange range of values that GradientSlider value can take. Passed [value]
+ * will be coerced to this range
  * @param onValueChangeFinished lambda to be invoked when value change has ended. This callback
  * shouldn't be used to update the slider value (use [onValueChange] for that), but rather to
  * know when the user has completed selecting a new value by ending a drag or a click.
  * @param interactionSource the [MutableInteractionSource] representing the stream of
- * [Interaction]s for this Slider. You can create and pass in your own remembered
+ * [Interaction]s for this GradientSlider. You can create and pass in your own remembered
  * [MutableInteractionSource] if you want to observe [Interaction]s and customize the
- * appearance / behavior of this Slider in different [Interaction]s.
- * @param colors [SliderColors] that will be used to determine the color of the Slider parts in
- * different state. See [SliderDefaults.colors] to customize.
+ * appearance / behavior of this GradientSlider in different [Interaction]s.
+ * @param colors [SliderColors] that will be used to determine the color of the GradientSlider
+ * parts in different state. See [SliderDefaults.colors] to customize.
  */
-@Composable fun Slider(
+@Composable fun GradientSlider(
     value: Float,
     onValueChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
@@ -107,7 +107,8 @@ import com.google.android.material.math.MathUtils.lerp
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
     onValueChangeFinished: (() -> Unit)? = null,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
-    colors: SliderColors = SliderDefaults.colors()) {
+    colors: SliderColors = SliderDefaults.colors()
+) {
     val onValueChangeState = rememberUpdatedState(onValueChange)
 
     BoxWithConstraints(modifier
@@ -164,13 +165,13 @@ import com.google.android.material.math.MathUtils.lerp
 }
 
 /**
- * Object to hold defaults used by [Slider]
+ * Object to hold defaults used by [GradientSlider]
  */
 object SliderDefaults {
 
     /**
      * Creates a [SliderColors] that represents the different colors used in parts of the
-     * [Slider] in different states.
+     * [GradientSlider] in different states.
      *
      * For the name references below the words "active" and "inactive" are used. Active part of
      * the slider is filled with progress, so if slider's progress is 30% out of 100%, left (or
@@ -187,8 +188,7 @@ object SliderDefaults {
      * @param disabledInactiveTrackColor color of the track in the "inactive" part when the
      * Slider is disabled
      */
-    @Composable
-    fun colors(
+    @Composable fun colors(
         thumbColor: Color = MaterialTheme.colors.primary,
         thumbColorEnd: Color = MaterialTheme.colors.primaryVariant,
         disabledThumbColor: Color = MaterialTheme.colors.onSurface
@@ -230,7 +230,7 @@ object SliderDefaults {
 }
 
 /**
- * Represents the colors used by a [Slider] and its parts in different states
+ * Represents the colors used by a [GradientSlider] and its parts in different states
  *
  * See [SliderDefaults.colors] for the default implementation that follows Material
  * specifications.
@@ -241,7 +241,7 @@ interface SliderColors {
     /**
      * Represents the color used for the slider's thumb, depending on [enabled].
      *
-     * @param enabled whether the [Slider] is enabled or not
+     * @param enabled whether the [GradientSlider] is enabled or not
      */
     @Composable
     fun thumbColor(enabled: Boolean): State<Color>
@@ -261,7 +261,7 @@ interface SliderColors {
      * Active part is filled with progress, so if sliders progress is 30% out of 100%, left (or
      * right in RTL) 30% of the track will be active, the rest is not active.
      *
-     * @param enabled whether the [Slider] is enabled or not
+     * @param enabled whether the [GradientSlider] is enabled or not
      * @param active whether the part of the track is active of not
      */
     @Composable
