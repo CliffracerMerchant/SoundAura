@@ -1,11 +1,12 @@
 /* This file is part of SoundAura, which is released under the terms of the Apache
  * License 2.0. See license.md in the project's root directory to see the full license.
  *
- * The original Slider AOSP class has been modified to make the class SliderBox.
- * The SliderRange class has been removed, the SliderColors class has been
- * modified to support gradients for the slider track and thumb, and the
- * sliderThumbContents parameter has been added to support contents inside
- * the slider's thumb.*/
+ * The original Slider AOSP class has been modified in the following ways:
+ * - The SliderRange class has been removed
+ * - The steps/ticks functionality has been removed
+ * - The SliderColors class has been modified to support gradients for
+ *   the slider track and thumb, and the tick colors have been removed
+ */
 package com.cliffracertech.soundaura
 
 /*
@@ -36,14 +37,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.ContentAlpha
 import androidx.compose.material.MaterialTheme
-import androidx.compose.material.contentColorFor
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.platform.LocalDensity
@@ -79,25 +78,17 @@ import com.google.android.material.math.MathUtils.lerp
  * You can allow the user to choose only between predefined set of values by specifying the amount
  * of steps between min and max values: @sample androidx.compose.material.samples.StepsSliderSample
  *
- * SliderBox acts as the standard Compose Slider, except that it allows for adding
- * other content to the box that contains the slider control using the composable
- * parameter content, and allows for setting the slider control's padding within
- * the outer box using the parameter sliderPadding. Adding other contents this way
- * allows for extra slider decorations that do not interfere with the dragging of
- * the slider.
+ * com.cliffracertech.soundaura.Slider acts as the standard Compose Slider, except
+ * that it adds support for gradient colors to the slider's thumb and track, and
+ * it removes the ticks/steps functionality.
  *
  * @param value current value of the Slider. If outside of [valueRange] provided, value will be
  * coerced to this range.
  * @param onValueChange lambda in which value should be updated
  * @param modifier modifiers for the Slider layout
- * @param sliderPadding padding for the slider control within the SliderBox; set as needed to
- * prevent overlap of the slider controls with other composables in the SliderBox's content.
  * @param enabled whether or not component is enabled and can we interacted with or not
  * @param valueRange range of values that Slider value can take. Passed [value] will be coerced to
  * this range
- * @param steps if greater than 0, specifies the amounts of discrete values, evenly distributed
- * between across the whole value range. If 0, slider will behave as a continuous slider and allow
- * to choose any value from the range specified. Must not be negative.
  * @param onValueChangeFinished lambda to be invoked when value change has ended. This callback
  * shouldn't be used to update the slider value (use [onValueChange] for that), but rather to
  * know when the user has completed selecting a new value by ending a drag or a click.
@@ -107,35 +98,22 @@ import com.google.android.material.math.MathUtils.lerp
  * appearance / behavior of this Slider in different [Interaction]s.
  * @param colors [SliderColors] that will be used to determine the color of the Slider parts in
  * different state. See [SliderDefaults.colors] to customize.
- * @param sliderThumbContents The contents of the slider's thumb, if any.
- * @param content Other decorative composables to include in the SliderBox.
  */
-@Composable
-fun SliderBox(
+@Composable fun Slider(
     value: Float,
     onValueChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
-    sliderPadding: PaddingValues = PaddingValues(),
     enabled: Boolean = true,
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
-    /*@IntRange(from = 0)*/
-    steps: Int = 0,
     onValueChangeFinished: (() -> Unit)? = null,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
-    colors: SliderColors = SliderDefaults.colors(),
-    sliderThumbContents: (@Composable () -> Unit)? = null,
-    content: @Composable BoxWithConstraintsScope.() -> Unit
-) {
-    require(steps >= 0) { "steps should be >= 0" }
+    colors: SliderColors = SliderDefaults.colors()) {
     val onValueChangeState = rememberUpdatedState(onValueChange)
-    val tickFractions = remember(steps) {
-        stepsToTickFractions(steps)
-    }
-    BoxWithConstraints(
-        modifier
-            .requiredSizeIn(minWidth = ThumbRadius * 2, minHeight = ThumbRadius * 2)
-            .sliderSemantics(value, tickFractions, enabled, onValueChange, valueRange, steps)
-            .focusable(enabled, interactionSource)
+
+    BoxWithConstraints(modifier
+        .requiredSizeIn(minWidth = ThumbRadius * 2, minHeight = ThumbRadius * 2)
+        .sliderSemantics(value, enabled, onValueChange, valueRange)
+        .focusable(enabled, interactionSource)
     ) {
         val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
         val maxPx = constraints.maxWidth.toFloat()
@@ -147,7 +125,6 @@ fun SliderBox(
         fun scaleToOffset(userValue: Float) =
             scale(valueRange.start, valueRange.endInclusive, userValue, minPx, maxPx)
 
-        val scope = rememberCoroutineScope()
         val rawOffset = remember { mutableStateOf(scaleToOffset(value)) }
         val draggableState = remember(minPx, maxPx, valueRange) {
             SliderDraggableState {
@@ -158,15 +135,8 @@ fun SliderBox(
 
         CorrectValueSideEffect(::scaleToOffset, valueRange, rawOffset, value)
 
-        val gestureEndAction = rememberUpdatedState<(Float) -> Unit> { velocity: Float ->
-            val current = rawOffset.value
-            val target = snapValueToTick(current, tickFractions, minPx, maxPx)
-            if (current != target) {
-                scope.launch {
-                    animateToTarget(draggableState, current, target, velocity)
-                    onValueChangeFinished?.invoke()
-                }
-            } else if (!draggableState.isDragging) {
+        val gestureEndAction = rememberUpdatedState { velocity: Float ->
+            if (!draggableState.isDragging) {
                 // check ifDragging in case the change is still in progress (touch -> drag case)
                 onValueChangeFinished?.invoke()
             }
@@ -188,27 +158,19 @@ fun SliderBox(
 
         val coerced = value.coerceIn(valueRange.start, valueRange.endInclusive)
         val fraction = calcFraction(valueRange.start, valueRange.endInclusive, coerced)
-        SliderImpl(
-            enabled,
-            fraction,
-            tickFractions,
-            colors,
-            maxPx,
-            interactionSource,
-            modifier = press.then(drag).padding(sliderPadding),
-            sliderThumbContents = sliderThumbContents)
-        content()
+        SliderImpl(enabled, fraction, colors, maxPx,
+                   interactionSource, press.then(drag))
     }
 }
 
 /**
- * Object to hold defaults used by [SliderBox]
+ * Object to hold defaults used by [Slider]
  */
 object SliderDefaults {
 
     /**
      * Creates a [SliderColors] that represents the different colors used in parts of the
-     * [SliderBox] in different states.
+     * [Slider] in different states.
      *
      * For the name references below the words "active" and "inactive" are used. Active part of
      * the slider is filled with progress, so if slider's progress is 30% out of 100%, left (or
@@ -224,14 +186,6 @@ object SliderDefaults {
      * disabled
      * @param disabledInactiveTrackColor color of the track in the "inactive" part when the
      * Slider is disabled
-     * @param activeTickColor colors to be used to draw tick marks on the active track, if `steps`
-     * is specified
-     * @param inactiveTickColor colors to be used to draw tick marks on the inactive track, if
-     * `steps` are specified on the Slider is specified
-     * @param disabledActiveTickColor colors to be used to draw tick marks on the active track
-     * when Slider is disabled and when `steps` are specified on it
-     * @param disabledInactiveTickColor colors to be used to draw tick marks on the inactive part
-     * of the track when Slider is disabled and when `steps` are specified on it
      */
     @Composable
     fun colors(
@@ -247,12 +201,7 @@ object SliderDefaults {
         disabledActiveTrackColor: Color =
             MaterialTheme.colors.onSurface.copy(alpha = DisabledActiveTrackAlpha),
         disabledInactiveTrackColor: Color =
-            disabledActiveTrackColor.copy(alpha = DisabledInactiveTrackAlpha),
-        activeTickColor: Color = contentColorFor(activeTrackColor).copy(alpha = TickAlpha),
-        inactiveTickColor: Color = activeTrackColor.copy(alpha = TickAlpha),
-        disabledActiveTickColor: Color = activeTickColor.copy(alpha = DisabledTickAlpha),
-        disabledInactiveTickColor: Color = disabledInactiveTrackColor
-            .copy(alpha = DisabledTickAlpha)
+            disabledActiveTrackColor.copy(alpha = DisabledInactiveTrackAlpha)
     ): SliderColors = DefaultSliderColors(
         thumbColor = thumbColor,
         thumbColorEnd = thumbColorEnd,
@@ -262,10 +211,6 @@ object SliderDefaults {
         activeTrackBrush = activeTrackBrush,
         disabledActiveTrackColor = disabledActiveTrackColor,
         disabledInactiveTrackColor = disabledInactiveTrackColor,
-        activeTickColor = activeTickColor,
-        inactiveTickColor = inactiveTickColor,
-        disabledActiveTickColor = disabledActiveTickColor,
-        disabledInactiveTickColor = disabledInactiveTickColor
     )
 
     /**
@@ -282,20 +227,10 @@ object SliderDefaults {
      * Default alpha for the track when it is disabled and inactive
      */
     const val DisabledActiveTrackAlpha = 0.32f
-
-    /**
-     * Default alpha of the ticks that are drawn on top of the track
-     */
-    const val TickAlpha = 0.54f
-
-    /**
-     * Default alpha for tick marks when they are disabled
-     */
-    const val DisabledTickAlpha = 0.12f
 }
 
 /**
- * Represents the colors used by a [SliderBox] and its parts in different states
+ * Represents the colors used by a [Slider] and its parts in different states
  *
  * See [SliderDefaults.colors] for the default implementation that follows Material
  * specifications.
@@ -306,7 +241,7 @@ interface SliderColors {
     /**
      * Represents the color used for the slider's thumb, depending on [enabled].
      *
-     * @param enabled whether the [SliderBox] is enabled or not
+     * @param enabled whether the [Slider] is enabled or not
      */
     @Composable
     fun thumbColor(enabled: Boolean): State<Color>
@@ -326,7 +261,7 @@ interface SliderColors {
      * Active part is filled with progress, so if sliders progress is 30% out of 100%, left (or
      * right in RTL) 30% of the track will be active, the rest is not active.
      *
-     * @param enabled whether the [SliderBox] is enabled or not
+     * @param enabled whether the [Slider] is enabled or not
      * @param active whether the part of the track is active of not
      */
     @Composable
@@ -338,32 +273,16 @@ interface SliderColors {
      */
     @Composable
     fun activeTrackBrush(): State<Brush?>
-
-    /**
-     * Represents the color used for the slider's tick which is the dot separating steps, if
-     * they are set on the slider, depending on [enabled] and [active].
-     *
-     * Active tick is the tick that is in the part of the track filled with progress, so if
-     * sliders progress is 30% out of 100%, left (or right in RTL) 30% of the track and the ticks
-     * in this 30% will be active, the rest is not active.
-     *
-     * @param enabled whether the [SliderBox] is enabled or not
-     * @param active whether the part of the track this tick is in is active of not
-     */
-    @Composable
-    fun tickColor(enabled: Boolean, active: Boolean): State<Color>
 }
 
 @Composable
 private fun SliderImpl(
     enabled: Boolean,
     positionFraction: Float,
-    tickFractions: List<Float>,
     colors: SliderColors,
     width: Float,
     interactionSource: MutableInteractionSource,
     modifier: Modifier,
-    sliderThumbContents: (@Composable () -> Unit)? = null,
 ) {
     Box(modifier.then(DefaultSliderConstraints)) {
         val trackStrokeWidth: Float
@@ -379,18 +298,10 @@ private fun SliderImpl(
         val offset = (widthDp - thumbSize) * positionFraction
         val center = Modifier.align(Alignment.CenterStart)
 
-        Track(
-            center.fillMaxSize(),
-            colors,
-            enabled,
-            0f,
-            positionFraction,
-            tickFractions,
-            thumbPx,
-            trackStrokeWidth
-        )
-        SliderThumb(center, offset, interactionSource, colors, enabled,
-                    thumbSize, positionFraction, sliderThumbContents)
+        Track(center.fillMaxSize(), colors, enabled,
+              0f, positionFraction, thumbPx, trackStrokeWidth)
+        SliderThumb(center, offset, interactionSource, colors,
+                    enabled, thumbSize, positionFraction)
     }
 }
 
@@ -403,7 +314,6 @@ private fun SliderThumb(
     enabled: Boolean,
     thumbSize: Dp,
     positionFraction: Float,
-    contents: (@Composable () -> Unit)? = null,
 ) {
     Box(modifier.padding(start = offset)) {
         val interactions = remember { mutableStateListOf<Interaction>() }
@@ -438,8 +348,7 @@ private fun SliderThumb(
             .indication(interactionSource,
                 rememberRipple(bounded = false, radius = ThumbRippleRadius))
             .shadow(if (enabled) elevation else 0.dp, CircleShape, clip = false)
-            .background(thumbColor, CircleShape)
-        ) { contents?.invoke() }
+            .background(thumbColor, CircleShape))
     }
 }
 
@@ -450,15 +359,12 @@ private fun Track(
     enabled: Boolean,
     positionFractionStart: Float,
     positionFractionEnd: Float,
-    tickFractions: List<Float>,
     thumbPx: Float,
     trackStrokeWidth: Float
 ) {
     val inactiveTrackColor = colors.trackColor(enabled, active = false)
     val activeTrackColor = colors.trackColor(enabled, active = true)
     val activeTrackBrush = colors.activeTrackBrush().value
-    val inactiveTickColor = colors.tickColor(enabled, active = false)
-    val activeTickColor = colors.tickColor(enabled, active = true)
 
     Canvas(modifier) {
         val isRtl = layoutDirection == LayoutDirection.Rtl
@@ -475,43 +381,17 @@ private fun Track(
         )
         val sliderValueEnd = Offset(
             sliderStart.x + (sliderEnd.x - sliderStart.x) * positionFractionEnd,
-            center.y
-        )
+            center.y)
 
         val sliderValueStart = Offset(
             sliderStart.x + (sliderEnd.x - sliderStart.x) * positionFractionStart,
-            center.y
-        )
+            center.y)
 
-        if (activeTrackBrush == null) {
-            drawLine(
-                activeTrackColor.value,
-                sliderValueStart,
-                sliderValueEnd,
-                trackStrokeWidth,
-                StrokeCap.Round
-            )
-        } else {
-            drawLine(
-                activeTrackBrush,
-                sliderValueStart,
-                sliderValueEnd,
-                trackStrokeWidth,
-                StrokeCap.Round
-            )
-        }
-
-        tickFractions.groupBy { it > positionFractionEnd }.forEach { (afterFraction, list) ->
-            drawPoints(
-                list.map {
-                    Offset(lerp(sliderStart, sliderEnd, it).x, center.y)
-                },
-                PointMode.Points,
-                (if (afterFraction) inactiveTickColor else activeTickColor).value,
-                trackStrokeWidth,
-                StrokeCap.Round
-            )
-        }
+        if (activeTrackBrush == null)
+            drawLine(activeTrackColor.value, sliderValueStart,
+                     sliderValueEnd, trackStrokeWidth, StrokeCap.Round)
+        else drawLine(activeTrackBrush, sliderValueStart,
+                sliderValueEnd, trackStrokeWidth, StrokeCap.Round)
     }
 }
 
@@ -573,11 +453,9 @@ private fun CorrectValueSideEffect(
 
 private fun Modifier.sliderSemantics(
     value: Float,
-    tickFractions: List<Float>,
     enabled: Boolean,
     onValueChange: (Float) -> Unit,
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
-    steps: Int = 0
 ): Modifier {
     val coerced = value.coerceIn(valueRange.start, valueRange.endInclusive)
     return semantics(mergeDescendants = true) {
@@ -585,24 +463,17 @@ private fun Modifier.sliderSemantics(
         setProgress(
             action = { targetValue ->
                 val newValue = targetValue.coerceIn(valueRange.start, valueRange.endInclusive)
-                val resolvedValue = if (steps > 0) {
-                    tickFractions
-                        .map { lerp(valueRange.start, valueRange.endInclusive, it) }
-                        .minByOrNull { abs(it - newValue) } ?: newValue
-                } else {
-                    newValue
-                }
                 // This is to keep it consistent with AbsSeekbar.java: return false if no
                 // change from current.
-                if (resolvedValue == coerced) {
+                if (newValue == coerced)
                     false
-                } else {
-                    onValueChange(resolvedValue)
+                else {
+                    onValueChange(newValue)
                     true
                 }
             }
         )
-    }.progressSemantics(value, valueRange, steps)
+    }.progressSemantics(value, valueRange)
 }
 
 private fun Modifier.sliderPressModifier(
@@ -610,12 +481,17 @@ private fun Modifier.sliderPressModifier(
     interactionSource: MutableInteractionSource,
     maxPx: Float,
     isRtl: Boolean,
+//    rawOffset: State<Float>,
     gestureEndAction: State<(Float) -> Unit>,
     enabled: Boolean
 ): Modifier = if (!enabled) this else
     pointerInput(draggableState, interactionSource, maxPx, isRtl) {
         detectTapGestures(
             onPress = { pos ->
+//                draggableState.drag(MutatePriority.UserInput) {
+//                    val to = if (isRtl) maxPx - pos.x else pos.x
+//                    dragBy(to - rawOffset.value)
+//                }
                 val interaction = PressInteraction.Press(pos)
                 interactionSource.emit(interaction)
                 val finishInteraction = try {
@@ -785,10 +661,6 @@ private class DefaultSliderColors(
     private val activeTrackBrush: Brush?,
     private val disabledActiveTrackColor: Color,
     private val disabledInactiveTrackColor: Color,
-    private val activeTickColor: Color,
-    private val inactiveTickColor: Color,
-    private val disabledActiveTickColor: Color,
-    private val disabledInactiveTickColor: Color
 ) : SliderColors {
 
     @Composable
@@ -811,18 +683,6 @@ private class DefaultSliderColors(
 
     @Composable override fun activeTrackBrush() = rememberUpdatedState(activeTrackBrush)
 
-
-    @Composable
-    override fun tickColor(enabled: Boolean, active: Boolean): State<Color> {
-        return rememberUpdatedState(
-            if (enabled) {
-                if (active) activeTickColor else inactiveTickColor
-            } else {
-                if (active) disabledActiveTickColor else disabledInactiveTickColor
-            }
-        )
-    }
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || this::class != other::class) return false
@@ -835,10 +695,6 @@ private class DefaultSliderColors(
         if (inactiveTrackColor != other.inactiveTrackColor) return false
         if (disabledActiveTrackColor != other.disabledActiveTrackColor) return false
         if (disabledInactiveTrackColor != other.disabledInactiveTrackColor) return false
-        if (activeTickColor != other.activeTickColor) return false
-        if (inactiveTickColor != other.inactiveTickColor) return false
-        if (disabledActiveTickColor != other.disabledActiveTickColor) return false
-        if (disabledInactiveTickColor != other.disabledInactiveTickColor) return false
 
         return true
     }
@@ -850,10 +706,6 @@ private class DefaultSliderColors(
         result = 31 * result + inactiveTrackColor.hashCode()
         result = 31 * result + disabledActiveTrackColor.hashCode()
         result = 31 * result + disabledInactiveTrackColor.hashCode()
-        result = 31 * result + activeTickColor.hashCode()
-        result = 31 * result + inactiveTickColor.hashCode()
-        result = 31 * result + disabledActiveTickColor.hashCode()
-        result = 31 * result + disabledInactiveTickColor.hashCode()
         return result
     }
 }

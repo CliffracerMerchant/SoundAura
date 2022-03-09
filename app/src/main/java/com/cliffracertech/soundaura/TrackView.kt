@@ -18,6 +18,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 
 /**
  * A pseudo-interface that contains callbacks for TrackView interactions.
@@ -35,6 +36,24 @@ class TrackViewCallback(
     val onRenameRequest: (String, String) -> Unit = { _, _ -> },
     val onDeleteRequest: (String) -> Unit = { }
 )
+
+@Composable fun TrackVolumeSlider(
+    volume: Float,
+    onVolumeChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    onVolumeChangeFinished: (() -> Unit)? = null,
+) = Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+    Icon(imageVector = Icons.Default.VolumeUp,
+         contentDescription = null,
+         modifier = Modifier.size(20.dp),
+         tint = MaterialTheme.colors.primary)
+    Slider(value = volume, onValueChange = onVolumeChange,
+           modifier = Modifier.padding(start = 2.dp, end = 0.dp),
+           onValueChangeFinished = onVolumeChangeFinished)
+    }
+
+@Preview @Composable fun TrackVolumeSliderPreview() =
+    SoundAuraTheme { TrackVolumeSlider(0.5f, { }) }
 
 /**
  * A view that displays a play/pause icon, a title, a volume slider, and a
@@ -57,32 +76,20 @@ fun TrackView(
     }
 
     var volume by remember { mutableStateOf(track.volume) }
-    val iconSize = 20.dp
-    val sliderTopPadding = 20.dp
-    SliderBox(
-        value = volume,
-        onValueChange = {
-            volume = it
-            callback.onVolumeChange(track.uriString, it)
-        }, onValueChangeFinished = {
-            callback.onVolumeChangeFinished(track.uriString, volume)
-        }, modifier = Modifier.padding(0.dp, 6.dp, 0.dp, 0.dp).weight(1f),
-        sliderPadding = PaddingValues(start = iconSize,
-                                      top = sliderTopPadding,
-                                      end = iconSize)
-    ) {
+    val sliderTopPadding = 26.dp
+
+    Box(Modifier.weight(1f)) {
         Text(text = track.name, style = MaterialTheme.typography.h6,
              maxLines = 1, overflow = TextOverflow.Ellipsis,
-             modifier = Modifier.padding(start = 4.dp))
-        Icon(Icons.Default.VolumeMute, null,
-             Modifier.padding(top = sliderTopPadding + 14.dp)
-                 .size(iconSize),
-             MaterialTheme.colors.primary)
-        Icon(Icons.Default.VolumeUp, null,
-             Modifier.padding(top = sliderTopPadding + 14.dp,
-                              start = maxWidth - iconSize)
-                 .size(iconSize),
-             MaterialTheme.colors.primaryVariant)
+             modifier = Modifier.padding(start = 4.dp, top = 6.dp))
+        TrackVolumeSlider(
+            volume = volume,
+            onVolumeChange = {
+                volume = it
+                callback.onVolumeChange(track.uriString, it)
+            }, onVolumeChangeFinished = {
+                callback.onVolumeChangeFinished(track.uriString, volume)
+            }, modifier = Modifier.padding(top = sliderTopPadding))
     }
 
     ItemMoreOptionsButton(
@@ -189,6 +196,12 @@ fun TrackView(
         ConfirmDeleteDialog(itemName, { showingDeleteDialog = false }, onDeleteRequest)
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF00FF00)
-@Composable fun TrackViewPreview() =
-    TrackView(Track(uriString = "", name = "Track 1", volume = 0.5f), TrackViewCallback())
+@Preview @Composable
+fun LightTrackViewPreview() = SoundAuraTheme(darkTheme =  false) {
+    TrackView(Track("", "Track 1", volume = 0.5f), TrackViewCallback())
+}
+
+@Preview @Composable
+fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme =  true) {
+    TrackView(Track("", "Track 1", volume = 0.5f), TrackViewCallback())
+}
