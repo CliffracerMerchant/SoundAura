@@ -138,10 +138,9 @@ class MainActivity : ComponentActivity() {
             ProvideWindowInsets {
                 val transparent = Color.Transparent
                 val systemUiController = rememberSystemUiController()
-                val useDarkIcons = MaterialTheme.colors.isLight
                 LaunchedEffect(usingDarkTheme) {
-                    systemUiController.setStatusBarColor(transparent, useDarkIcons)
-                    systemUiController.setNavigationBarColor(transparent, useDarkIcons)
+                    systemUiController.setStatusBarColor(transparent, true)
+                    systemUiController.setNavigationBarColor(transparent, true)
                 }
                 content()
             }
