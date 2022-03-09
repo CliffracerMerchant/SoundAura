@@ -3,13 +3,15 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
+import androidx.annotation.FloatRange
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,24 +38,6 @@ class TrackViewCallback(
     val onRenameRequest: (String, String) -> Unit = { _, _ -> },
     val onDeleteRequest: (String) -> Unit = { }
 )
-
-@Composable fun TrackVolumeSlider(
-    volume: Float,
-    onVolumeChange: (Float) -> Unit,
-    modifier: Modifier = Modifier,
-    onVolumeChangeFinished: (() -> Unit)? = null,
-) = Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-    Icon(imageVector = Icons.Default.VolumeUp,
-         contentDescription = null,
-         modifier = Modifier.size(20.dp),
-         tint = MaterialTheme.colors.primary)
-    GradientSlider(value = volume, onValueChange = onVolumeChange,
-                   modifier = Modifier.padding(start = 2.dp, end = 0.dp),
-                   onValueChangeFinished = onVolumeChangeFinished)
-    }
-
-@Preview @Composable fun TrackVolumeSliderPreview() =
-    SoundAuraTheme { TrackVolumeSlider(0.5f, { }) }
 
 /**
  * A view that displays a play/pause icon, a title, a volume slider, and a
@@ -82,7 +66,7 @@ fun TrackView(
         Text(text = track.name, style = MaterialTheme.typography.h6,
              maxLines = 1, overflow = TextOverflow.Ellipsis,
              modifier = Modifier.padding(start = 4.dp, top = 6.dp))
-        TrackVolumeSlider(
+        VolumeSlider(
             volume = volume,
             onVolumeChange = {
                 volume = it
@@ -136,6 +120,32 @@ fun TrackView(
     val description = if (playing) stringResource(R.string.item_pause_description, itemName)
                       else         stringResource(R.string.item_play_description, itemName)
     PlayPauseIcon(playing, description, tint)
+}
+
+/**
+ * A slider to change a volume level.
+ *
+ * @param volume The current volume level, in the range of 0.0f to 1.0f
+ * @param onVolumeChange The callback that will be invoked as the slider is being dragged
+ * @param modifier The modifier for the slider
+ * @param onVolumeChangeFinished The callback that will be invoked when the slider's
+ *                               thumb has been released after a drag event
+ */
+@Composable fun VolumeSlider(
+    @FloatRange(from=0.0, to=1.0)
+    volume: Float,
+    onVolumeChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    onVolumeChangeFinished: (() -> Unit)? = null,
+) = Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+
+    Icon(imageVector = Icons.Default.VolumeUp,
+         contentDescription = null,
+         modifier = Modifier.size(20.dp),
+         tint = MaterialTheme.colors.primary)
+    GradientSlider(value = volume, onValueChange = onVolumeChange,
+                   modifier = Modifier.padding(start = 2.dp, end = 0.dp),
+                   onValueChangeFinished = onVolumeChangeFinished)
 }
 
 /**
