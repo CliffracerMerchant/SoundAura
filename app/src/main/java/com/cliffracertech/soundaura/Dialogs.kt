@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -22,7 +21,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -87,11 +85,7 @@ import androidx.documentfile.provider.DocumentFile
     }
 }
 
-@Preview @Composable
-fun RenameDialogPreview() = RenameDialog("Renameable thing", { }, { })
-
-@Composable
-fun ConfirmDeleteDialog(
+@Composable fun ConfirmDeleteDialog(
     itemName: String,
     onDismissRequest: () -> Unit,
     onConfirmRequest: () -> Unit
@@ -108,10 +102,6 @@ fun ConfirmDeleteDialog(
                                         onDismissRequest() })
     }
 }
-
-@Preview @Composable
-fun ConfirmDeleteDialogPreview() = ConfirmDeleteDialog("Deleteable thing", { }, { })
-
 
 fun Uri.getDisplayName(context: Context) =
     DocumentFile.fromSingleUri(context, this)?.name?.substringBeforeLast('.', "")
@@ -136,7 +126,6 @@ class OpenPersistableDocument : ActivityResultContracts.OpenDocument() {
         LaunchedEffect(true) { launcher.launch(arrayOf("audio/*")) }
     else Dialog(onDismissRequest) {
         Column(Modifier
-            //.alpha(if (chosenUri == null) 0f else 1f)
             .background(MaterialTheme.colors.surface,
                         MaterialTheme.shapes.medium)
             .padding(16.dp, 16.dp, 16.dp, 0.dp)
@@ -168,3 +157,50 @@ class OpenPersistableDocument : ActivityResultContracts.OpenDocument() {
         }
     }
 }
+
+/**
+ * A simplified alert dialog, for when only a title, body text,
+ * and an ok button need to be displayed.
+ *
+ * @param text The body text of the dialog
+ * @param title The title text of the dialog, if any.
+ * @param onDismissRequest The callback that will be invoked when the user
+ *     tries to close the dialog, either by tapping the ok button or when
+ *     a tap outside the bounds of the dialog is performed
+ */
+@Composable fun SimpleAlertDialog(
+    text: String,
+    title: String? = null,
+    onDismissRequest: () -> Unit
+) = AlertDialog(
+    onDismissRequest,
+    title = { if (title != null) Text(title) },
+    text = { Text(text) },
+    buttons = { Row {
+        Spacer(Modifier.weight(1f))
+        TextButton(
+            onClick = onDismissRequest,
+            modifier = Modifier.heightIn(48.dp, Dp.Infinity),
+        ) {
+            Text(stringResource(android.R.string.ok),
+                 style = MaterialTheme.typography.button,
+                 color = MaterialTheme.colors.secondary)
+        }
+    }})
+
+/** Show a dialog displaying the app's privacy policy to the user. */
+@Composable fun PrivacyPolicyDialog(
+    onDismissRequest: () -> Unit
+) = SimpleAlertDialog(
+    title = stringResource(R.string.privacy_policy_description),
+    text = stringResource(R.string.privacy_policy_text),
+    onDismissRequest = onDismissRequest)
+
+/** Show a dialog displaying information about the app to the user. */
+@Composable fun AboutAppDialog(
+    onDismissRequest: () -> Unit
+) = SimpleAlertDialog(
+    title = stringResource(R.string.app_name),
+    text = stringResource(R.string.about_app_text),
+    onDismissRequest = onDismissRequest)
+

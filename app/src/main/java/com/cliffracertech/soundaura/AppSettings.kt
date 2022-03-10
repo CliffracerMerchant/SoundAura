@@ -4,15 +4,42 @@ package com.cliffracertech.soundaura
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+
+/** A settings category displayed on a large surface background.
+ * @param title The title of the category
+ * @param content A list of composables containing each setting item. */
+@Composable fun SettingCategory(
+    title: String,
+    content: List<@Composable () -> Unit>
+) = Surface(shape = MaterialTheme.shapes.large) {
+    Column(Modifier.padding(20.dp, 16.dp, 20.dp, 0.dp)) {
+        Text(title, style = MaterialTheme.typography.h6)
+        Spacer(Modifier.height(8.dp))
+        Divider()
+        Column {
+            content.forEachIndexed { index, item ->
+                item()
+                if (index != content.lastIndex)
+                    Divider()
+            }
+        }
+    }
+}
+
 /**
  * A radio button group to select a particular value of an enum.
  *
@@ -53,40 +80,59 @@ import androidx.lifecycle.viewmodel.compose.viewModel
  * @param content A composable containing the content used to change the setting.
  */
 @Composable fun Setting(
-    icon:  (@Composable () -> Unit)? = null,
+    icon: (@Composable () -> Unit)? = null,
     title: String,
+    onTitleClick: (() -> Unit)? = null,
     description: String? = null,
     content: @Composable () -> Unit,
-) = Row(verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.largeSurfaceBackground()
-                           .padding(0.dp, 8.dp, 24.dp, 8.dp),
-) {
-    if (icon != null) Box(Modifier.size(48.dp)) { icon() }
-    else              Spacer(Modifier.width(24.dp))
+) = Row(verticalAlignment = Alignment.CenterVertically) {
 
-    Column(Modifier.weight(1f)) {
-        Text(title, style = MaterialTheme.typography.h6)
+    if (icon != null)
+        Box(Modifier.size(48.dp)) { icon() }
+
+    val titleModifier = Modifier.weight(1f).heightIn(min = 48.dp).then(
+        if (onTitleClick == null) Modifier
+        else Modifier.clickable(onClick = onTitleClick))
+
+    Column(titleModifier, verticalArrangement = Arrangement.Center) {
+        Text(title, style = MaterialTheme.typography.body1)
+
         if (description != null)
             Text(description, style = MaterialTheme.typography.body2)
     }
     content()
 }
 
-@Composable
-fun AppSettings() = Surface(
+@Composable fun AppSettings() = Surface(
     color = MaterialTheme.colors.background,
     modifier = Modifier.fillMaxSize(1f)
 ) {
-    Column(Modifier.padding(12.dp, 8.dp)) {
+    Column(Modifier.padding(8.dp), Arrangement.spacedBy(8.dp)) {
         val viewModel: SettingsViewModel = viewModel()
 
-        Setting(title = stringResource(R.string.app_theme_description)) {
-            EnumRadioButtonGroup(
-                modifier = Modifier.padding(end = 16.dp),
-                values = AppTheme.values(),
-                valueNames = AppTheme.stringValues(),
-                currentValue = viewModel.appTheme,
-                onValueSelected = viewModel::onAppThemeSelected)
-        }
+        SettingCategory(stringResource(R.string.display_category_description), listOf {
+            Setting(title = stringResource(R.string.app_theme_description)) {
+                EnumRadioButtonGroup(
+                    modifier = Modifier.padding(end = 16.dp),
+                    values = AppTheme.values(),
+                    valueNames = AppTheme.stringValues(),
+                    currentValue = viewModel.appTheme,
+                    onValueSelected = viewModel::onAppThemeSelected)
+            }
+        })
+
+        SettingCategory(stringResource(R.string.about_category_description), listOf({
+            var showingPrivacyPolicyDialog by remember { mutableStateOf(false)  }
+            Setting(title = stringResource(R.string.privacy_policy_description),
+                    onTitleClick = { showingPrivacyPolicyDialog = true }) {}
+            if (showingPrivacyPolicyDialog)
+                PrivacyPolicyDialog { showingPrivacyPolicyDialog = false }
+        }, {
+            var showingAboutAppDialog by remember { mutableStateOf(false)  }
+            Setting(title = stringResource(R.string.about_app_description),
+                    onTitleClick = { showingAboutAppDialog = true }) {}
+            if (showingAboutAppDialog)
+                AboutAppDialog { showingAboutAppDialog = false }
+        }))
     }
 }

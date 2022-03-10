@@ -4,13 +4,6 @@
 
 <resources>
     <string name="app_name">SoundAura</string>
-    <string name="app_settings_description">SoundAura settings</string>
-    <string name="settings_description">Settings</string>
-
-    <string name="app_theme_description">App Theme</string>
-    <string name="use_system_theme_description">System</string>
-    <string name="light_theme_description">Light</string>
-    <string name="dark_theme_description">Dark</string>
 
     <string name="app_player_service_description">A service to play the user\'s sound mix.</string>
     <string name="player_notification_channel_id">player_controls</string>
@@ -20,10 +13,6 @@
     <string name="back_description">Back</string>
     <string name="search_description">Search</string>
     <string name="sort_options_description">Open sorting options</string>
-
-    <string name="name_ascending_description">Name ascending</string>
-    <string name="name_descending_description">Name descending</string>
-    <string name="order_added_description">Order added</string>
 
     <string name="item_play_description">Play %1$s</string>
     <string name="item_pause_description">Pause %1$s</string>
@@ -50,4 +39,28 @@
     <string name="track_already_exists_error_message">This file is already in the library</string>
 
     <string name="pref_sort_key">track_sort</string>
+    <string name="name_ascending_description">Name ascending</string>
+    <string name="name_descending_description">Name descending</string>
+    <string name="order_added_description">Order added</string>
+
+    <string name="app_settings_description">SoundAura settings</string>
+    <string name="settings_description">Settings</string>
+
+    <string name="display_category_description">Display</string>
+    <string name="app_theme_description">App Theme</string>
+    <string name="use_system_theme_description">System</string>
+    <string name="light_theme_description">Light</string>
+    <string name="dark_theme_description">Dark</string>
+
+    <string name="about_category_description">About</string>
+    <string name="privacy_policy_description">Privacy Policy</string>
+    <string name="privacy_policy_text">
+        SoundAura does not collect, store, or transmit any personal information.</string>
+    <string name="about_app_description">About SoundAura</string>
+    <string name="about_app_text">
+        Copyright 2022 Nicholas Hochstetler. \nSoundAura is an open-source background
+        sound app, licensed under the terms of the Apache License, version 2.0. View
+        the source code at: https://github.com/NicholasHochstetler/SoundAura. </string>
 </resources>
+
+
