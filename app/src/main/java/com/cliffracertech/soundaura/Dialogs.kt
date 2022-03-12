@@ -11,6 +11,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -18,25 +19,41 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.core.graphics.ColorUtils
 import androidx.documentfile.provider.DocumentFile
 
+/**
+ * A row containing an ok text button and, optionally, a cancel text
+ * button, for use in a dialog box.
+ *
+ * @param onCancelClick The callback that will be invoked when the cancel
+ *     button is clicked. If null, the cancel button will not appear.
+ * @param okButtonEnabled Whether or not the ok button is enabled.
+ * @param onOkClick The callback that will be invoked when the ok button is clicked.
+ */
 @Composable fun CancelOkButtonRow(
-    onCancelClick: () -> Unit,
+    onCancelClick: (() -> Unit)? = null,
     okButtonEnabled: Boolean = true,
     onOkClick: () -> Unit,
 ) = Row {
     Spacer(Modifier.weight(1f))
-    TextButton(onCancelClick, Modifier.heightIn(48.dp, Dp.Infinity)) {
-        Text(text = stringResource(android.R.string.cancel),
-             style = MaterialTheme.typography.button,
-             color = MaterialTheme.colors.secondary)
-    }
+    if (onCancelClick != null)
+        TextButton(onCancelClick, Modifier.heightIn(48.dp, Dp.Infinity)) {
+            Text(text = stringResource(android.R.string.cancel),
+                 style = MaterialTheme.typography.button,
+                color = MaterialTheme.colors.secondary)
+        }
     TextButton(
         onClick = onOkClick,
         modifier = Modifier.heightIn(48.dp, Dp.Infinity),
@@ -158,49 +175,51 @@ class OpenPersistableDocument : ActivityResultContracts.OpenDocument() {
     }
 }
 
-/**
- * A simplified alert dialog, for when only a title, body text,
- * and an ok button need to be displayed.
- *
- * @param text The body text of the dialog
- * @param title The title text of the dialog, if any.
- * @param onDismissRequest The callback that will be invoked when the user
- *     tries to close the dialog, either by tapping the ok button or when
- *     a tap outside the bounds of the dialog is performed
- */
-@Composable fun SimpleAlertDialog(
-    text: String,
-    title: String? = null,
-    onDismissRequest: () -> Unit
-) = AlertDialog(
-    onDismissRequest,
-    title = { if (title != null) Text(title) },
-    text = { Text(text) },
-    buttons = { Row {
-        Spacer(Modifier.weight(1f))
-        TextButton(
-            onClick = onDismissRequest,
-            modifier = Modifier.heightIn(48.dp, Dp.Infinity),
-        ) {
-            Text(stringResource(android.R.string.ok),
-                 style = MaterialTheme.typography.button,
-                 color = MaterialTheme.colors.secondary)
-        }
-    }})
-
 /** Show a dialog displaying the app's privacy policy to the user. */
 @Composable fun PrivacyPolicyDialog(
     onDismissRequest: () -> Unit
-) = SimpleAlertDialog(
-    title = stringResource(R.string.privacy_policy_description),
-    text = stringResource(R.string.privacy_policy_text),
-    onDismissRequest = onDismissRequest)
+) = AlertDialog(
+    onDismissRequest = onDismissRequest,
+    buttons = { CancelOkButtonRow(onOkClick = onDismissRequest) },
+    title = { Text(stringResource(R.string.privacy_policy_description)) },
+    text = { Text(stringResource(R.string.privacy_policy_text)) })
 
 /** Show a dialog displaying information about the app to the user. */
 @Composable fun AboutAppDialog(
     onDismissRequest: () -> Unit
-) = SimpleAlertDialog(
-    title = stringResource(R.string.app_name),
-    text = stringResource(R.string.about_app_text),
-    onDismissRequest = onDismissRequest)
+) = AlertDialog(
+    onDismissRequest = onDismissRequest,
+    buttons = { CancelOkButtonRow(onOkClick = onDismissRequest) },
+    title = { Text(stringResource(R.string.app_name)) },
+    text = {
+        val text = stringResource(R.string.about_app_body)
+        val linkifiedText = buildAnnotatedString {
+            // ClickableText seems to not follow the local text style by default
+            val backgroundColor = MaterialTheme.colors.surface
+            val localContentColor = LocalContentColor.current
+            val localContentAlpha = LocalContentAlpha.current
+            val bodyTextColor = remember(backgroundColor, localContentColor, localContentAlpha) {
+                Color(ColorUtils.blendARGB(backgroundColor.toArgb(),
+                                           localContentColor.toArgb(),
+                                           localContentAlpha))
+            }
+            pushStyle(SpanStyle(color = bodyTextColor))
+            append(text)
+            val urlRange = text.indexOf("https://")..text.lastIndex
+            val urlStyle = SpanStyle(color = MaterialTheme.colors.secondary,
+                                     textDecoration = TextDecoration.Underline)
+            addStyle(style = urlStyle, start = urlRange.first, end = urlRange.last + 1)
+            addStringAnnotation(tag = "URL", annotation = text.substring(urlRange),
+                                start = urlRange.first, end = urlRange.last + 1)
+        }
+        val uriHandler = LocalUriHandler.current
 
+        ClickableText(
+            text = linkifiedText,
+            style = MaterialTheme.typography.body2
+        ) {
+            val annotations = linkifiedText.getStringAnnotations("URL", it, it)
+            for (annotation in annotations)
+                uriHandler.openUri(annotation.item)
+        }
+    })
