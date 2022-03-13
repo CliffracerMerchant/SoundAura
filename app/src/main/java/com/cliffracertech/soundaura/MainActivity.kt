@@ -88,6 +88,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+
         setContentWithTheme {
             val scaffoldState = rememberScaffoldState()
             val isPlaying by boundPlayerService?.isPlaying.mapToNonNullState(false)
@@ -136,12 +139,6 @@ class MainActivity : ComponentActivity() {
         }
         SoundAuraTheme(usingDarkTheme) {
             ProvideWindowInsets {
-                val transparent = Color.Transparent
-                val systemUiController = rememberSystemUiController()
-                LaunchedEffect(usingDarkTheme) {
-                    systemUiController.setStatusBarColor(transparent, true)
-                    systemUiController.setNavigationBarColor(transparent, true)
-                }
                 content()
             }
         }
