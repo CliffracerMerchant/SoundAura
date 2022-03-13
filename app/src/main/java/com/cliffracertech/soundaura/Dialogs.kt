@@ -9,7 +9,6 @@ import android.content.Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
@@ -168,41 +167,29 @@ class OpenPersistableDocument : ActivityResultContracts.OpenDocument() {
         if (it == null)
             onDismissRequest()
     }
-
-    if ((chosenUri == null))
-        LaunchedEffect(true) { launcher.launch(arrayOf("audio/*")) }
-    else Dialog(onDismissRequest) {
-        Column(Modifier
-            .background(MaterialTheme.colors.surface,
-                        MaterialTheme.shapes.medium)
-            .padding(16.dp, 16.dp, 16.dp, 0.dp)
-        ) {
-            Text(text = stringResource(R.string.track_name_description),
-                 modifier = Modifier.padding(8.dp, 0.dp, 0.dp, 0.dp),
-                 style = MaterialTheme.typography.body1)
-            Spacer(Modifier.height(6.dp))
-
-            val context = LocalContext.current
-            var trackName by remember {
-                mutableStateOf(chosenUri?.getDisplayName(context) ?: "")
-            }
-            TextField(
-                value = trackName,
-                onValueChange = { trackName = it },
-                textStyle = MaterialTheme.typography.body1,
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(1f))
-            CancelConfirmButtonRow(
-                onCancel = onDismissRequest,
-                confirmEnabled = chosenUri != null && trackName.isNotBlank(),
-                onConfirm = {
-                    val uri = chosenUri ?: return@CancelConfirmButtonRow
-                    context.contentResolver.takePersistableUriPermission(
-                        uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    onConfirmRequest(Track(uri.toString(), trackName))
-                })
-        }
+    val context = LocalContext.current
+    var trackName by remember(chosenUri) {
+        mutableStateOf(chosenUri?.getDisplayName(context) ?: "")
     }
+
+    if (chosenUri == null)
+        LaunchedEffect(true) { launcher.launch(arrayOf("audio/*")) }
+    else SoundAuraDialog(
+        title = stringResource(R.string.track_name_description),
+        onDismissRequest = onDismissRequest,
+        confirmButtonEnabled = chosenUri != null && trackName.isNotBlank(),
+        onConfirm = {
+            val uri = chosenUri ?: return@SoundAuraDialog
+            context.contentResolver.takePersistableUriPermission(
+                uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            onConfirmRequest(Track(uri.toString(), trackName))
+        }, content = { TextField(
+            value = trackName,
+            onValueChange = { trackName = it },
+            textStyle = MaterialTheme.typography.body1,
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(1f))
+        })
 }
 
 /** Show a dialog displaying the app's privacy policy to the user. */
