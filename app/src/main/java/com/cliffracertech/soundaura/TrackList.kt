@@ -5,7 +5,6 @@ package com.cliffracertech.soundaura
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
@@ -30,8 +29,7 @@ import javax.inject.Inject
 /** A LazyColumn to display all of the Tracks provided in @param tracks
  * with instances of TrackView. The created TrackViews will use the
  * provided @param trackViewCallback for callbacks. */
-@Composable
-fun TrackList(
+@Composable fun TrackList(
     modifier: Modifier = Modifier,
     bottomPadding: Dp,
     tracks: List<Track>,
@@ -63,10 +61,11 @@ class TrackListViewModel @Inject constructor(
         val searchQueryFlow = snapshotFlow { searchQueryState.query.value }
         combine(trackSort, searchQueryFlow, trackDao::getAllTracks)
             .transformLatest { emitAll(it) }
-            .onEach { tracks = it }.launchIn(viewModelScope)
+            .onEach { tracks = it }
+            .launchIn(viewModelScope)
     }
 
-    fun onDeleteTrackDialogConfirmation(uriString: String) {
+    fun onDeleteTrackDialogConfirm(uriString: String) {
         viewModelScope.launch { trackDao.delete(uriString) }
     }
 
@@ -78,7 +77,7 @@ class TrackListViewModel @Inject constructor(
         viewModelScope.launch { trackDao.updateVolume(uriString, volume) }
     }
 
-    fun onTrackRenameRequest(uriString: String, name: String) {
+    fun onTrackRenameDialogConfirm(uriString: String, name: String) {
         viewModelScope.launch { trackDao.updateName(uriString, name) }
     }
 }
@@ -97,8 +96,8 @@ class TrackListViewModel @Inject constructor(
             onPlayPauseButtonClick = viewModel::onTrackPlayPauseClick,
             onVolumeChange = onVolumeChange,
             onVolumeChangeFinished = viewModel::onTrackVolumeChangeRequest,
-            onRenameRequest = viewModel::onTrackRenameRequest,
-            onDeleteRequest = viewModel::onDeleteTrackDialogConfirmation)
+            onRenameRequest = viewModel::onTrackRenameDialogConfirm,
+            onDeleteRequest = viewModel::onDeleteTrackDialogConfirm)
     }
     TrackList(
         tracks = viewModel.tracks,

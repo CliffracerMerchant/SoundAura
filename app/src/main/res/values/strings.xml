@@ -21,11 +21,12 @@
     <string name="add_button_description">Add track</string>
     <string name="add_button_expanded_description">Cancel add track</string>
 
-    <string name="item_rename_description">Rename</string>
+    <string name="rename_description">Rename</string>
     <string name="rename_dialog_title">Rename %1$s</string>
 
-    <string name="item_delete_description">Delete</string>
-    <string name="confirm_delete_message">Are you sure you want to remove %1$s from your library? This cannot be undone.</string>
+    <string name="delete_description">Delete</string>
+    <string name="confirm_delete_title">Delete %1$s?</string>
+    <string name="confirm_delete_message">This cannot be undone.</string>
 
     <string name="track_name_description">Track name</string>
     <string name="play_description">Play</string>

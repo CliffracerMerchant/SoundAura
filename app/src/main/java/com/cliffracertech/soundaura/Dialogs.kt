@@ -15,13 +15,9 @@ import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -33,37 +29,91 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.graphics.ColorUtils
 import androidx.documentfile.provider.DocumentFile
 
+fun Modifier.minTouchTargetSize() =
+    sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+
 /**
- * A row containing an ok text button and, optionally, a cancel text
+ * A row containing a confirm text button and, optionally, a cancel text
  * button, for use in a dialog box.
  *
- * @param onCancelClick The callback that will be invoked when the cancel
- *     button is clicked. If null, the cancel button will not appear.
- * @param okButtonEnabled Whether or not the ok button is enabled.
- * @param onOkClick The callback that will be invoked when the ok button is clicked.
+ * @param onCancel The callback that will be invoked when the cancel
+ *     button is tapped. If null, the cancel button will not appear.
+ * @param confirmEnabled Whether or not the confirm button is enabled.
+ * @param onConfirm The callback that will be invoked when the confirm button is tapped.
  */
-@Composable fun CancelOkButtonRow(
-    onCancelClick: (() -> Unit)? = null,
-    okButtonEnabled: Boolean = true,
-    onOkClick: () -> Unit,
+@Composable fun CancelConfirmButtonRow(
+    onCancel: (() -> Unit)? = null,
+    confirmEnabled: Boolean = true,
+    confirmText: String = stringResource(android.R.string.ok),
+    onConfirm: () -> Unit,
 ) = Row {
     Spacer(Modifier.weight(1f))
-    if (onCancelClick != null)
-        TextButton(onCancelClick, Modifier.heightIn(48.dp, Dp.Infinity)) {
-            Text(text = stringResource(android.R.string.cancel),
-                 style = MaterialTheme.typography.button,
-                color = MaterialTheme.colors.secondary)
+    if (onCancel != null)
+        TextButton(onCancel, Modifier.minTouchTargetSize()) {
+            Text(stringResource(android.R.string.cancel))
         }
-    TextButton(
-        onClick = onOkClick,
-        modifier = Modifier.heightIn(48.dp, Dp.Infinity),
-        enabled = okButtonEnabled
-    ) {
-        Text(stringResource(android.R.string.ok),
-             style = MaterialTheme.typography.button,
-             color = if (okButtonEnabled)
-                         MaterialTheme.colors.secondary
-                     else Color.Unspecified)
+    TextButton(onConfirm, Modifier.minTouchTargetSize(), confirmEnabled) {
+        Text(confirmText)
+    }
+}
+
+// SoundAuraDialog was created to have more control over the layout of the dialog
+// than the stock Compose AlertDialog does, and due to the fact that the standard
+// AlertDialog was not adding space in between the title and the content TextField
+// of the rename dialog, despite trying to add spacers and/or padding to both the
+// title and the TextField.
+/**
+ * Compose an alert dialog.
+ *
+ * @param title The string representing the dialog's title. Can be null, in
+ *     which case the title will not be displayed.
+ * @param titleLayout The layout that will be used for the dialog's title.
+ *     Will default to a composable Text using the value of the title parameter.
+ * @param text The string representing the dialog's message. Will only be used
+ *     if the content parameter is not overridden, in which case it will default
+ *     to a composable Text containing the value of this parameter.
+ * @param titleContentSpacing The spacing, in Dp, in between the title and the content.
+ * @param contentButtonSpacing The spacing, in Dp, in between the content and the buttons.
+ * @param onDismissRequest The callback that will be invoked when the user taps the cancel
+ *     button, if shown, or when they tap outside the dialog or the back button is pressed.
+ * @param showCancelButton Whether or not the cancel button will be shown.
+ * @param confirmButtonEnabled Whether the confirm button is enabled.
+ * @param confirmText The string used for the confirm button.
+ * @param onConfirm The callback that will be invoked when the confirm button is tapped.
+ * @param content
+ */
+@Composable fun SoundAuraDialog(
+    title: String? = null,
+    titleLayout: @Composable (String) -> Unit = @Composable {
+        val textStyle = MaterialTheme.typography.body1
+        ProvideTextStyle(textStyle) { Text(it) }
+    }, text: String? = null,
+    titleContentSpacing: Dp = 12.dp,
+    contentButtonSpacing: Dp = 8.dp,
+    onDismissRequest: () -> Unit,
+    showCancelButton: Boolean = true,
+    confirmButtonEnabled: Boolean = true,
+    confirmText: String = stringResource(android.R.string.ok),
+    onConfirm: () -> Unit = onDismissRequest,
+    content: @Composable () -> Unit = @Composable {
+        CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.high) {
+            val textStyle = MaterialTheme.typography.subtitle1
+            ProvideTextStyle(textStyle) { Text(text ?: "") }
+        }
+    },
+) = Dialog(onDismissRequest) {
+    Surface(shape = MaterialTheme.shapes.medium) {
+        Column(Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp)) {
+            if (title != null)
+                titleLayout(title)
+            Spacer(Modifier.height(titleContentSpacing))
+            content()
+            Spacer(Modifier.height(contentButtonSpacing))
+            val cancelCallback = if (!showCancelButton) null
+                                 else onDismissRequest
+            CancelConfirmButtonRow(
+                cancelCallback, confirmButtonEnabled, confirmText, onConfirm)
+        }
     }
 }
 
@@ -71,54 +121,34 @@ import androidx.documentfile.provider.DocumentFile
     itemName: String,
     onDismissRequest: () -> Unit,
     onConfirmRequest: (String) -> Unit
-) = Dialog(onDismissRequest = onDismissRequest) {
-    Column(Modifier
-        .background(MaterialTheme.colors.surface,
-                    MaterialTheme.shapes.medium)
-        .padding(16.dp, 16.dp, 16.dp, 0.dp)
-    ) {
-        var currentName by remember { mutableStateOf(itemName) }
-        val focusRequester = FocusRequester()
-        val keyboardController = LocalSoftwareKeyboardController.current
-
-        Text(stringResource(R.string.rename_dialog_title, itemName),
-             modifier = Modifier.padding(8.dp, 0.dp, 0.dp, 0.dp),
-             style = MaterialTheme.typography.body1)
-        Spacer(Modifier.height(6.dp))
-        TextField(
+) {
+    var currentName by remember { mutableStateOf(itemName) }
+    SoundAuraDialog(
+        title = stringResource(R.string.rename_dialog_title, itemName),
+        confirmButtonEnabled = currentName.isNotBlank(),
+        confirmText = stringResource(R.string.rename_description),
+        onConfirm = { onConfirmRequest(currentName)
+                      onDismissRequest() },
+        onDismissRequest = onDismissRequest,
+        content = { TextField(
             value = currentName,
             onValueChange = { currentName = it },
             singleLine = true,
-            textStyle = MaterialTheme.typography.body1,
-            modifier = Modifier
-                .fillMaxWidth(1f)
-                .focusRequester(focusRequester)
-                .onFocusChanged { if (it.isFocused) keyboardController?.show() })
-        LaunchedEffect(Unit) { focusRequester.requestFocus() }
-        CancelOkButtonRow(onCancelClick = onDismissRequest,
-                          okButtonEnabled = currentName.isNotBlank(),
-                          onOkClick = { onConfirmRequest(currentName)
-                                        onDismissRequest() })
-    }
+            textStyle = MaterialTheme.typography.body1)
+        })
 }
 
 @Composable fun ConfirmDeleteDialog(
     itemName: String,
     onDismissRequest: () -> Unit,
     onConfirmRequest: () -> Unit
-) = Dialog(onDismissRequest = onDismissRequest) {
-    Column(Modifier
-        .background(MaterialTheme.colors.surface,
-                    MaterialTheme.shapes.medium)
-        .padding(16.dp, 16.dp, 16.dp, 0.dp)
-    ) {
-        Text(stringResource(R.string.confirm_delete_message, itemName),
-             style = MaterialTheme.typography.body1)
-        CancelOkButtonRow(onCancelClick = onDismissRequest,
-                          onOkClick = { onConfirmRequest()
-                                        onDismissRequest() })
-    }
-}
+) = SoundAuraDialog(
+    onDismissRequest = onDismissRequest,
+    title = stringResource(R.string.confirm_delete_title, itemName),
+    text = stringResource(R.string.confirm_delete_message),
+    confirmText = stringResource(R.string.delete_description),
+    onConfirm = { onConfirmRequest()
+                  onDismissRequest() })
 
 fun Uri.getDisplayName(context: Context) =
     DocumentFile.fromSingleUri(context, this)?.name?.substringBeforeLast('.', "")
@@ -162,11 +192,11 @@ class OpenPersistableDocument : ActivityResultContracts.OpenDocument() {
                 textStyle = MaterialTheme.typography.body1,
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(1f))
-            CancelOkButtonRow(
-                onCancelClick = onDismissRequest,
-                okButtonEnabled = chosenUri != null && trackName.isNotBlank(),
-                onOkClick = {
-                    val uri = chosenUri ?: return@CancelOkButtonRow
+            CancelConfirmButtonRow(
+                onCancel = onDismissRequest,
+                confirmEnabled = chosenUri != null && trackName.isNotBlank(),
+                onConfirm = {
+                    val uri = chosenUri ?: return@CancelConfirmButtonRow
                     context.contentResolver.takePersistableUriPermission(
                         uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     onConfirmRequest(Track(uri.toString(), trackName))
@@ -178,48 +208,50 @@ class OpenPersistableDocument : ActivityResultContracts.OpenDocument() {
 /** Show a dialog displaying the app's privacy policy to the user. */
 @Composable fun PrivacyPolicyDialog(
     onDismissRequest: () -> Unit
-) = AlertDialog(
+) = SoundAuraDialog(
+    title = stringResource(R.string.privacy_policy_description),
+    text = stringResource(R.string.privacy_policy_text),
+    showCancelButton = false,
     onDismissRequest = onDismissRequest,
-    buttons = { CancelOkButtonRow(onOkClick = onDismissRequest) },
-    title = { Text(stringResource(R.string.privacy_policy_description)) },
-    text = { Text(stringResource(R.string.privacy_policy_text)) })
+    onConfirm = onDismissRequest)
 
 /** Show a dialog displaying information about the app to the user. */
 @Composable fun AboutAppDialog(
     onDismissRequest: () -> Unit
-) = AlertDialog(
+) = SoundAuraDialog(
+    title = stringResource(R.string.app_name),
+    showCancelButton = false,
     onDismissRequest = onDismissRequest,
-    buttons = { CancelOkButtonRow(onOkClick = onDismissRequest) },
-    title = { Text(stringResource(R.string.app_name)) },
-    text = {
-        val text = stringResource(R.string.about_app_body)
-        val linkifiedText = buildAnnotatedString {
-            // ClickableText seems to not follow the local text style by default
-            val backgroundColor = MaterialTheme.colors.surface
-            val localContentColor = LocalContentColor.current
-            val localContentAlpha = LocalContentAlpha.current
-            val bodyTextColor = remember(backgroundColor, localContentColor, localContentAlpha) {
-                Color(ColorUtils.blendARGB(backgroundColor.toArgb(),
-                                           localContentColor.toArgb(),
-                                           localContentAlpha))
-            }
-            pushStyle(SpanStyle(color = bodyTextColor))
-            append(text)
-            val urlRange = text.indexOf("https://")..text.lastIndex
-            val urlStyle = SpanStyle(color = MaterialTheme.colors.secondary,
-                                     textDecoration = TextDecoration.Underline)
-            addStyle(style = urlStyle, start = urlRange.first, end = urlRange.last + 1)
-            addStringAnnotation(tag = "URL", annotation = text.substring(urlRange),
-                                start = urlRange.first, end = urlRange.last + 1)
+    onConfirm = onDismissRequest,
+) {
+    val text = stringResource(R.string.about_app_body)
+    val linkifiedText = buildAnnotatedString {
+        // ClickableText seems to not follow the local text style by default
+        val backgroundColor = MaterialTheme.colors.surface
+        val localContentColor = LocalContentColor.current
+        val localContentAlpha = LocalContentAlpha.current
+        val bodyTextColor = remember(backgroundColor, localContentColor, localContentAlpha) {
+            Color(ColorUtils.blendARGB(backgroundColor.toArgb(),
+                                       localContentColor.toArgb(),
+                                       localContentAlpha))
         }
-        val uriHandler = LocalUriHandler.current
+        pushStyle(SpanStyle(color = bodyTextColor))
+        append(text)
+        val urlRange = text.indexOf("https://")..text.lastIndex
+        val urlStyle = SpanStyle(color = MaterialTheme.colors.primary,
+                                 textDecoration = TextDecoration.Underline)
+        addStyle(style = urlStyle, start = urlRange.first, end = urlRange.last + 1)
+        addStringAnnotation(tag = "URL", annotation = text.substring(urlRange),
+                            start = urlRange.first, end = urlRange.last + 1)
+    }
+    val uriHandler = LocalUriHandler.current
 
-        ClickableText(
-            text = linkifiedText,
-            style = MaterialTheme.typography.body2
-        ) {
-            val annotations = linkifiedText.getStringAnnotations("URL", it, it)
-            for (annotation in annotations)
-                uriHandler.openUri(annotation.item)
-        }
-    })
+    ClickableText(
+        text = linkifiedText,
+        style = MaterialTheme.typography.body2
+    ) {
+        val annotations = linkifiedText.getStringAnnotations("URL", it, it)
+        for (annotation in annotations)
+            uriHandler.openUri(annotation.item)
+    }
+}

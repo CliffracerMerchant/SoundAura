@@ -60,7 +60,7 @@ fun TrackView(
     }
 
     var volume by remember { mutableStateOf(track.volume) }
-    val sliderTopPadding = 26.dp
+    val sliderTopPadding = 28.dp
 
     Box(Modifier.weight(1f)) {
         Text(text = track.name, style = MaterialTheme.typography.h6,
@@ -186,14 +186,14 @@ fun TrackView(
                 showingRenameDialog = true
                 showingOptionsMenu = false
             }) {
-                Text(text = stringResource(R.string.item_rename_description),
+                Text(text = stringResource(R.string.rename_description),
                      style = MaterialTheme.typography.button)
             }
             DropdownMenuItem(onClick = {
                 showingDeleteDialog = true
                 showingOptionsMenu = false
             }) {
-                Text(text = stringResource(R.string.item_delete_description),
+                Text(text = stringResource(R.string.delete_description),
                      style = MaterialTheme.typography.button)
             }
         }
