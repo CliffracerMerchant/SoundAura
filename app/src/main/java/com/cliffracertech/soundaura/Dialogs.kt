@@ -25,8 +25,10 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.ColorUtils
 import androidx.documentfile.provider.DocumentFile
+import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 
 fun Modifier.minTouchTargetSize() =
     sizeIn(minWidth = 48.dp, minHeight = 48.dp)
@@ -201,6 +203,23 @@ class OpenPersistableDocument : ActivityResultContracts.OpenDocument() {
     showCancelButton = false,
     onDismissRequest = onDismissRequest,
     onConfirm = onDismissRequest)
+
+/** Show a dialog to display all of the open source libraries used
+ * in the app, as well as their licenses. */
+@Composable fun OpenSourceLibrariesUsedDialog(
+    showing: Boolean,
+    onDismissRequest: () -> Unit
+) {
+    if (showing) AlertDialog(
+        onDismissRequest = onDismissRequest,
+        confirmButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text(stringResource(id = android.R.string.ok))
+            }
+        }, modifier = Modifier.padding(16.dp),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        text = { LibrariesContainer(Modifier.fillMaxSize()) })
+}
 
 /** Show a dialog displaying information about the app to the user. */
 @Composable fun AboutAppDialog(

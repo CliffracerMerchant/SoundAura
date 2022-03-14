@@ -54,13 +54,14 @@
     <string name="dark_theme_description">Dark</string>
 
     <string name="about_category_description">About</string>
-    <string name="privacy_policy_description">Privacy Policy</string>
+    <string name="privacy_policy_description">Privacy policy</string>
     <string name="privacy_policy_text">
         SoundAura does not collect, store, or transmit any personal information.</string>
+    <string name="open_source_licenses_description">Open source licenses</string>
     <string name="about_app_description">About SoundAura</string>
     <string name="about_app_body">
-        Copyright 2022 Nicholas Hochstetler. \nSoundAura is an open-source background
-        sound app, licensed under the terms of the Apache License, version 2.0. View
+        Copyright 2022 Nicholas Hochstetler. \nSoundAura is an open source ambient
+        noise app, licensed under the terms of the Apache License, version 2.0. View
         the source code at: https://github.com/NicholasHochstetler/SoundAura</string>
 </resources>
 

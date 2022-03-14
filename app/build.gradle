@@ -3,6 +3,7 @@ plugins {
     id 'kotlin-android'
     id 'kotlin-kapt'
     id 'dagger.hilt.android.plugin'
+    id "com.mikepenz.aboutlibraries.plugin"
 }
 
 android {
@@ -89,6 +90,8 @@ dependencies {
     implementation "androidx.datastore:datastore-preferences:1.0.0"
     implementation "com.google.dagger:hilt-android:2.40.5"
     implementation "com.google.accompanist:accompanist-insets:0.23.1"
+    implementation "com.mikepenz:aboutlibraries-core:10.0.0"
+    implementation "com.mikepenz:aboutlibraries-compose:10.0.0"
 
     kapt "androidx.room:room-compiler:2.4.2"
     kapt "com.google.dagger:hilt-compiler:2.40.5"

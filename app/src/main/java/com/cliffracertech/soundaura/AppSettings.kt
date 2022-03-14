@@ -8,11 +8,7 @@ import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -121,18 +117,26 @@ import androidx.lifecycle.viewmodel.compose.viewModel
             }
         })
 
-        SettingCategory(stringResource(R.string.about_category_description), listOf({
-            var showingPrivacyPolicyDialog by remember { mutableStateOf(false)  }
-            Setting(title = stringResource(R.string.privacy_policy_description),
-                    onTitleClick = { showingPrivacyPolicyDialog = true }) {}
-            if (showingPrivacyPolicyDialog)
-                PrivacyPolicyDialog { showingPrivacyPolicyDialog = false }
-        }, {
-            var showingAboutAppDialog by remember { mutableStateOf(false)  }
-            Setting(title = stringResource(R.string.about_app_description),
-                    onTitleClick = { showingAboutAppDialog = true }) {}
-            if (showingAboutAppDialog)
-                AboutAppDialog { showingAboutAppDialog = false }
-        }))
+        SettingCategory(stringResource(R.string.about_category_description), listOf(
+            {
+                var showingPrivacyPolicyDialog by remember { mutableStateOf(false)  }
+                Setting(title = stringResource(R.string.privacy_policy_description),
+                        onTitleClick = { showingPrivacyPolicyDialog = true }) {}
+                if (showingPrivacyPolicyDialog)
+                    PrivacyPolicyDialog { showingPrivacyPolicyDialog = false }
+            }, {
+                var showingLicensesDialog by remember { mutableStateOf(false) }
+                Setting(title = stringResource(R.string.open_source_licenses_description),
+                        onTitleClick = { showingLicensesDialog = true }) {}
+                OpenSourceLibrariesUsedDialog(
+                    showing = showingLicensesDialog,
+                    onDismissRequest = { showingLicensesDialog = false })
+            }, {
+                var showingAboutAppDialog by remember { mutableStateOf(false)  }
+                Setting(title = stringResource(R.string.about_app_description),
+                        onTitleClick = { showingAboutAppDialog = true }) {}
+                if (showingAboutAppDialog)
+                    AboutAppDialog { showingAboutAppDialog = false }
+            }))
     }
 }
