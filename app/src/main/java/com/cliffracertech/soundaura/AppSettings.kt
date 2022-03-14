@@ -9,6 +9,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -76,8 +77,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
  * @param content A composable containing the content used to change the setting.
  */
 @Composable fun Setting(
-    icon: (@Composable () -> Unit)? = null,
     title: String,
+    icon: (@Composable () -> Unit)? = null,
     onTitleClick: (() -> Unit)? = null,
     description: String? = null,
     content: @Composable () -> Unit,
@@ -106,37 +107,39 @@ import androidx.lifecycle.viewmodel.compose.viewModel
     Column(Modifier.padding(8.dp), Arrangement.spacedBy(8.dp)) {
         val viewModel: SettingsViewModel = viewModel()
 
-        SettingCategory(stringResource(R.string.display_category_description), listOf {
-            Setting(title = stringResource(R.string.app_theme_description)) {
-                EnumRadioButtonGroup(
-                    modifier = Modifier.padding(end = 16.dp),
-                    values = AppTheme.values(),
-                    valueNames = AppTheme.stringValues(),
-                    currentValue = viewModel.appTheme,
-                    onValueSelected = viewModel::onAppThemeSelected)
-            }
-        })
+        SettingCategory(stringResource(R.string.display_category_description), listOf(
+            {
+                Setting(title = stringResource(R.string.app_theme_description)) {
+                    EnumRadioButtonGroup(
+                        modifier = Modifier.padding(end = 16.dp),
+                        values = AppTheme.values(),
+                        valueNames = AppTheme.stringValues(),
+                        currentValue = viewModel.appTheme,
+                        onValueSelected = viewModel::onAppThemeSelected)
+                }
+            }, {
+                Setting("") { }
+            }))
 
         SettingCategory(stringResource(R.string.about_category_description), listOf(
             {
-                var showingPrivacyPolicyDialog by remember { mutableStateOf(false)  }
+                var showingPrivacyPolicy by rememberSaveable { mutableStateOf(false)  }
                 Setting(title = stringResource(R.string.privacy_policy_description),
-                        onTitleClick = { showingPrivacyPolicyDialog = true }) {}
-                if (showingPrivacyPolicyDialog)
-                    PrivacyPolicyDialog { showingPrivacyPolicyDialog = false }
+                        onTitleClick = { showingPrivacyPolicy = true }) {}
+                if (showingPrivacyPolicy)
+                    PrivacyPolicyDialog { showingPrivacyPolicy = false }
             }, {
-                var showingLicensesDialog by remember { mutableStateOf(false) }
+                var showingLicenses by rememberSaveable { mutableStateOf(false) }
                 Setting(title = stringResource(R.string.open_source_licenses_description),
-                        onTitleClick = { showingLicensesDialog = true }) {}
-                OpenSourceLibrariesUsedDialog(
-                    showing = showingLicensesDialog,
-                    onDismissRequest = { showingLicensesDialog = false })
+                        onTitleClick = { showingLicenses = true }) {}
+                if (showingLicenses)
+                    OpenSourceLibrariesUsedDialog { showingLicenses = false }
             }, {
-                var showingAboutAppDialog by remember { mutableStateOf(false)  }
+                var showingAboutApp by rememberSaveable { mutableStateOf(false)  }
                 Setting(title = stringResource(R.string.about_app_description),
-                        onTitleClick = { showingAboutAppDialog = true }) {}
-                if (showingAboutAppDialog)
-                    AboutAppDialog { showingAboutAppDialog = false }
+                        onTitleClick = { showingAboutApp = true }) {}
+                if (showingAboutApp)
+                    AboutAppDialog { showingAboutApp = false }
             }))
     }
 }

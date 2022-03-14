@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -123,7 +124,7 @@ fun Modifier.minTouchTargetSize() =
     onDismissRequest: () -> Unit,
     onConfirmRequest: (String) -> Unit
 ) {
-    var currentName by remember { mutableStateOf(itemName) }
+    var currentName by rememberSaveable { mutableStateOf(itemName) }
     SoundAuraDialog(
         title = stringResource(R.string.rename_dialog_title, itemName),
         confirmButtonEnabled = currentName.isNotBlank(),
@@ -163,14 +164,14 @@ class OpenPersistableDocument : ActivityResultContracts.OpenDocument() {
     onDismissRequest: () -> Unit,
     onConfirmRequest: (Track) -> Unit
 ) {
-    var chosenUri by remember { mutableStateOf<Uri?>(null) }
+    var chosenUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     val launcher = rememberLauncherForActivityResult(OpenPersistableDocument()) {
         chosenUri = it
         if (it == null)
             onDismissRequest()
     }
     val context = LocalContext.current
-    var trackName by remember(chosenUri) {
+    var trackName by rememberSaveable(chosenUri) {
         mutableStateOf(chosenUri?.getDisplayName(context) ?: "")
     }
 
@@ -206,11 +207,8 @@ class OpenPersistableDocument : ActivityResultContracts.OpenDocument() {
 
 /** Show a dialog to display all of the open source libraries used
  * in the app, as well as their licenses. */
-@Composable fun OpenSourceLibrariesUsedDialog(
-    showing: Boolean,
-    onDismissRequest: () -> Unit
-) {
-    if (showing) AlertDialog(
+@Composable fun OpenSourceLibrariesUsedDialog(onDismissRequest: () -> Unit) =
+    AlertDialog(
         onDismissRequest = onDismissRequest,
         confirmButton = {
             TextButton(onClick = onDismissRequest) {
@@ -219,7 +217,6 @@ class OpenPersistableDocument : ActivityResultContracts.OpenDocument() {
         }, modifier = Modifier.padding(16.dp),
         properties = DialogProperties(usePlatformDefaultWidth = false),
         text = { LibrariesContainer(Modifier.fillMaxSize()) })
-}
 
 /** Show a dialog displaying information about the app to the user. */
 @Composable fun AboutAppDialog(

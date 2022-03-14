@@ -17,6 +17,7 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -28,7 +29,6 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import com.google.accompanist.insets.statusBarsPadding
@@ -131,7 +131,7 @@ import com.google.accompanist.insets.statusBarsPadding
         // query's fade out animation. This allows the last non-null search
         // query text to fade out with the rest of the search query (i.e. the
         // underline) instead of abruptly disappearing.
-        var lastSearchQuery by remember { mutableStateOf("") }
+        var lastSearchQuery by rememberSaveable { mutableStateOf("") }
         if (searchQueryIsNotNull) {
             val text = searchQuery ?: lastSearchQuery
             AutoFocusSearchQuery(text, onSearchQueryChanged)
@@ -158,7 +158,7 @@ import com.google.accompanist.insets.statusBarsPadding
                 Icon(painter, stringResource(R.string.search_description))
             }
             // Change sort button
-            var sortMenuShown by remember { mutableStateOf(false) }
+            var sortMenuShown by rememberSaveable { mutableStateOf(false) }
             IconButton(onClick = { sortMenuShown = !sortMenuShown }) {
                 Icon(imageVector = Icons.Default.Sort,
                      stringResource(R.string.sort_options_description))
