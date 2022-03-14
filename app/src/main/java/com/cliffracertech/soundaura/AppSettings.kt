@@ -4,12 +4,16 @@ package com.cliffracertech.soundaura
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -104,42 +108,58 @@ import androidx.lifecycle.viewmodel.compose.viewModel
     color = MaterialTheme.colors.background,
     modifier = Modifier.fillMaxSize(1f)
 ) {
-    Column(Modifier.padding(8.dp), Arrangement.spacedBy(8.dp)) {
-        val viewModel: SettingsViewModel = viewModel()
-
-        SettingCategory(stringResource(R.string.display_category_description), listOf(
-            {
-                Setting(title = stringResource(R.string.app_theme_description)) {
-                    EnumRadioButtonGroup(
-                        modifier = Modifier.padding(end = 16.dp),
-                        values = AppTheme.values(),
-                        valueNames = AppTheme.stringValues(),
-                        currentValue = viewModel.appTheme,
-                        onValueSelected = viewModel::onAppThemeSelected)
-                }
-            }, {
-                Setting("") { }
-            }))
-
-        SettingCategory(stringResource(R.string.about_category_description), listOf(
-            {
-                var showingPrivacyPolicy by rememberSaveable { mutableStateOf(false)  }
-                Setting(title = stringResource(R.string.privacy_policy_description),
-                        onTitleClick = { showingPrivacyPolicy = true }) {}
-                if (showingPrivacyPolicy)
-                    PrivacyPolicyDialog { showingPrivacyPolicy = false }
-            }, {
-                var showingLicenses by rememberSaveable { mutableStateOf(false) }
-                Setting(title = stringResource(R.string.open_source_licenses_description),
-                        onTitleClick = { showingLicenses = true }) {}
-                if (showingLicenses)
-                    OpenSourceLibrariesUsedDialog { showingLicenses = false }
-            }, {
-                var showingAboutApp by rememberSaveable { mutableStateOf(false)  }
-                Setting(title = stringResource(R.string.about_app_description),
-                        onTitleClick = { showingAboutApp = true }) {}
-                if (showingAboutApp)
-                    AboutAppDialog { showingAboutApp = false }
-            }))
+    LazyColumn(
+        modifier = Modifier.padding(horizontal = 8.dp),
+        contentPadding = PaddingValues(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        item { DisplaySettingsCategory() }
+        item { AboutSettingsCategory() }
     }
+}
+
+@Composable private fun DisplaySettingsCategory() {
+    val titleString = stringResource(R.string.display_category_description)
+    val appThemeSetting = @Composable {
+        val viewModel: SettingsViewModel = viewModel()
+        Setting(title = stringResource(R.string.app_theme_description)) {
+            EnumRadioButtonGroup(
+                modifier = Modifier.padding(end = 16.dp),
+                values = AppTheme.values(),
+                valueNames = AppTheme.stringValues(),
+                currentValue = viewModel.appTheme,
+                onValueSelected = viewModel::onAppThemeSelected)
+        }
+    }
+    SettingCategory(titleString, listOf(appThemeSetting))
+}
+
+@Composable private fun AboutSettingsCategory() {
+    val titleString = stringResource(R.string.about_category_description)
+    val privacyPolicySetting = @Composable {
+        var showingPrivacyPolicy by rememberSaveable { mutableStateOf(false) }
+        Setting(title = stringResource(R.string.privacy_policy_description),
+                onTitleClick = { showingPrivacyPolicy = true }) {}
+        if (showingPrivacyPolicy)
+            PrivacyPolicyDialog { showingPrivacyPolicy = false }
+    }
+    val openSourceLicensesSetting = @Composable {
+        var showingLicenses by rememberSaveable { mutableStateOf(false) }
+        Setting(title = stringResource(R.string.open_source_licenses_description),
+                onTitleClick = { showingLicenses = true }) {}
+        if (showingLicenses)
+            OpenSourceLibrariesUsedDialog { showingLicenses = false }
+    }
+    val aboutAppSetting = @Composable {
+        var showingAboutApp by rememberSaveable { mutableStateOf(false) }
+        Setting(title = stringResource(R.string.about_app_description),
+                onTitleClick = { showingAboutApp = true }) {}
+        if (showingAboutApp)
+            AboutAppDialog { showingAboutApp = false }
+    }
+    SettingCategory(titleString, listOf(
+        privacyPolicySetting,
+        openSourceLicensesSetting,
+        aboutAppSetting
+    ))
 }
