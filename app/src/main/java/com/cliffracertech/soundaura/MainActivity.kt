@@ -88,8 +88,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        window.statusBarColor = android.graphics.Color.TRANSPARENT
 
         setContentWithTheme {
             val scaffoldState = rememberScaffoldState()
@@ -137,6 +135,13 @@ class MainActivity : ComponentActivity() {
                 theme == AppTheme.UseSystem && systemDarkThemeActive
             }
         }
+
+        val uiController = rememberSystemUiController()
+        LaunchedEffect(Unit) {
+            uiController.setStatusBarColor(Color.Transparent, true)
+            uiController.setNavigationBarColor(Color.Transparent, true)
+        }
+
         SoundAuraTheme(usingDarkTheme) {
             ProvideWindowInsets {
                 content()
