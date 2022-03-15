@@ -19,7 +19,7 @@ import javax.inject.Qualifier
 import javax.inject.Singleton
 
 @Entity(tableName = "track")
-class Track(
+data class Track(
     @ColumnInfo(name="uriString") @PrimaryKey
     val uriString: String,
     @ColumnInfo(name="name")
@@ -40,6 +40,23 @@ class Track(
             }
         }
     }
+
+    override fun equals(other: Any?) = when {
+        other !is Track -> false
+        other === this -> true
+        else -> other.uriString == uriString &&
+                other.name == name &&
+                other.playing == playing &&
+                other.volume == volume
+    }
+
+    override fun hashCode(): Int {
+        var result = uriString.hashCode()
+        result = 31 * result + name.hashCode()
+        result = 31 * result + playing.hashCode()
+        result = 31 * result + volume.hashCode()
+        return result
+    }
 }
 
 @Dao abstract class TrackDao {
@@ -53,13 +70,13 @@ class Track(
     abstract suspend fun delete(uriStrings: List<String>)
 
     @Query("SELECT * FROM track WHERE name LIKE :filter ORDER BY name COLLATE NOCASE ASC")
-    abstract fun getAllTracksSortedByNameAsc(filter: String): Flow<List<Track>>
+    protected abstract fun getAllTracksSortedByNameAsc(filter: String): Flow<List<Track>>
 
     @Query("SELECT * FROM track WHERE name LIKE :filter ORDER BY name COLLATE NOCASE DESC")
-    abstract fun getAllTracksSortedByNameDesc(filter: String): Flow<List<Track>>
+    protected abstract fun getAllTracksSortedByNameDesc(filter: String): Flow<List<Track>>
 
     @Query("SELECT * FROM track WHERE name LIKE :filter")
-    abstract fun getAllTracksSortedByOrderAdded(filter: String): Flow<List<Track>>
+    protected abstract fun getAllTracksSortedByOrderAdded(filter: String): Flow<List<Track>>
 
     fun getAllTracks(sort: Track.Sort, searchFilter: String?): Flow<List<Track>> {
         val filter = "%${searchFilter ?: ""}%"

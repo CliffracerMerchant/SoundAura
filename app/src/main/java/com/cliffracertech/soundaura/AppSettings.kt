@@ -160,6 +160,5 @@ import androidx.lifecycle.viewmodel.compose.viewModel
     SettingCategory(titleString, listOf(
         privacyPolicySetting,
         openSourceLicensesSetting,
-        aboutAppSetting
-    ))
+        aboutAppSetting))
 }
