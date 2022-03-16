@@ -216,7 +216,10 @@ class OpenPersistableDocument : ActivityResultContracts.OpenDocument() {
             }
         }, modifier = Modifier.padding(16.dp),
         properties = DialogProperties(usePlatformDefaultWidth = false),
-        text = { LibrariesContainer(Modifier.fillMaxSize()) })
+        text = { Box(Modifier.fillMaxSize()) { LibrariesContainer() }})
+        // Putting the LibrariesContainer inside the box prevents a
+        // visual bug where the dialog appears at a smaller size at
+        // first, and then changes to its full size.
 
 /** Show a dialog displaying information about the app to the user. */
 @Composable fun AboutAppDialog(
@@ -251,7 +254,7 @@ class OpenPersistableDocument : ActivityResultContracts.OpenDocument() {
 
     ClickableText(
         text = linkifiedText,
-        style = MaterialTheme.typography.body2
+        style = MaterialTheme.typography.subtitle1
     ) {
         val annotations = linkifiedText.getStringAnnotations("URL", it, it)
         for (annotation in annotations)

@@ -27,7 +27,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
     title: String,
     content: List<@Composable () -> Unit>
 ) = Surface(shape = MaterialTheme.shapes.large) {
-    Column(Modifier.padding(20.dp, 16.dp, 20.dp, 0.dp)) {
+    Column(Modifier.padding(20.dp, 16.dp, 20.dp, 4.dp)) {
         Text(title, style = MaterialTheme.typography.h6)
         Spacer(Modifier.height(8.dp))
         Divider()
