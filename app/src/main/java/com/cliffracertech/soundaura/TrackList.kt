@@ -16,6 +16,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -47,12 +49,13 @@ import javax.inject.Inject
 @HiltViewModel
 class TrackListViewModel @Inject constructor(
     @ApplicationContext context: Context,
+    dataStore: DataStore<Preferences>,
     private val trackDao: TrackDao,
     searchQueryState: SearchQueryState
 ) : ViewModel() {
 
     private val trackSortKey = intPreferencesKey(context.getString(R.string.pref_sort_key))
-    private val trackSort = context.dataStore.enumPreferenceFlow<Track.Sort>(trackSortKey)
+    private val trackSort = dataStore.enumPreferenceFlow<Track.Sort>(trackSortKey)
 
     var tracks by mutableStateOf<List<Track>>(emptyList())
         private set

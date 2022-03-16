@@ -1,8 +1,5 @@
-/*
- * This file is part of SoundAura, which is released under the terms of the Apache
- * License 2.0. See license.md in the project's root directory to see the full license.
- */
-
+/* This file is part of SoundAura, which is released under the terms of the Apache
+ * License 2.0. See license.md in the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
 import android.content.Context
@@ -10,6 +7,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.ViewModel
@@ -23,14 +22,14 @@ import javax.inject.Inject
 @HiltViewModel
 class ActionBarViewModel @Inject constructor(
     @ApplicationContext context: Context,
+    private val dataStore: DataStore<Preferences>,
     searchQueryState: SearchQueryState,
 ) : ViewModel() {
-    private val dataStore = context.dataStore
 
     private val trackSortKey = intPreferencesKey(context.getString(R.string.pref_sort_key))
     val trackSort by dataStore.enumPreferenceState<Track.Sort>(trackSortKey, viewModelScope)
 
-    fun ontrackSortOptionClick(newValue: Track.Sort) {
+    fun onTrackSortOptionClick(newValue: Track.Sort) {
         viewModelScope.launch {
             dataStore.edit { it[trackSortKey] = newValue.ordinal }
         }
@@ -45,9 +44,9 @@ class ActionBarViewModel @Inject constructor(
 
 /** Compose a ListActionBar that switches between a normal state with all
  * buttons enabled, and an alternative state with most buttons disabled
- * according to the value of @param showingAppSettings. Back and settings
- * button clicks will invoke @param onBackButtonClick and @param
- * onSettingsButtonClick, respectively. */
+ * according to the value of the parameter showingAppSettings. Back and
+ * settings button clicks will invoke the parameters onBackButtonClick
+ * and onSettingsButtonClick, respectively. */
 @Composable fun SoundAuraActionBar(
     showingAppSettings: Boolean,
     onBackButtonClick: () -> Unit,
@@ -67,7 +66,7 @@ class ActionBarViewModel @Inject constructor(
         sortOptions = Track.Sort.values(),
         sortOptionNames = Track.Sort.stringValues(),
         currentSortOption = viewModel.trackSort,
-        onSortOptionClick = viewModel::ontrackSortOptionClick,
+        onSortOptionClick = viewModel::onTrackSortOptionClick,
     ) {
         SettingsButton(onClick = {
             viewModel.searchQuery = null
