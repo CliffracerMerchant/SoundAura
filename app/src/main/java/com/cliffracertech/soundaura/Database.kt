@@ -103,17 +103,6 @@ data class Track(
 @Database(entities = [Track::class], version = 1, exportSchema = true)
 abstract class SoundAuraDatabase : RoomDatabase() {
     abstract fun trackDao(): TrackDao
-
-    companion object {
-        var instance: SoundAuraDatabase? = null
-
-        fun get(context: Context) = instance ?:
-            Room.databaseBuilder(
-                context.applicationContext,
-                SoundAuraDatabase::class.java,
-                "SoundAuraDb"
-            ).build().also { instance = it }
-    }
 }
 
 @Module @InstallIn(SingletonComponent::class)

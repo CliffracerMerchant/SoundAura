@@ -12,14 +12,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestCoroutineDispatcher
 import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.io.IOException
 
 @RunWith(RobolectricTestRunner::class)
 class AddTrackButtonViewModelTests {
     private lateinit var instance: AddTrackButtonViewModel
+    private lateinit var db: SoundAuraDatabase
     private lateinit var trackDao: TrackDao
     private lateinit var messageHandler: MessageHandler
 
@@ -30,6 +33,9 @@ class AddTrackButtonViewModelTests {
         messageHandler = MessageHandler()
         instance = AddTrackButtonViewModel(trackDao, messageHandler)
     }
+
+    @After @Throws(IOException::class)
+    fun closeDb() = db.close()
 
     @Test fun initialState() {
         assertThat(instance.expanded).isFalse()
