@@ -3,10 +3,8 @@
 package com.cliffracertech.soundaura
 
 import android.content.Context
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.res.stringResource
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -23,8 +21,18 @@ import javax.inject.Inject
 class ActionBarViewModel @Inject constructor(
     @ApplicationContext context: Context,
     private val dataStore: DataStore<Preferences>,
+    private val navigationState: MainActivityNavigationState,
     searchQueryState: SearchQueryState,
 ) : ViewModel() {
+    val showingAppSettings get() = navigationState.showingAppSettings
+    var searchQuery by searchQueryState.query
+
+    val title by derivedStateOf {
+        StringResource(
+            if (showingAppSettings)
+                R.string.app_settings_description
+            else R.string.app_name)
+    }
 
     private val trackSortKey = intPreferencesKey(context.getString(R.string.pref_sort_key))
     val trackSort by dataStore.enumPreferenceState<Track.Sort>(trackSortKey, viewModelScope)
@@ -35,42 +43,44 @@ class ActionBarViewModel @Inject constructor(
         }
     }
 
-    var searchQuery by searchQueryState.query
-
     fun onSearchButtonClick() {
         searchQuery = if (searchQuery == null) "" else null
     }
+
+    fun onSettingsButtonClick() {
+        searchQuery = null
+        navigationState.showingAppSettings = true
+    }
+
+    fun onBackButtonClick() =
+        if (showingAppSettings) {
+            navigationState.showingAppSettings = false
+            true
+        } else false
 }
 
 /** Compose a ListActionBar that switches between a normal state with all
- * buttons enabled, and an alternative state with most buttons disabled
- * according to the value of the parameter showingAppSettings. Back and
- * settings button clicks will invoke the parameters onBackButtonClick
- * and onSettingsButtonClick, respectively. */
-@Composable fun SoundAuraActionBar(
-    showingAppSettings: Boolean,
-    onBackButtonClick: () -> Unit,
-    onSettingsButtonClick: () -> Unit,
-) {
+ * buttons enabled, and an alternative state with most buttons disabled.
+ * @param onUnhandledBackButtonClick The callback that will be invoked if
+ *                                   a back button click is not handled. */
+@Composable fun SoundAuraActionBar(onUnhandledBackButtonClick: () -> Unit) {
     val viewModel: ActionBarViewModel = viewModel()
-    val title = if (!showingAppSettings) stringResource(R.string.app_name)
-                else                     stringResource(R.string.app_settings_description)
+
     ListActionBar(
-        showBackButtonForNavigation = showingAppSettings,
-        onBackButtonClick = onBackButtonClick,
-        title = title,
+        showBackButtonForNavigation = viewModel.showingAppSettings,
+        onBackButtonClick = {
+            if (!viewModel.onBackButtonClick())
+                onUnhandledBackButtonClick()
+        }, title = viewModel.title.resolve(LocalContext.current),
         searchQuery = viewModel.searchQuery,
         onSearchQueryChanged = { viewModel.searchQuery = it },
-        showSearchAndChangeSortButtons = !showingAppSettings,
+        showSearchAndChangeSortButtons = !viewModel.showingAppSettings,
         onSearchButtonClick = viewModel::onSearchButtonClick,
         sortOptions = Track.Sort.values(),
         sortOptionNames = Track.Sort.stringValues(),
         currentSortOption = viewModel.trackSort,
         onSortOptionClick = viewModel::onTrackSortOptionClick,
     ) {
-        SettingsButton(onClick = {
-            viewModel.searchQuery = null
-            onSettingsButtonClick()
-        })
+        SettingsButton(onClick = viewModel::onSettingsButtonClick)
     }
 }

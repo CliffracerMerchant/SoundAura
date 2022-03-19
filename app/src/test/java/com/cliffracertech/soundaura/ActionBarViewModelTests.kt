@@ -4,7 +4,7 @@ package com.cliffracertech.soundaura
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.google.common.truth.Truth
+import com.google.common.truth.Truth.assertThat
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -16,35 +16,72 @@ import org.robolectric.annotation.Config
 class ActionBarViewModelTests {
     private lateinit var instance: ActionBarViewModel
     private lateinit var searchQueryState: SearchQueryState
+    private lateinit var navigationState: MainActivityNavigationState
 
     @Before fun init() {
         val context = ApplicationProvider.getApplicationContext<Context>()
+        navigationState = MainActivityNavigationState()
         searchQueryState = SearchQueryState()
-        instance = ActionBarViewModel(context, context.dataStore, searchQueryState)
+        instance = ActionBarViewModel(context, context.dataStore,
+                                      navigationState, searchQueryState)
+    }
+
+    @Test fun title() {
+        assertThat(navigationState.showingAppSettings).isFalse()
+        assertThat(instance.title.stringResId).isEqualTo(R.string.app_name)
+        navigationState.showingAppSettings = true
+        assertThat(instance.title.stringResId).isEqualTo(R.string.app_settings_description)
+        navigationState.showingAppSettings = false
+        assertThat(instance.title.stringResId).isEqualTo(R.string.app_name)
     }
 
     @Test fun searchButtonClicks() {
-        Truth.assertThat(instance.searchQuery).isNull()
+        assertThat(instance.searchQuery).isNull()
         instance.onSearchButtonClick()
-        Truth.assertThat(instance.searchQuery).isEqualTo("")
+        assertThat(instance.searchQuery).isEqualTo("")
         instance.onSearchButtonClick()
-        Truth.assertThat(instance.searchQuery).isNull()
+        assertThat(instance.searchQuery).isNull()
         instance.searchQuery = "test query"
-        Truth.assertThat(instance.searchQuery).isEqualTo("test query")
+        assertThat(instance.searchQuery).isEqualTo("test query")
         instance.onSearchButtonClick()
-        Truth.assertThat(instance.searchQuery).isNull()
+        assertThat(instance.searchQuery).isNull()
     }
 
     @Test fun searchQueryMatchesUnderlyingState() {
-        Truth.assertThat(instance.searchQuery).isNull()
-        Truth.assertThat(searchQueryState.query.value).isNull()
+        assertThat(instance.searchQuery).isNull()
+        assertThat(searchQueryState.query.value).isNull()
         instance.searchQuery = "test query"
-        Truth.assertThat(instance.searchQuery).isEqualTo("test query")
-        Truth.assertThat(searchQueryState.query.value).isEqualTo("test query")
+        assertThat(instance.searchQuery).isEqualTo("test query")
+        assertThat(searchQueryState.query.value).isEqualTo("test query")
         instance.onSearchButtonClick()
-        Truth.assertThat(instance.searchQuery).isNull()
-        Truth.assertThat(searchQueryState.query.value).isNull()
+        assertThat(instance.searchQuery).isNull()
+        assertThat(searchQueryState.query.value).isNull()
         searchQueryState.query.value = "test query"
-        Truth.assertThat(instance.searchQuery).isEqualTo("test query")
+        assertThat(instance.searchQuery).isEqualTo("test query")
+    }
+
+    @Test fun settingsButtonAffectsUnderlyingState() {
+        assertThat(navigationState.showingAppSettings).isFalse()
+        instance.onSettingsButtonClick()
+        assertThat(navigationState.showingAppSettings).isTrue()
+        instance.onSettingsButtonClick()
+        assertThat(navigationState.showingAppSettings).isTrue()
+    }
+
+    @Test fun backButtonExitsAppSettings() {
+        settingsButtonAffectsUnderlyingState()
+        instance.onBackButtonClick()
+        assertThat(instance.showingAppSettings).isFalse()
+        instance.onBackButtonClick()
+        assertThat(instance.showingAppSettings).isFalse()
+    }
+
+    @Test fun settingsButtonClearsSearchQuery() {
+        searchQueryState.query.value = "test query"
+        assertThat(instance.searchQuery).isEqualTo("test query")
+        instance.onSettingsButtonClick()
+        assertThat(instance.searchQuery).isNull()
+        instance.onBackButtonClick()
+        assertThat(instance.searchQuery).isNull()
     }
 }

@@ -35,25 +35,29 @@ import com.google.accompanist.insets.navigationBarsHeight
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.scopes.ActivityRetainedScoped
 import kotlinx.coroutines.flow.collect
 import javax.inject.Inject
 
+@ActivityRetainedScoped
+class MainActivityNavigationState @Inject constructor() {
+    var showingAppSettings by mutableStateOf(false)
+}
+
+@ActivityRetainedScoped
+class ReadOnlyMainActivityNavigationState @Inject constructor(
+    private val mutableState: MainActivityNavigationState
+) {
+    val showingAppSettings get() = mutableState.showingAppSettings
+}
+
 @HiltViewModel
 class MainActivityViewModel @Inject constructor(
-    messageHandler: MessageHandler
+    messageHandler: MessageHandler,
+    private val navigationState: ReadOnlyMainActivityNavigationState,
 ) : ViewModel() {
     val messages = messageHandler.messages
-
-    private var _showingAppSettings by mutableStateOf(false)
-    val showingAppSettings get() = _showingAppSettings
-
-    fun onSettingsButtonClick() { _showingAppSettings = true }
-
-    fun onBackButtonClick() =
-        if (showingAppSettings) {
-            _showingAppSettings = false
-            true
-        } else false
+    val showingAppSettings get() = navigationState.showingAppSettings
 }
 
 @AndroidEntryPoint
@@ -80,19 +84,12 @@ class MainActivity : ComponentActivity() {
         boundPlayerService = null
     }
 
-    override fun onBackPressed() {
-        if (!viewModel.onBackButtonClick())
-            super.onBackPressed()
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContentWithTheme {
             val scaffoldState = rememberScaffoldState()
-            val isPlaying by boundPlayerService?.isPlaying.mapToNonNullState(false)
-            val showingAppSettings = viewModel.showingAppSettings
             val addTrackButtonViewModel: AddTrackButtonViewModel = viewModel()
 
             MessageHandler(scaffoldState)
@@ -103,17 +100,13 @@ class MainActivity : ComponentActivity() {
                 }, scaffoldState = scaffoldState,
                 floatingActionButtonPosition = FabPosition.Center,
                 topBar = {
-                    SoundAuraActionBar(
-                        showingAppSettings = showingAppSettings,
-                        onBackButtonClick = viewModel::onBackButtonClick,
-                        onSettingsButtonClick = viewModel::onSettingsButtonClick)
+                    SoundAuraActionBar(::onBackPressed)
                 }, bottomBar = {
                     Spacer(Modifier.navigationBarsHeight().fillMaxWidth())
                 }, floatingActionButton = {
-                    PlayPauseButton(showing = !showingAppSettings, isPlaying)
+                    PlayPauseButton()
                 }, content = {
-                    val bottomPadding = it.calculateBottomPadding()
-                    MainContent(showingAppSettings, bottomPadding)
+                    MainContent(it.calculateBottomPadding())
                 })
         }
     }
@@ -169,13 +162,12 @@ class MainActivity : ComponentActivity() {
     }
 
     /** Compose a play / pause floating action button inside an AnimatedVisibility. */
-    @Composable private fun PlayPauseButton(
-        showing: Boolean,
-        isPlaying: Boolean
-    ) = AnimatedVisibility(showing,
+    @Composable private fun PlayPauseButton() = AnimatedVisibility(
+        visible = viewModel.showingAppSettings,
         enter = fadeIn(tween()) + scaleIn(overshootTweenSpec()),
         exit = fadeOut(tween(delayMillis = 125)) + scaleOut(anticipateTweenSpec(delay = 75))
     ) {
+        val isPlaying by boundPlayerService?.isPlaying.mapToNonNullState(false)
         FloatingActionButton(
             onClick = { boundPlayerService?.toggleIsPlaying() },
             backgroundColor = lerp(MaterialTheme.colors.primary,
@@ -187,36 +179,35 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @Composable private fun MainContent(
-        showingAppSettings: Boolean,
-        bottomPadding: Dp
-    ) = Box(Modifier.fillMaxSize(1f)) {
-        // The bottomPadding parameter only accounts for the navigation bar.
-        // The extra 16dp for the add track button is the standard floating
-        // action button edge margin. The extra 72dp for the track list is
-        // the 16dp margin for the FAB, plus 56dp for the FAB itself.
-        val trackListBottomPadding = bottomPadding + 72.dp
-        val addTrackButtonBottomPadding = bottomPadding + 16.dp
+    @Composable private fun MainContent(bottomPadding: Dp) =
+        Box(Modifier.fillMaxSize(1f)) {
+            val showingAppSettings = viewModel.showingAppSettings
+            // The bottomPadding parameter only accounts for the navigation bar.
+            // The extra 16dp for the add track button is the standard floating
+            // action button edge margin. The extra 72dp for the track list is
+            // the 16dp margin for the FAB, plus 56dp for the FAB itself.
+            val trackListBottomPadding = bottomPadding + 72.dp
+            val addTrackButtonBottomPadding = bottomPadding + 16.dp
 
-        SlideAnimatedContent(
-            targetState = showingAppSettings,
-            leftToRight = !showingAppSettings
-        ) { showingAppSettings ->
-            if (showingAppSettings)
-                AppSettings()
-            else StatefulTrackList(
-                bottomPadding = trackListBottomPadding,
-                onVolumeChange = { uri, volume ->
-                    boundPlayerService?.setTrackVolume(uri, volume)
-                })
+            SlideAnimatedContent(
+                targetState = showingAppSettings,
+                leftToRight = !showingAppSettings
+            ) { showingAppSettingsScreen ->
+                if (showingAppSettingsScreen)
+                    AppSettings()
+                else StatefulTrackList(
+                    bottomPadding = trackListBottomPadding,
+                    onVolumeChange = { uri, volume ->
+                        boundPlayerService?.setTrackVolume(uri, volume)
+                    })
+            }
+            AnimatedVisibility(
+                visible = !showingAppSettings,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = addTrackButtonBottomPadding),
+                enter = fadeIn(tween(delayMillis = 75)) + scaleIn(overshootTweenSpec(delay = 75)),
+                exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTweenSpec())
+            ) { StatefulAddTrackButton() }
         }
-        AnimatedVisibility(
-            visible = !showingAppSettings,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = addTrackButtonBottomPadding),
-            enter = fadeIn(tween(delayMillis = 75)) + scaleIn(overshootTweenSpec(delay = 75)),
-            exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTweenSpec())
-        ) { StatefulAddTrackButton() }
-    }
 }
