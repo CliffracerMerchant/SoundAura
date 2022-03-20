@@ -24,6 +24,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -47,13 +48,23 @@ import javax.inject.Inject
 }
 
 @HiltViewModel
-class TrackListViewModel @Inject constructor(
-    @ApplicationContext context: Context,
+class TrackListViewModel(
+    context: Context,
     dataStore: DataStore<Preferences>,
     private val trackDao: TrackDao,
-    searchQueryState: SearchQueryState
+    searchQueryState: SearchQueryState,
+    coroutineScope: CoroutineScope? = null
 ) : ViewModel() {
 
+    @Inject constructor(
+        @ApplicationContext
+        context: Context,
+        dataStore: DataStore<Preferences>,
+        trackDao: TrackDao,
+        searchQueryState: SearchQueryState,
+    ) : this(context, dataStore, trackDao, searchQueryState, null)
+
+    private val scope = coroutineScope ?: viewModelScope
     private val trackSortKey = intPreferencesKey(context.getString(R.string.pref_sort_key))
     private val trackSort = dataStore.enumPreferenceFlow<Track.Sort>(trackSortKey)
 
@@ -65,23 +76,23 @@ class TrackListViewModel @Inject constructor(
         combine(trackSort, searchQueryFlow, trackDao::getAllTracks)
             .transformLatest { emitAll(it) }
             .onEach { tracks = it }
-            .launchIn(viewModelScope)
+            .launchIn(scope)
     }
 
     fun onDeleteTrackDialogConfirm(uriString: String) {
-        viewModelScope.launch { trackDao.delete(uriString) }
+        scope.launch { trackDao.delete(uriString) }
     }
 
-    fun onTrackPlayPauseClick(uriString: String, playing: Boolean) {
-        viewModelScope.launch { trackDao.updatePlaying(uriString, playing) }
+    fun onTrackPlayPauseClick(uriString: String) {
+        scope.launch { trackDao.togglePlaying(uriString) }
     }
 
     fun onTrackVolumeChangeRequest(uriString: String, volume: Float) {
-        viewModelScope.launch { trackDao.updateVolume(uriString, volume) }
+        scope.launch { trackDao.updateVolume(uriString, volume) }
     }
 
     fun onTrackRenameDialogConfirm(uriString: String, name: String) {
-        viewModelScope.launch { trackDao.updateName(uriString, name) }
+        scope.launch { trackDao.updateName(uriString, name) }
     }
 }
 
