@@ -33,7 +33,7 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
  * @param onDeleteRequest The callback that will be invoked when the deletion of the track is requested.
  */
 class TrackViewCallback(
-    val onPlayPauseButtonClick: (String, Boolean) -> Unit = { _, _ -> },
+    val onPlayPauseButtonClick: (String) -> Unit = { _ -> },
     val onVolumeChange: (String, Float) -> Unit = { _, _ -> },
     val onVolumeChangeFinished: (String, Float) -> Unit = { _, _ -> },
     val onRenameRequest: (String, String) -> Unit = { _, _ -> },
@@ -57,7 +57,7 @@ fun TrackView(
     modifier = modifier.fillMaxWidth(1f).largeSurfaceBackground()
 ){
     PlayPauseButton(track.playing, track.name, MaterialTheme.colors.primary) {
-        callback.onPlayPauseButtonClick(track.uriString, !track.playing)
+        callback.onPlayPauseButtonClick(track.uriString)
     }
 
     var volume by remember { mutableStateOf(track.volume) }

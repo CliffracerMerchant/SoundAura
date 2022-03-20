@@ -72,13 +72,13 @@ class DatabaseTests {
         var tracks = getAllTracks()
         assertThat(tracks[0].playing || tracks[1].playing || tracks[2].playing).isFalse()
 
-        dao.updatePlaying(tracks[1].uriString, true)
-        dao.updatePlaying(tracks[2].uriString, true)
+        dao.togglePlaying(tracks[1].uriString)
+        dao.togglePlaying(tracks[2].uriString)
         tracks = getAllTracks()
         assertThat(tracks[0].playing).isFalse()
         assertThat(tracks[1].playing && tracks[2].playing).isTrue()
 
-        dao.updatePlaying(tracks[2].uriString, false)
+        dao.togglePlaying(tracks[2].uriString)
         tracks = getAllTracks()
         assertThat(tracks[0].playing || tracks[2].playing).isFalse()
         assertThat(tracks[1].playing).isTrue()
@@ -205,13 +205,13 @@ class DatabaseTests {
         var playingTracks = dao.getAllPlayingTracks().first()
         assertThat(playingTracks).isEmpty()
 
-        dao.updatePlaying(allTracks[0].uriString, true)
-        dao.updatePlaying(allTracks[2].uriString, true)
+        dao.togglePlaying(allTracks[0].uriString)
+        dao.togglePlaying(allTracks[2].uriString)
         allTracks = getAllTracks()
         playingTracks = dao.getAllPlayingTracks().first()
         assertThat(playingTracks).containsExactly(allTracks[0], allTracks[2])
 
-        dao.updatePlaying(allTracks[0].uriString, false)
+        dao.togglePlaying(allTracks[0].uriString)
         allTracks = getAllTracks()
         playingTracks = dao.getAllPlayingTracks().first()
         assertThat(playingTracks).containsExactly(allTracks[2])

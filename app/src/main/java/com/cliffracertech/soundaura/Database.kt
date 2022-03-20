@@ -90,8 +90,8 @@ data class Track(
     @Query("SELECT * FROM track WHERE playing")
     abstract fun getAllPlayingTracks(): Flow<List<Track>>
 
-    @Query("UPDATE track set playing = :playing WHERE uriString = :uri")
-    abstract suspend fun updatePlaying(uri: String, playing: Boolean)
+    @Query("UPDATE track set playing = 1 - playing WHERE uriString = :uri")
+    abstract suspend fun togglePlaying(uri: String)
 
     @Query("UPDATE track SET volume = :volume WHERE uriString = :uri")
     abstract suspend fun updateVolume(uri: String, volume: Float)

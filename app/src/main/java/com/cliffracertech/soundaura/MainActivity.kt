@@ -163,7 +163,7 @@ class MainActivity : ComponentActivity() {
 
     /** Compose a play / pause floating action button inside an AnimatedVisibility. */
     @Composable private fun PlayPauseButton() = AnimatedVisibility(
-        visible = viewModel.showingAppSettings,
+        visible = !viewModel.showingAppSettings,
         enter = fadeIn(tween()) + scaleIn(overshootTweenSpec()),
         exit = fadeOut(tween(delayMillis = 125)) + scaleOut(anticipateTweenSpec(delay = 75))
     ) {
