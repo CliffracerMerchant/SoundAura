@@ -123,7 +123,7 @@ import javax.inject.Inject
             icon = { Icon(Icons.Default.Add, null) },
             backgroundColor = MaterialTheme.colors.primaryVariant,
             contentColor = MaterialTheme.colors.onPrimary,
-//            elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp))
+//            elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp))
             elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp))
         }, { ExtendedFloatingActionButton(
             text = { Text("local file") },
@@ -131,7 +131,7 @@ import javax.inject.Inject
             icon = { Icon(Icons.Default.Add, null) },
             backgroundColor = MaterialTheme.colors.primaryVariant,
             contentColor = MaterialTheme.colors.onPrimary,
-//            elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp))
+//            elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp))
             elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp))
         })
 ) { FloatingActionButton(
@@ -139,7 +139,7 @@ import javax.inject.Inject
     backgroundColor = MaterialTheme.colors.primaryVariant,
     contentColor = MaterialTheme.colors.onPrimary,
     elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
-//    elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp)
+//    elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp)
 ) {
     // The two angles are chosen between so that the icon always appears
     // to rotate clockwise, instead of clockwise and then counterclockwise.

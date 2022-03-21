@@ -95,16 +95,19 @@ class MainActivity : ComponentActivity() {
             MessageHandler(scaffoldState)
 
             Scaffold(
+                scaffoldState = scaffoldState,
                 modifier = Modifier.pointerInput(Unit) {
                     detectTapWithoutConsuming(addTrackButtonViewModel::onGlobalClick)
-                }, scaffoldState = scaffoldState,
-                floatingActionButtonPosition = FabPosition.Center,
-                topBar = {
+                }, topBar = {
                     SoundAuraActionBar(::onBackPressed)
                 }, bottomBar = {
                     Spacer(Modifier.navigationBarsHeight().fillMaxWidth())
                 }, floatingActionButton = {
-                    PlayPauseButton()
+                    // The floating action buttons are added in the content
+                    // section instead to have more control over their placement.
+                    // A spacer is added here so that snack bars still appear
+                    // above the floating action buttons.
+                    Spacer(Modifier.navigationBarsHeight(26.dp).fillMaxWidth())
                 }, content = {
                     MainContent(it.calculateBottomPadding())
                 })
@@ -161,24 +164,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Compose a play / pause floating action button inside an AnimatedVisibility. */
-    @Composable private fun PlayPauseButton() = AnimatedVisibility(
-        visible = !viewModel.showingAppSettings,
-        enter = fadeIn(tween()) + scaleIn(overshootTweenSpec()),
-        exit = fadeOut(tween(delayMillis = 125)) + scaleOut(anticipateTweenSpec(delay = 75))
-    ) {
-        val isPlaying by boundPlayerService?.isPlaying.mapToNonNullState(false)
-        FloatingActionButton(
-            onClick = { boundPlayerService?.toggleIsPlaying() },
-            backgroundColor = lerp(MaterialTheme.colors.primary,
-                                   MaterialTheme.colors.primaryVariant, 0.5f),
-//            elevation = FloatingActionButtonDefaults.elevation(6.dp, 3.dp)
-            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
-        ) {
-            PlayPauseIcon(isPlaying, tint = MaterialTheme.colors.onPrimary)
-        }
-    }
-
     @Composable private fun MainContent(bottomPadding: Dp) =
         Box(Modifier.fillMaxSize(1f)) {
             val showingAppSettings = viewModel.showingAppSettings
@@ -202,11 +187,28 @@ class MainActivity : ComponentActivity() {
                     })
             }
             AnimatedVisibility(
+                visible = !viewModel.showingAppSettings,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = buttonBottomPadding),
+                enter = fadeIn(tween(delayMillis = 75)) + scaleIn(overshootTweenSpec(delay = 75)),
+                exit = fadeOut(tween(delayMillis = 125)) + scaleOut(anticipateTweenSpec(delay = 75))
+            ) {
+                val isPlaying by boundPlayerService?.isPlaying.mapToNonNullState(false)
+                FloatingActionButton(
+                    onClick = { boundPlayerService?.toggleIsPlaying() },
+                    backgroundColor = lerp(MaterialTheme.colors.primary,
+                                           MaterialTheme.colors.primaryVariant, 0.5f),
+//                    elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp)
+                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
+                ) { PlayPauseIcon(isPlaying, tint = MaterialTheme.colors.onPrimary) }
+            }
+            AnimatedVisibility(
                 visible = !showingAppSettings,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = addTrackButtonBottomPadding),
-                enter = fadeIn(tween(delayMillis = 75)) + scaleIn(overshootTweenSpec(delay = 75)),
+                    .padding(end = 16.dp, bottom = buttonBottomPadding),
+                enter = fadeIn(tween()) + scaleIn(overshootTweenSpec()),
                 exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTweenSpec())
             ) { StatefulAddTrackButton() }
         }

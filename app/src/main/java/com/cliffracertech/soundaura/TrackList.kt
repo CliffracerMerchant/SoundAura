@@ -6,7 +6,9 @@ import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,11 +36,13 @@ import javax.inject.Inject
  * provided @param trackViewCallback for callbacks. */
 @Composable fun TrackList(
     modifier: Modifier = Modifier,
+    state: LazyListState = rememberLazyListState(),
     bottomPadding: Dp,
     tracks: List<Track>,
     trackViewCallback: TrackViewCallback = TrackViewCallback()
 ) = LazyColumn(
     modifier = modifier,
+    state = state,
     contentPadding = PaddingValues(8.dp, 8.dp, 8.dp, 8.dp + bottomPadding),
     verticalArrangement = Arrangement.spacedBy(8.dp)
 ) {
@@ -102,6 +106,7 @@ class TrackListViewModel(
  *                       a TrackView's volume slider is moved. */
 @Composable fun StatefulTrackList(
     bottomPadding: Dp,
+    state: LazyListState = rememberLazyListState(),
     onVolumeChange: (String, Float) -> Unit,
 ) {
     val viewModel: TrackListViewModel = viewModel()
@@ -115,6 +120,7 @@ class TrackListViewModel(
     }
     TrackList(
         tracks = viewModel.tracks,
+        state = state,
         bottomPadding = bottomPadding,
         trackViewCallback = itemCallback)
 }
