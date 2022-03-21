@@ -88,7 +88,7 @@ fun TrackView(
     contentDescription: String =
         if (playing) stringResource(R.string.pause_description)
         else         stringResource(R.string.play_description),
-    tint: Color = LocalContentColor.current.copy(alpha = LocalContentAlpha.current)
+    tint: Color
 ) {
     val playToPause = AnimatedImageVector.animatedVectorResource(R.drawable.play_to_pause)
     val playToPausePainter = rememberAnimatedVectorPainter(playToPause, atEnd = playing)
@@ -115,7 +115,7 @@ fun TrackView(
 @Composable fun PlayPauseButton(
     playing: Boolean,
     itemName: String,
-    tint: Color = LocalContentColor.current.copy(alpha = LocalContentAlpha.current),
+    tint: Color,
     onClick: () -> Unit
 ) = IconButton(onClick) {
     val description = if (playing) stringResource(R.string.item_pause_description, itemName)

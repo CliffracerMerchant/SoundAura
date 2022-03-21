@@ -16,6 +16,7 @@ import androidx.activity.viewModels
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -167,12 +168,18 @@ class MainActivity : ComponentActivity() {
     @Composable private fun MainContent(bottomPadding: Dp) =
         Box(Modifier.fillMaxSize(1f)) {
             val showingAppSettings = viewModel.showingAppSettings
-            // The bottomPadding parameter only accounts for the navigation bar.
-            // The extra 16dp for the add track button is the standard floating
-            // action button edge margin. The extra 72dp for the track list is
-            // the 16dp margin for the FAB, plus 56dp for the FAB itself.
-            val trackListBottomPadding = bottomPadding + 72.dp
-            val addTrackButtonBottomPadding = bottomPadding + 16.dp
+            // The bottomPadding parameter only accounts for the navigation
+            // bar. The buttons are given an extra 8dp so that they don't
+            // appear right along the bottom edge, and the track list is
+            // given an additional 56dp padding to account for the size of
+            // the FABs themselves.
+            val buttonBottomPadding = bottomPadding + 8.dp
+            val trackListBottomPadding = buttonBottomPadding + 56.dp
+
+            // The track list state is remembered here so that the scrolling
+            // position will not be lost if the user navigates to the app
+            // settings screen and back.
+            val trackListState = rememberLazyListState()
 
             SlideAnimatedContent(
                 targetState = showingAppSettings,
@@ -182,6 +189,7 @@ class MainActivity : ComponentActivity() {
                     AppSettings()
                 else StatefulTrackList(
                     bottomPadding = trackListBottomPadding,
+                    state = trackListState,
                     onVolumeChange = { uri, volume ->
                         boundPlayerService?.setTrackVolume(uri, volume)
                     })
