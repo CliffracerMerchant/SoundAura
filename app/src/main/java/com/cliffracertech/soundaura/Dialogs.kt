@@ -76,13 +76,16 @@ fun Modifier.minTouchTargetSize() =
  *     to a composable Text containing the value of this parameter.
  * @param titleContentSpacing The spacing, in Dp, in between the title and the content.
  * @param contentButtonSpacing The spacing, in Dp, in between the content and the buttons.
- * @param onDismissRequest The callback that will be invoked when the user taps the cancel
- *     button, if shown, or when they tap outside the dialog or the back button is pressed.
+ * @param onDismissRequest The callback that will be invoked when the user taps
+ *     the cancel button, if shown, or when they tap outside the dialog or the
+ *     back button is pressed.
  * @param showCancelButton Whether or not the cancel button will be shown.
  * @param confirmButtonEnabled Whether the confirm button is enabled.
  * @param confirmText The string used for the confirm button.
  * @param onConfirm The callback that will be invoked when the confirm button is tapped.
- * @param content
+ * @param content The composable lambda used for the dialog's content area.
+ *     content will default to a composable Text object that contains the text
+ *     described by the text parameter.
  */
 @Composable fun SoundAuraDialog(
     title: String? = null,
