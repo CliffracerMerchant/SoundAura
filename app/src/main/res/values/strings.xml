@@ -4,6 +4,7 @@
 
 <resources>
     <string name="app_name">SoundAura</string>
+    <string name="app_version">v0.1</string>
 
     <string name="app_player_service_description">A service to play the user\'s sound mix.</string>
     <string name="player_notification_channel_id">player_controls</string>
@@ -61,8 +62,8 @@
     <string name="about_app_description">About SoundAura</string>
     <string name="about_app_body">
         Copyright 2022 Nicholas Hochstetler. \nSoundAura is an open source ambient
-        noise app, licensed under the terms of the Apache License, version 2.0. View
-        the source code at: https://github.com/NicholasHochstetler/SoundAura</string>
+        noise app. The source code is licensed under the terms of the Apache License,
+        version 2.0, and can be viewed at: https://github.com/NicholasHochstetler/SoundAura</string>
 </resources>
 
 

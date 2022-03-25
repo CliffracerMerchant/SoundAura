@@ -15,6 +15,7 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -297,7 +298,18 @@ private fun List<NewTrack>.containsNoBlankNames() =
     onDismissRequest: () -> Unit
 ) = SoundAuraDialog(
     title = stringResource(R.string.app_name),
-    showCancelButton = false,
+    titleLayout = { title ->
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(title, style = MaterialTheme.typography.body1)
+            CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.high) {
+                val textStyle = MaterialTheme.typography.subtitle1
+                Spacer(Modifier.width(6.dp))
+                ProvideTextStyle(textStyle) {
+                    Text(stringResource(R.string.app_version))
+                }
+            }
+        }
+    }, showCancelButton = false,
     onDismissRequest = onDismissRequest,
     onConfirm = onDismissRequest,
 ) {
