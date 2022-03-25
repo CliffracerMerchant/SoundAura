@@ -4,16 +4,17 @@
 package com.cliffracertech.soundaura
 
 import android.content.Context
-import android.content.Intent
-import android.content.Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+import android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -109,9 +110,10 @@ fun Modifier.minTouchTargetSize() =
 ) = Dialog(onDismissRequest) {
     Surface(shape = MaterialTheme.shapes.medium) {
         Column(Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp)) {
-            if (title != null)
+            if (title != null) {
                 titleLayout(title)
-            Spacer(Modifier.height(titleContentSpacing))
+                Spacer(Modifier.height(titleContentSpacing))
+            }
             content()
             Spacer(Modifier.height(contentButtonSpacing))
             val cancelCallback = if (!showCancelButton) null
@@ -156,19 +158,14 @@ fun Modifier.minTouchTargetSize() =
                   onDismissRequest() })
 
 fun Uri.getDisplayName(context: Context) =
-    DocumentFile.fromSingleUri(context, this)?.name?.substringBeforeLast('.', "")
-
-class OpenPersistableDocument : ActivityResultContracts.OpenDocument() {
-    override fun createIntent(context: Context, input: Array<String>) =
-        super.createIntent(context, input).setFlags(FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
-}
+    DocumentFile.fromSingleUri(context, this)?.name?.substringBeforeLast('.')
 
 @Composable fun AddTrackFromLocalFileDialog(
     onDismissRequest: () -> Unit,
     onConfirmRequest: (Track) -> Unit
 ) {
     var chosenUri by rememberSaveable { mutableStateOf<Uri?>(null) }
-    val launcher = rememberLauncherForActivityResult(OpenPersistableDocument()) {
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {
         chosenUri = it
         if (it == null)
             onDismissRequest()
@@ -179,7 +176,7 @@ class OpenPersistableDocument : ActivityResultContracts.OpenDocument() {
     }
 
     if (chosenUri == null)
-        LaunchedEffect(true) { launcher.launch(arrayOf("audio/*")) }
+        LaunchedEffect(Unit) { launcher.launch(arrayOf("audio/*")) }
     else SoundAuraDialog(
         title = stringResource(R.string.track_name_description),
         onDismissRequest = onDismissRequest,
@@ -187,7 +184,7 @@ class OpenPersistableDocument : ActivityResultContracts.OpenDocument() {
         onConfirm = {
             val uri = chosenUri ?: return@SoundAuraDialog
             context.contentResolver.takePersistableUriPermission(
-                uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                uri, FLAG_GRANT_READ_URI_PERMISSION)
             onConfirmRequest(Track(uri.toString(), trackName))
         }, content = { TextField(
             value = trackName,
@@ -195,6 +192,77 @@ class OpenPersistableDocument : ActivityResultContracts.OpenDocument() {
             textStyle = MaterialTheme.typography.body1,
             singleLine = true,
             modifier = Modifier.fillMaxWidth(1f))
+        })
+}
+
+private class NewTrack(file: DocumentFile) {
+    val uri = file.uri
+    var name = file.name?.substringBeforeLast('.') ?: ""
+
+    fun toTrack() = Track(uri.toString(), name)
+}
+
+private fun List<NewTrack>.containsNoBlankNames() =
+    find { it.name.isBlank() } == null
+
+/** Compose a LazyColumn of TextFields to edit the names of the
+ * NewTrack instances in the receiver List<NewTrack>. */
+@Composable private fun List<NewTrack>.Editor(
+    modifier: Modifier = Modifier
+) = LazyColumn(modifier) {
+    items(size) { index ->
+        TextField(
+            value = get(index).name,
+            onValueChange = { get(index).name = it },
+            textStyle = MaterialTheme.typography.body1,
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(1f))
+    }
+}
+
+@Composable fun AddTracksFromLocalDirectoryDialog(
+    onDismissRequest: () -> Unit,
+    onConfirmRequest: (List<Track>) -> Unit
+) {
+    var chosenUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) {
+        chosenUri = it
+        if (it == null)
+            onDismissRequest()
+    }
+    val context = LocalContext.current
+    val trackNameList = rememberSaveable(chosenUri) {
+        val parentUri = chosenUri
+        if (parentUri == null)
+            SnapshotStateList()
+        else {
+            // This app's min SDK version is 23, so
+            // DocumentFile.fromTreeUri should never return null.
+            val file = DocumentFile.fromTreeUri(context, parentUri)!!
+            file.listFiles().filter {
+                it.type?.startsWith("audio/") == true
+            }.map(::NewTrack).toMutableStateList()
+        }
+    }
+
+    if (chosenUri == null)
+        LaunchedEffect(Unit) {
+            launcher.launch(/*starting uri = */ null)
+        }
+    else SoundAuraDialog(
+        title = stringResource(R.string.track_name_description),
+        onDismissRequest = onDismissRequest,
+        confirmButtonEnabled =
+            trackNameList.isNotEmpty() &&
+            trackNameList.containsNoBlankNames(),
+        onConfirm = {
+            trackNameList.forEach {
+                context.contentResolver.takePersistableUriPermission(
+                    it.uri, FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            onConfirmRequest(trackNameList.map { it.toTrack() })
+        }, content = {
+            trackNameList.Editor()
         })
 }
 
