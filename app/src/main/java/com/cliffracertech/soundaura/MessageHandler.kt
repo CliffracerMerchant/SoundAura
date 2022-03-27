@@ -48,5 +48,9 @@ class MessageHandler @Inject constructor() {
         actionStringResource: StringResource? = null,
         onActionClick: (() -> Unit)? = null,
         onDismiss: ((Int) -> Unit)? = null
-    ) = _messages.tryEmit(Message(stringResource, actionStringResource, onActionClick, onDismiss))
+    ) {
+        val message = Message(stringResource, actionStringResource,
+                              onActionClick, onDismiss)
+        _messages.tryEmit(message)
+    }
 }

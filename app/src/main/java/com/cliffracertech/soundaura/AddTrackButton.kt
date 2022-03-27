@@ -4,6 +4,7 @@
 package com.cliffracertech.soundaura
 
 import android.database.sqlite.SQLiteConstraintException
+import androidx.annotation.StringRes
 import androidx.compose.animation.*
 import androidx.compose.animation.core.AnimationConstants.DefaultDurationMillis
 import androidx.compose.animation.core.animateFloatAsState
@@ -13,10 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -48,8 +46,8 @@ import javax.inject.Inject
  *     layout change. These bounds can optionally be used to detect whether taps
  *     fall outside the bounds of the layout, useful when, e.g., an automatic
  *     collapsing of the layout when a click occurs outside its bounds is desired.
- * @param childAlignment The alignment that will be used for the child content.
- *     The default value is Alignment.End.
+ * @param childAlignment The horizontal alignment that will be used for the child
+ *     content. The default value is Alignment.End.
  * @param childAppearanceDuration The duration for a given child's appearance animation.
  * @param totalDuration The total duration over which all children will appear. If
  *     longer than childAppearanceDuration, the appearance or disappearance of
@@ -87,6 +85,41 @@ import javax.inject.Inject
     content()
 }
 
+// The button elevations will be set to 0 for the time being
+// to work around an AnimatedVisibility bug where the button's
+// shadows are clipped.
+@Composable private fun AddTrackButtonChild(
+    @StringRes textResId: Int,
+    onClick: () -> Unit,
+) = ExtendedFloatingActionButton(
+    onClick = onClick,
+    text = { Text(stringResource(textResId)) },
+    icon = { Icon(Icons.Default.Add, null) },
+    backgroundColor = MaterialTheme.colors.primaryVariant,
+    contentColor = MaterialTheme.colors.onPrimary,
+//  elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp))
+    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp))
+
+/** Compose an icon that rotates between a plus state and a close
+ * state with an animation, according to the value of the parameter
+ * showAsClose. The icon will always appear to rotate clockwise.*/
+@Composable private fun PlusCloseIcon(showAsClose: Boolean) {
+    // The two angles are chosen between so that the icon always appears
+    // to rotate clockwise, instead of clockwise and then counterclockwise.
+    val angle1 by animateFloatAsState(
+        targetValue = if (showAsClose) 45f else 0f,
+        animationSpec = overshootTweenSpec())
+    val angle2 by animateFloatAsState(
+        targetValue = if (showAsClose) 45f else 90f,
+        animationSpec = overshootTweenSpec())
+    val angle = if (showAsClose) angle1
+                else             angle2
+    val description = stringResource(
+        if (showAsClose) R.string.add_button_expanded_description
+        else             R.string.add_button_description)
+    Icon(Icons.Default.Add, description, Modifier.rotate(angle))
+}
+
 /**
  * An implementation of SpeedDialLayout whose main content is a floating action
  * button with an add icon. When clicked, the button will animate to display a
@@ -100,56 +133,30 @@ import javax.inject.Inject
  *     collapsing of the layout when a click occurs outside its bounds is desired.
  * @param onClick The callback that will be invoked when the main content FAB is clicked.
  * @param onAddDownloadClick The callback that will be invoked when the download button is clicked.
- * @param onAddLocalFileClick The callback that will be invoked when the add local file button is clicked.
+ * @param onAddLocalFilesClick The callback that will be invoked when the add local files button is clicked.
  */
 @Composable fun AddTrackButton(
     expanded: Boolean,
     onBoundsChange: (Rect) -> Unit = {},
     onClick: () -> Unit = {},
     onAddDownloadClick: () -> Unit = {},
-    onAddLocalFileClick: () -> Unit = {},
+    onAddLocalFilesClick: () -> Unit = {},
 ) = SpeedDialLayout(
     expanded = expanded,
     onBoundsChange = onBoundsChange,
     childAppearanceDuration = 275,
     totalDuration = 400,
     children = listOf(
-        // The button elevations will be set to 0 for the time being
-        // to work around an AnimatedVisibility bug where the button's
-        // shadows are clipped.
-        { ExtendedFloatingActionButton(
-            text = { Text("download") },
-            onClick = onAddDownloadClick,
-            icon = { Icon(Icons.Default.Add, null) },
-            backgroundColor = MaterialTheme.colors.primaryVariant,
-            contentColor = MaterialTheme.colors.onPrimary,
-//            elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp))
-            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp))
-        }, { ExtendedFloatingActionButton(
-            text = { Text("local file") },
-            onClick = onAddLocalFileClick,
-            icon = { Icon(Icons.Default.Add, null) },
-            backgroundColor = MaterialTheme.colors.primaryVariant,
-            contentColor = MaterialTheme.colors.onPrimary,
-//            elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp))
-            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp))
-        })
-) { FloatingActionButton(
-    onClick = onClick,
-    backgroundColor = MaterialTheme.colors.primaryVariant,
-    contentColor = MaterialTheme.colors.onPrimary,
-    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
+        { AddTrackButtonChild(R.string.download_description, onAddDownloadClick) },
+        { AddTrackButtonChild(R.string.local_file_description, onAddLocalFilesClick) },
+    ), content = { FloatingActionButton(
+        onClick = onClick,
+        backgroundColor = MaterialTheme.colors.primaryVariant,
+        contentColor = MaterialTheme.colors.onPrimary,
+        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp),
+        content = { PlusCloseIcon(showAsClose = expanded) }
 //    elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp)
-) {
-    // The two angles are chosen between so that the icon always appears
-    // to rotate clockwise, instead of clockwise and then counterclockwise.
-    val angle1 by animateFloatAsState(if (expanded) 45f else 0f, overshootTweenSpec())
-    val angle2 by animateFloatAsState(if (expanded) 45f else 90f, overshootTweenSpec())
-    val angle = if (expanded) angle1 else angle2
-    val description = if (expanded) stringResource(R.string.add_button_expanded_description)
-                      else          stringResource(R.string.add_button_description)
-    Icon(Icons.Default.Add, description, Modifier.rotate(angle))
-}}
+    )})
 
 @Preview @Composable
 fun AddTrackButtonPreview() = AddTrackButton(expanded = true)
@@ -163,12 +170,6 @@ class AddTrackButtonViewModel @Inject constructor(
     private var _expanded by mutableStateOf(false)
     val expanded get() = _expanded
 
-    private var _showingAddLocalFileDialog by mutableStateOf(false)
-    val showingAddLocalFileDialog get() = _showingAddLocalFileDialog
-
-    private var _showingDownloadFileDialog by mutableStateOf(false)
-    val showingDownloadFileDialog get() = _showingDownloadFileDialog
-
     private var lastBounds = Rect(0f, 0f, 0f, 0f)
 
     fun onClick() { _expanded = !expanded }
@@ -180,15 +181,9 @@ class AddTrackButtonViewModel @Inject constructor(
             _expanded = false
     }
 
-    private fun addTrack(track: Track) {
-        viewModelScope.launch {
-            try { trackDao.insert(track) }
-            catch(e: SQLiteConstraintException) {
-                val stringResId = R.string.track_already_exists_error_message
-                messageHandler.postMessage(StringResource(stringResId))
-            }
-        }
-    }
+
+    private var _showingDownloadFileDialog by mutableStateOf(false)
+    val showingDownloadFileDialog get() = _showingDownloadFileDialog
 
     fun onDownloadFileButtonClick() {
         _expanded = false
@@ -201,22 +196,44 @@ class AddTrackButtonViewModel @Inject constructor(
 
     fun onDownloadFileDialogConfirm(track: Track) {
         onDownloadFileDialogDismiss()
-        addTrack(track)
+        viewModelScope.launch {
+            try { trackDao.insert(track) }
+            catch(e: SQLiteConstraintException) {
+                val stringResId = R.string.track_already_exists_error_message
+                messageHandler.postMessage(StringResource(stringResId))
+            }
+        }
     }
 
-    fun onAddLocalFileButtonClick() {
+
+    private var _showingAddLocalFilesDialog by mutableStateOf(false)
+    val showingAddLocalFilesDialog get() = _showingAddLocalFilesDialog
+
+    fun onAddLocalFilesButtonClick() {
         _expanded = false
-        _showingAddLocalFileDialog = true
+        _showingAddLocalFilesDialog = true
     }
 
-    fun onAddLocalFileDialogDismiss() {
-        _showingAddLocalFileDialog = false
+    fun onAddLocalFilesDialogDismiss() {
+        _showingAddLocalFilesDialog = false
     }
 
-    fun onAddLocalFileDialogConfirm(track: Track) {
-        onAddLocalFileDialogDismiss()
-        addTrack(track)
+    fun onAddLocalFilesDialogConfirm(tracks: List<Track>) {
+        onAddLocalFilesDialogDismiss()
+        viewModelScope.launch {
+            try { trackDao.insert(tracks) }
+            catch(e: SQLiteConstraintException) {
+                val stringResId =
+                    if (tracks.size == 1)
+                        R.string.track_already_exists_error_message
+                    else R.string.some_tracks_already_exist_error_message
+                messageHandler.postMessage(StringResource(stringResId))
+            }
+        }
     }
+
+    fun onDisplayMessageRequest(message: String) =
+        messageHandler.postMessage(StringResource(message))
 }
 
 /** Compose an AddTrackButton with state provided by an instance of AddTrackButtonViewModel. */
@@ -228,12 +245,13 @@ class AddTrackButtonViewModel @Inject constructor(
         onBoundsChange = viewModel::onBoundsChange,
         onClick = viewModel::onClick,
         onAddDownloadClick = viewModel::onDownloadFileButtonClick,
-        onAddLocalFileClick = viewModel::onAddLocalFileButtonClick)
+        onAddLocalFilesClick = viewModel::onAddLocalFilesButtonClick,)
 
     //if (viewModel.showingDownloadFileDialog)
 
-    if (viewModel.showingAddLocalFileDialog)
-        AddTrackFromLocalFileDialog(
-            onDismissRequest = viewModel::onAddLocalFileDialogDismiss,
-            onConfirmRequest = viewModel::onAddLocalFileDialogConfirm)
+    if (viewModel.showingAddLocalFilesDialog)
+        AddTracksFromLocalFilesDialog(
+            onDismissRequest = viewModel::onAddLocalFilesDialogDismiss,
+            onConfirmRequest = viewModel::onAddLocalFilesDialogConfirm,
+            onMessage = viewModel::onDisplayMessageRequest)
 }

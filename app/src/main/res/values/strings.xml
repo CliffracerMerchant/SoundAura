@@ -21,6 +21,12 @@
 
     <string name="add_button_description">Add track</string>
     <string name="add_button_expanded_description">Cancel add track</string>
+    <string name="download_description">Download</string>
+    <string name="local_file_description">Local file(s)</string>
+    <string name="track_already_exists_error_message">This file is already in the library.</string>
+    <string name="some_tracks_already_exist_error_message">
+        Some or all of the files were not added due to already being in the library.</string>
+    <string name="add_local_files_dialog_title">Confirm track names</string>
 
     <string name="rename_description">Rename</string>
     <string name="rename_dialog_title">Rename %1$s</string>
@@ -29,7 +35,6 @@
     <string name="confirm_delete_title">Delete %1$s?</string>
     <string name="confirm_delete_message">This cannot be undone.</string>
 
-    <string name="track_name_description">Track name</string>
     <string name="play_description">Play</string>
     <string name="pause_description">Pause</string>
     <string name="playing_description">Playing</string>
@@ -38,7 +43,6 @@
     <string name="checked_description">Checked</string>
     <string name="unchecked_description">Unchecked</string>
     <string name="dismiss_description">Dismiss</string>
-    <string name="track_already_exists_error_message">This file is already in the library</string>
 
     <string name="pref_sort_key">track_sort</string>
     <string name="name_ascending_description">Name ascending</string>

@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
@@ -128,14 +129,14 @@ fun Modifier.minTouchTargetSize() =
 @Composable fun RenameDialog(
     itemName: String,
     onDismissRequest: () -> Unit,
-    onConfirmRequest: (String) -> Unit
+    onConfirm: (String) -> Unit
 ) {
     var currentName by rememberSaveable { mutableStateOf(itemName) }
     SoundAuraDialog(
         title = stringResource(R.string.rename_dialog_title, itemName),
         confirmButtonEnabled = currentName.isNotBlank(),
         confirmText = stringResource(R.string.rename_description),
-        onConfirm = { onConfirmRequest(currentName)
+        onConfirm = { onConfirm(currentName)
                       onDismissRequest() },
         onDismissRequest = onDismissRequest,
         content = { TextField(
@@ -149,122 +150,100 @@ fun Modifier.minTouchTargetSize() =
 @Composable fun ConfirmDeleteDialog(
     itemName: String,
     onDismissRequest: () -> Unit,
-    onConfirmRequest: () -> Unit
+    onConfirm: () -> Unit
 ) = SoundAuraDialog(
     onDismissRequest = onDismissRequest,
     title = stringResource(R.string.confirm_delete_title, itemName),
     text = stringResource(R.string.confirm_delete_message),
     confirmText = stringResource(R.string.delete_description),
-    onConfirm = { onConfirmRequest()
-                  onDismissRequest() })
+    onConfirm = {
+        onConfirm()
+        onDismissRequest()
+    })
 
+/** Return a suitable display name for a file uri (i.e. the file name minus
+ *  the file type extension, and with underscores replaced with spaces. */
 fun Uri.getDisplayName(context: Context) =
-    DocumentFile.fromSingleUri(context, this)?.name?.substringBeforeLast('.')
+    DocumentFile.fromSingleUri(context, this)?.name
+        ?.substringBeforeLast('.')
+        ?.replace('_', ' ')
 
-@Composable fun AddTrackFromLocalFileDialog(
-    onDismissRequest: () -> Unit,
-    onConfirmRequest: (Track) -> Unit
-) {
-    var chosenUri by rememberSaveable { mutableStateOf<Uri?>(null) }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {
-        chosenUri = it
-        if (it == null)
-            onDismissRequest()
-    }
-    val context = LocalContext.current
-    var trackName by rememberSaveable(chosenUri) {
-        mutableStateOf(chosenUri?.getDisplayName(context) ?: "")
-    }
+/** Return whether the List<String> contains any strings that are blank
+ * (i.e. are either empty or consist of only whitespace characters). */
+val List<String>.containsBlanks get() =
+    find { it.isBlank() } != null
 
-    if (chosenUri == null)
-        LaunchedEffect(Unit) { launcher.launch(arrayOf("audio/*")) }
-    else SoundAuraDialog(
-        title = stringResource(R.string.track_name_description),
-        onDismissRequest = onDismissRequest,
-        confirmButtonEnabled = chosenUri != null && trackName.isNotBlank(),
-        onConfirm = {
-            val uri = chosenUri ?: return@SoundAuraDialog
-            context.contentResolver.takePersistableUriPermission(
-                uri, FLAG_GRANT_READ_URI_PERMISSION)
-            onConfirmRequest(Track(uri.toString(), trackName))
-        }, content = { TextField(
-            value = trackName,
-            onValueChange = { trackName = it },
-            textStyle = MaterialTheme.typography.body1,
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(1f))
-        })
-}
-
-private class NewTrack(file: DocumentFile) {
-    val uri = file.uri
-    var name = file.name?.substringBeforeLast('.') ?: ""
-
-    fun toTrack() = Track(uri.toString(), name)
-}
-
-private fun List<NewTrack>.containsNoBlankNames() =
-    find { it.name.isBlank() } == null
-
-/** Compose a LazyColumn of TextFields to edit the names of the
- * NewTrack instances in the receiver List<NewTrack>. */
-@Composable private fun List<NewTrack>.Editor(
+/** Compose a LazyColumn of TextFields to edit the
+ * strings of the the receiver MutableList<NewTrack>. */
+@Composable private fun MutableList<String>.Editor(
     modifier: Modifier = Modifier
-) = LazyColumn(modifier) {
+) = LazyColumn(
+    modifier = modifier,
+    verticalArrangement = Arrangement.spacedBy(8.dp),
+) {
     items(size) { index ->
         TextField(
-            value = get(index).name,
-            onValueChange = { get(index).name = it },
+            value = get(index),
+            onValueChange = { this@Editor[index] = it },
             textStyle = MaterialTheme.typography.body1,
             singleLine = true,
             modifier = Modifier.fillMaxWidth(1f))
     }
 }
 
-@Composable fun AddTracksFromLocalDirectoryDialog(
+/**
+ * Open a dialog for the user to select one or more audio files to add to
+ * their library.
+ *
+ * @param onDismissRequest The callback that will be invoked when the user
+ *     clicks outside the dialog or taps the cancel button.
+ * @param onConfirmRequest The callback that will be invoked when the user
+ *     taps the dialog's confirm button after having selected one or more files.
+ * @param onMessage The callback that will be invoked if the dialog needs
+ *     to display an explanatory message to the user. Typically this should
+ *     display a snack bar containing the String parameter message.
+ */
+@Composable fun AddTracksFromLocalFilesDialog(
     onDismissRequest: () -> Unit,
-    onConfirmRequest: (List<Track>) -> Unit
+    onConfirmRequest: (List<Track>) -> Unit,
+    onMessage: (String) -> Unit,
 ) {
-    var chosenUri by rememberSaveable { mutableStateOf<Uri?>(null) }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) {
-        chosenUri = it
-        if (it == null)
-            onDismissRequest()
-    }
     val context = LocalContext.current
-    val trackNameList = rememberSaveable(chosenUri) {
-        val parentUri = chosenUri
-        if (parentUri == null)
-            SnapshotStateList()
-        else {
-            // This app's min SDK version is 23, so
-            // DocumentFile.fromTreeUri should never return null.
-            val file = DocumentFile.fromTreeUri(context, parentUri)!!
-            file.listFiles().filter {
-                it.type?.startsWith("audio/") == true
-            }.map(::NewTrack).toMutableStateList()
-        }
+    var chosenUris by rememberSaveable { mutableStateOf<List<Uri>?>(null) }
+    val trackNames = rememberSaveable<SnapshotStateList<String>>(
+        saver = listSaver(
+            save = { it },
+            restore = { it.toMutableStateList() }),
+        init = { mutableStateListOf() })
+
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        if (uris.isEmpty())
+            onDismissRequest()
+        chosenUris = uris
+        trackNames.clear()
+        for (uri in uris)
+            trackNames.add(uri.getDisplayName(context) ?: "")
     }
 
-    if (chosenUri == null)
-        LaunchedEffect(Unit) {
-            launcher.launch(/*starting uri = */ null)
-        }
+    if (chosenUris == null)
+        LaunchedEffect(Unit) { launcher.launch(arrayOf("audio/*")) }
     else SoundAuraDialog(
-        title = stringResource(R.string.track_name_description),
+        title = stringResource(R.string.add_local_files_dialog_title),
         onDismissRequest = onDismissRequest,
-        confirmButtonEnabled =
-            trackNameList.isNotEmpty() &&
-            trackNameList.containsNoBlankNames(),
+        confirmButtonEnabled = chosenUris != null &&
+                               !trackNames.containsBlanks,
         onConfirm = {
-            trackNameList.forEach {
+            val uris = chosenUris ?: return@SoundAuraDialog
+            val newTracks = List(uris.size) {
                 context.contentResolver.takePersistableUriPermission(
-                    it.uri, FLAG_GRANT_READ_URI_PERMISSION)
+                    uris[it], FLAG_GRANT_READ_URI_PERMISSION)
+                val name = trackNames.getOrNull(it) ?: ""
+                Track(uris[it].toString(), name)
             }
-            onConfirmRequest(trackNameList.map { it.toTrack() })
-        }, content = {
-            trackNameList.Editor()
-        })
+            onConfirmRequest(newTracks)
+        }, content = { trackNames.Editor(Modifier.heightIn(max = 400.dp)) })
 }
 
 /** Show a dialog displaying the app's privacy policy to the user. */
