@@ -199,14 +199,12 @@ val List<String>.containsBlanks get() =
  *     clicks outside the dialog or taps the cancel button.
  * @param onConfirmRequest The callback that will be invoked when the user
  *     taps the dialog's confirm button after having selected one or more files.
- * @param onMessage The callback that will be invoked if the dialog needs
- *     to display an explanatory message to the user. Typically this should
- *     display a snack bar containing the String parameter message.
+ *     The first parameter is the list of Uris representing the files to add,
+ *     while the second parameter is the list of names for each of these uris.
  */
 @Composable fun AddTracksFromLocalFilesDialog(
     onDismissRequest: () -> Unit,
-    onConfirmRequest: (List<Track>) -> Unit,
-    onMessage: (String) -> Unit,
+    onConfirmRequest: (List<Uri>, List<String>) -> Unit,
 ) {
     val context = LocalContext.current
     var chosenUris by rememberSaveable { mutableStateOf<List<Uri>?>(null) }
@@ -236,14 +234,10 @@ val List<String>.containsBlanks get() =
                                !trackNames.containsBlanks,
         onConfirm = {
             val uris = chosenUris ?: return@SoundAuraDialog
-            val newTracks = List(uris.size) {
-                context.contentResolver.takePersistableUriPermission(
-                    uris[it], FLAG_GRANT_READ_URI_PERMISSION)
-                val name = trackNames.getOrNull(it) ?: ""
-                Track(uris[it].toString(), name)
-            }
-            onConfirmRequest(newTracks)
-        }, content = { trackNames.Editor(Modifier.heightIn(max = 400.dp)) })
+            onConfirmRequest(uris, trackNames)
+        }, content = {
+            trackNames.Editor(Modifier.heightIn(max = 400.dp))
+        })
 }
 
 /** Show a dialog displaying the app's privacy policy to the user. */

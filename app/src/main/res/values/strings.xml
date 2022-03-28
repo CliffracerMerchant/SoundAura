@@ -6,10 +6,12 @@
     <string name="app_name">SoundAura</string>
     <string name="app_version">v0.1</string>
 
-    <string name="app_player_service_description">A service to play the user\'s sound mix.</string>
+    <string name="app_player_service_description">
+        A service to play the user\'s sound mix.</string>
     <string name="player_notification_channel_id">player_controls</string>
     <string name="player_notification_channel_name">Player controls</string>
-    <string name="player_notification_channel_description">A notification that contains player controls.</string>
+    <string name="player_notification_channel_description">
+        A notification that contains player controls.</string>
 
     <string name="back_description">Back</string>
     <string name="search_description">Search</string>
@@ -23,10 +25,16 @@
     <string name="add_button_expanded_description">Cancel add track</string>
     <string name="download_description">Download</string>
     <string name="local_file_description">Local file(s)</string>
-    <string name="track_already_exists_error_message">This file is already in the library.</string>
+    <string name="add_local_files_dialog_title">Confirm track name(s)</string>
+    <string name="track_already_exists_error_message">
+        This file is already in the library.</string>
     <string name="some_tracks_already_exist_error_message">
-        Some or all of the files were not added due to already being in the library.</string>
-    <string name="add_local_files_dialog_title">Confirm track names</string>
+        %1$d of the selected files were already in the library.</string>
+    <string name="over_file_permission_limit_warning">
+        %1$d files could not be added because the app is at the file
+        permission limit of %2$d. You must remove some tracks in order
+        to add any more.
+    </string>
 
     <string name="rename_description">Rename</string>
     <string name="rename_dialog_title">Rename %1$s</string>

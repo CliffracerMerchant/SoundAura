@@ -4,6 +4,7 @@
 package com.cliffracertech.soundaura
 
 import android.content.Context
+import android.net.Uri
 import androidx.annotation.FloatRange
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -30,6 +31,9 @@ data class Track(
     @ColumnInfo(name="volume", defaultValue = "1.0")
     val volume: Float = 1f
 ) {
+    constructor(uri: Uri, name: String) :
+        this(uri.toString(), name)
+
     enum class Sort { NameAsc, NameDesc, OrderAdded;
 
         companion object {
@@ -61,7 +65,9 @@ data class Track(
 
 @Dao abstract class TrackDao {
     @Insert abstract suspend fun insert(track: Track): Long
-    @Insert abstract suspend fun insert(track: List<Track>)
+
+    @Insert(onConflict  = OnConflictStrategy.IGNORE)
+    abstract suspend fun insert(track: List<Track>): List<Long>
 
     @Query("DELETE FROM track WHERE uriString = :uriString")
     abstract suspend fun delete(uriString: String)

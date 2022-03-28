@@ -3,7 +3,12 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
 import android.database.sqlite.SQLiteConstraintException
+import android.net.Uri
+import android.os.Build
 import androidx.annotation.StringRes
 import androidx.compose.animation.*
 import androidx.compose.animation.core.AnimationConstants.DefaultDurationMillis
@@ -29,6 +34,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -161,8 +167,12 @@ import javax.inject.Inject
 @Preview @Composable
 fun AddTrackButtonPreview() = AddTrackButton(expanded = true)
 
-@HiltViewModel
+// The stored context object here is the application
+// context, and therefore does not present a problem.
+@HiltViewModel @SuppressLint("StaticFieldLeak")
 class AddTrackButtonViewModel @Inject constructor(
+    @ApplicationContext
+    private val context: Context,
     private val trackDao: TrackDao,
     private val messageHandler: MessageHandler
 ) : ViewModel() {
@@ -218,22 +228,52 @@ class AddTrackButtonViewModel @Inject constructor(
         _showingAddLocalFilesDialog = false
     }
 
-    fun onAddLocalFilesDialogConfirm(tracks: List<Track>) {
+    fun onAddLocalFilesDialogConfirm(trackUris: List<Uri>, trackNames: List<String>) {
         onAddLocalFilesDialogDismiss()
         viewModelScope.launch {
-            try { trackDao.insert(tracks) }
-            catch(e: SQLiteConstraintException) {
-                val stringResId =
-                    if (tracks.size == 1)
-                        R.string.track_already_exists_error_message
-                    else R.string.some_tracks_already_exist_error_message
-                messageHandler.postMessage(StringResource(stringResId))
+            val newTracks = List(trackUris.size) {
+                val name = trackNames.getOrNull(it) ?: ""
+                Track(trackUris[it].toString(), name)
+            }
+            val results = trackDao.insert(newTracks)
+            val insertedTracks = mutableListOf<Track>()
+            val failedTracks = mutableListOf<Track>()
+            results.forEachIndexed { index, insertedId ->
+                val track = newTracks[index]
+                if (insertedId >= 0)
+                    insertedTracks.add(track)
+                else failedTracks.add(track)
+            }
+            if (failedTracks.isNotEmpty())
+                messageHandler.postMessage(
+                    if (newTracks.size == 1)
+                        StringResource(R.string.track_already_exists_error_message)
+                    else StringResource(R.string.some_tracks_already_exist_error_message,
+                                        failedTracks.size))
+
+            val persistedPermissionAllowance =
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) 128 else 512
+            var numPersistedPermissions = context.contentResolver.persistedUriPermissions.size
+
+            failedTracks.clear()
+            insertedTracks.forEachIndexed { index, track ->
+                if (numPersistedPermissions < persistedPermissionAllowance) {
+                    val trackUri = Uri.parse(track.uriString)
+                    context.contentResolver.takePersistableUriPermission(
+                        trackUri, FLAG_GRANT_READ_URI_PERMISSION)
+                    numPersistedPermissions++
+                } else failedTracks.add(track)
+            }
+            if (failedTracks.isNotEmpty()) {
+                messageHandler.postMessage(
+                    StringResource(
+                        string = null,
+                        stringResId = R.string.over_file_permission_limit_warning,
+                        args = arrayListOf(failedTracks.size, persistedPermissionAllowance)))
+                trackDao.delete(failedTracks.map { it.uriString })
             }
         }
     }
-
-    fun onDisplayMessageRequest(message: String) =
-        messageHandler.postMessage(StringResource(message))
 }
 
 /** Compose an AddTrackButton with state provided by an instance of AddTrackButtonViewModel. */
@@ -252,6 +292,5 @@ class AddTrackButtonViewModel @Inject constructor(
     if (viewModel.showingAddLocalFilesDialog)
         AddTracksFromLocalFilesDialog(
             onDismissRequest = viewModel::onAddLocalFilesDialogDismiss,
-            onConfirmRequest = viewModel::onAddLocalFilesDialogConfirm,
-            onMessage = viewModel::onDisplayMessageRequest)
+            onConfirmRequest = viewModel::onAddLocalFilesDialogConfirm)
 }
