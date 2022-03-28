@@ -3,6 +3,8 @@
 package com.cliffracertech.soundaura
 
 import android.content.Context
+import android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
@@ -83,8 +86,13 @@ class TrackListViewModel(
             .launchIn(scope)
     }
 
-    fun onDeleteTrackDialogConfirm(uriString: String) {
-        scope.launch { trackDao.delete(uriString) }
+    fun onDeleteTrackDialogConfirm(context: Context, uriString: String) {
+        scope.launch {
+            val uri = Uri.parse(uriString)
+            context.contentResolver.releasePersistableUriPermission(
+                uri, FLAG_GRANT_READ_URI_PERMISSION)
+            trackDao.delete(uriString)
+        }
     }
 
     fun onTrackPlayPauseClick(uriString: String) {
@@ -110,13 +118,16 @@ class TrackListViewModel(
     onVolumeChange: (String, Float) -> Unit,
 ) {
     val viewModel: TrackListViewModel = viewModel()
+    val context = LocalContext.current
     val itemCallback = remember {
         TrackViewCallback(
             onPlayPauseButtonClick = viewModel::onTrackPlayPauseClick,
             onVolumeChange = onVolumeChange,
             onVolumeChangeFinished = viewModel::onTrackVolumeChangeRequest,
             onRenameRequest = viewModel::onTrackRenameDialogConfirm,
-            onDeleteRequest = viewModel::onDeleteTrackDialogConfirm)
+            onDeleteRequest = {
+                viewModel.onDeleteTrackDialogConfirm(context, it)
+            })
     }
     TrackList(
         tracks = viewModel.tracks,
