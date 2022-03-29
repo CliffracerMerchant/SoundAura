@@ -1,6 +1,7 @@
 package com.cliffracertech.soundaura
 
 import android.content.Context
+import android.net.Uri
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.room.Room
@@ -17,8 +18,10 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.io.IOException
 
+@Config(sdk=[30])
 @RunWith(RobolectricTestRunner::class)
 class AddTrackButtonViewModelTests {
     private lateinit var instance: AddTrackButtonViewModel
@@ -28,10 +31,10 @@ class AddTrackButtonViewModelTests {
 
     @Before fun init() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val db = Room.inMemoryDatabaseBuilder(context, SoundAuraDatabase::class.java).build()
+        db = Room.inMemoryDatabaseBuilder(context, SoundAuraDatabase::class.java).build()
         trackDao = db.trackDao()
         messageHandler = MessageHandler()
-        instance = AddTrackButtonViewModel(trackDao, messageHandler)
+        instance = AddTrackButtonViewModel(context, trackDao, messageHandler)
     }
 
     @After @Throws(IOException::class)
@@ -39,8 +42,9 @@ class AddTrackButtonViewModelTests {
 
     @Test fun initialState() {
         assertThat(instance.expanded).isFalse()
-        assertThat(instance.showingAddLocalFileDialog).isFalse()
         assertThat(instance.showingDownloadFileDialog).isFalse()
+        assertThat(instance.showingAddLocalFilesDialog).isFalse()
+
     }
 
     @Test fun clickTogglesExpandedState() {
@@ -89,29 +93,31 @@ class AddTrackButtonViewModelTests {
         Unit
     }
 
-    @Test fun addLocalFileButtonClick() {
+    @Test fun addLocalFilesButtonClick() {
         instance.onClick()
         assertThat(instance.expanded).isTrue()
-        assertThat(instance.showingAddLocalFileDialog).isFalse()
-        instance.onAddLocalFileButtonClick()
+        assertThat(instance.showingAddLocalFilesDialog).isFalse()
+        instance.onAddLocalFilesButtonClick()
         assertThat(instance.expanded).isFalse()
-        assertThat(instance.showingAddLocalFileDialog).isTrue()
+        assertThat(instance.showingAddLocalFilesDialog).isTrue()
     }
 
     @Test fun addLocalFileDialogDismiss() {
-        addLocalFileButtonClick()
-        instance.onAddLocalFileDialogDismiss()
-        assertThat(instance.showingAddLocalFileDialog).isFalse()
+        addLocalFilesButtonClick()
+        instance.onAddLocalFilesDialogDismiss()
+        assertThat(instance.showingAddLocalFilesDialog).isFalse()
     }
 
     @Test fun addLocalFileDialogConfirm() = runBlocking {
-        addLocalFileButtonClick()
+        addLocalFilesButtonClick()
         val testTrack = Track("uriString", "name")
         var tracks = trackDao.getAllTracks(Track.Sort.OrderAdded, null).first()
         assertThat(tracks).isEmpty()
 
-        instance.onAddLocalFileDialogConfirm(testTrack)
-        assertThat(instance.showingAddLocalFileDialog).isFalse()
+        instance.onAddLocalFilesDialogConfirm(
+            trackUris = listOf(Uri.parse(testTrack.uriString)),
+            trackNames = listOf(testTrack.name))
+        assertThat(instance.showingAddLocalFilesDialog).isFalse()
         tracks = trackDao.getAllTracks(Track.Sort.OrderAdded, null).first()
         assertThat(tracks).containsExactly(testTrack)
         Unit
@@ -126,14 +132,16 @@ class AddTrackButtonViewModelTests {
         launch { latestMessage = messageHandler.messages.first() }
 
         val testTrack = Track("uriString", "name")
+        val trackUris = listOf(Uri.parse(testTrack.uriString))
+        val trackNames = listOf(testTrack.name)
         var tracks = trackDao.getAllTracks(Track.Sort.OrderAdded, null).first()
         assertThat(tracks).isEmpty()
 
-        instance.onAddLocalFileDialogConfirm(testTrack)
+        instance.onAddLocalFilesDialogConfirm(trackUris, trackNames)
         tracks = trackDao.getAllTracks(Track.Sort.OrderAdded, null).first()
         assertThat(tracks).containsExactly(testTrack)
 
-        instance.onAddLocalFileDialogConfirm(testTrack)
+        instance.onAddLocalFilesDialogConfirm(trackUris, trackNames)
         tracks = trackDao.getAllTracks(Track.Sort.OrderAdded, null).first()
         assertThat(tracks).containsExactly(testTrack)
 

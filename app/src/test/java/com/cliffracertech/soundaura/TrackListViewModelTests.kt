@@ -18,6 +18,7 @@ import org.robolectric.annotation.Config
 @Config(sdk=[30])
 @RunWith(RobolectricTestRunner::class)
 class TrackListViewModelTests {
+    private lateinit var context: Context
     private lateinit var instance: TrackListViewModel
     private lateinit var db: SoundAuraDatabase
     private lateinit var dao: TrackDao
@@ -27,7 +28,7 @@ class TrackListViewModelTests {
     }
 
     @Before fun init() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
+        context = ApplicationProvider.getApplicationContext()
         db = Room.inMemoryDatabaseBuilder(context, SoundAuraDatabase::class.java).build()
         dao = db.trackDao()
         searchQueryState = SearchQueryState()
@@ -57,7 +58,7 @@ class TrackListViewModelTests {
     @Test fun deleteTrackDialogConfirm() {
         tracksPropertyReflectsAddedTracks()
         val track3 = testTracks[2]
-        instance.onDeleteTrackDialogConfirm(track3.uriString)
+        instance.onDeleteTrackDialogConfirm(context, track3.uriString)
         Thread.sleep(50L)
         assertThat(instance.tracks)
             .containsExactlyElementsIn(testTracks.minus(track3)).inOrder()
