@@ -45,20 +45,19 @@ class MainActivityNavigationState @Inject constructor() {
     var showingAppSettings by mutableStateOf(false)
 }
 
-@ActivityRetainedScoped
-class ReadOnlyMainActivityNavigationState @Inject constructor(
-    private val mutableState: MainActivityNavigationState
-) {
-    val showingAppSettings get() = mutableState.showingAppSettings
-}
-
 @HiltViewModel
 class MainActivityViewModel @Inject constructor(
     messageHandler: MessageHandler,
-    private val navigationState: ReadOnlyMainActivityNavigationState,
+    private val navigationState: MainActivityNavigationState,
 ) : ViewModel() {
     val messages = messageHandler.messages
     val showingAppSettings get() = navigationState.showingAppSettings
+
+    fun onBackButtonClick() =
+        if (showingAppSettings) {
+            navigationState.showingAppSettings = false
+            true
+        } else false
 }
 
 @AndroidEntryPoint
@@ -83,6 +82,11 @@ class MainActivity : ComponentActivity() {
         super.onPause()
         unbindService(serviceConnection)
         boundPlayerService = null
+    }
+
+    override fun onBackPressed() {
+        if (!viewModel.onBackButtonClick())
+            super.onBackPressed()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -134,15 +138,16 @@ class MainActivity : ComponentActivity() {
         }
 
         val uiController = rememberSystemUiController()
-        LaunchedEffect(Unit) {
+        LaunchedEffect(usingDarkTheme) {
+            // For some reason the status bar icons get reset
+            // to a light color when the theme is changed, so
+            // this effect needs to run after every theme change
+            // instead of just when the app starts.
             uiController.setStatusBarColor(Color.Transparent, true)
             uiController.setNavigationBarColor(Color.Transparent, true)
         }
-
         SoundAuraTheme(usingDarkTheme) {
-            ProvideWindowInsets {
-                content()
-            }
+            ProvideWindowInsets { content() }
         }
     }
 
