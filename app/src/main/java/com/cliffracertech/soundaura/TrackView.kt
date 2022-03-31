@@ -194,7 +194,7 @@ fun TrackView(
                 showingDeleteDialog = true
                 showingOptionsMenu = false
             }) {
-                Text(text = stringResource(R.string.delete_description),
+                Text(text = stringResource(R.string.remove_description),
                      style = MaterialTheme.typography.button)
             }
         }
@@ -204,7 +204,7 @@ fun TrackView(
         RenameDialog(itemName, { showingRenameDialog = false }, onRenameRequest)
 
     if (showingDeleteDialog)
-        ConfirmDeleteDialog(itemName, { showingDeleteDialog = false }, onDeleteRequest)
+        ConfirmRemoveDialog(itemName, { showingDeleteDialog = false }, onDeleteRequest)
 }
 
 @Preview @Composable

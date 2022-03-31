@@ -4,7 +4,6 @@
 package com.cliffracertech.soundaura
 
 import android.content.Context
-import android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -147,22 +146,22 @@ fun Modifier.minTouchTargetSize() =
         })
 }
 
-@Composable fun ConfirmDeleteDialog(
+@Composable fun ConfirmRemoveDialog(
     itemName: String,
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit
 ) = SoundAuraDialog(
     onDismissRequest = onDismissRequest,
-    title = stringResource(R.string.confirm_delete_title, itemName),
-    text = stringResource(R.string.confirm_delete_message),
-    confirmText = stringResource(R.string.delete_description),
+    title = stringResource(R.string.confirm_remove_title, itemName),
+    text = stringResource(R.string.confirm_remove_message),
+    confirmText = stringResource(R.string.remove_description),
     onConfirm = {
         onConfirm()
         onDismissRequest()
     })
 
 /** Return a suitable display name for a file uri (i.e. the file name minus
- *  the file type extension, and with underscores replaced with spaces. */
+ * the file type extension, and with underscores replaced with spaces. */
 fun Uri.getDisplayName(context: Context) =
     DocumentFile.fromSingleUri(context, this)?.name
         ?.substringBeforeLast('.')

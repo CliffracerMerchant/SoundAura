@@ -39,9 +39,9 @@
     <string name="rename_description">Rename</string>
     <string name="rename_dialog_title">Rename %1$s</string>
 
-    <string name="delete_description">Delete</string>
-    <string name="confirm_delete_title">Delete %1$s?</string>
-    <string name="confirm_delete_message">
+    <string name="remove_description">Remove</string>
+    <string name="confirm_remove_title">Remove %1$s?</string>
+    <string name="confirm_remove_message">
         This will remove the track from your library,
         but will not delete the file from your device.</string>
 
