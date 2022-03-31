@@ -24,16 +24,16 @@
     <string name="add_button_description">Add track</string>
     <string name="add_button_expanded_description">Cancel add track</string>
     <string name="download_description">Download</string>
-    <string name="local_file_description">Local file(s)</string>
+    <string name="local_file_description">Local files</string>
     <string name="add_local_files_dialog_title">Confirm track name(s)</string>
     <string name="track_already_exists_error_message">
         This file is already in the library.</string>
     <string name="some_tracks_already_exist_error_message">
         %1$d of the selected files were already in the library.</string>
     <string name="over_file_permission_limit_warning">
-        %1$d files could not be added because the app is at the file
-        permission limit of %2$d. You must remove some tracks in order
-        to add any more.
+        %1$d files could not be added because the app is at Android\'s
+        file permission limit of %2$d. You must remove some tracks in
+        order to add any more.
     </string>
 
     <string name="rename_description">Rename</string>
@@ -41,7 +41,9 @@
 
     <string name="delete_description">Delete</string>
     <string name="confirm_delete_title">Delete %1$s?</string>
-    <string name="confirm_delete_message">This cannot be undone.</string>
+    <string name="confirm_delete_message">
+        This will remove the track from your library,
+        but will not delete the file from your device.</string>
 
     <string name="play_description">Play</string>
     <string name="pause_description">Pause</string>
