@@ -6,4 +6,14 @@ package com.cliffracertech.soundaura
 import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
-class SoundAuraApplication : android.app.Application()
+class SoundAuraApplication : android.app.Application() {
+    override fun onCreate() {
+        super.onCreate()
+
+        PlayerService.addPlaybackChangeListener {
+            TogglePlaybackTileService.updateState(
+                context = applicationContext,
+                playbackIsStarted = it == PlayerService.PlaybackState.Playing)
+        }
+    }
+}

@@ -9,7 +9,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.app.PendingIntent.FLAG_UPDATE_CURRENT
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.database.ContentObserver
@@ -20,7 +19,6 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings.System.CONTENT_URI
-import android.service.quicksettings.TileService
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -90,11 +88,11 @@ class PlayerService: LifecycleService() {
     private var isPlaying by mutableStateOf(false)
     private var wasAutoPaused = false
 
-    private var isStartedAndPlaying = false
-        set(value) {
-            field = value
-            TogglePlaybackTileService.updateState(this, value)
-        }
+    enum class PlaybackState { Playing, Paused, Stopped }
+
+    fun interface PlaybackChangeListener {
+        fun onPlaybackStateChange(newState: PlaybackState)
+    }
 
     companion object {
         private const val requestCode = 1
@@ -111,6 +109,22 @@ class PlayerService: LifecycleService() {
         fun stopIntent(context: Context) =
             Intent(context, PlayerService::class.java)
                 .setAction(actionStop)
+
+        private val playbackChangeListeners = mutableListOf<PlaybackChangeListener>()
+
+        fun addPlaybackChangeListener(listener: PlaybackChangeListener) {
+            playbackChangeListeners.add(listener)
+        }
+
+        fun removePlaybackChangeListener(listener: PlaybackChangeListener) {
+            playbackChangeListeners.remove(listener)
+        }
+
+        var playbackState = PlaybackState.Stopped
+            private set(value) {
+                field = value
+                playbackChangeListeners.forEach { it.onPlaybackStateChange(value) }
+            }
     }
 
     override fun onCreate() {
@@ -159,7 +173,7 @@ class PlayerService: LifecycleService() {
 
     override fun onDestroy() {
         uriPlayerMap.forEach { it.value.release() }
-        isStartedAndPlaying = false
+        playbackState = PlaybackState.Stopped
         super.onDestroy()
     }
 
@@ -167,7 +181,7 @@ class PlayerService: LifecycleService() {
         when (intent?.action) {
             actionStop -> {
                 if (!boundToActivity) {
-                    isStartedAndPlaying = false
+                    playbackState = PlaybackState.Stopped
                     stopForeground(true)
                     stopSelf()
                 } else setIsPlaying(false)
@@ -215,7 +229,8 @@ class PlayerService: LifecycleService() {
     fun setIsPlaying(isPlaying: Boolean) {
         this.isPlaying = isPlaying
         runWithoutActivity = true
-        isStartedAndPlaying = isPlaying
+        playbackState = if (isPlaying) PlaybackState.Playing
+                        else           PlaybackState.Paused
         uriPlayerMap.forEach { it.value.setPaused(!isPlaying) }
         notificationManager.notify(notificationId, notification)
         wasAutoPaused = false
