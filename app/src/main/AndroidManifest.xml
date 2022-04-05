@@ -33,7 +33,7 @@
         <service
             android:name=".TogglePlayerTileService"
             android:label="@string/app_name"
-            android:icon="@mipmap/ic_launcher_transparent_bg"
+            android:icon="@drawable/tile_and_notification_icon"
             android:exported="true"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>

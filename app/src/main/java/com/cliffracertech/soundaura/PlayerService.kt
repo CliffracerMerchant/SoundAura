@@ -255,7 +255,7 @@ class PlayerService: LifecycleService() {
     private val notificationBuilder by lazy {
         NotificationCompat.Builder(this, notificationChannelId)
             .setOngoing(true)
-            .setSmallIcon(R.mipmap.ic_launcher_transparent_bg)
+            .setSmallIcon(R.drawable.tile_and_notification_icon)
             .setContentIntent(PendingIntent.getActivity(this, 0,
                 Intent(this, MainActivity::class.java).apply {
                     action = Intent.ACTION_MAIN

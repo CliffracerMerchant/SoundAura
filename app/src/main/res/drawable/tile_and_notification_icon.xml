@@ -1,0 +1,44 @@
+<!-- This file is part of SoundAura, which is released under
+   ~ the terms of the Apache License 2.0. See license.md in
+   ~ the project's root directory to see the full license. -->
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="20"
+    android:viewportHeight="20">
+    <group>
+        <path
+            android:pathData="M 10 8 A 2 2 0 0 0 10 12 A 2 2 0 0 0 10 8"
+            android:strokeLineCap="butt">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:startX="0"
+                    android:startY="10"
+                    android:endX="20"
+                    android:endY="10"
+                    android:type="linear">
+                    <item android:offset="0" android:color="#55D69A"/>
+                    <item android:offset="1" android:color="#3EC2BD"/>
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path
+            android:pathData="M 10 0.875 A 9.125 9.125 0 0 0 10 19.125 A 9.125 9.125 0 0 0 10 0.875 M 11.896 13.284 A 3.792 3.792 0 0 0 11.896 6.716 M 8.104 6.716 A 3.792 3.792 0 0 0 8.104 13.284 M 15.594 6.77 A 6.459 6.459 0 0 0 4.406 6.77 M 4.406 13.23 A 6.459 6.459 0 0 0 15.594 13.23"
+            android:strokeWidth="1.75"
+            android:strokeLineCap="round">
+            <aapt:attr name="android:strokeColor">
+                <gradient
+                    android:startX="0"
+                    android:startY="10"
+                    android:endX="20"
+                    android:endY="10"
+                    android:type="linear">
+                    <item android:offset="0" android:color="#55D69A"/>
+                    <item android:offset="1" android:color="#3EC2BD"/>
+                </gradient>
+            </aapt:attr>
+        </path>
+    </group>
+</vector>
