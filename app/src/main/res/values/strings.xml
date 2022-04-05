@@ -13,6 +13,11 @@
     <string name="player_notification_channel_description">
         A notification that contains player controls.</string>
 
+    <string name="tile_inactive_subtitle">Stopped</string>
+    <string name="tile_active_subtitle">Playing</string>
+    <string name="tile_inactive_description">Play SoundAura audio</string>
+    <string name="tile_active_description">Stop SoundAura</string>
+
     <string name="back_description">Back</string>
     <string name="search_description">Search</string>
     <string name="sort_options_description">Open sorting options</string>

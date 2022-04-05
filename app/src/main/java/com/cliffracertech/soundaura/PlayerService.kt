@@ -9,6 +9,8 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.app.PendingIntent.FLAG_UPDATE_CURRENT
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.database.ContentObserver
 import android.media.AudioDeviceCallback
@@ -18,6 +20,7 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings.System.CONTENT_URI
+import android.service.quicksettings.TileService
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -72,6 +75,8 @@ import javax.inject.Inject
 class PlayerService: LifecycleService() {
     private val uriPlayerMap = mutableMapOf<String, MediaPlayer>()
     @Inject lateinit var trackDao: TrackDao
+    private lateinit var audioManager: AudioManager
+    private lateinit var notificationManager: NotificationManager
 
     private var boundToActivity = false
     private var runWithoutActivity = false
@@ -84,38 +89,38 @@ class PlayerService: LifecycleService() {
 
     private var isPlaying by mutableStateOf(false)
     private var wasAutoPaused = false
-    private lateinit var audioManager: AudioManager
+
+    private var isStartedAndPlaying get() = Companion.isStartedAndPlaying
+        set(value) {
+            Companion.isStartedAndPlaying = value
+            val tileService = ComponentName(this, TogglePlayerTileService::class.java)
+            TileService.requestListeningState(this, tileService)
+        }
 
     companion object {
         private const val requestCode = 1
         private const val playPauseKey = "playPause"
         private const val actionPlayPause = "com.cliffracertech.soundaura.action.playPause"
         private const val actionStop = "com.cliffracertech.soundaura.action.stop"
-        private const val notificationId = 342654432
-    }
+        private const val notificationId = 1
 
-    override fun onDestroy() {
-        uriPlayerMap.forEach { it.value.release() }
-        super.onDestroy()
-    }
+        var isStartedAndPlaying = false
+            private set
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val action = intent?.action
-        if (action == actionStop && !boundToActivity) {
-            stopForeground(true)
-            stopSelf()
-        } else if (action == actionPlayPause) {
-            val wasPlaying = intent.extras?.getBoolean(playPauseKey)
-            wasPlaying?.let { setIsPlaying(it) }
-        }
+        fun playIntent(context: Context) =
+            Intent(context, PlayerService::class.java)
+                .setAction(actionPlayPause)
+                .putExtra(playPauseKey, true)
 
-        startForeground(notificationId, notification)
-        return super.onStartCommand(intent, flags, startId)
+        fun stopIntent(context: Context) =
+            Intent(context, PlayerService::class.java)
+                .setAction(actionStop)
     }
 
     override fun onCreate() {
         super.onCreate()
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+        notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
         contentResolver.registerContentObserver(CONTENT_URI, true, object: ContentObserver(null) {
             override fun onChange(selfChange: Boolean) {
@@ -156,46 +161,31 @@ class PlayerService: LifecycleService() {
         }
     }
 
-    private fun checkAutoPause() {
-        val volume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-        if (volume == 0 && isPlaying) {
-            setIsPlaying(false)
-            wasAutoPaused = true
-        } else if (volume > 0 && !isPlaying && wasAutoPaused) {
-            setIsPlaying(true)
-            wasAutoPaused = false
+    override fun onDestroy() {
+        uriPlayerMap.forEach { it.value.release() }
+        isStartedAndPlaying = false
+        super.onDestroy()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            actionStop -> {
+                if (!boundToActivity) {
+                    isStartedAndPlaying = false
+                    stopForeground(true)
+                    stopSelf()
+                } else setIsPlaying(false)
+            } actionPlayPause -> {
+                // The service should be in a foreground state if a play/
+                // pause action is invoked, but setIsPlaying will cause
+                // runWithoutActivity to be set to true, which will cause
+                // startForeground to be called if it hadn't been already.
+                val targetState = intent.extras?.getBoolean(playPauseKey)
+                targetState?.let { setIsPlaying(it) }
+            } else -> startForeground(notificationId, notification)
         }
+        return super.onStartCommand(intent, flags, startId)
     }
-
-    override fun onBind(intent: Intent): Binder {
-        super.onBind(intent)
-        boundToActivity = true
-        notificationManager.notify(notificationId, notification)
-        return Binder()
-    }
-
-    override fun onRebind(intent: Intent?) {
-        boundToActivity = true
-        notificationManager.notify(notificationId, notification)
-    }
-
-    override fun onUnbind(intent: Intent?): Boolean {
-        boundToActivity = false
-        if (!runWithoutActivity) notificationManager.cancel(notificationId)
-        else notificationManager.notify(notificationId, notification)
-        return true
-    }
-
-    fun setIsPlaying(isPlaying: Boolean) {
-        this.isPlaying = isPlaying
-        runWithoutActivity = true
-        uriPlayerMap.forEach { it.value.setPaused(!isPlaying) }
-        notificationManager.notify(notificationId, notification)
-        wasAutoPaused = false
-    }
-
-    private fun MediaPlayer.setPaused(paused: Boolean) =
-        if (paused) pause() else start()
 
     inner class Binder: android.os.Binder() {
         val isPlaying get() = this@PlayerService.isPlaying
@@ -209,8 +199,41 @@ class PlayerService: LifecycleService() {
         }
     }
 
-    private val notificationManager by lazy {
-        getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+    override fun onBind(intent: Intent): Binder {
+        super.onBind(intent)
+        boundToActivity = true
+        notificationManager.notify(notificationId, notification)
+        return Binder()
+    }
+
+    override fun onUnbind(intent: Intent?): Boolean {
+        boundToActivity = false
+        if (!runWithoutActivity) notificationManager.cancel(notificationId)
+        else notificationManager.notify(notificationId, notification)
+        return false
+    }
+
+    private fun MediaPlayer.setPaused(paused: Boolean) =
+        if (paused) pause() else start()
+
+    fun setIsPlaying(isPlaying: Boolean) {
+        this.isPlaying = isPlaying
+        runWithoutActivity = true
+        isStartedAndPlaying = isPlaying
+        uriPlayerMap.forEach { it.value.setPaused(!isPlaying) }
+        notificationManager.notify(notificationId, notification)
+        wasAutoPaused = false
+    }
+
+    private fun checkAutoPause() {
+        val volume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        if (volume == 0 && isPlaying) {
+            setIsPlaying(false)
+            wasAutoPaused = true
+        } else if (volume > 0 && !isPlaying && wasAutoPaused) {
+            setIsPlaying(true)
+            wasAutoPaused = false
+        }
     }
 
     private val notificationChannelId by lazy {
@@ -227,6 +250,8 @@ class PlayerService: LifecycleService() {
         channelId
     }
 
+    private val notificationStyle = androidx.media.app.NotificationCompat.MediaStyle()
+
     private val notificationBuilder by lazy {
         NotificationCompat.Builder(this, notificationChannelId)
             .setOngoing(true)
@@ -238,45 +263,50 @@ class PlayerService: LifecycleService() {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }, FLAG_IMMUTABLE))
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setStyle(notificationStyle)
     }
 
     /** A notification action that will toggle the service's isPlaying state. */
     private val togglePlayPauseAction: Action get() {
         val icon = if (isPlaying) R.drawable.pause_to_play
                    else           R.drawable.play_to_pause
-        val description = getString(if (isPlaying) R.string.pause_description
-                                    else           R.string.play_description)
+        val description = getString(
+            if (isPlaying) R.string.pause_description
+            else           R.string.play_description)
+
         val intent = Intent(this, PlayerService::class.java)
                         .setAction(actionPlayPause)
                         .putExtra(playPauseKey, !isPlaying)
-        val pendingIntent = PendingIntent.getService(this, requestCode, intent,
-                                                     FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE)
+        val pendingIntent = PendingIntent.getService(
+            this, requestCode, intent, FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE)
         return Action(icon, description, pendingIntent)
     }
 
     /** A notification action that will stop the service when triggered. */
-    private val stopServiceAction: Action get() {
-        val intent = Intent(this, PlayerService::class.java).setAction(actionStop)
-        return Action(R.drawable.ic_baseline_close_24,
-                      getString(R.string.close_description),
-                      PendingIntent.getService(this, requestCode, intent, FLAG_IMMUTABLE))
+    private val stopServiceAction by lazy {
+        val pendingIntent = PendingIntent.getService(
+            this, requestCode, stopIntent(this), FLAG_IMMUTABLE)
+        Action(R.drawable.ic_baseline_close_24,
+               getString(R.string.close_description),
+               pendingIntent)
     }
 
     /** A notification to use as the foreground notification for the service */
     private val notification: Notification get() {
-        val description = getString(if (isPlaying) R.string.playing_description
-                                    else           R.string.paused_description)
+        val description = getString(
+            if (isPlaying) R.string.playing_description
+            else           R.string.paused_description)
+
         val builder = notificationBuilder
             .setContentTitle(description)
             .clearActions()
             .addAction(togglePlayPauseAction)
 
-        val style = androidx.media.app.NotificationCompat.MediaStyle()
         if (runWithoutActivity && !boundToActivity) {
             builder.addAction(stopServiceAction)
-            style.setShowActionsInCompactView(0, 1)
-        } else style.setShowActionsInCompactView(0)
+            notificationStyle.setShowActionsInCompactView(0, 1)
+        } else notificationStyle.setShowActionsInCompactView(0)
 
-        return builder.setStyle(style).build()
+        return builder.build()
     }
 }
