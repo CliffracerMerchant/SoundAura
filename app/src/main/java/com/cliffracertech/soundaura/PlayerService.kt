@@ -90,11 +90,10 @@ class PlayerService: LifecycleService() {
     private var isPlaying by mutableStateOf(false)
     private var wasAutoPaused = false
 
-    private var isStartedAndPlaying get() = Companion.isStartedAndPlaying
+    private var isStartedAndPlaying = false
         set(value) {
-            Companion.isStartedAndPlaying = value
-            val tileService = ComponentName(this, TogglePlayerTileService::class.java)
-            TileService.requestListeningState(this, tileService)
+            field = value
+            TogglePlaybackTileService.updateState(this, value)
         }
 
     companion object {
@@ -103,9 +102,6 @@ class PlayerService: LifecycleService() {
         private const val actionPlayPause = "com.cliffracertech.soundaura.action.playPause"
         private const val actionStop = "com.cliffracertech.soundaura.action.stop"
         private const val notificationId = 1
-
-        var isStartedAndPlaying = false
-            private set
 
         fun playIntent(context: Context) =
             Intent(context, PlayerService::class.java)
