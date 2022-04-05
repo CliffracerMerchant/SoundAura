@@ -88,27 +88,22 @@ class PlayerService: LifecycleService() {
     private var isPlaying by mutableStateOf(false)
     private var wasAutoPaused = false
 
-    enum class PlaybackState { Playing, Paused, Stopped }
-
     fun interface PlaybackChangeListener {
         fun onPlaybackStateChange(newState: PlaybackState)
     }
 
     companion object {
         private const val requestCode = 1
-        private const val playPauseKey = "playPause"
-        private const val actionPlayPause = "com.cliffracertech.soundaura.action.playPause"
-        private const val actionStop = "com.cliffracertech.soundaura.action.stop"
         private const val notificationId = 1
 
         fun playIntent(context: Context) =
             Intent(context, PlayerService::class.java)
-                .setAction(actionPlayPause)
-                .putExtra(playPauseKey, true)
+                .setAction(context.getString(R.string.set_playback_action))
+                .putExtra(context.getString(R.string.set_playback_key), true)
 
         fun stopIntent(context: Context) =
             Intent(context, PlayerService::class.java)
-                .setAction(actionStop)
+                .setAction(context.getString(R.string.stop_playback_action))
 
         private val playbackChangeListeners = mutableListOf<PlaybackChangeListener>()
 
@@ -179,18 +174,19 @@ class PlayerService: LifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            actionStop -> {
+            getString(R.string.stop_playback_action) -> {
                 if (!boundToActivity) {
                     playbackState = PlaybackState.Stopped
                     stopForeground(true)
                     stopSelf()
                 } else setIsPlaying(false)
-            } actionPlayPause -> {
+            } getString(R.string.set_playback_action) -> {
                 // The service should be in a foreground state if a play/
                 // pause action is invoked, but setIsPlaying will cause
                 // runWithoutActivity to be set to true, which will cause
                 // startForeground to be called if it hadn't been already.
-                val targetState = intent.extras?.getBoolean(playPauseKey)
+                val key = getString(R.string.set_playback_key)
+                val targetState = intent.extras?.getBoolean(key)
                 targetState?.let { setIsPlaying(it) }
             } else -> startForeground(notificationId, notification)
         }
@@ -286,8 +282,8 @@ class PlayerService: LifecycleService() {
             else           R.string.play_description)
 
         val intent = Intent(this, PlayerService::class.java)
-                        .setAction(actionPlayPause)
-                        .putExtra(playPauseKey, !isPlaying)
+            .setAction(getString(R.string.set_playback_action))
+            .putExtra(getString(R.string.set_playback_key), !isPlaying)
         val pendingIntent = PendingIntent.getService(
             this, requestCode, intent, FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE)
         return Action(icon, description, pendingIntent)

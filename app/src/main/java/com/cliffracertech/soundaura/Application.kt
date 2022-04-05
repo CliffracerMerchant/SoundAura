@@ -3,7 +3,10 @@
 
 package com.cliffracertech.soundaura
 
+import androidx.core.content.ContextCompat
 import dagger.hilt.android.HiltAndroidApp
+
+enum class PlaybackState { Playing, Paused, Stopped }
 
 @HiltAndroidApp
 class SoundAuraApplication : android.app.Application() {
@@ -12,8 +15,14 @@ class SoundAuraApplication : android.app.Application() {
 
         PlayerService.addPlaybackChangeListener {
             TogglePlaybackTileService.updateState(
-                context = applicationContext,
-                playbackIsStarted = it == PlayerService.PlaybackState.Playing)
+                context = applicationContext, state = it)
+        }
+
+        TogglePlaybackTileService.addPlaybackStateRequestListener {
+            if (it == PlaybackState.Playing)
+                ContextCompat.startForegroundService(
+                    this, PlayerService.playIntent(this))
+            else startService(PlayerService.stopIntent(this))
         }
     }
 }
