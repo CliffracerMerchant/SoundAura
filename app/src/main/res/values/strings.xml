@@ -39,9 +39,9 @@
     <string name="some_tracks_already_exist_error_message">
         %1$d of the selected files were already in the library.</string>
     <string name="over_file_permission_limit_warning">
-        %1$d files could not be added because the app is at Android\'s
-        file permission limit of %2$d. You must remove some tracks in
-        order to add any more.
+        %1$d files could not be added because the app is at
+        Android\'s file permission limit of %2$d. You must
+        remove some tracks in order to add any more.
     </string>
 
     <string name="rename_description">Rename</string>
@@ -76,6 +76,42 @@
     <string name="light_theme_description">Light</string>
     <string name="dark_theme_description">Dark</string>
 
+    <string name="playback_category_description">Playback</string>
+    <string name="control_playback_using_tile_setting_title">
+        Control playback using a tile</string>
+    <string name="tile_tutorial_title">Tile Tutorial</string>
+    <string name="multi_step_dialog_indicator">%1$d of %2$d</string>
+    <string name="tile_tutorial_intro_text">
+        In addition to its notification, you can control SoundAura
+        through a quick settings tile.</string>
+    <string name="tile_tutorial_add_tile_text">
+        To add it to your active quick setting tiles, tap the fully
+        expanded status bar\'s edit button, and drag the SoundAura
+        tile into your list of current tiles.</string>
+    <string name="tile_tutorial_add_tile_help_button_text">
+        Help! I can\'t figure out how to add tiles.</string>
+    <string name="tile_tutorial_add_tile_help_button_show_description">show add tile help</string>
+    <string name="tile_tutorial_add_tile_help_button_hide_description">hide add tile help</string>
+    <string name="tile_tutorial_add_tile_help_text">
+        The button to edit
+        your quick setting tiles might appear differently depending
+        on your device manufacturer and Android version. If you
+        can\'t figure out how to add quick setting tiles, try
+        searching \'edit quick setting tiles\' along with your
+        device manufacturer on an internet search engine.</string>
+    <string name="tile_tutorial_add_tile_button_text">Add tile</string>
+    <string name="tile_tutorial_tile_usage_text">
+        Tapping the tile will toggle SoundAura\'s background audio
+        service between its playing and stopped states. Long tapping
+        the tile will open SoundAura.</string>
+    <string name="tile_tutorial_hide_notification_text">
+        If you would like to hide SoundAura\'s notification to save
+        space, you must hide it yourself (Android won\'t allow
+        SoundAura to do this). Go to the %1$s, tap \'Notifications\'
+        and disable the \'Player controls\' notification.</string>
+    <string name="tile_tutorial_hide_notification_link_text">
+        system settings page for SoundAura</string>
+
     <string name="about_category_description">About</string>
     <string name="privacy_policy_description">Privacy policy</string>
     <string name="privacy_policy_text">
@@ -83,9 +119,10 @@
     <string name="open_source_licenses_description">Open source licenses</string>
     <string name="about_app_description">About SoundAura</string>
     <string name="about_app_body">
-        Copyright 2022 Nicholas Hochstetler. \nSoundAura is an open source ambient
-        noise app. The source code is licensed under the terms of the Apache License,
-        version 2.0, and can be viewed at: https://github.com/NicholasHochstetler/SoundAura</string>
+        Copyright 2022 Nicholas Hochstetler. \nSoundAura is an open
+        source ambient noise app. The source code is licensed under
+        the terms of the Apache License, version 2.0, and can be
+        viewed at: https://github.com/NicholasHochstetler/SoundAura</string>
 </resources>
 
 

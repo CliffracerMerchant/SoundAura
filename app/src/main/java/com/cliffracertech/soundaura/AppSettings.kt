@@ -27,7 +27,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
     title: String,
     content: List<@Composable () -> Unit>
 ) = Surface(shape = MaterialTheme.shapes.large) {
-    Column(Modifier.padding(20.dp, 16.dp, 20.dp, 4.dp)) {
+    Column(Modifier.padding(20.dp, 16.dp, 20.dp, 6.dp)) {
         Text(title, style = MaterialTheme.typography.h6)
         Spacer(Modifier.height(8.dp))
         Divider()
@@ -78,13 +78,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
  * @param icon The icon to represent the setting. Will not be displayed if null.
  * @param title The string title for the setting.
  * @param description A longer description of the setting. Will not be displayed if null.
+ * @param onTitleClick The callback, if any, that will be invoked when the setting
+ *                     title is clicked. Defaults to null.
  * @param content A composable containing the content used to change the setting.
  */
 @Composable fun Setting(
     title: String,
     icon: (@Composable () -> Unit)? = null,
-    onTitleClick: (() -> Unit)? = null,
     description: String? = null,
+    onTitleClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) = Row(verticalAlignment = Alignment.CenterVertically) {
 
@@ -104,6 +106,33 @@ import androidx.lifecycle.viewmodel.compose.viewModel
     content()
 }
 
+/**
+ * Compose a Setting instance with empty content, whose title will open
+ * a dialog when clicked.
+ *
+ * @param icon The icon to represent the setting. Will not be displayed if null.
+ * @param title The string title for the setting.
+ * @param description A longer description of the setting. Will not be displayed if null.
+ * @param content The composable labmda containing the dialog that will be shown
+ *     when the title is clicked. The provided () -> Unit lambda argument should
+ *     be used as the onDismissRequest for the inner dialog.
+ */
+@Composable fun DialogSetting(
+    title: String,
+    icon: (@Composable () -> Unit)? = null,
+    description: String? = null,
+    content: @Composable (onDismissRequest: () -> Unit) -> Unit,
+) {
+    var showingDialog by rememberSaveable { mutableStateOf(false) }
+    Setting(
+        title = title,
+        icon = icon,
+        description = description,
+        onTitleClick = { showingDialog = true }) {}
+    if (showingDialog)
+        content { showingDialog = false }
+}
+
 @Composable fun AppSettings() = Surface(
     color = MaterialTheme.colors.background,
     modifier = Modifier.fillMaxSize(1f)
@@ -114,50 +143,55 @@ import androidx.lifecycle.viewmodel.compose.viewModel
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item { DisplaySettingsCategory() }
+        item { PlaybackSettingsCategory() }
         item { AboutSettingsCategory() }
     }
 }
 
 @Composable private fun DisplaySettingsCategory() {
-    val titleString = stringResource(R.string.display_category_description)
-    val appThemeSetting = @Composable {
-        val viewModel: SettingsViewModel = viewModel()
-        Setting(title = stringResource(R.string.app_theme_description)) {
-            EnumRadioButtonGroup(
-                modifier = Modifier.padding(end = 16.dp),
-                values = AppTheme.values(),
-                valueNames = AppTheme.stringValues(),
-                currentValue = viewModel.appTheme,
-                onValueSelected = viewModel::onAppThemeSelected)
-        }
-    }
-    SettingCategory(titleString, listOf(appThemeSetting))
+    SettingCategory(
+        title = stringResource(R.string.display_category_description),
+        content = listOf @Composable {
+            val viewModel: SettingsViewModel = viewModel()
+            Setting(title = stringResource(R.string.app_theme_description)) {
+                EnumRadioButtonGroup(
+                    modifier = Modifier.padding(end = 16.dp),
+                    values = AppTheme.values(),
+                    valueNames = AppTheme.stringValues(),
+                    currentValue = viewModel.appTheme,
+                    onValueSelected = viewModel::onAppThemeSelected)
+            }
+        })
+}
+
+@Composable private fun PlaybackSettingsCategory() {
+    SettingCategory(
+        title = stringResource(R.string.playback_category_description),
+        content = listOf {
+            DialogSetting(stringResource(R.string.control_playback_using_tile_setting_title)) {
+                TileTutorialDialog(onDismissRequest = it)
+            }
+        })
 }
 
 @Composable private fun AboutSettingsCategory() {
-    val titleString = stringResource(R.string.about_category_description)
+    val title = stringResource(R.string.about_category_description)
     val privacyPolicySetting = @Composable {
-        var showingPrivacyPolicy by rememberSaveable { mutableStateOf(false) }
-        Setting(title = stringResource(R.string.privacy_policy_description),
-                onTitleClick = { showingPrivacyPolicy = true }) {}
-        if (showingPrivacyPolicy)
-            PrivacyPolicyDialog { showingPrivacyPolicy = false }
+        DialogSetting(stringResource(R.string.privacy_policy_description)) {
+            PrivacyPolicyDialog(onDismissRequest = it)
+        }
     }
     val openSourceLicensesSetting = @Composable {
-        var showingLicenses by rememberSaveable { mutableStateOf(false) }
-        Setting(title = stringResource(R.string.open_source_licenses_description),
-                onTitleClick = { showingLicenses = true }) {}
-        if (showingLicenses)
-            OpenSourceLibrariesUsedDialog { showingLicenses = false }
+        DialogSetting(stringResource(R.string.open_source_licenses_description)) {
+            OpenSourceLibrariesUsedDialog(onDismissRequest = it)
+        }
     }
     val aboutAppSetting = @Composable {
-        var showingAboutApp by rememberSaveable { mutableStateOf(false) }
-        Setting(title = stringResource(R.string.about_app_description),
-                onTitleClick = { showingAboutApp = true }) {}
-        if (showingAboutApp)
-            AboutAppDialog { showingAboutApp = false }
+        DialogSetting(stringResource(R.string.about_app_description)) {
+            AboutAppDialog(onDismissRequest = it)
+        }
     }
-    SettingCategory(titleString, listOf(
+    SettingCategory(title, listOf(
         privacyPolicySetting,
         openSourceLicensesSetting,
         aboutAppSetting))

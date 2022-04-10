@@ -4,19 +4,31 @@
 package com.cliffracertech.soundaura
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -24,6 +36,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -238,6 +251,158 @@ val List<String>.containsBlanks get() =
             trackNames.Editor(Modifier.heightIn(max = 400.dp))
         })
 }
+
+@Composable fun MultiStepDialog(
+    title: String,
+    titleContentSpacing: Dp = 12.dp,
+    contentButtonSpacing: Dp = 8.dp,
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit = onDismissRequest,
+    pages: List<@Composable () -> Unit>
+) = Dialog(onDismissRequest, DialogProperties(usePlatformDefaultWidth = false)) {
+    require(pages.isNotEmpty())
+
+    Surface(Modifier.padding(24.dp), MaterialTheme.shapes.medium) {
+        Column(Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp)) {
+            var previousPage by rememberSaveable { mutableStateOf(0) }
+            var currentPage by rememberSaveable { mutableStateOf(0) }
+
+            Row {
+                Text(title, style = MaterialTheme.typography.body1)
+                Spacer(Modifier.weight(1f))
+                Text(stringResource(R.string.multi_step_dialog_indicator, currentPage + 1, pages.size),
+                     style = MaterialTheme.typography.subtitle1)
+            }
+
+            Spacer(Modifier.height(titleContentSpacing))
+
+            CompositionLocalProvider(LocalTextStyle provides MaterialTheme.typography.subtitle1) {
+                SlideAnimatedContent(
+                    targetState = currentPage,
+                    modifier = Modifier.animateContentSize(tween()),
+                    leftToRight = currentPage >= previousPage
+                ) { pages[it]() }
+            }
+
+            Spacer(Modifier.height(contentButtonSpacing))
+
+            Row {
+                val firstButtonText: String
+                val secondButtonText: String
+                val firstButtonOnClick: () -> Unit
+                val secondButtonOnClick: () -> Unit
+
+                if (currentPage == 0) {
+                    firstButtonText = "Cancel"
+                    firstButtonOnClick = onDismissRequest
+                } else {
+                    firstButtonText = "Previous"
+                    firstButtonOnClick = {
+                        previousPage = currentPage
+                        currentPage -= 1
+                    }
+                }
+                if (currentPage == pages.lastIndex) {
+                    secondButtonText = "Finish"
+                    secondButtonOnClick = onConfirm
+                } else {
+                    secondButtonText = "Next"
+                    secondButtonOnClick = {
+                        previousPage = currentPage
+                        currentPage += 1
+                    }
+                }
+
+                TextButton(firstButtonOnClick) { Text(firstButtonText) }
+                Spacer(Modifier.weight(1f))
+                TextButton(secondButtonOnClick) { Text(secondButtonText) }
+            }
+        }
+    }
+}
+
+@Composable fun TileTutorialDialog(
+    onDismissRequest: () -> Unit
+) = MultiStepDialog(
+    title = stringResource(R.string.tile_tutorial_title),
+    onDismissRequest = onDismissRequest,
+    pages = listOf(@Composable {
+        Column {
+            Text(stringResource(R.string.tile_tutorial_intro_text))
+
+//            if (Build.VERSION.SDK_INT >= 33) {
+//                val onButtonClick = { StatusBarManager.requestAddTileService(
+//                    ComponentName(context, TogglePlaybackTileService::class.java),
+//                    stringResource(R.string.app_name),
+//                    icon =,
+//                    resultExecutor =,
+//                    resultCallback =,)
+//                }
+//                TextButton(onClick = onButtonClick) {
+//                    Text(stringResource(R.string.tile_tutorial_add_tile_button_text))
+//                }
+//            } else {
+            Spacer(Modifier.size(16.dp))
+            Text(stringResource(R.string.tile_tutorial_add_tile_text))
+            Column {
+                var showingAddTileHelp by rememberSaveable { mutableStateOf(false) }
+                Row(modifier = Modifier.minTouchTargetSize()
+                        .clickable { showingAddTileHelp = !showingAddTileHelp },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(stringResource(R.string.tile_tutorial_add_tile_help_button_text),
+                         style = LocalTextStyle.current.copy(fontWeight = FontWeight.Bold))
+                    val iconRotation by animateFloatAsState(if (showingAddTileHelp) 180f else 0f)
+                    Spacer(Modifier.weight(1f))
+                    Icon(imageVector = Icons.Default.ExpandMore,
+                         contentDescription = stringResource(
+                             if (showingAddTileHelp)
+                                 R.string.tile_tutorial_add_tile_help_button_hide_description
+                             else R.string.tile_tutorial_add_tile_help_button_show_description),
+                         modifier = Modifier.rotate(iconRotation))
+                }
+                AnimatedVisibility(showingAddTileHelp) {
+                    Text(stringResource(R.string.tile_tutorial_add_tile_help_text))
+                }
+            }
+        }
+
+//        }
+    }, @Composable {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(stringResource(R.string.tile_tutorial_tile_usage_text))
+            val context = LocalContext.current
+            val hideNotificationLinkText = stringResource(
+                R.string.tile_tutorial_hide_notification_link_text)
+            val hideNotificationText = stringResource(
+                R.string.tile_tutorial_hide_notification_text,
+                hideNotificationLinkText)
+            val linkTextStartIndex = hideNotificationText.indexOf(hideNotificationLinkText)
+            val linkTextLastIndex = linkTextStartIndex + hideNotificationLinkText.length
+
+            val linkifiedText = buildAnnotatedString {
+                // ClickableText seems to not follow the local text style by default
+                pushStyle(SpanStyle(color = LocalContentColor.current,
+                                    fontSize = LocalTextStyle.current.fontSize))
+                append(hideNotificationText)
+                val urlStyle = SpanStyle(color = MaterialTheme.colors.primary,
+                                         textDecoration = TextDecoration.Underline)
+                addStyle(urlStyle, linkTextStartIndex, linkTextLastIndex)
+            }
+
+            ClickableText(
+                text = linkifiedText,
+                modifier = Modifier.alpha(LocalContentAlpha.current),
+                style = MaterialTheme.typography.subtitle1
+            ) {
+                if (it in linkTextStartIndex..linkTextLastIndex) {
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                    intent.data = Uri.fromParts("package", context.packageName, null)
+                    context.startActivity(intent)
+                }
+            }
+        }
+    }))
 
 /** Show a dialog displaying the app's privacy policy to the user. */
 @Composable fun PrivacyPolicyDialog(
