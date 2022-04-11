@@ -9,10 +9,10 @@
     android:viewportWidth="30"
     android:viewportHeight="30">
     <group
-        android:scaleX="0.9"
-        android:scaleY="0.9"
-        android:translateX="1.5"
-        android:translateY="1.5"  >
+        android:scaleX="0.8"
+        android:scaleY="0.8"
+        android:translateX="3"
+        android:translateY="3"  >
         <path
             android:pathData="M 15 13 A 2 2 0 0 0 15 17 A 2 2 0 0 0 15 13"
             android:strokeLineCap="butt">
