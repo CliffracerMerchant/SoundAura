@@ -139,7 +139,7 @@ import com.google.accompanist.insets.statusBarsPadding
                 lastSearchQuery = searchQuery
         // This inner crossfade is for when the title changes.
         } else Crossfade(title) {
-            Text(it, style = MaterialTheme.typography.h6)
+            Text(it, style = MaterialTheme.typography.h6, maxLines = 1)
         }
     }
 
@@ -242,8 +242,7 @@ import com.google.accompanist.insets.statusBarsPadding
                 Divider(Modifier.align(Alignment.BottomStart),
                         LocalContentColor.current, thickness = (1.5).dp)
             }
-        }
-    )
+        })
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 }
 
