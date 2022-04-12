@@ -16,8 +16,7 @@
     <string name="set_playback_key">playback_value</string>
     <string name="stop_playback_action">com.cliffracertech.soundaura.action.stop</string>
 
-    <string name="tile_inactive_subtitle">Stopped</string>
-    <string name="tile_active_subtitle">Playing</string>
+    <string name="stopped_description">Stopped</string>
     <string name="tile_inactive_description">Play SoundAura audio</string>
     <string name="tile_active_description">Stop SoundAura audio</string>
 

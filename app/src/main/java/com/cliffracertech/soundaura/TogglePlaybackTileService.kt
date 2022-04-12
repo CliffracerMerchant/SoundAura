@@ -68,12 +68,15 @@ class TogglePlaybackTileService: TileService() {
             qsTile.state = STATE_ACTIVE
             qsTile.contentDescription = getString(R.string.tile_active_description)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
-                qsTile.subtitle = getString(R.string.tile_active_subtitle)
+                qsTile.subtitle = getString(R.string.playing_description)
         } else {
-            qsTile.state =  STATE_INACTIVE
+            qsTile.state = STATE_INACTIVE
             qsTile.contentDescription = getString(R.string.tile_inactive_description)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
-                qsTile.subtitle = getString(R.string.tile_inactive_subtitle)
+                qsTile.subtitle = getString(
+                    if (newestPlaybackState == PlaybackState.Paused)
+                        R.string.paused_description
+                    else R.string.stopped_description)
         }
         qsTile.updateTile()
     }
