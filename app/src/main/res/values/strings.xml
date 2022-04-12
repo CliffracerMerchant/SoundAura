@@ -11,7 +11,7 @@
     <string name="player_notification_channel_id">player_controls</string>
     <string name="player_notification_channel_name">Player controls</string>
     <string name="player_notification_channel_description">
-        A notification that contains player controls.</string>
+        A notification with controls for SoundAura\'s background audio service.</string>
     <string name="set_playback_action">com.cliffracertech.soundaura.action.playPause</string>
     <string name="set_playback_key">playback_value</string>
     <string name="stop_playback_action">com.cliffracertech.soundaura.action.stop</string>
