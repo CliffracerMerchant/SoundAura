@@ -9,7 +9,8 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
@@ -20,8 +21,6 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.SnapshotStateList
@@ -29,10 +28,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -42,7 +40,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.graphics.ColorUtils
 import androidx.documentfile.provider.DocumentFile
 import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 
@@ -366,7 +363,6 @@ val List<String>.containsBlanks get() =
                 }
             }
         }
-
 //        }
     }, @Composable {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -436,48 +432,37 @@ val List<String>.containsBlanks get() =
 ) = SoundAuraDialog(
     title = stringResource(R.string.app_name),
     titleLayout = { title ->
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(title, style = MaterialTheme.typography.body1)
-            CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.high) {
-                val textStyle = MaterialTheme.typography.subtitle1
-                Spacer(Modifier.width(6.dp))
-                ProvideTextStyle(textStyle) {
-                    Text(stringResource(R.string.app_version))
-                }
-            }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(painter = painterResource(R.drawable.tile_and_notification_icon),
+                 contentDescription = null,
+                 modifier = Modifier.size(30.dp),
+                 tint = MaterialTheme.colors.primary)
+            Spacer(Modifier.width(2.dp))
+            Text(text = title, style = MaterialTheme.typography.body1)
+            Text(text = stringResource(R.string.app_version),
+                 style = MaterialTheme.typography.subtitle1)
         }
     }, showCancelButton = false,
     onDismissRequest = onDismissRequest,
     onConfirm = onDismissRequest,
+    contentButtonSpacing = 0.dp
 ) {
-    val text = stringResource(R.string.about_app_body)
-    val linkifiedText = buildAnnotatedString {
-        // ClickableText seems to not follow the local text style by default
-        val backgroundColor = MaterialTheme.colors.surface
-        val localContentColor = LocalContentColor.current
-        val localContentAlpha = LocalContentAlpha.current
-        val bodyTextColor = remember(backgroundColor, localContentColor, localContentAlpha) {
-            Color(ColorUtils.blendARGB(backgroundColor.toArgb(),
-                                       localContentColor.toArgb(),
-                                       localContentAlpha))
-        }
-        pushStyle(SpanStyle(color = bodyTextColor))
-        append(text)
-        val urlRange = text.indexOf("https://")..text.lastIndex
-        val urlStyle = SpanStyle(color = MaterialTheme.colors.primary,
-                                 textDecoration = TextDecoration.Underline)
-        addStyle(style = urlStyle, start = urlRange.first, end = urlRange.last + 1)
-        addStringAnnotation(tag = "URL", annotation = text.substring(urlRange),
-                            start = urlRange.first, end = urlRange.last + 1)
-    }
     val uriHandler = LocalUriHandler.current
-
-    ClickableText(
-        text = linkifiedText,
-        style = MaterialTheme.typography.subtitle1
-    ) {
-        val annotations = linkifiedText.getStringAnnotations("URL", it, it)
-        for (annotation in annotations)
-            uriHandler.openUri(annotation.item)
+    val gitHubLink = stringResource(R.string.github_link)
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(text = stringResource(R.string.about_app_body),
+             style = MaterialTheme.typography.subtitle1)
+        Row(Modifier.clickable { uriHandler.openUri(gitHubLink) },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(painter = painterResource(R.drawable.github_logo),
+                 contentDescription = null,
+                 modifier = Modifier.padding(top = 16.dp, bottom = 16.dp, end = 12.dp))
+            Text(text = stringResource(R.string.source_code_description),
+                 textDecoration = TextDecoration.Underline,
+                 color = MaterialTheme.colors.primary)
+        }
     }
 }

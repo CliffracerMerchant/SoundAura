@@ -8,13 +8,9 @@
 
     <string name="app_player_service_description">
         A service to play the user\'s sound mix.</string>
-    <string name="player_notification_channel_id">player_controls</string>
     <string name="player_notification_channel_name">Player controls</string>
     <string name="player_notification_channel_description">
         A notification with controls for SoundAura\'s background audio service.</string>
-    <string name="set_playback_action">com.cliffracertech.soundaura.action.playPause</string>
-    <string name="set_playback_key">playback_value</string>
-    <string name="stop_playback_action">com.cliffracertech.soundaura.action.stop</string>
 
     <string name="stopped_description">Stopped</string>
     <string name="tile_inactive_description">Play SoundAura audio</string>
@@ -89,15 +85,17 @@
         tile into your list of current tiles.</string>
     <string name="tile_tutorial_add_tile_help_button_text">
         Help! I can\'t figure out how to add tiles.</string>
-    <string name="tile_tutorial_add_tile_help_button_show_description">show add tile help</string>
-    <string name="tile_tutorial_add_tile_help_button_hide_description">hide add tile help</string>
+    <string name="tile_tutorial_add_tile_help_button_show_description">
+        show add tile help</string>
+    <string name="tile_tutorial_add_tile_help_button_hide_description">
+        hide add tile help</string>
     <string name="tile_tutorial_add_tile_help_text">
-        The button to edit
-        your quick setting tiles might appear differently depending
-        on your device manufacturer and Android version. If you
-        can\'t figure out how to add quick setting tiles, try
-        searching \'edit quick setting tiles\' along with your
-        device manufacturer on an internet search engine.</string>
+        The button to edit your quick setting tiles might appear
+        differently depending on your device manufacturer and
+        Android version. If you can\'t figure out how to add quick
+        setting tiles, try searching \'edit quick setting tiles\'
+        along with your device manufacturer on an internet search
+        engine.</string>
     <string name="tile_tutorial_add_tile_button_text">Add tile</string>
     <string name="tile_tutorial_tile_usage_text">
         Tapping the tile will toggle SoundAura\'s background audio
@@ -118,10 +116,9 @@
     <string name="open_source_licenses_description">Open source licenses</string>
     <string name="about_app_description">About SoundAura</string>
     <string name="about_app_body">
-        Copyright 2022 Nicholas Hochstetler. \nSoundAura is an open
-        source ambient noise app. The source code is licensed under
-        the terms of the Apache License, version 2.0, and can be
-        viewed at: https://github.com/NicholasHochstetler/SoundAura</string>
+        SoundAura is an open source ambient sound app. The source code
+        is available under the terms of the Apache License, version 2.0.</string>
+    <string name="source_code_description">View source code</string>
 </resources>
 
 
