@@ -82,7 +82,7 @@ class PlayerService: LifecycleService() {
     private lateinit var notificationManager: NotificationManager
 
     private var isPlaying by mutableStateOf(false)
-    private var wasAutoPaused = false
+    private val unpauseLocks = mutableListOf<String>()
     private var currentlyBound = false
     private var runAsStartedService = false
         set(value) {
@@ -99,6 +99,7 @@ class PlayerService: LifecycleService() {
     companion object {
         private const val requestCode = 1
         private const val notificationId = 1
+        private const val autoPauseOnAudioDeviceChangeKey = "autopause_audio_device_change"
 
         fun playIntent(context: Context) =
             Intent(context, PlayerService::class.java)
@@ -134,11 +135,13 @@ class PlayerService: LifecycleService() {
         audioManager.registerAudioDeviceCallback(object: AudioDeviceCallback() {
             override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) {
                 super.onAudioDevicesAdded(addedDevices)
-                checkAutoPause()
+                val volume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                autoPauseIf(volume == 0, autoPauseOnAudioDeviceChangeKey)
             }
             override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) {
                 super.onAudioDevicesRemoved(removedDevices)
-                checkAutoPause()
+                val volume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                autoPauseIf(volume == 0, autoPauseOnAudioDeviceChangeKey)
             }
         }, null)
 
@@ -146,9 +149,10 @@ class PlayerService: LifecycleService() {
             trackDao.getAllPlayingTracks().collect { tracks ->
                 val uris = tracks.map { it.uriString }
                 uriPlayerMap.keys.retainAll {
-                    val result = it in uris
-                    if (!result) uriPlayerMap[it]?.release()
-                    result
+                    val inNewList = it in uris
+                    if (!inNewList)
+                        uriPlayerMap[it]?.release()
+                    inNewList
                 }
                 tracks.forEach {
                     val player = uriPlayerMap.getOrPut(it.uriString) {
@@ -221,25 +225,43 @@ class PlayerService: LifecycleService() {
     private fun MediaPlayer.setPaused(paused: Boolean) =
         if (paused) pause() else start()
 
-    fun setIsPlaying(isPlaying: Boolean) {
+    /** Set the isPlaying state, returning whether or not the change was
+     * successful. setIsPlaying will return false if the playing state
+     * already matched the provided value. */
+    fun setIsPlaying(isPlaying: Boolean): Boolean {
+        if (this.isPlaying == isPlaying)
+            return false
+        if (isPlaying && unpauseLocks.isNotEmpty())
+            return false
+
         this.isPlaying = isPlaying
         runAsStartedService = true
         playbackState = if (isPlaying) PlaybackState.Playing
                         else           PlaybackState.Paused
         uriPlayerMap.forEach { it.value.setPaused(!isPlaying) }
         notificationManager.notify(notificationId, notification)
-        wasAutoPaused = false
+        return true
     }
 
-    private fun checkAutoPause() {
-        val volume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-        if (volume == 0 && isPlaying) {
-            setIsPlaying(false)
-            wasAutoPaused = true
-        } else if (volume > 0 && !isPlaying && wasAutoPaused) {
+    /**
+     * Automatically pause playback if the parameter condition is true and
+     * isPlaying is true. If this auto-pause succeeds, an unpause lock will be
+     * added to the player with a key equal to the parameter key. Calling
+     * autoPauseIf with the same key with a false condition will remove the
+     * corresponding unpause lock and, if there are no other unpause locks,
+     * resume playback. Different causes of the auto-pause event should
+     * therefore utilize unique keys (e.g. one for auto-pausing when a call is
+     * started, and another for auto-pausing when other media starts playing).
+     * Manually setting the isPlaying state using setIsPlaying will reset all
+     * unpause locks.
+     */
+    private fun autoPauseIf(condition: Boolean, key: String) {
+        if (condition && isPlaying && setIsPlaying(false)) {
+            unpauseLocks.add(key)
+        } else if (!condition && unpauseLocks.remove(key))
+            // setIsPlaying will return false and not change the
+            // state if there are still other unpause locks remaining
             setIsPlaying(true)
-            wasAutoPaused = false
-        }
     }
 
     private val notificationChannelId by lazy {
