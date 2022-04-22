@@ -64,14 +64,15 @@ import javax.inject.Inject
  * function addPlaybackChangeListener with a PlaybackChangeListener.
  * PlaybackChangeListener is a functional interface whose single abstract
  * method is called whenever the PlayerService's playback state changes and
- * takes the new PlaybackState value as a parameter.
+ * takes the new PlaybackStateCompat value as a parameter.
  *
  * If an audio device change occurs when isPlaying is true and the new media
  * volume after the device change is zero, PlayerService will automatically
  * pause itself to preserve battery life. If another device change brings the
  * media volume back up to above zero and isPlaying has not been called
  * manually since PlayerService was auto-paused, it will also automatically
- * unpause itself.
+ * unpause itself. This auto-pause also works for ongoing calls if the
+ * READ_PHONE_STATE permission has been granted to the app.
  *
  * To ensure that the volume for already playing tracks is changed seamlessly
  * and without perceptible lag, PlayerService will not respond to track volume

@@ -17,18 +17,17 @@ import android.support.v4.media.session.PlaybackStateCompat
  * In order to update the tile's visual state, TogglePlaybackTileService must
  * be informed of changes to the app's playback state by calling the function
  * TogglePlaybackTileService.updateState with a context instance and a
- * PlaybackState value. The tile will appear in its active state if the app's
- * playback state is equal to PlaybackState.Playing, and will appear inactive
- * if the app's playback state is either PlaybackState.Paused or
- * PlaybackState.Stopped.
+ * PlaybackStateCompat value. The tile will appear in its active state if the
+ * app's playback state is equal to PlaybackStateCompat.STATE_PLAYING, and will
+ * appear inactive otherwise.
  *
  * As TogglePlaybackTileService itself does not control the app's playback
  * state, clicking the tile will request a playback state change. These
  * requests to change the playback state can be listened to by registering a
  * PlaybackStateRequestListener using the function addPlaybackStateRequestListener.
- * The requested state will be PlaybackState.Playing if the tile is clicked
- * when in its inactive state, and PlaybackState.Stopped if the tile is clicked
- * in its active state.
+ * The requested state will be PlaybackStateCompat.STATE_PLAYING if the tile is
+ * clicked when in its inactive state, and PlaybackStateCompat.STATE_STOPPED if
+ * the tile is clicked in its active state.
  */
 class TogglePlaybackTileService: TileService() {
 
