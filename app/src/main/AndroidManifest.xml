@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.cliffracertech.soundaura">
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.READ_PHONE_STATE"
+        android:requiredFeature="false"/>
 
     <application
         android:name="SoundAuraApplication"
@@ -43,6 +45,5 @@
                 android:name="android.service.quicksettings.ACTIVE_TILE"
                 android:value="true" />
         </service>
-
     </application>
 </manifest>

@@ -108,6 +108,7 @@ class PlayerService: LifecycleService() {
         private const val requestCode = 1
         private const val notificationId = 1
         private const val autoPauseOnAudioDeviceChangeKey = "autopause_audio_device_change"
+        private const val autoPauseOngoingCallKey = "autopause_ongoing_call"
 
         fun playIntent(context: Context) =
             Intent(context, PlayerService::class.java)
@@ -156,6 +157,7 @@ class PlayerService: LifecycleService() {
         super.onCreate()
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        telephonyManager = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
         mediaSession = MediaSessionCompat(
             this, PlayerService::class.toString(), null,
             PendingIntent.getActivity(this, 0,
@@ -179,6 +181,8 @@ class PlayerService: LifecycleService() {
                 autoPauseIf(volume == 0, autoPauseOnAudioDeviceChangeKey)
             }
         }, null)
+
+        addPhoneStateListener()
 
         repeatWhenStarted {
             trackDao.getAllPlayingTracks().collect { tracks ->
@@ -373,5 +377,26 @@ class PlayerService: LifecycleService() {
         notificationStyle.setMediaSession(mediaSession.sessionToken)
 
         return builder.build()
+    }
+
+    private fun addPhoneStateListener() {
+        val onCallStateChange = { state: Int ->
+            autoPauseIf(key = autoPauseOngoingCallKey, condition =
+                state == TelephonyManager.CALL_STATE_RINGING ||
+                state == TelephonyManager.CALL_STATE_OFFHOOK)
+        }
+        val id = android.os.Binder.clearCallingIdentity()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            telephonyManager.registerTelephonyCallback(
+                mainExecutor,
+                object : TelephonyCallback(), TelephonyCallback.CallStateListener {
+                    override fun onCallStateChanged(state: Int) =
+                        onCallStateChange(state)
+                })
+        } else telephonyManager.listen(object: PhoneStateListener() {
+            override fun onCallStateChanged(state: Int, phoneNumber: String?) =
+                onCallStateChange(state)
+        }, PhoneStateListener.LISTEN_CALL_STATE)
+        android.os.Binder.restoreCallingIdentity(id)
     }
 }
