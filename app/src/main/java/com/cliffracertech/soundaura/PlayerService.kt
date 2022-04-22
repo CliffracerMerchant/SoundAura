@@ -3,6 +3,7 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -11,6 +12,7 @@ import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
@@ -380,23 +382,31 @@ class PlayerService: LifecycleService() {
     }
 
     private fun addPhoneStateListener() {
+        val readPhoneState = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.READ_PHONE_STATE)
+        if (readPhoneState != PackageManager.PERMISSION_GRANTED)
+            return
+
         val onCallStateChange = { state: Int ->
             autoPauseIf(key = autoPauseOngoingCallKey, condition =
                 state == TelephonyManager.CALL_STATE_RINGING ||
                 state == TelephonyManager.CALL_STATE_OFFHOOK)
         }
+
         val id = android.os.Binder.clearCallingIdentity()
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val telephonyCallback = object : TelephonyCallback(), TelephonyCallback.CallStateListener {
+                override fun onCallStateChanged(state: Int) =
+                    onCallStateChange(state)
+            }
             telephonyManager.registerTelephonyCallback(
-                mainExecutor,
-                object : TelephonyCallback(), TelephonyCallback.CallStateListener {
-                    override fun onCallStateChanged(state: Int) =
-                        onCallStateChange(state)
-                })
+                mainExecutor, telephonyCallback)
         } else telephonyManager.listen(object: PhoneStateListener() {
             override fun onCallStateChanged(state: Int, phoneNumber: String?) =
                 onCallStateChange(state)
         }, PhoneStateListener.LISTEN_CALL_STATE)
+
         android.os.Binder.restoreCallingIdentity(id)
     }
 }
