@@ -9,6 +9,7 @@ import android.os.Build
 import android.service.quicksettings.Tile.STATE_ACTIVE
 import android.service.quicksettings.Tile.STATE_INACTIVE
 import android.service.quicksettings.TileService
+import android.support.v4.media.session.PlaybackStateCompat
 
 /**
  * A TileService to control control the app's audio playback.
@@ -32,13 +33,13 @@ import android.service.quicksettings.TileService
 class TogglePlaybackTileService: TileService() {
 
     fun interface PlaybackStateRequestListener {
-        fun onPlaybackStateRequest(requestedState: PlaybackState)
+        fun onPlaybackStateRequest(@PlaybackStateCompat.State requestedState: Int)
     }
 
     companion object {
-        private var newestPlaybackState = PlaybackState.Stopped
+        private var newestPlaybackState = PlaybackStateCompat.STATE_STOPPED
 
-        fun updateState(context: Context, state: PlaybackState) {
+        fun updateState(context: Context, @PlaybackStateCompat.State state: Int) {
             newestPlaybackState = state
             val tileService = ComponentName(
                 context, TogglePlaybackTileService::class.java)
@@ -55,7 +56,7 @@ class TogglePlaybackTileService: TileService() {
             playbackStateRequestListeners.remove(listener)
         }
 
-        private fun requestState(state: PlaybackState) {
+        private fun requestState(@PlaybackStateCompat.State state: Int) {
             playbackStateRequestListeners.forEach {
                 it.onPlaybackStateRequest(state)
             }
@@ -64,7 +65,7 @@ class TogglePlaybackTileService: TileService() {
 
     override fun onStartListening() {
         qsTile.label = getString(R.string.app_name)
-        if (newestPlaybackState == PlaybackState.Playing) {
+        if (newestPlaybackState == PlaybackStateCompat.STATE_PLAYING) {
             qsTile.state = STATE_ACTIVE
             qsTile.contentDescription = getString(R.string.tile_active_description)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
@@ -74,7 +75,7 @@ class TogglePlaybackTileService: TileService() {
             qsTile.contentDescription = getString(R.string.tile_inactive_description)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
                 qsTile.subtitle = getString(
-                    if (newestPlaybackState == PlaybackState.Paused)
+                    if (newestPlaybackState == PlaybackStateCompat.STATE_PAUSED)
                         R.string.paused_description
                     else R.string.stopped_description)
         }
@@ -82,8 +83,8 @@ class TogglePlaybackTileService: TileService() {
     }
 
     override fun onClick() {
-        if (newestPlaybackState == PlaybackState.Playing)
-            requestState(PlaybackState.Stopped)
-        else requestState(PlaybackState.Playing)
+        if (newestPlaybackState == PlaybackStateCompat.STATE_PLAYING)
+            requestState(PlaybackStateCompat.STATE_STOPPED)
+        else requestState(PlaybackStateCompat.STATE_PLAYING)
     }
 }

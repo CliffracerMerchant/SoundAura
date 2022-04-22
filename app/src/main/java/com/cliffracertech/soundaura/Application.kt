@@ -3,10 +3,9 @@
 
 package com.cliffracertech.soundaura
 
+import android.support.v4.media.session.PlaybackStateCompat
 import androidx.core.content.ContextCompat
 import dagger.hilt.android.HiltAndroidApp
-
-enum class PlaybackState { Playing, Paused, Stopped }
 
 @HiltAndroidApp
 class SoundAuraApplication : android.app.Application() {
@@ -19,7 +18,7 @@ class SoundAuraApplication : android.app.Application() {
         }
 
         TogglePlaybackTileService.addPlaybackStateRequestListener {
-            if (it == PlaybackState.Playing)
+            if (it == PlaybackStateCompat.STATE_PLAYING)
                 ContextCompat.startForegroundService(
                     this, PlayerService.playIntent(this))
             else startService(PlayerService.stopIntent(this))

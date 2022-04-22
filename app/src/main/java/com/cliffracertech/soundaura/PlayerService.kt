@@ -17,6 +17,11 @@ import android.media.AudioManager
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
+import android.support.v4.media.session.MediaSessionCompat
+import android.support.v4.media.session.PlaybackStateCompat
+import android.telephony.PhoneStateListener
+import android.telephony.TelephonyCallback
+import android.telephony.TelephonyManager
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -80,6 +85,9 @@ class PlayerService: LifecycleService() {
     @Inject lateinit var trackDao: TrackDao
     private lateinit var audioManager: AudioManager
     private lateinit var notificationManager: NotificationManager
+    private lateinit var mediaSession: MediaSessionCompat
+    private val playbackStateBuilder = PlaybackStateCompat.Builder()
+    private lateinit var telephonyManager: TelephonyManager
 
     private var isPlaying by mutableStateOf(false)
     private val unpauseLocks = mutableListOf<String>()
@@ -93,7 +101,7 @@ class PlayerService: LifecycleService() {
         }
 
     fun interface PlaybackChangeListener {
-        fun onPlaybackStateChange(newState: PlaybackState)
+        fun onPlaybackStateChange(@PlaybackStateCompat.State newState: Int)
     }
 
     companion object {
@@ -120,17 +128,44 @@ class PlayerService: LifecycleService() {
             playbackChangeListeners.remove(listener)
         }
 
-        var playbackState = PlaybackState.Stopped
+        var playbackState = PlaybackStateCompat.STATE_STOPPED//PlaybackState.Stopped
             private set(value) {
                 field = value
                 playbackChangeListeners.forEach { it.onPlaybackStateChange(value) }
             }
     }
 
+    private var playbackState
+        get() = Companion.playbackState
+        set(value) {
+            Companion.playbackState = value
+            updatePlaybackStateAndNotification()
+        }
+
+    private fun updatePlaybackStateAndNotification() {
+        playbackStateBuilder.setState(Companion.playbackState, 0, 1f)
+        val actions = PlaybackStateCompat.ACTION_PLAY_PAUSE or
+            if (currentlyBound) 0
+            else PlaybackStateCompat.ACTION_STOP
+        playbackStateBuilder.setActions(actions)
+        mediaSession.setPlaybackState(playbackStateBuilder.build())
+        notificationManager.notify(notificationId, notification)
+    }
+
     override fun onCreate() {
         super.onCreate()
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        mediaSession = MediaSessionCompat(
+            this, PlayerService::class.toString(), null,
+            PendingIntent.getActivity(this, 0,
+                Intent(this, MainActivity::class.java).apply {
+                    action = Intent.ACTION_MAIN
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }, FLAG_IMMUTABLE))
+        mediaSession.isActive = true
+        updatePlaybackStateAndNotification()
 
         audioManager.registerAudioDeviceCallback(object: AudioDeviceCallback() {
             override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) {
@@ -170,7 +205,7 @@ class PlayerService: LifecycleService() {
 
     override fun onDestroy() {
         uriPlayerMap.forEach { it.value.release() }
-        playbackState = PlaybackState.Stopped
+        playbackState = PlaybackStateCompat.STATE_STOPPED
         super.onDestroy()
     }
 
@@ -178,7 +213,7 @@ class PlayerService: LifecycleService() {
         when (intent?.action) {
             getString(R.string.stop_playback_action) -> {
                 if (!currentlyBound) {
-                    playbackState = PlaybackState.Stopped
+                    playbackState = PlaybackStateCompat.STATE_STOPPED
                     stopForeground(true)
                     stopSelf()
                 } else setIsPlaying(false)
@@ -210,7 +245,7 @@ class PlayerService: LifecycleService() {
     override fun onBind(intent: Intent): Binder {
         super.onBind(intent)
         currentlyBound = true
-        notificationManager.notify(notificationId, notification)
+        updatePlaybackStateAndNotification()
         return Binder()
     }
 
@@ -218,7 +253,7 @@ class PlayerService: LifecycleService() {
         currentlyBound = false
         if (!runAsStartedService)
             notificationManager.cancel(notificationId)
-        else notificationManager.notify(notificationId, notification)
+        else updatePlaybackStateAndNotification()
         return false
     }
 
@@ -236,10 +271,10 @@ class PlayerService: LifecycleService() {
 
         this.isPlaying = isPlaying
         runAsStartedService = true
-        playbackState = if (isPlaying) PlaybackState.Playing
-                        else           PlaybackState.Paused
+        playbackState = if (isPlaying) PlaybackStateCompat.STATE_PLAYING
+                        else           PlaybackStateCompat.STATE_PAUSED
         uriPlayerMap.forEach { it.value.setPaused(!isPlaying) }
-        notificationManager.notify(notificationId, notification)
+        updatePlaybackStateAndNotification()
         return true
     }
 
@@ -273,6 +308,7 @@ class PlayerService: LifecycleService() {
             val importance = NotificationManager.IMPORTANCE_LOW
             val channel = NotificationChannel(channelId, title, importance)
             channel.description = getString(R.string.player_notification_channel_description)
+            channel.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             notificationManager.createNotificationChannel(channel)
         }
         channelId
@@ -296,8 +332,8 @@ class PlayerService: LifecycleService() {
 
     /** A notification action that will toggle the service's isPlaying state. */
     private val togglePlayPauseAction: Action get() {
-        val icon = if (isPlaying) R.drawable.pause_to_play
-                   else           R.drawable.play_to_pause
+        val icon = if (isPlaying) R.drawable.ic_baseline_pause_24
+                   else           R.drawable.ic_baseline_play_24
         val description = getString(
             if (isPlaying) R.string.pause_description
             else           R.string.play_description)
@@ -334,6 +370,7 @@ class PlayerService: LifecycleService() {
             builder.addAction(stopServiceAction)
             notificationStyle.setShowActionsInCompactView(0, 1)
         } else notificationStyle.setShowActionsInCompactView(0)
+        notificationStyle.setMediaSession(mediaSession.sessionToken)
 
         return builder.build()
     }

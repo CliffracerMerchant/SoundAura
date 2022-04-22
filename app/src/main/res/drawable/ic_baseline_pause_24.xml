@@ -1,0 +1,15 @@
+<!--
+  ~ This file is part of SoundAura, which is released under the terms of the Apache
+  ~ License 2.0. See license.md in the project's root directory to see the full license.
+  -->
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M6,19h4v-14h-4v14z M14,5v14h4v-14h-4z"/>
+</vector>
