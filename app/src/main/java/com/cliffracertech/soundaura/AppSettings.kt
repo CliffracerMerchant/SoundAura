@@ -168,19 +168,33 @@ import androidx.lifecycle.viewmodel.compose.viewModel
                     values = AppTheme.values(),
                     valueNames = AppTheme.stringValues(),
                     currentValue = viewModel.appTheme,
-                    onValueSelected = viewModel::onAppThemeSelected)
+                    onValueSelected = viewModel::onAppThemeClick)
             }
         })
 }
 
 @Composable private fun PlaybackSettingsCategory() {
+    val autoPauseDuringCallSetting = @Composable {
+        val viewModel: SettingsViewModel = viewModel()
+        Setting(
+            title = stringResource(R.string.auto_pause_during_calls_setting_title),
+            subtitle = stringResource(R.string.auto_pause_during_calls_setting_subtitle),
+            onClick = { viewModel.onAutoPauseDuringCallClick() }
+        ) {
+            Switch(checked = viewModel.autoPauseDuringCall,
+                onCheckedChange = { viewModel.onAutoPauseDuringCallClick() },
+                colors = SwitchDefaults.colors(
+                    uncheckedThumbColor = MaterialTheme.colors.background))
+        }
+    }
+    val titleTutorialSetting = @Composable {
+        DialogSetting(
+            title = stringResource(R.string.control_playback_using_tile_setting_title),
+            content = { TileTutorialDialog(onDismissRequest = it) })
+    }
     SettingCategory(
         title = stringResource(R.string.playback_category_description),
-        content = listOf {
-            DialogSetting(stringResource(R.string.control_playback_using_tile_setting_title)) {
-                TileTutorialDialog(onDismissRequest = it)
-            }
-        })
+        content = listOf(autoPauseDuringCallSetting, titleTutorialSetting))
 }
 
 @Composable private fun AboutSettingsCategory() {

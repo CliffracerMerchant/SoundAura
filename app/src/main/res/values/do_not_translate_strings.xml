@@ -11,5 +11,7 @@
     <string name="set_playback_key">playback_value</string>
     <string name="stop_playback_action">com.cliffracertech.soundaura.action.stop</string>
 
+    <string name="app_theme_setting_key">app_theme</string>
+    <string name="auto_pause_during_calls_setting_key">auto_pause_during_calls</string>
 
 </resources>

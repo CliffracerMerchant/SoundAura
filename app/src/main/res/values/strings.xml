@@ -72,6 +72,11 @@
     <string name="dark_theme_description">Dark</string>
 
     <string name="playback_category_description">Playback</string>
+    <string name="auto_pause_during_calls_setting_title">
+        Auto-pause during calls</string>
+    <string name="auto_pause_during_calls_setting_subtitle">
+        Requires read phone state permission</string>
+
     <string name="control_playback_using_tile_setting_title">
         Control playback using a tile</string>
     <string name="tile_tutorial_title">Tile Tutorial</string>
