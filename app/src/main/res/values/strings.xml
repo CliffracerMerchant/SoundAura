@@ -3,11 +3,10 @@
    ~ the project's root directory to see the full license. -->
 
 <resources>
-    <string name="app_name">SoundAura</string>
+    <string name="app_name" translatable="false">SoundAura</string>
     <string name="app_version">v0.1</string>
 
-    <string name="app_player_service_description">
-        A service to play the user\'s sound mix.</string>
+    <string name="app_player_service_description">A service to play the user\'s sound mix.</string>
     <string name="player_notification_channel_name">Player controls</string>
     <string name="player_notification_channel_description">
         A notification with controls for SoundAura\'s background audio service.</string>
@@ -76,6 +75,17 @@
         Auto-pause during calls</string>
     <string name="auto_pause_during_calls_setting_subtitle">
         Requires read phone state permission</string>
+    <string name="request_phone_state_permission_explanation">
+        SoundAura needs to access your device\'s phone state in order
+        to be able to automatically pause playback during a phone call.
+        \n\nOther apps may not need this permission to pause playback
+        during a phone call because they use Android\'s audio focus
+        feature, through which the system will tell them when they need
+        to pause. SoundAura intentionally eschews normal audio focus
+        rules because it is intended as a background sound app that
+        should play alongside other audio.\n\nUnfortunately the only
+        other way for SoundAura to be able to detect ongoing phone
+        calls is with the permission to read the phone\'s state.</string>
 
     <string name="control_playback_using_tile_setting_title">
         Control playback using a tile</string>
@@ -124,6 +134,21 @@
         SoundAura is an open source ambient sound app. The source code
         is available under the terms of the Apache License, version 2.0.</string>
     <string name="source_code_description">View source code</string>
+
+    <string name="github_link" translatable="false">
+        https://github.com/NicholasHochstetler/SoundAura</string>
+
+    <string name="player_notification_channel_id" translatable="false">
+        player_controls</string>
+    <string name="set_playback_action" translatable="false">
+        com.cliffracertech.soundaura.action.playPause</string>
+    <string name="set_playback_key" translatable="false">playback_value</string>
+    <string name="stop_playback_action" translatable="false">
+        com.cliffracertech.soundaura.action.stop</string>
+
+    <string name="app_theme_setting_key" translatable="false">app_theme</string>
+    <string name="auto_pause_during_calls_setting_key" translatable="false">
+        auto_pause_during_calls</string>
 </resources>
 
 

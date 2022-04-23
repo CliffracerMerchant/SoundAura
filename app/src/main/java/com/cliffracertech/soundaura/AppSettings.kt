@@ -2,6 +2,8 @@
  * License 2.0. See license.md in the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
+import android.Manifest
+import android.app.Activity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,6 +17,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -185,6 +188,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
                 onCheckedChange = { viewModel.onAutoPauseDuringCallClick() },
                 colors = SwitchDefaults.colors(
                     uncheckedThumbColor = MaterialTheme.colors.background))
+        }
+        if (viewModel.showingAskForPhoneStatePermissionDialog) {
+            val context = LocalContext.current
+            val activity = context as? Activity
+            val showExplanation = activity?.shouldShowRequestPermissionRationale(
+                Manifest.permission.READ_PHONE_STATE) ?: true
+            PhoneStatePermissionDialog(
+                showExplanationFirst = showExplanation,
+                onDismissRequest = viewModel::onAskForPhoneStatePermissionDialogDismiss,
+                onPermissionResult = viewModel::onAskForPhoneStatePermissionDialogConfirm)
         }
     }
     val titleTutorialSetting = @Composable {

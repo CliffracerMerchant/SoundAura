@@ -3,6 +3,7 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -314,6 +315,39 @@ val List<String>.containsBlanks get() =
                 Spacer(Modifier.weight(1f))
                 TextButton(secondButtonOnClick) { Text(secondButtonText) }
             }
+        }
+    }
+}
+
+/**
+ * Launch a dialog to request the READ_PHONE_STATE permission.
+ * @param showExplanationFirst Whether or not a dialog box explaining
+ *     why the permission is needed will be shown.
+ * @param onDismissRequest The callback that will be invoked if the
+ *     explanatory dialog is dismissed.
+ * @param onPermissionResult The callback that will be invoked when
+ *     the user grants or rejects the permission. The Boolean parameter
+ *     will be true if the permission was granted, or false otherwise.
+ */
+@Composable fun PhoneStatePermissionDialog(
+    showExplanationFirst: Boolean,
+    onDismissRequest: () -> Unit,
+    onPermissionResult: (Boolean) -> Unit
+) {
+    var userSawExplanation by rememberSaveable { mutableStateOf(false) }
+    if (showExplanationFirst && !userSawExplanation) {
+        SoundAuraDialog(
+            onDismissRequest = onDismissRequest,
+            title = stringResource(R.string.auto_pause_during_calls_setting_title),
+            text = stringResource(R.string.request_phone_state_permission_explanation),
+            onConfirm = { userSawExplanation = true })
+    }
+    if (!showExplanationFirst || userSawExplanation) {
+        val launcher = rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission(),
+            onResult = onPermissionResult)
+        LaunchedEffect(Unit) {
+            launcher.launch(Manifest.permission.READ_PHONE_STATE)
         }
     }
 }

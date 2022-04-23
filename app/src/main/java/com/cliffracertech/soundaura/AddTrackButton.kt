@@ -177,31 +177,31 @@ class AddTrackButtonViewModel @Inject constructor(
     private val messageHandler: MessageHandler
 ) : ViewModel() {
 
-    private var _expanded by mutableStateOf(false)
-    val expanded get() = _expanded
+    var expanded by mutableStateOf(false)
+        private set
 
     private var lastBounds = Rect(0f, 0f, 0f, 0f)
 
-    fun onClick() { _expanded = !expanded }
+    fun onClick() { expanded = !expanded }
 
     fun onBoundsChange(bounds: Rect) { lastBounds = bounds }
 
     fun onGlobalClick(pos: Offset) {
         if (!lastBounds.contains(pos))
-            _expanded = false
+            expanded = false
     }
 
 
-    private var _showingDownloadFileDialog by mutableStateOf(false)
-    val showingDownloadFileDialog get() = _showingDownloadFileDialog
+    var showingDownloadFileDialog by mutableStateOf(false)
+        private set
 
     fun onDownloadFileButtonClick() {
-        _expanded = false
-        _showingDownloadFileDialog = true
+        expanded = false
+        showingDownloadFileDialog = true
     }
 
     fun onDownloadFileDialogDismiss() {
-        _showingDownloadFileDialog = false
+        showingDownloadFileDialog = false
     }
 
     fun onDownloadFileDialogConfirm(track: Track) {
@@ -216,16 +216,16 @@ class AddTrackButtonViewModel @Inject constructor(
     }
 
 
-    private var _showingAddLocalFilesDialog by mutableStateOf(false)
-    val showingAddLocalFilesDialog get() = _showingAddLocalFilesDialog
+    var showingAddLocalFilesDialog by mutableStateOf(false)
+        private set
 
     fun onAddLocalFilesButtonClick() {
-        _expanded = false
-        _showingAddLocalFilesDialog = true
+        expanded = false
+        showingAddLocalFilesDialog = true
     }
 
     fun onAddLocalFilesDialogDismiss() {
-        _showingAddLocalFilesDialog = false
+        showingAddLocalFilesDialog = false
     }
 
     fun onAddLocalFilesDialogConfirm(trackUris: List<Uri>, trackNames: List<String>) {

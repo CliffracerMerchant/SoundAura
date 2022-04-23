@@ -3,5 +3,5 @@
    ~ License 2.0. See license.md in the project's root directory to see the full license. -->
 
 <resources>
-    <string name="app_name">SoundAura debug</string>
+    <string name="app_name" translatable="false">SoundAura debug</string>
 </resources>

@@ -3,12 +3,10 @@
 package com.cliffracertech.soundaura
 
 import android.Manifest
+import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.datastore.core.DataStore
@@ -17,7 +15,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.Module
 import dagger.Provides
@@ -43,7 +41,7 @@ class PreferencesModule {
 class SettingsViewModel @Inject constructor(
     @ApplicationContext context: Context,
     private val dataStore: DataStore<Preferences>
-) : ViewModel() {
+) : AndroidViewModel(context as Application) {
     private val appThemeKey = intPreferencesKey(
         context.getString(R.string.app_theme_setting_key))
 
@@ -60,27 +58,46 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private val hasReadPhoneStatePermission = ContextCompat.checkSelfPermission(
-        context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
+    private var hasReadPhoneStatePermission by mutableStateOf(
+        ContextCompat.checkSelfPermission(
+            getApplication(), Manifest.permission.READ_PHONE_STATE
+        ) == PackageManager.PERMISSION_GRANTED)
 
     private val autoPauseDuringCallKey = booleanPreferencesKey(
         context.getString(R.string.auto_pause_during_calls_setting_key))
 
-    private val _autoPauseDuringCall by dataStore.preferenceState(
+    private val autoPauseDuringCallPreference by dataStore.preferenceState(
         key = autoPauseDuringCallKey,
         initialValue = false,
         scope = viewModelScope)
 
     val autoPauseDuringCall by derivedStateOf {
-        _autoPauseDuringCall && hasReadPhoneStatePermission
+        autoPauseDuringCallPreference && hasReadPhoneStatePermission
     }
+
+    var showingAskForPhoneStatePermissionDialog by mutableStateOf(false)
+        private set
 
     fun onAutoPauseDuringCallClick() {
         if (!autoPauseDuringCall && !hasReadPhoneStatePermission)
-            return
-        viewModelScope.launch {
+            showingAskForPhoneStatePermissionDialog = true
+        else viewModelScope.launch {
             dataStore.edit { it[autoPauseDuringCallKey] = !autoPauseDuringCall }
         }
+    }
+
+    fun onAskForPhoneStatePermissionDialogDismiss() {
+        showingAskForPhoneStatePermissionDialog = false
+    }
+
+    fun onAskForPhoneStatePermissionDialogConfirm(permissionGranted: Boolean) {
+        if (permissionGranted) viewModelScope.launch {
+            dataStore.edit {
+                it[autoPauseDuringCallKey] = true
+            }
+            hasReadPhoneStatePermission = true
+        }
+        onAskForPhoneStatePermissionDialogDismiss()
     }
 }
 

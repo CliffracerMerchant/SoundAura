@@ -409,11 +409,8 @@ class PlayerService: LifecycleService() {
 
         val readPhoneState = ContextCompat.checkSelfPermission(
             this, Manifest.permission.READ_PHONE_STATE)
-        if (readPhoneState != PackageManager.PERMISSION_GRANTED && enabled) {
-            Log.d("SoundAura", "Tried to add auto-pause during call when " +
-                  "READ_PHONE_STATE permission was not granted; aborting.")
+        if (readPhoneState != PackageManager.PERMISSION_GRANTED && enabled)
             return
-        }
 
         val onCallStateChange = { state: Int ->
             autoPauseIf(key = autoPauseOngoingCallKey, condition =
