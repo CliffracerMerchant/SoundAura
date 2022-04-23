@@ -5,10 +5,9 @@ package com.cliffracertech.soundaura
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.Divider
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -72,36 +71,41 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 }
 
 /**
- * A setting layout, with room for an icon, title, and setting
- * content (e.g. a switch to turn the setting on and off.
+ * A setting layout, with room for an icon, title, subtitle, and
+ * setting content (e.g. a switch to turn the setting on and off.
  *
  * @param icon The icon to represent the setting. Will not be displayed if null.
  * @param title The string title for the setting.
- * @param description A longer description of the setting. Will not be displayed if null.
- * @param onTitleClick The callback, if any, that will be invoked when the setting
- *                     title is clicked. Defaults to null.
+ * @param subtitle Additional text to be displayed below the title with
+ *                 a lower emphasis. Will not be displayed if null.
+ * @param onClick The callback, if any, that will be invoked when
+ *                the setting is clicked. Defaults to null.
  * @param content A composable containing the content used to change the setting.
  */
 @Composable fun Setting(
     title: String,
     icon: (@Composable () -> Unit)? = null,
-    description: String? = null,
-    onTitleClick: (() -> Unit)? = null,
+    subtitle: String? = null,
+    onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
-) = Row(verticalAlignment = Alignment.CenterVertically) {
+) = Row(
+    modifier = Modifier.minTouchTargetSize().then(
+        if (onClick == null) Modifier
+        else Modifier.clickable(onClick = onClick)),
+    verticalAlignment = Alignment.CenterVertically
+) {
+        if (icon != null)
+            Box(Modifier.size(48.dp)) { icon() }
 
-    if (icon != null)
-        Box(Modifier.size(48.dp)) { icon() }
-
-    val titleModifier = Modifier.weight(1f).heightIn(min = 48.dp).then(
-        if (onTitleClick == null) Modifier
-        else Modifier.clickable(onClick = onTitleClick))
-
-    Column(titleModifier, verticalArrangement = Arrangement.Center) {
-        Text(title, style = MaterialTheme.typography.body1)
-
-        if (description != null)
-            Text(description, style = MaterialTheme.typography.body2)
+    Column(Modifier.weight(1f), Arrangement.Center) {
+        Text(text = title,
+            modifier = Modifier.padding(top = 8.dp),
+            style = MaterialTheme.typography.body1)
+        if (subtitle != null) {
+            Spacer(Modifier.height(2.dp))
+            Text(text = subtitle, style = MaterialTheme.typography.body2)
+        }
+        Spacer(Modifier.height(8.dp))
     }
     content()
 }
@@ -127,8 +131,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
     Setting(
         title = title,
         icon = icon,
-        description = description,
-        onTitleClick = { showingDialog = true }) {}
+        subtitle = description,
+        onClick = { showingDialog = true },
+    ) {
+        Icon(imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = LocalContentColor.current.copy(ContentAlpha.medium))
+    }
     if (showingDialog)
         content { showingDialog = false }
 }

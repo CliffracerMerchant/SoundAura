@@ -13,32 +13,29 @@ import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
 private val DarkColorPalette = darkColors(
     primary = DarkThemeGradientStart,
-    primaryVariant = DarkThemeGradientEnd,
-    secondary = DarkThemeSecondary,
-    secondaryVariant = DarkThemeSecondary,
+    primaryVariant = DarkThemeGradientStartVariant,
+    secondary = DarkThemeGradientEnd,
+    secondaryVariant = DarkThemeGradientEndVariant,
     background = DarkBackground,
     surface = DarkSurface,
     onBackground = DarkOnSurface,
     onSurface = DarkOnSurface,
-    onPrimary = DarkOnPrimary,
-)
+    onPrimary = DarkOnPrimary)
 
 private val LightColorPalette = lightColors(
     primary = LightThemeGradientStart,
-    primaryVariant = LightThemeGradientEnd,
-    secondary = LightThemeSecondary,
-    secondaryVariant = LightThemeSecondary,
+    primaryVariant = LightThemeGradientStartVariant,
+    secondary = LightThemeGradientEnd,
+    secondaryVariant = LightThemeGradientEndVariant,
     background = LightBackground,
     surface = LightSurface,
     onBackground = LightOnSurface,
     onSurface = LightOnSurface,
-    onPrimary = LightOnPrimary,
-)
+    onPrimary = LightOnPrimary)
 
-@Composable
-fun SoundAuraTheme(
+@Composable fun SoundAuraTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable() () -> Unit
+    content: @Composable () -> Unit
 ) {
     val systemUiController = rememberSystemUiController()
     systemUiController.setSystemBarsColor(Color.Transparent)
@@ -49,6 +46,5 @@ fun SoundAuraTheme(
         colors = colors,
         typography = Typography,
         shapes = Shapes,
-        content = content
-    )
+        content = content)
 }
