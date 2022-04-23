@@ -24,15 +24,18 @@ import android.support.v4.media.session.PlaybackStateCompat
 import android.telephony.PhoneStateListener
 import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.Action
 import androidx.core.content.ContextCompat
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.lifecycle.LifecycleService
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import javax.inject.Inject
 
 /**
@@ -110,8 +113,8 @@ class PlayerService: LifecycleService() {
     companion object {
         private const val requestCode = 1
         private const val notificationId = 1
-        private const val autoPauseOnAudioDeviceChangeKey = "autopause_audio_device_change"
-        private const val autoPauseOngoingCallKey = "autopause_ongoing_call"
+        private const val autoPauseOnAudioDeviceChangeKey = "auto_pause_audio_device_change"
+        private const val autoPauseOngoingCallKey = "auto_pause_ongoing_call"
 
         fun playIntent(context: Context) =
             Intent(context, PlayerService::class.java)
@@ -185,10 +188,15 @@ class PlayerService: LifecycleService() {
             }
         }, null)
 
-        addPhoneStateListener()
-
         repeatWhenStarted {
-            trackDao.getAllPlayingTracks().collect { tracks ->
+            val autoPauseDuringCallsKey = booleanPreferencesKey(
+                getString(R.string.auto_pause_during_calls_setting_key))
+            dataStore.preferenceFlow(autoPauseDuringCallsKey, false)
+                .onEach(::setAutoPauseDuringCallEnabled)
+                .launchIn(this)
+
+            trackDao.getAllPlayingTracks().onEach { tracks ->
+                // remove players whose track is no longer in the track list
                 val uris = tracks.map { it.uriString }
                 uriPlayerMap.keys.retainAll {
                     val inNewList = it in uris
@@ -196,6 +204,7 @@ class PlayerService: LifecycleService() {
                         uriPlayerMap[it]?.release()
                     inNewList
                 }
+                // add players for tracks newly added to the track list
                 tracks.forEach {
                     val player = uriPlayerMap.getOrPut(it.uriString) {
                         MediaPlayer.create(this@PlayerService, Uri.parse(it.uriString))
@@ -206,7 +215,7 @@ class PlayerService: LifecycleService() {
                     if (player.isPlaying != isPlaying)
                         player.setPaused(!isPlaying)
                 }
-            }
+            }.launchIn(this)
         }
     }
 
@@ -382,11 +391,29 @@ class PlayerService: LifecycleService() {
         return builder.build()
     }
 
-    private fun addPhoneStateListener() {
+    private var telephonyCallback: TelephonyCallback? = null
+    private var phoneStateListener: PhoneStateListener? = null
+
+    @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+    private fun setAutoPauseDuringCallEnabled(enabled: Boolean) {
+        if (!enabled) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                telephonyCallback?.let { telephonyManager.unregisterTelephonyCallback(it) }
+                telephonyCallback = null
+            } else {
+                phoneStateListener?.let { telephonyManager.listen(it, PhoneStateListener.LISTEN_NONE)}
+                phoneStateListener = null
+            }
+            return
+        }
+
         val readPhoneState = ContextCompat.checkSelfPermission(
             this, Manifest.permission.READ_PHONE_STATE)
-        if (readPhoneState != PackageManager.PERMISSION_GRANTED)
+        if (readPhoneState != PackageManager.PERMISSION_GRANTED && enabled) {
+            Log.d("SoundAura", "Tried to add auto-pause during call when " +
+                  "READ_PHONE_STATE permission was not granted; aborting.")
             return
+        }
 
         val onCallStateChange = { state: Int ->
             autoPauseIf(key = autoPauseOngoingCallKey, condition =
