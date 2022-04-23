@@ -165,14 +165,14 @@ object GradientSliderDefaults {
      */
     @Composable fun colors(
         thumbColor: Color = MaterialTheme.colors.primary,
-        thumbColorEnd: Color = MaterialTheme.colors.primaryVariant,
+        thumbColorEnd: Color = MaterialTheme.colors.secondary,
         disabledThumbColor: Color = MaterialTheme.colors.onSurface
             .copy(alpha = ContentAlpha.disabled)
             .compositeOver(MaterialTheme.colors.surface),
         activeTrackColor: Color = MaterialTheme.colors.primary,
         inactiveTrackColor: Color = activeTrackColor.copy(alpha = InactiveTrackAlpha),
         activeTrackBrush: Brush? = Brush.horizontalGradient(listOf(
-            MaterialTheme.colors.primary, MaterialTheme.colors.primaryVariant)),
+            MaterialTheme.colors.primary, MaterialTheme.colors.secondary)),
         disabledActiveTrackColor: Color =
             MaterialTheme.colors.onSurface.copy(alpha = DisabledActiveTrackAlpha),
         disabledInactiveTrackColor: Color =

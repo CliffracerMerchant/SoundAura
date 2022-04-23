@@ -101,7 +101,7 @@ import javax.inject.Inject
     onClick = onClick,
     text = { Text(stringResource(textResId)) },
     icon = { Icon(Icons.Default.Add, null) },
-    backgroundColor = MaterialTheme.colors.primaryVariant,
+    backgroundColor = MaterialTheme.colors.secondary,
     contentColor = MaterialTheme.colors.onPrimary,
 //  elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp))
     elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp))
@@ -157,7 +157,7 @@ import javax.inject.Inject
         { AddTrackButtonChild(R.string.local_file_description, onAddLocalFilesClick) },
     ), content = { FloatingActionButton(
         onClick = onClick,
-        backgroundColor = MaterialTheme.colors.primaryVariant,
+        backgroundColor = MaterialTheme.colors.secondary,
         contentColor = MaterialTheme.colors.onPrimary,
         elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp),
         content = { PlusCloseIcon(showAsClose = expanded) }
