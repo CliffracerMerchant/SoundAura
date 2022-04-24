@@ -14,16 +14,27 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class ActionBarViewModel @Inject constructor(
-    @ApplicationContext context: Context,
+class ActionBarViewModel(
+    context: Context,
     private val dataStore: DataStore<Preferences>,
     private val navigationState: MainActivityNavigationState,
     searchQueryState: SearchQueryState,
+    coroutineScope: CoroutineScope? = null
 ) : ViewModel() {
+
+    @Inject constructor(
+        @ApplicationContext context: Context,
+        dataStore: DataStore<Preferences>,
+        navigationState: MainActivityNavigationState,
+        searchQueryState: SearchQueryState
+    ) : this(context, dataStore, navigationState, searchQueryState, null)
+
+    private val scope = coroutineScope ?: viewModelScope
     val showingAppSettings get() = navigationState.showingAppSettings
     var searchQuery by searchQueryState.query
 
@@ -35,12 +46,12 @@ class ActionBarViewModel @Inject constructor(
     }
 
     private val trackSortKey = intPreferencesKey(context.getString(R.string.pref_sort_key))
-    val trackSort by dataStore.enumPreferenceState<Track.Sort>(trackSortKey, viewModelScope)
+    val trackSort by dataStore.enumPreferenceState<Track.Sort>(trackSortKey, scope)
 
     fun onTrackSortOptionClick(newValue: Track.Sort) {
-        viewModelScope.launch {
-            dataStore.edit { it[trackSortKey] = newValue.ordinal }
-        }
+        scope.launch { dataStore.edit {
+            it[trackSortKey] = newValue.ordinal
+        }}
     }
 
     fun onSearchButtonClick() {
@@ -80,7 +91,5 @@ class ActionBarViewModel @Inject constructor(
         sortOptionNames = Track.Sort.stringValues(),
         currentSortOption = viewModel.trackSort,
         onSortOptionClick = viewModel::onTrackSortOptionClick,
-    ) {
-        SettingsButton(onClick = viewModel::onSettingsButtonClick)
-    }
+        otherContent = { SettingsButton(viewModel::onSettingsButtonClick) })
 }

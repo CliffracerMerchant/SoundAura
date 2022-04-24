@@ -45,6 +45,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -180,12 +181,22 @@ fun AddTrackButtonPreview() = AddTrackButton(expanded = true)
 // The stored context object here is the application
 // context, and therefore does not present a problem.
 @HiltViewModel @SuppressLint("StaticFieldLeak")
-class AddTrackButtonViewModel @Inject constructor(
+class AddTrackButtonViewModel(
     @ApplicationContext
     private val context: Context,
     private val trackDao: TrackDao,
-    private val messageHandler: MessageHandler
+    private val messageHandler: MessageHandler,
+    coroutineScope: CoroutineScope? = null
 ) : ViewModel() {
+
+    @Inject constructor(
+        @ApplicationContext
+        context: Context,
+        trackDao: TrackDao,
+        messageHandler: MessageHandler
+    ) : this(context, trackDao, messageHandler, null)
+
+    private val scope = coroutineScope ?: viewModelScope
 
     var expanded by mutableStateOf(false)
         private set
@@ -216,7 +227,7 @@ class AddTrackButtonViewModel @Inject constructor(
 
     fun onDownloadFileDialogConfirm(track: Track) {
         onDownloadFileDialogDismiss()
-        viewModelScope.launch {
+        scope.launch {
             try { trackDao.insert(track) }
             catch(e: SQLiteConstraintException) {
                 val stringResId = R.string.track_already_exists_error_message
@@ -224,7 +235,6 @@ class AddTrackButtonViewModel @Inject constructor(
             }
         }
     }
-
 
     var showingAddLocalFilesDialog by mutableStateOf(false)
         private set
@@ -240,7 +250,7 @@ class AddTrackButtonViewModel @Inject constructor(
 
     fun onAddLocalFilesDialogConfirm(trackUris: List<Uri>, trackNames: List<String>) {
         onAddLocalFilesDialogDismiss()
-        viewModelScope.launch {
+        scope.launch {
             val newTracks = List(trackUris.size) {
                 val name = trackNames.getOrNull(it) ?: ""
                 Track(trackUris[it].toString(), name)

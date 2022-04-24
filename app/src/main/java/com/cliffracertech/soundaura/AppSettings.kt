@@ -97,8 +97,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
         else Modifier.clickable(onClick = onClick)),
     verticalAlignment = Alignment.CenterVertically
 ) {
-        if (icon != null)
-            Box(Modifier.size(48.dp)) { icon() }
+    if (icon != null)
+        Box(Modifier.size(48.dp)) { icon() }
 
     Column(Modifier.weight(1f), Arrangement.Center) {
         Text(text = title,
@@ -120,7 +120,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
  * @param icon The icon to represent the setting. Will not be displayed if null.
  * @param title The string title for the setting.
  * @param description A longer description of the setting. Will not be displayed if null.
- * @param content The composable labmda containing the dialog that will be shown
+ * @param content The composable lambda containing the dialog that will be shown
  *     when the title is clicked. The provided () -> Unit lambda argument should
  *     be used as the onDismissRequest for the inner dialog.
  */
