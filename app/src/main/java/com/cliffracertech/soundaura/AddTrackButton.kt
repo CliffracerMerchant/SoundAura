@@ -9,6 +9,8 @@ import android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
 import android.database.sqlite.SQLiteConstraintException
 import android.net.Uri
 import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.animation.*
 import androidx.compose.animation.core.AnimationConstants.DefaultDurationMillis
@@ -16,10 +18,16 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -27,9 +35,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -294,3 +304,80 @@ class AddTrackButtonViewModel @Inject constructor(
             onDismissRequest = viewModel::onAddLocalFilesDialogDismiss,
             onConfirmRequest = viewModel::onAddLocalFilesDialogConfirm)
 }
+
+/**
+ * Open a dialog for the user to select one or more audio files to add to
+ * their library.
+ *
+ * @param onDismissRequest The callback that will be invoked when the user
+ *     clicks outside the dialog or taps the cancel button.
+ * @param onConfirmRequest The callback that will be invoked when the user
+ *     taps the dialog's confirm button after having selected one or more files.
+ *     The first parameter is the list of Uris representing the files to add,
+ *     while the second parameter is the list of names for each of these uris.
+ */
+@Composable fun AddTracksFromLocalFilesDialog(
+    onDismissRequest: () -> Unit,
+    onConfirmRequest: (List<Uri>, List<String>) -> Unit,
+) {
+    val context = LocalContext.current
+    var chosenUris by rememberSaveable { mutableStateOf<List<Uri>?>(null) }
+    val trackNames = rememberSaveable<SnapshotStateList<String>>(
+        saver = listSaver(
+            save = { it },
+            restore = { it.toMutableStateList() }),
+        init = { mutableStateListOf() })
+
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        if (uris.isEmpty())
+            onDismissRequest()
+        chosenUris = uris
+        trackNames.clear()
+        for (uri in uris)
+            trackNames.add(uri.getDisplayName(context) ?: "")
+    }
+
+    if (chosenUris == null)
+        LaunchedEffect(Unit) { launcher.launch(arrayOf("audio/*")) }
+    else SoundAuraDialog(
+        title = stringResource(R.string.add_local_files_dialog_title),
+        onDismissRequest = onDismissRequest,
+        confirmButtonEnabled = chosenUris != null &&
+                !trackNames.containsBlanks,
+        onConfirm = {
+            val uris = chosenUris ?: return@SoundAuraDialog
+            onConfirmRequest(uris, trackNames)
+        }, content = {
+            trackNames.Editor(Modifier.heightIn(max = 400.dp))
+        })
+}
+
+/** Return a suitable display name for a file uri (i.e. the file name minus
+ * the file type extension, and with underscores replaced with spaces. */
+fun Uri.getDisplayName(context: Context) =
+    DocumentFile.fromSingleUri(context, this)?.name
+        ?.substringBeforeLast('.')
+        ?.replace('_', ' ')
+
+/** Return whether the List<String> contains any strings that are blank
+ * (i.e. are either empty or consist of only whitespace characters). */
+val List<String>.containsBlanks get() =
+    find { it.isBlank() } != null
+
+/** Compose a LazyColumn of TextFields to edit the
+ * strings of the the receiver MutableList<NewTrack>. */
+@Composable private fun MutableList<String>.Editor(
+    modifier: Modifier = Modifier
+) = LazyColumn(
+    modifier = modifier,
+    verticalArrangement = Arrangement.spacedBy(8.dp),
+    content = { items(size) { index ->
+        TextField(
+            value = get(index),
+            onValueChange = { this@Editor[index] = it },
+            textStyle = MaterialTheme.typography.body1,
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(1f))
+    }})

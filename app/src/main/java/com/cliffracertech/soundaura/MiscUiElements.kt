@@ -6,6 +6,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.AnimationConstants.DefaultDurationMillis
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
@@ -19,6 +20,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+
+fun Modifier.minTouchTargetSize() =
+    sizeIn(minWidth = 48.dp, minHeight = 48.dp)
 
 /** A modifier that sets the background to be a MaterialTheme.shapes.large
  * shape filled in with a MaterialTheme.colors.surface color. */

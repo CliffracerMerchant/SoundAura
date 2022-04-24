@@ -216,3 +216,38 @@ fun LightTrackViewPreview() = SoundAuraTheme(darkTheme =  false) {
 fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme =  true) {
     TrackView(Track("", "Track 1", volume = 0.5f), TrackViewCallback())
 }
+
+@Composable fun RenameDialog(
+    itemName: String,
+    onDismissRequest: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var currentName by rememberSaveable { mutableStateOf(itemName) }
+    SoundAuraDialog(
+        title = stringResource(R.string.rename_dialog_title, itemName),
+        confirmButtonEnabled = currentName.isNotBlank(),
+        confirmText = stringResource(R.string.rename_description),
+        onConfirm = { onConfirm(currentName)
+            onDismissRequest() },
+        onDismissRequest = onDismissRequest,
+        content = { TextField(
+            value = currentName,
+            onValueChange = { currentName = it },
+            singleLine = true,
+            textStyle = MaterialTheme.typography.body1)
+        })
+}
+
+@Composable fun ConfirmRemoveDialog(
+    itemName: String,
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit
+) = SoundAuraDialog(
+    onDismissRequest = onDismissRequest,
+    title = stringResource(R.string.confirm_remove_title, itemName),
+    text = stringResource(R.string.confirm_remove_message),
+    confirmText = stringResource(R.string.remove_description),
+    onConfirm = {
+        onConfirm()
+        onDismissRequest()
+    })
