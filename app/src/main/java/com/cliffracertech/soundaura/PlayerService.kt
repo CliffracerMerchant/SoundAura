@@ -24,7 +24,6 @@ import android.support.v4.media.session.PlaybackStateCompat
 import android.telephony.PhoneStateListener
 import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
-import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -190,7 +189,7 @@ class PlayerService: LifecycleService() {
 
         repeatWhenStarted {
             val autoPauseDuringCallsKey = booleanPreferencesKey(
-                getString(R.string.auto_pause_during_calls_setting_key))
+                getString(R.string.pref_auto_pause_during_calls_key))
             dataStore.preferenceFlow(autoPauseDuringCallsKey, false)
                 .onEach(::setAutoPauseDuringCallEnabled)
                 .launchIn(this)

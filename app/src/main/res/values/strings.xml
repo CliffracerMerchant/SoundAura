@@ -146,8 +146,8 @@
     <string name="stop_playback_action" translatable="false">
         com.cliffracertech.soundaura.action.stop</string>
 
-    <string name="app_theme_setting_key" translatable="false">app_theme</string>
-    <string name="auto_pause_during_calls_setting_key" translatable="false">
+    <string name="pref_app_theme_key" translatable="false">app_theme</string>
+    <string name="pref_auto_pause_during_calls_key" translatable="false">
         auto_pause_during_calls</string>
 </resources>
 

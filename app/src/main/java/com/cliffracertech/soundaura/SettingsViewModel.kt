@@ -15,7 +15,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.Module
 import dagger.Provides
@@ -23,6 +23,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
@@ -38,38 +39,47 @@ class PreferencesModule {
 }
 
 @HiltViewModel
-class SettingsViewModel @Inject constructor(
-    @ApplicationContext context: Context,
-    private val dataStore: DataStore<Preferences>
-) : AndroidViewModel(context as Application) {
+class SettingsViewModel(
+    context: Context,
+    private val dataStore: DataStore<Preferences>,
+    coroutineScope: CoroutineScope? = null
+) : ViewModel() {
+
+    @Inject constructor(
+        @ApplicationContext context: Context,
+        dataStore: DataStore<Preferences>,
+    ) : this(context, dataStore, null)
+
+    private val scope = coroutineScope ?: viewModelScope
     private val appThemeKey = intPreferencesKey(
-        context.getString(R.string.app_theme_setting_key))
+        context.getString(R.string.pref_app_theme_key))
+    private val autoPauseDuringCallKey = booleanPreferencesKey(
+        context.getString(R.string.pref_auto_pause_during_calls_key))
 
     // The thread must be blocked when reading the first value
     // of the app theme from the DataStore or else the screen
     // can flicker between light and dark themes on startup.
     val appTheme by runBlocking {
-        dataStore.awaitEnumPreferenceState<AppTheme>(appThemeKey, viewModelScope)
+        dataStore.awaitEnumPreferenceState<AppTheme>(appThemeKey, scope)
     }
 
     fun onAppThemeClick(theme: AppTheme) {
-        viewModelScope.launch {
+        scope.launch {
             dataStore.edit { it[appThemeKey] = theme.ordinal }
         }
     }
 
     private var hasReadPhoneStatePermission by mutableStateOf(
         ContextCompat.checkSelfPermission(
-            getApplication(), Manifest.permission.READ_PHONE_STATE
+            context, Manifest.permission.READ_PHONE_STATE
         ) == PackageManager.PERMISSION_GRANTED)
 
-    private val autoPauseDuringCallKey = booleanPreferencesKey(
-        context.getString(R.string.auto_pause_during_calls_setting_key))
 
-    private val autoPauseDuringCallPreference by dataStore.preferenceState(
-        key = autoPauseDuringCallKey,
-        initialValue = false,
-        scope = viewModelScope)
+    private val autoPauseDuringCallPreference by
+        dataStore.preferenceState(
+            key = autoPauseDuringCallKey,
+            initialValue = false,
+            scope = scope)
 
     val autoPauseDuringCall by derivedStateOf {
         autoPauseDuringCallPreference && hasReadPhoneStatePermission
@@ -81,7 +91,7 @@ class SettingsViewModel @Inject constructor(
     fun onAutoPauseDuringCallClick() {
         if (!autoPauseDuringCall && !hasReadPhoneStatePermission)
             showingAskForPhoneStatePermissionDialog = true
-        else viewModelScope.launch {
+        else scope.launch {
             dataStore.edit { it[autoPauseDuringCallKey] = !autoPauseDuringCall }
         }
     }
@@ -91,7 +101,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun onAskForPhoneStatePermissionDialogConfirm(permissionGranted: Boolean) {
-        if (permissionGranted) viewModelScope.launch {
+        if (permissionGranted) scope.launch {
             dataStore.edit {
                 it[autoPauseDuringCallKey] = true
             }
