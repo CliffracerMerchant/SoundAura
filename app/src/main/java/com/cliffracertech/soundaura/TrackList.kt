@@ -19,7 +19,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -34,19 +33,29 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/** A LazyColumn to display all of the Tracks provided in @param tracks
+/**
+ * A LazyColumn to display all of the Tracks provided in @param tracks
  * with instances of TrackView. The created TrackViews will use the
- * provided @param trackViewCallback for callbacks. */
+ * provided @param trackViewCallback for callbacks.
+ *
+ * @param modifier The modifier that will be used for the entire TrackList.
+ * @param state The LazyListState used for the TrackList's scrolling state.
+ * @param contentPadding The PaddingValues instance that will be used as
+ *     the content padding for the TrackList's items.
+ * @param tracks The list of Tracks that will be displayed by the TrackList.
+ * @param trackViewCallback The instance of TrackViewCallback that will
+ *     be used for responses to individual TrackView interactions.
+ */
 @Composable fun TrackList(
     modifier: Modifier = Modifier,
     state: LazyListState = rememberLazyListState(),
-    bottomPadding: Dp,
+    contentPadding: PaddingValues,
     tracks: List<Track>,
     trackViewCallback: TrackViewCallback = TrackViewCallback()
 ) = LazyColumn(
     modifier = modifier,
     state = state,
-    contentPadding = PaddingValues(8.dp, 8.dp, 8.dp, 8.dp + bottomPadding),
+    contentPadding = contentPadding,
     verticalArrangement = Arrangement.spacedBy(8.dp)
 ) {
     items(items = tracks, key = { it.uriString }) {
@@ -110,10 +119,17 @@ class TrackListViewModel(
 
 /** Compose a TrackList, using an instance of TrackListViewModel to
  * obtain the list of tracks and to respond to item related callbacks.
+ * @param padding A PaddingValues instance whose values will be
+ *     as the contentPadding for the TrackList
+*  @param state The LazyListState used for the TrackList. state
+ *     defaults to an instance of LazyListState returned from a
+ *     rememberLazyListState call, but can be overridden here in
+ *     case, e.g., the scrolling position needs to be remembered
+ *     even when the StatefulTrackList leaves the composition.
  * @param onVolumeChange The callback that will be invoked when
- *                       a TrackView's volume slider is moved. */
+ *     a TrackView's volume slider is moved. */
 @Composable fun StatefulTrackList(
-    bottomPadding: Dp,
+    padding: PaddingValues,
     state: LazyListState = rememberLazyListState(),
     onVolumeChange: (String, Float) -> Unit,
 ) {
@@ -132,6 +148,6 @@ class TrackListViewModel(
     TrackList(
         tracks = viewModel.tracks,
         state = state,
-        bottomPadding = bottomPadding,
+        contentPadding = padding,
         trackViewCallback = itemCallback)
 }

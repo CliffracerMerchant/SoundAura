@@ -134,7 +134,7 @@ class PlayerService: LifecycleService() {
             playbackChangeListeners.remove(listener)
         }
 
-        var playbackState = PlaybackStateCompat.STATE_STOPPED//PlaybackState.Stopped
+        var playbackState = PlaybackStateCompat.STATE_STOPPED
             private set(value) {
                 field = value
                 playbackChangeListeners.forEach { it.onPlaybackStateChange(value) }

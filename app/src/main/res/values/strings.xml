@@ -27,6 +27,8 @@
     <string name="add_button_expanded_description">Cancel add track</string>
     <string name="download_description">Download</string>
     <string name="local_file_description">Local files</string>
+    <string name="download_button_message">
+        The download button is non-functional at this time</string>
     <string name="add_local_files_dialog_title">Confirm track name(s)</string>
     <string name="track_already_exists_error_message">
         This file is already in the library.</string>

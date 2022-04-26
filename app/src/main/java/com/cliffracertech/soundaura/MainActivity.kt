@@ -7,7 +7,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import android.content.res.Configuration
 import android.os.Bundle
 import android.os.IBinder
 import androidx.activity.ComponentActivity
@@ -15,6 +14,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.*
@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -97,7 +98,7 @@ class MainActivity : ComponentActivity() {
             val scaffoldState = rememberScaffoldState()
             val addTrackButtonViewModel: AddTrackButtonViewModel = viewModel()
 
-            MessageHandler(scaffoldState)
+            MessageDisplayer(scaffoldState)
 
             Scaffold(
                 scaffoldState = scaffoldState,
@@ -106,15 +107,25 @@ class MainActivity : ComponentActivity() {
                 }, topBar = {
                     SoundAuraActionBar(::onBackPressed)
                 }, bottomBar = {
-                    Spacer(Modifier.navigationBarsHeight().fillMaxWidth())
+                    Spacer(
+                        Modifier
+                            .navigationBarsHeight()
+                            .fillMaxWidth())
                 }, floatingActionButton = {
                     // The floating action buttons are added in the content
                     // section instead to have more control over their placement.
                     // A spacer is added here so that snack bars still appear
-                    // above the floating action buttons.
-                    Spacer(Modifier.navigationBarsHeight(26.dp).fillMaxWidth())
+                    // above the floating action buttons. 48dp was arrived at
+                    // by starting from the FAB size of 56dp and adjusting
+                    // downward by 8dp due to the inherent snack bar padding.
+                    Spacer(
+                        Modifier
+                            .height(48.dp)
+                            .fillMaxWidth())
                 }, content = {
-                    MainContent(it.calculateBottomPadding())
+                    MainContent(padding = it) { //onSnackBarDismissRequest =
+                        scaffoldState.snackbarHostState.currentSnackbarData?.dismiss()
+                    }
                 })
         }
     }
@@ -126,19 +137,17 @@ class MainActivity : ComponentActivity() {
         content: @Composable () -> Unit
     ) = setContent(parent) {
         val settingsViewModel: SettingsViewModel = viewModel()
-        val usingDarkTheme by derivedStateOf {
-            val theme = settingsViewModel.appTheme
-            if (theme == AppTheme.Dark)
+        val themePreference = settingsViewModel.appTheme
+        val systemIsUsingDarkTheme = isSystemInDarkTheme()
+        val useDarkTheme by derivedStateOf {
+            if (themePreference == AppTheme.Dark)
                 true
-            else {
-                val systemDarkThemeActive = Configuration.UI_MODE_NIGHT_YES ==
-                    (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK)
-                theme == AppTheme.UseSystem && systemDarkThemeActive
-            }
+            else themePreference == AppTheme.UseSystem
+                    && systemIsUsingDarkTheme
         }
 
         val uiController = rememberSystemUiController()
-        LaunchedEffect(usingDarkTheme) {
+        LaunchedEffect(useDarkTheme) {
             // For some reason the status bar icons get reset
             // to a light color when the theme is changed, so
             // this effect needs to run after every theme change
@@ -146,14 +155,14 @@ class MainActivity : ComponentActivity() {
             uiController.setStatusBarColor(Color.Transparent, true)
             uiController.setNavigationBarColor(Color.Transparent, true)
         }
-        SoundAuraTheme(usingDarkTheme) {
+        SoundAuraTheme(useDarkTheme) {
             ProvideWindowInsets { content() }
         }
     }
 
     /** Compose a message handler that will read messages emitted from a
      * MainActivityViewModel's messages member and display them using snack bars.*/
-    @Composable private fun MessageHandler(scaffoldState: ScaffoldState) {
+    @Composable private fun MessageDisplayer(scaffoldState: ScaffoldState) {
         val dismissLabel = stringResource(R.string.dismiss_description)
 
         LaunchedEffect(Unit) {
@@ -170,59 +179,82 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @Composable private fun MainContent(bottomPadding: Dp) =
-        Box(Modifier.fillMaxSize(1f)) {
-            val showingAppSettings = viewModel.showingAppSettings
-            // The bottomPadding parameter only accounts for the navigation
-            // bar. The buttons are given an extra 8dp so that they don't
-            // appear right along the bottom edge, and the track list is
-            // given an additional 56dp padding to account for the size of
-            // the FABs themselves.
-            val buttonBottomPadding = bottomPadding + 8.dp
-            val trackListBottomPadding = buttonBottomPadding + 56.dp
+    @Composable private fun MainContent(
+        padding: PaddingValues,
+        onSnackBarDismissRequest: () -> Unit
+    ) = Box(Modifier.fillMaxSize(1f)) {
+        val showingAppSettings = viewModel.showingAppSettings
+        val ld = LocalLayoutDirection.current
 
-            // The track list state is remembered here so that the scrolling
-            // position will not be lost if the user navigates to the app
-            // settings screen and back.
-            val trackListState = rememberLazyListState()
-
-            SlideAnimatedContent(
-                targetState = showingAppSettings,
-                leftToRight = !showingAppSettings
-            ) { showingAppSettingsScreen ->
-                if (showingAppSettingsScreen)
-                    AppSettings()
-                else StatefulTrackList(
-                    bottomPadding = trackListBottomPadding,
-                    state = trackListState,
-                    onVolumeChange = { uri, volume ->
-                        boundPlayerService?.setTrackVolume(uri, volume)
-                    })
-            }
-            AnimatedVisibility(
-                visible = !viewModel.showingAppSettings,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = buttonBottomPadding),
-                enter = fadeIn(tween(delayMillis = 75)) + scaleIn(overshootTweenSpec(delay = 75)),
-                exit = fadeOut(tween(delayMillis = 125)) + scaleOut(anticipateTweenSpec(delay = 75))
-            ) {
-                val isPlaying by boundPlayerService?.isPlaying.mapToNonNullState(false)
-                FloatingActionButton(
-                    onClick = { boundPlayerService?.toggleIsPlaying() },
-                    backgroundColor = lerp(MaterialTheme.colors.primary,
-                                           MaterialTheme.colors.primaryVariant, 0.5f),
-//                    elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp)
-                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
-                ) { PlayPauseIcon(isPlaying, tint = MaterialTheme.colors.onPrimary) }
-            }
-            AnimatedVisibility(
-                visible = !showingAppSettings,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = buttonBottomPadding),
-                enter = fadeIn(tween()) + scaleIn(overshootTweenSpec()),
-                exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTweenSpec())
-            ) { StatefulAddTrackButton() }
+        // The padding parameter only accounts for the system bars.
+        // The buttons are given an extra 8dp so that they don't
+        // appear right along the bottom edge, and the track list is
+        // given an additional 64dp padding to account for the size of
+        // the FABs themselves.
+        val buttonBottomPadding = remember(padding) {
+            8.dp + padding.calculateBottomPadding()
         }
+        val trackListPadding = remember(padding) {
+            PaddingValues(
+                start = 8.dp + padding.calculateStartPadding(ld),
+                top = 8.dp + padding.calculateTopPadding(),
+                end = 8.dp + padding.calculateEndPadding(ld),
+                bottom = 64.dp + buttonBottomPadding)
+        }
+
+        // The track list state is remembered here so that the
+        // scrolling position will not be lost if the user
+        // navigates to the app settings screen and back.
+        val trackListState = rememberLazyListState()
+
+        SlideAnimatedContent(
+            targetState = showingAppSettings,
+            leftToRight = !showingAppSettings
+        ) { showingAppSettingsScreen ->
+            if (showingAppSettingsScreen)
+                AppSettings()
+            else StatefulTrackList(
+                padding = trackListPadding,
+                state = trackListState,
+                onVolumeChange = { uri, volume ->
+                    boundPlayerService?.setTrackVolume(uri, volume)
+                })
+        }
+        FloatingActionButtons(
+            visible = !showingAppSettings,
+            bottomPadding = buttonBottomPadding,
+            onSnackBarDismissRequest)
+    }
+
+    @Composable private fun BoxScope.FloatingActionButtons(
+        visible: Boolean,
+        bottomPadding: Dp,
+        onSnackBarDismissRequest: () -> Unit
+    ) {
+        AnimatedVisibility(
+            visible = visible,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = bottomPadding),
+            enter = fadeIn(tween(delayMillis = 75)) + scaleIn(overshootTweenSpec(delay = 75)),
+            exit = fadeOut(tween(delayMillis = 125)) + scaleOut(anticipateTweenSpec(delay = 75))
+        ) {
+            val isPlaying by boundPlayerService?.isPlaying.mapToNonNullState(false)
+            FloatingActionButton(
+                onClick = { boundPlayerService?.toggleIsPlaying() },
+                backgroundColor = lerp(MaterialTheme.colors.primary,
+                                       MaterialTheme.colors.secondary, 0.5f),
+//                    elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp)
+                elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
+            ) { PlayPauseIcon(isPlaying, tint = MaterialTheme.colors.onPrimary) }
+        }
+        AnimatedVisibility(
+            visible = visible,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = bottomPadding),
+            enter = fadeIn(tween()) + scaleIn(overshootTweenSpec()),
+            exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTweenSpec()),
+        ) { StatefulAddTrackButton(onSnackBarDismissRequest) }
+    }
 }

@@ -218,7 +218,8 @@ class AddTrackButtonViewModel(
 
     fun onDownloadFileButtonClick() {
         expanded = false
-        showingDownloadFileDialog = true
+//        showingDownloadFileDialog = true
+        messageHandler.postMessage(StringResource(R.string.download_button_message))
     }
 
     fun onDownloadFileDialogDismiss() {
@@ -296,14 +297,23 @@ class AddTrackButtonViewModel(
     }
 }
 
-/** Compose an AddTrackButton with state provided by an instance of AddTrackButtonViewModel. */
-@Composable fun StatefulAddTrackButton() {
+/**
+ * Compose an AddTrackButton with state provided by an instance of AddTrackButtonViewModel.
+ *
+ * @param onClick The callback that will be invoked when the button is clicked.
+ *     StatefulAddTrackButton will already handle the expanding and collapsing
+ *     of the button itself. Use onClick for additional onClick actions.
+ */
+@Composable fun StatefulAddTrackButton(
+    onClick: (() -> Unit)? = null
+) {
     val viewModel: AddTrackButtonViewModel = viewModel()
 
     AddTrackButton(
         expanded = viewModel.expanded,
         onBoundsChange = viewModel::onBoundsChange,
-        onClick = viewModel::onClick,
+        onClick = { viewModel.onClick()
+                    onClick?.invoke() },
         onAddDownloadClick = viewModel::onDownloadFileButtonClick,
         onAddLocalFilesClick = viewModel::onAddLocalFilesButtonClick,)
 

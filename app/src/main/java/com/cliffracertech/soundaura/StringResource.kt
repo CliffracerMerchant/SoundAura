@@ -5,9 +5,8 @@ package com.cliffracertech.soundaura
 import android.content.Context
 import androidx.annotation.StringRes
 
-/** A holder of a string resource, which can be resolved to a string by calling
- * the method resolve with a Context instance. Thanks to this SO post at
- * https://stackoverflow.com/a/65967451 for the idea. */
+/** A holder of a string resource, which can be resolved to a
+ * string by calling the method resolve with a Context instance. */
 class StringResource(
     private val string: String?,
     @StringRes val stringResId: Int = 0,

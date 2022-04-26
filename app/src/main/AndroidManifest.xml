@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.cliffracertech.soundaura">
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.READ_PHONE_STATE"
+        tools:targetApi="o"
         android:requiredFeature="false"/>
 
     <application
@@ -14,10 +16,18 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SoundAura">
 
+        <!-- The Accompanist window insets functionality seems to not
+             provide the correct values when the phone is in landscape
+             orientation (the navigation bar still overlaps the content
+             in landscape even when they are provided the correct window
+             insets values. Until this is fixed, the orientation is
+             going to be locked to portrait for the time being. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.SoundAura.NoActionBar">
+            android:theme="@style/Theme.SoundAura.NoActionBar"
+            tools:ignore="LockedOrientationActivity"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
