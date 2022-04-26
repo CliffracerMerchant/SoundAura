@@ -70,9 +70,9 @@ class ActionBarViewModelTests {
 
     @Test fun backButtonExitsAppSettings() {
         settingsButtonAffectsUnderlyingState()
-        instance.onBackButtonClick()
+        assertThat(instance.onBackButtonClick()).isTrue()
         assertThat(instance.showingAppSettings).isFalse()
-        instance.onBackButtonClick()
+        assertThat(instance.onBackButtonClick()).isFalse()
         assertThat(instance.showingAppSettings).isFalse()
     }
 

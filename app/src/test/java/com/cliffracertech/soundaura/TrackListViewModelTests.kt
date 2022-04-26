@@ -6,8 +6,12 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.TestCoroutineScope
+import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -18,36 +22,40 @@ import org.robolectric.annotation.Config
 @Config(sdk=[30])
 @RunWith(RobolectricTestRunner::class)
 class TrackListViewModelTests {
-    private lateinit var context: Context
-    private lateinit var instance: TrackListViewModel
+    private val context = ApplicationProvider.getApplicationContext<Context>()
+    private val coroutineDispatcher = TestCoroutineDispatcher()
+    private val coroutineScope = TestCoroutineScope(coroutineDispatcher + Job())
+    private lateinit var searchQueryState: SearchQueryState
     private lateinit var db: SoundAuraDatabase
     private lateinit var dao: TrackDao
-    private lateinit var searchQueryState: SearchQueryState
+    private lateinit var instance: TrackListViewModel
     private val testTracks = List(5) {
         Track(uriString = "uri$it", name = "track $it")
     }
 
     @Before fun init() {
-        context = ApplicationProvider.getApplicationContext()
         db = Room.inMemoryDatabaseBuilder(context, SoundAuraDatabase::class.java).build()
         dao = db.trackDao()
         searchQueryState = SearchQueryState()
         instance = TrackListViewModel(context, context.dataStore, dao,
-                                      searchQueryState, TestCoroutineScope())
+                                      searchQueryState, coroutineScope)
+        Dispatchers.setMain(coroutineDispatcher)
+    }
+    @After fun cleanUp() {
+        Dispatchers.resetMain()
+        coroutineDispatcher.cleanupTestCoroutines()
+        coroutineScope.cancel()
+        db.close()
     }
 
-    @After fun closeDb() = db.close()
+    // Unfortunately I can't get these tests to work without a Thread.sleep
+    // call. This shouldn't be necessary when using a test dispatcher and
+    // coroutine scope, but is for some reason. This might have something to
+    // do with how the tracks property is backed by a MutableState instance
+    // whose value updates when the Flow of tracks returned from the TrackDao
+    // emits a new value.
 
     @Test fun tracksPropertyReflectsAddedTracks() {
-        // Unfortunately I can't get this test to work without a Thread.sleep call.
-        // Normally using a TestCoroutineScope and/or a TestCoroutineDispatcher
-        // would cause all jobs to be executed immediately in blocking fashion,
-        // but only the combination of using a TestCoroutineDispatcher and a
-        // Thread.sleep call seems to allow this test to pass (even though it
-        // does pass when tested manually). This likely has something to do with
-        // how the tracks property is backed by a MutableState instance whose
-        // value updates when the StateFlow of tracks returned from the TrackDao
-        // updates its own value.
         assertThat(instance.tracks).isEmpty()
         runBlocking { dao.insert(testTracks) }
         Thread.sleep(50L)
@@ -99,7 +107,6 @@ class TrackListViewModelTests {
         Thread.sleep(50L)
         assertThat(instance.tracks.map { it.volume })
             .containsExactlyElementsIn(expectedVolumes).inOrder()
-
     }
 
     @Test fun trackRenameDialogConfirm() {

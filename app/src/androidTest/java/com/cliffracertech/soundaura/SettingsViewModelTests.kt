@@ -15,7 +15,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Before
@@ -41,7 +40,6 @@ class SettingsViewModelTests {
     private suspend fun updatedPreferences() = dataStore.data.first().toPreferences()
 
     @Before fun init() {
-        runBlocking { dataStore.edit { it.clear() } }
         instance = SettingsViewModel(context, dataStore, coroutineScope)
         Dispatchers.setMain(coroutineDispatcher)
     }
