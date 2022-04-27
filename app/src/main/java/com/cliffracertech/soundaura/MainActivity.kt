@@ -96,6 +96,9 @@ class MainActivity : ComponentActivity() {
 
         setContentWithTheme {
             val scaffoldState = rememberScaffoldState()
+            // The AddTrackButtonViewModel needs to be notified of global
+            // click events so that it can collapse the AddTrackButton when
+            // a click is performed outside its bounds.
             val addTrackButtonViewModel: AddTrackButtonViewModel = viewModel()
 
             MessageDisplayer(scaffoldState)
@@ -107,10 +110,7 @@ class MainActivity : ComponentActivity() {
                 }, topBar = {
                     SoundAuraActionBar(::onBackPressed)
                 }, bottomBar = {
-                    Spacer(
-                        Modifier
-                            .navigationBarsHeight()
-                            .fillMaxWidth())
+                    Spacer(Modifier.navigationBarsHeight().fillMaxWidth())
                 }, floatingActionButton = {
                     // The floating action buttons are added in the content
                     // section instead to have more control over their placement.
@@ -118,10 +118,7 @@ class MainActivity : ComponentActivity() {
                     // above the floating action buttons. 48dp was arrived at
                     // by starting from the FAB size of 56dp and adjusting
                     // downward by 8dp due to the inherent snack bar padding.
-                    Spacer(
-                        Modifier
-                            .height(48.dp)
-                            .fillMaxWidth())
+                    Spacer(Modifier.height(48.dp).fillMaxWidth())
                 }, content = {
                     MainContent(padding = it) { //onSnackBarDismissRequest =
                         scaffoldState.snackbarHostState.currentSnackbarData?.dismiss()
@@ -188,18 +185,9 @@ class MainActivity : ComponentActivity() {
 
         // The padding parameter only accounts for the system bars.
         // The buttons are given an extra 8dp so that they don't
-        // appear right along the bottom edge, and the track list is
-        // given an additional 64dp padding to account for the size of
-        // the FABs themselves.
+        // appear right along the bottom edge.
         val buttonBottomPadding = remember(padding) {
             8.dp + padding.calculateBottomPadding()
-        }
-        val trackListPadding = remember(padding) {
-            PaddingValues(
-                start = 8.dp + padding.calculateStartPadding(ld),
-                top = 8.dp + padding.calculateTopPadding(),
-                end = 8.dp + padding.calculateEndPadding(ld),
-                bottom = 64.dp + buttonBottomPadding)
         }
 
         // The track list state is remembered here so that the
@@ -211,14 +199,32 @@ class MainActivity : ComponentActivity() {
             targetState = showingAppSettings,
             leftToRight = !showingAppSettings
         ) { showingAppSettingsScreen ->
-            if (showingAppSettingsScreen)
-                AppSettings()
-            else StatefulTrackList(
-                padding = trackListPadding,
-                state = trackListState,
-                onVolumeChange = { uri, volume ->
-                    boundPlayerService?.setTrackVolume(uri, volume)
-                })
+            if (showingAppSettingsScreen) {
+                val padding = remember(padding) {
+                    PaddingValues(
+                        start = 8.dp + padding.calculateStartPadding(ld),
+                        top = 8.dp + padding.calculateTopPadding(),
+                        end = 8.dp + padding.calculateEndPadding(ld),
+                        bottom = buttonBottomPadding)
+                }
+                AppSettings(padding)
+            } else {
+                // The track list is given an additional 64dp padding
+                // to account for the size of the FABs themselves.
+                val padding = remember(padding) {
+                    PaddingValues(
+                        start = 8.dp + padding.calculateStartPadding(ld),
+                        top = 8.dp + padding.calculateTopPadding(),
+                        end = 8.dp + padding.calculateEndPadding(ld),
+                        bottom = 64.dp + buttonBottomPadding)
+                }
+                StatefulTrackList(
+                    padding = padding,
+                    state = trackListState,
+                    onVolumeChange = { uri, volume ->
+                        boundPlayerService?.setTrackVolume(uri, volume)
+                    })
+            }
         }
         FloatingActionButtons(
             visible = !showingAppSettings,
