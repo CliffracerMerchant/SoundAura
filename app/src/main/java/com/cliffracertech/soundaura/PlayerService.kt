@@ -41,26 +41,15 @@ import javax.inject.Inject
  * A service to play the set of audio tracks marked as playing tracks in the
  * application's database.
  *
- * PlayerService runs as a foreground service, and presents a notification to
- * the user that displays its current play/pause state in string form, along
- * with actions to toggle the play/pause state and to close the service. The
- * play/pause action will always be visible, but the close action is hidden
- * when the service is bound to any clients via Context.bindService.
- *
- * PlayerService is designed to be started as a bound service, with the binding
- * client receiving an instance of its Binder class, through which they can
- * read and manipulate the play/pause state through the Binder instance's
- * isPlaying property and its toggleIsPlaying function. Bound activities should
- * call unbind when they are paused. If the service's play/pause state or a
- * track volume was changed through the Binder instance at least once before
- * the unbind occurred, then PlayerService will automatically start itself as a
- * started service, meaning that it will outlive its bound clients. If one of
- * these changes did not occur after PlayerService was started but before all
- * clients were unbound, then the PlayerService will stop when all clients are
- * unbound as per normal for bound services. This behavior is intended so that
- * if the user accidentally starts the app and closes it immediately without
- * interacting with it, they won't also have to close the PlayerService through
- * its notification.
+ * PlayerService can either be started independently of an activity with a
+ * startService call, or can be started bound to an activity if the activity
+ * calls bindService. In the latter case, PlayerService will call startService
+ * on itself so that it outlives the binding activity. In either case,
+ * PlayerService presents a foreground notification to the user that displays
+ * its current play/pause state in string form, along with actions to toggle
+ * the play/pause state and to close the service. The play/pause action will
+ * always be visible, but the close action is hidden when the service is bound
+ * to any clients.
  *
  * Changes in the playback state can be listened to by calling the static
  * function addPlaybackChangeListener with a PlaybackChangeListener.
@@ -76,33 +65,59 @@ import javax.inject.Inject
  * unpause itself. This auto-pause also works for ongoing calls if the
  * READ_PHONE_STATE permission has been granted to the app.
  *
- * To ensure that the volume for already playing tracks is changed seamlessly
- * and without perceptible lag, PlayerService will not respond to track volume
- * updates for already playing tracks that are received through the view
- * model's playingTracks property. Instead, the function setTrackVolume must be
- * called with the Uri (in string form) of the track and the new volume. If a
- * bound activity presents the user with, e.g, a slider to change a track's
- * volume, the slider's onSlide callback should therefore call setTrackVolume.
+ * To ensure that the volume for already playing tracks is changed without
+ * perceptible lag, PlayerService will not respond to track volume changes made
+ * at the database level for already playing tracks. Instead, the function
+ * setTrackVolume must be called with the Uri (in string form) of the track and
+ * the new volume. If a bound activity presents the user with, e.g, a slider to
+ * change a track's volume, the slider's onSlide callback should therefore call
+ * setTrackVolume.
  */
 @AndroidEntryPoint
 class PlayerService: LifecycleService() {
     private val uriPlayerMap = mutableMapOf<String, MediaPlayer>()
+    private val unpauseLocks = mutableListOf<String>()
     @Inject lateinit var trackDao: TrackDao
     private lateinit var audioManager: AudioManager
     private lateinit var notificationManager: NotificationManager
     private lateinit var mediaSession: MediaSessionCompat
-    private val playbackStateBuilder = PlaybackStateCompat.Builder()
     private lateinit var telephonyManager: TelephonyManager
 
-    private var isPlaying by mutableStateOf(false)
-    private val unpauseLocks = mutableListOf<String>()
-    private var currentlyBound = false
-    private var runAsStartedService = false
+    private var boundToActivity = false
         set(value) {
-            if (value && !field)
-                ContextCompat.startForegroundService(
-                    this, Intent(this, this::class.java))
+            if (value == field) return
             field = value
+            notificationManager.notify(notificationId, notification)
+        }
+
+    /** isPlaying is updated in playbackState's custom setter and should not be
+     * changed otherwise. A value of true indicates a PlaybackStateCompat value
+     * of STATE_PLAYING, while false indicates another PlaybackStateCompat value. */
+    private var isPlaying by mutableStateOf(false)
+    private val playbackStateBuilder = PlaybackStateCompat.Builder()
+    private var playbackState
+        get() = Companion.playbackState
+        set(value) {
+            if (playbackState == value)
+                return
+
+            Companion.playbackState = value
+            unpauseLocks.clear()
+            isPlaying = value == PlaybackStateCompat.STATE_PLAYING
+
+            if (value != PlaybackStateCompat.STATE_STOPPED) {
+                uriPlayerMap.forEach { it.value.setPaused(!isPlaying) }
+                playbackStateBuilder.setState(Companion.playbackState, 0, 1f)
+                val actions = PlaybackStateCompat.ACTION_PLAY_PAUSE or
+                    if (boundToActivity) 0
+                    else PlaybackStateCompat.ACTION_STOP
+                playbackStateBuilder.setActions(actions)
+                mediaSession.setPlaybackState(playbackStateBuilder.build())
+                notificationManager.notify(notificationId, notification)
+            } else {
+                stopForeground(true)
+                stopSelf()
+            }
         }
 
     fun interface PlaybackChangeListener {
@@ -112,17 +127,26 @@ class PlayerService: LifecycleService() {
     companion object {
         private const val requestCode = 1
         private const val notificationId = 1
-        private const val autoPauseOnAudioDeviceChangeKey = "auto_pause_audio_device_change"
+        private const val autoPauseAudioDeviceChangeKey = "auto_pause_audio_device_change"
         private const val autoPauseOngoingCallKey = "auto_pause_ongoing_call"
 
+        fun setPlaybackStateIntent(
+            context: Context,
+            @PlaybackStateCompat.State state: Int
+        ) : Intent {
+            val key = context.getString(R.string.set_playback_action)
+            return Intent(context, PlayerService::class.java)
+                .setAction(key).putExtra(key, state)
+        }
+
         fun playIntent(context: Context) =
-            Intent(context, PlayerService::class.java)
-                .setAction(context.getString(R.string.set_playback_action))
-                .putExtra(context.getString(R.string.set_playback_key), true)
+            setPlaybackStateIntent(context, PlaybackStateCompat.STATE_PLAYING)
+
+        fun pauseIntent(context: Context) =
+            setPlaybackStateIntent(context, PlaybackStateCompat.STATE_PAUSED)
 
         fun stopIntent(context: Context) =
-            Intent(context, PlayerService::class.java)
-                .setAction(context.getString(R.string.stop_playback_action))
+            setPlaybackStateIntent(context, PlaybackStateCompat.STATE_STOPPED)
 
         private val playbackChangeListeners = mutableListOf<PlaybackChangeListener>()
 
@@ -137,25 +161,10 @@ class PlayerService: LifecycleService() {
         var playbackState = PlaybackStateCompat.STATE_STOPPED
             private set(value) {
                 field = value
-                playbackChangeListeners.forEach { it.onPlaybackStateChange(value) }
+                playbackChangeListeners.forEach {
+                    it.onPlaybackStateChange(value)
+                }
             }
-    }
-
-    private var playbackState
-        get() = Companion.playbackState
-        set(value) {
-            Companion.playbackState = value
-            updatePlaybackStateAndNotification()
-        }
-
-    private fun updatePlaybackStateAndNotification() {
-        playbackStateBuilder.setState(Companion.playbackState, 0, 1f)
-        val actions = PlaybackStateCompat.ACTION_PLAY_PAUSE or
-            if (currentlyBound) 0
-            else PlaybackStateCompat.ACTION_STOP
-        playbackStateBuilder.setActions(actions)
-        mediaSession.setPlaybackState(playbackStateBuilder.build())
-        notificationManager.notify(notificationId, notification)
     }
 
     override fun onCreate() {
@@ -172,18 +181,18 @@ class PlayerService: LifecycleService() {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }, FLAG_IMMUTABLE))
         mediaSession.isActive = true
-        updatePlaybackStateAndNotification()
+        playbackState = PlaybackStateCompat.STATE_PAUSED
+        val intent = Intent(this, PlayerService::class.java)
+        ContextCompat.startForegroundService(this, intent)
 
         audioManager.registerAudioDeviceCallback(object: AudioDeviceCallback() {
             override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) {
-                super.onAudioDevicesAdded(addedDevices)
                 val volume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-                autoPauseIf(volume == 0, autoPauseOnAudioDeviceChangeKey)
+                autoPauseIf(volume == 0, autoPauseAudioDeviceChangeKey)
             }
             override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) {
-                super.onAudioDevicesRemoved(removedDevices)
                 val volume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-                autoPauseIf(volume == 0, autoPauseOnAudioDeviceChangeKey)
+                autoPauseIf(volume == 0, autoPauseAudioDeviceChangeKey)
             }
         }, null)
 
@@ -225,80 +234,31 @@ class PlayerService: LifecycleService() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            getString(R.string.stop_playback_action) -> {
-                if (!currentlyBound) {
-                    playbackState = PlaybackStateCompat.STATE_STOPPED
-                    stopForeground(true)
-                    stopSelf()
-                } else setIsPlaying(false)
-            } getString(R.string.set_playback_action) -> {
-                // The service should be in a foreground state if a play
-                // pause action is invoked, but setIsPlaying will cause
-                // runAsStartedService to be set to true, which will cause
-                // startForeground to be called if it hasn't been already.
-                val key = getString(R.string.set_playback_key)
-                val targetState = intent.extras?.getBoolean(key)
-                targetState?.let { setIsPlaying(it) }
-            } else -> startForeground(notificationId, notification)
+        val setPlaybackKey = getString(R.string.set_playback_action)
+        if (intent?.action == setPlaybackKey) {
+            val targetState = intent.extras?.getInt(setPlaybackKey)
+            playbackState = when (targetState) {
+                PlaybackStateCompat.STATE_PLAYING -> targetState
+                PlaybackStateCompat.STATE_PAUSED ->  targetState
+                PlaybackStateCompat.STATE_STOPPED ->
+                    if (!boundToActivity) targetState
+                    else PlaybackStateCompat.STATE_PAUSED
+                else -> playbackState
+            }
         }
+        startForeground(notificationId, notification)
         return super.onStartCommand(intent, flags, startId)
-    }
-
-    inner class Binder: android.os.Binder() {
-        val isPlaying get() = this@PlayerService.isPlaying
-
-        fun toggleIsPlaying() =
-            setIsPlaying(!this@PlayerService.isPlaying)
-
-        fun setTrackVolume(uriString: String, volume: Float) {
-            uriPlayerMap[uriString]?.setVolume(volume, volume)
-            runAsStartedService = true
-        }
-    }
-
-    override fun onBind(intent: Intent): Binder {
-        super.onBind(intent)
-        currentlyBound = true
-        updatePlaybackStateAndNotification()
-        return Binder()
-    }
-
-    override fun onUnbind(intent: Intent?): Boolean {
-        currentlyBound = false
-        if (!runAsStartedService)
-            notificationManager.cancel(notificationId)
-        else updatePlaybackStateAndNotification()
-        return false
     }
 
     private fun MediaPlayer.setPaused(paused: Boolean) =
         if (paused) pause() else start()
-
-    /** Set the isPlaying state, returning whether or not the change was
-     * successful. setIsPlaying will return false if the playing state
-     * already matched the provided value. */
-    fun setIsPlaying(isPlaying: Boolean): Boolean {
-        if (this.isPlaying == isPlaying)
-            return false
-        if (isPlaying && unpauseLocks.isNotEmpty())
-            return false
-
-        this.isPlaying = isPlaying
-        runAsStartedService = true
-        playbackState = if (isPlaying) PlaybackStateCompat.STATE_PLAYING
-                        else           PlaybackStateCompat.STATE_PAUSED
-        uriPlayerMap.forEach { it.value.setPaused(!isPlaying) }
-        updatePlaybackStateAndNotification()
-        return true
-    }
 
     /**
      * Automatically pause playback if the parameter condition is true and
      * isPlaying is true. If this auto-pause succeeds, an unpause lock will be
      * added to the player with a key equal to the parameter key. Calling
      * autoPauseIf with the same key with a false condition will remove the
-     * corresponding unpause lock and, if there are no other unpause locks,
+     * corresponding unpause lock, and, if there are no other unpause locks,
      * resume playback. Different causes of the auto-pause event should
      * therefore utilize unique keys (e.g. one for auto-pausing when a call is
      * started, and another for auto-pausing when other media starts playing).
@@ -306,12 +266,35 @@ class PlayerService: LifecycleService() {
      * unpause locks.
      */
     private fun autoPauseIf(condition: Boolean, key: String) {
-        if (condition && isPlaying && setIsPlaying(false)) {
+        if (condition) {
+            playbackState = PlaybackStateCompat.STATE_PAUSED
             unpauseLocks.add(key)
-        } else if (!condition && unpauseLocks.remove(key))
-            // setIsPlaying will return false and not change the
-            // state if there are still other unpause locks remaining
-            setIsPlaying(true)
+        } else if (unpauseLocks.remove(key) && unpauseLocks.isEmpty())
+            playbackState = PlaybackStateCompat.STATE_PLAYING
+    }
+
+    inner class Binder: android.os.Binder() {
+        val isPlaying get() = this@PlayerService.isPlaying
+
+        fun toggleIsPlaying() {
+            playbackState = if (isPlaying) PlaybackStateCompat.STATE_PAUSED
+                            else           PlaybackStateCompat.STATE_PLAYING
+        }
+
+        fun setTrackVolume(uriString: String, volume: Float) {
+            uriPlayerMap[uriString]?.setVolume(volume, volume)
+        }
+    }
+
+    override fun onBind(intent: Intent): Binder {
+        super.onBind(intent)
+        boundToActivity = true
+        return Binder()
+    }
+
+    override fun onUnbind(intent: Intent?): Boolean {
+        boundToActivity = false
+        return false
     }
 
     private val notificationChannelId by lazy {
@@ -332,6 +315,7 @@ class PlayerService: LifecycleService() {
     private val notificationStyle = androidx.media.app.NotificationCompat.MediaStyle()
 
     private val notificationBuilder by lazy {
+        notificationStyle.setMediaSession(mediaSession.sessionToken)
         NotificationCompat.Builder(this, notificationChannelId)
             .setOngoing(true)
             .setSmallIcon(R.drawable.tile_and_notification_icon)
@@ -353,16 +337,15 @@ class PlayerService: LifecycleService() {
             if (isPlaying) R.string.pause_description
             else           R.string.play_description)
 
-        val intent = Intent(this, PlayerService::class.java)
-            .setAction(getString(R.string.set_playback_action))
-            .putExtra(getString(R.string.set_playback_key), !isPlaying)
+        val intent = if (isPlaying) pauseIntent(this)
+                     else           playIntent(this)
         val pendingIntent = PendingIntent.getService(
             this, requestCode, intent, FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE)
         return Action(icon, description, pendingIntent)
     }
 
     /** A notification action that will stop the service when triggered. */
-    private val stopServiceAction by lazy {
+    private val stopAction by lazy {
         val pendingIntent = PendingIntent.getService(
             this, requestCode, stopIntent(this), FLAG_IMMUTABLE)
         Action(R.drawable.ic_baseline_close_24,
@@ -381,11 +364,10 @@ class PlayerService: LifecycleService() {
             .clearActions()
             .addAction(togglePlayPauseAction)
 
-        if (runAsStartedService && !currentlyBound) {
-            builder.addAction(stopServiceAction)
+        if (!boundToActivity) {
+            builder.addAction(stopAction)
             notificationStyle.setShowActionsInCompactView(0, 1)
         } else notificationStyle.setShowActionsInCompactView(0)
-        notificationStyle.setMediaSession(mediaSession.sessionToken)
 
         return builder.build()
     }
