@@ -130,7 +130,7 @@ class PlayerService: LifecycleService() {
         private const val autoPauseAudioDeviceChangeKey = "auto_pause_audio_device_change"
         private const val autoPauseOngoingCallKey = "auto_pause_ongoing_call"
 
-        fun setPlaybackStateIntent(
+        private fun setPlaybackStateIntent(
             context: Context,
             @PlaybackStateCompat.State state: Int
         ) : Intent {
@@ -181,6 +181,7 @@ class PlayerService: LifecycleService() {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }, FLAG_IMMUTABLE))
         mediaSession.isActive = true
+        mediaSession.setCallback(mediaSessionCallback)
         playbackState = PlaybackStateCompat.STATE_PAUSED
         val intent = Intent(this, PlayerService::class.java)
         ContextCompat.startForegroundService(this, intent)
@@ -295,6 +296,18 @@ class PlayerService: LifecycleService() {
     override fun onUnbind(intent: Intent?): Boolean {
         boundToActivity = false
         return false
+    }
+
+    private val mediaSessionCallback = object: MediaSessionCompat.Callback() {
+        override fun onPlay() {
+            playbackState = PlaybackStateCompat.STATE_PLAYING
+        }
+        override fun onPause() {
+            playbackState = PlaybackStateCompat.STATE_PAUSED
+        }
+        override fun onStop() {
+            playbackState = PlaybackStateCompat.STATE_STOPPED
+        }
     }
 
     private val notificationChannelId by lazy {
