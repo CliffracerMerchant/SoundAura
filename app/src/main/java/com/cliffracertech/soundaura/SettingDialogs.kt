@@ -32,6 +32,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 
@@ -174,47 +175,58 @@ fun PhoneStatePermissionDialog(
         }, modifier = Modifier.padding(16.dp),
         properties = DialogProperties(usePlatformDefaultWidth = false),
         text = { Box(Modifier.fillMaxSize()) { LibrariesContainer() }})
-// Putting the LibrariesContainer inside the box prevents a
-// visual bug where the dialog appears at a smaller size at
-// first, and then changes to its full size.
+        // Putting the LibrariesContainer inside the box prevents a
+        // visual bug where the dialog appears at a smaller size at
+        // first, and then changes to its full size.
 
 /** Show a dialog displaying information about the app to the user. */
 @Composable fun AboutAppDialog(
     onDismissRequest: () -> Unit
-) = SoundAuraDialog(
-    title = stringResource(R.string.app_name),
-    titleLayout = { title ->
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(painter = painterResource(R.drawable.tile_and_notification_icon),
-                 contentDescription = null,
-                 modifier = Modifier.size(30.dp),
-                 tint = MaterialTheme.colors.primary)
-            Spacer(Modifier.width(2.dp))
-            Text(text = title, style = MaterialTheme.typography.body1)
-            Text(text = stringResource(R.string.app_version),
+) = Dialog(onDismissRequest) {
+    Surface(shape = MaterialTheme.shapes.medium) {
+        Column(Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp)) {
+
+            // Title
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(painter = painterResource(R.drawable.tile_and_notification_icon),
+                     contentDescription = null,
+                     modifier = Modifier.size(24.dp),
+                     tint = MaterialTheme.colors.primary)
+                Spacer(Modifier.width(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(text = stringResource(R.string.app_name),
+                         modifier = Modifier.alignByBaseline(),
+                         style = MaterialTheme.typography.body1)
+                    Text(text = stringResource(R.string.app_version),
+                         modifier = Modifier.alignByBaseline(),
+                         style = MaterialTheme.typography.subtitle1)
+                }
+            }
+
+            // Content
+            Spacer(Modifier.height(12.dp))
+            Text(text = stringResource(R.string.about_app_body),
                  style = MaterialTheme.typography.subtitle1)
-        }
-    }, showCancelButton = false,
-    onDismissRequest = onDismissRequest,
-    onConfirm = onDismissRequest,
-    contentButtonSpacing = 0.dp
-) {
-    val uriHandler = LocalUriHandler.current
-    val gitHubLink = stringResource(R.string.github_link)
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(text = stringResource(R.string.about_app_body),
-             style = MaterialTheme.typography.subtitle1)
-        Row(Modifier.clickable { uriHandler.openUri(gitHubLink) },
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(painter = painterResource(R.drawable.github_logo),
-                 contentDescription = null,
-                 modifier = Modifier.padding(top = 16.dp, bottom = 16.dp, end = 12.dp))
-            Text(text = stringResource(R.string.source_code_description),
-                 textDecoration = TextDecoration.Underline,
-                 color = MaterialTheme.colors.primary)
+
+            // Bottom buttons
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val uriHandler = LocalUriHandler.current
+                val gitHubLink = stringResource(R.string.github_link)
+                TextButton(
+                    onClick = { uriHandler.openUri(gitHubLink) },
+                    contentPadding = PaddingValues(vertical = 18.dp)
+                ) {
+                    Icon(painterResource(R.drawable.github_logo), null)
+                    Spacer(Modifier.width(10.dp))
+                    Text(text = stringResource(R.string.source_code_description),
+                         textDecoration = TextDecoration.Underline,
+                         color = MaterialTheme.colors.primary)
+                }
+                Spacer(Modifier.weight(1f))
+                TextButton(onDismissRequest, Modifier.minTouchTargetSize()) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            }
         }
     }
 }

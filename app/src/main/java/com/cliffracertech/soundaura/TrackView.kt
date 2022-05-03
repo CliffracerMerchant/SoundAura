@@ -138,7 +138,7 @@ fun TrackView(
     IconButton(onClick = { showingOptionsMenu = !showingOptionsMenu }) {
         val description = stringResource(R.string.item_options_button_description, itemName)
         Icon(imageVector = Icons.Default.MoreVert,
-             tint = MaterialTheme.colors.primaryVariant,
+             tint = MaterialTheme.colors.secondary,
              contentDescription = description)
 
         DropdownMenu(
