@@ -10,8 +10,10 @@ import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.runtime.getValue
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.LocalContentColor
@@ -22,6 +24,7 @@ import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -70,21 +73,23 @@ fun Modifier.largeSurfaceBackground() = composed {
     tint: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) = IconButton(onClick) {
-
     // Circle background
-    val emptyToFilled = AnimatedImageVector.animatedVectorResource(R.drawable.empty_to_full_circle)
-    val filledToEmpty = AnimatedImageVector.animatedVectorResource(R.drawable.full_to_empty_circle)
-    val emptyToFilledPainter = rememberAnimatedVectorPainter(emptyToFilled, atEnd = added)
-    val filledToEmptyPainter = rememberAnimatedVectorPainter(filledToEmpty, atEnd = !added)
-    val backgroundPainter = if (added) filledToEmptyPainter
-                            else         emptyToFilledPainter
-    Icon(backgroundPainter, null, tint = tint)
+    // The combination of the larger tinted circle and the smaller
+    // background-tinted circle creates the effect of a circle that
+    // animates between filled and outlined.
+    Box(Modifier.size(24.dp).background(tint, CircleShape))
+    AnimatedVisibility(
+        visible = !added,
+        enter = scaleIn(overshootTweenSpec()),
+        exit = scaleOut(anticipateTweenSpec()),
+    ) {
+        Box(Modifier.size(20.dp).background(backgroundColor, CircleShape))
+    }
 
     // Plus / minus icon
-    val unadjustedAngle by animateFloatAsState(
-        targetValue = if (added) 0f else 90f, animationSpec = tween())
-    val angle = if (!added) unadjustedAngle
-                else        -unadjustedAngle
+    val angle by animateFloatAsState(
+        targetValue = if (added) 0f else 90f,
+        animationSpec = tween())
     val iconTint = if (added) backgroundColor else tint
     val minusIcon = painterResource(R.drawable.minus)
 
