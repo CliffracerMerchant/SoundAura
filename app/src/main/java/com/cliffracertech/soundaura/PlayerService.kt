@@ -98,7 +98,10 @@ class PlayerService: LifecycleService() {
     private var playbackState
         get() = Companion.playbackState
         set(value) {
-            if (playbackState == value)
+            if (playbackState == value ||
+                    (value != PlaybackStateCompat.STATE_PLAYING &&
+                     value != PlaybackStateCompat.STATE_PAUSED &&
+                     value != PlaybackStateCompat.STATE_STOPPED))
                 return
 
             Companion.playbackState = value
@@ -125,7 +128,8 @@ class PlayerService: LifecycleService() {
     }
 
     companion object {
-        private const val requestCode = 1
+        private const val playPauseActionRequestCode = 1
+        private const val stopActionRequestCode = 2
         private const val notificationId = 1
         private const val autoPauseAudioDeviceChangeKey = "auto_pause_audio_device_change"
         private const val autoPauseOngoingCallKey = "auto_pause_ongoing_call"
@@ -238,14 +242,9 @@ class PlayerService: LifecycleService() {
         val setPlaybackKey = getString(R.string.set_playback_action)
         if (intent?.action == setPlaybackKey) {
             val targetState = intent.extras?.getInt(setPlaybackKey)
-            playbackState = when (targetState) {
-                PlaybackStateCompat.STATE_PLAYING -> targetState
-                PlaybackStateCompat.STATE_PAUSED ->  targetState
-                PlaybackStateCompat.STATE_STOPPED ->
-                    if (!boundToActivity) targetState
-                    else PlaybackStateCompat.STATE_PAUSED
-                else -> playbackState
-            }
+            if (targetState == PlaybackStateCompat.STATE_STOPPED && boundToActivity)
+                playbackState = PlaybackStateCompat.STATE_PAUSED
+            else playbackState = targetState ?: playbackState
         }
         startForeground(notificationId, notification)
         return super.onStartCommand(intent, flags, startId)
@@ -353,14 +352,15 @@ class PlayerService: LifecycleService() {
         val intent = if (isPlaying) pauseIntent(this)
                      else           playIntent(this)
         val pendingIntent = PendingIntent.getService(
-            this, requestCode, intent, FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE)
+            this, playPauseActionRequestCode, intent,
+            FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE)
         return Action(icon, description, pendingIntent)
     }
 
     /** A notification action that will stop the service when triggered. */
     private val stopAction by lazy {
         val pendingIntent = PendingIntent.getService(
-            this, requestCode, stopIntent(this), FLAG_IMMUTABLE)
+            this, stopActionRequestCode, stopIntent(this), FLAG_IMMUTABLE)
         Action(R.drawable.ic_baseline_close_24,
                getString(R.string.close_description),
                pendingIntent)
@@ -368,16 +368,19 @@ class PlayerService: LifecycleService() {
 
     /** A notification to use as the foreground notification for the service */
     private val notification: Notification get() {
-        val description = getString(
-            if (isPlaying) R.string.playing_description
-            else           R.string.paused_description)
+        val description = getString(when(playbackState) {
+            PlaybackStateCompat.STATE_PLAYING -> R.string.playing_description
+            PlaybackStateCompat.STATE_PAUSED ->  R.string.paused_description
+            PlaybackStateCompat.STATE_STOPPED -> R.string.stopped_description
+            else -> R.string.stopped_description
+        })
 
         val builder = notificationBuilder
             .setContentTitle(description)
             .clearActions()
             .addAction(togglePlayPauseAction)
 
-        if (!boundToActivity) {
+        if (!boundToActivity && playbackState != PlaybackStateCompat.STATE_STOPPED) {
             builder.addAction(stopAction)
             notificationStyle.setShowActionsInCompactView(0, 1)
         } else notificationStyle.setShowActionsInCompactView(0)

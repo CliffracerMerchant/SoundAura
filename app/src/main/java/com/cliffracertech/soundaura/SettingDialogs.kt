@@ -192,7 +192,7 @@ fun PhoneStatePermissionDialog(
                      contentDescription = null,
                      modifier = Modifier.size(24.dp),
                      tint = MaterialTheme.colors.primary)
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(text = stringResource(R.string.app_name),
                          modifier = Modifier.alignByBaseline(),
