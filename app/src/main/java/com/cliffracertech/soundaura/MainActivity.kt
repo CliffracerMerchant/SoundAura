@@ -252,7 +252,15 @@ class MainActivity : ComponentActivity() {
                                        MaterialTheme.colors.secondary, 0.5f),
 //                    elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp)
                 elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
-            ) { PlayPauseIcon(isPlaying, tint = MaterialTheme.colors.onPrimary) }
+            ) {
+                val description = stringResource(
+                    if (isPlaying) R.string.soundaura_pause_description
+                    else           R.string.soundaura_play_description)
+                PlayPauseIcon(
+                    playing = isPlaying,
+                    contentDescription = description,
+                    tint = MaterialTheme.colors.onPrimary)
+            }
         }
         AnimatedVisibility(
             visible = visible,

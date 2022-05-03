@@ -4,11 +4,17 @@ package com.cliffracertech.soundaura
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.AnimationConstants.DefaultDurationMillis
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.graphics.res.animatedVectorResource
+import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
+import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.runtime.getValue
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
+import androidx.compose.material.LocalContentColor
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -19,6 +25,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
@@ -35,9 +44,73 @@ fun Modifier.largeSurfaceBackground() = composed {
 @Composable fun RadioButton(checked: Boolean, modifier: Modifier) {
     val vector = if (checked) Icons.Default.RadioButtonChecked
                  else         Icons.Default.RadioButtonUnchecked
-    val desc = if (checked) stringResource(R.string.checked_description)
-               else         stringResource(R.string.unchecked_description)
+    val desc = stringResource(if (checked) R.string.checked_description
+                              else         R.string.unchecked_description)
     Icon(vector, desc, modifier)
+}
+
+/**
+ * A button that alternates between an empty circle with a plus icon, and
+ * a filled circle with a minus icon depending on the parameter checked.
+ *
+ * @param added The added/removed state of the item the button is
+ *     representing. If added == true, the button will display a minus
+ *     icon. If added == false, a plus icon will be displayed instead.
+ * @param contentDescription The content description of the button.
+ * @param backgroundColor The color of the background that the button
+ *     is being displayed on. This is used for the inner plus icon
+ *     when added == true and the background of the button is filled.
+ * @param tint The tint that will be used for the button.
+ * @param onClick The callback that will be invoked when the button is clicked.
+ */
+@Composable fun AddRemoveButton(
+    added: Boolean,
+    contentDescription: String? = null,
+    backgroundColor: Color = MaterialTheme.colors.background,
+    tint: Color = LocalContentColor.current,
+    onClick: () -> Unit
+) = IconButton(onClick) {
+
+    // Circle background
+    val emptyToFilled = AnimatedImageVector.animatedVectorResource(R.drawable.empty_to_full_circle)
+    val filledToEmpty = AnimatedImageVector.animatedVectorResource(R.drawable.full_to_empty_circle)
+    val emptyToFilledPainter = rememberAnimatedVectorPainter(emptyToFilled, atEnd = added)
+    val filledToEmptyPainter = rememberAnimatedVectorPainter(filledToEmpty, atEnd = !added)
+    val backgroundPainter = if (added) filledToEmptyPainter
+                            else         emptyToFilledPainter
+    Icon(backgroundPainter, null, tint = tint)
+
+    // Plus / minus icon
+    val unadjustedAngle by animateFloatAsState(
+        targetValue = if (added) 0f else 90f, animationSpec = tween())
+    val angle = if (!added) unadjustedAngle
+                else        -unadjustedAngle
+    val iconTint = if (added) backgroundColor else tint
+    val minusIcon = painterResource(R.drawable.minus)
+
+    // One minus icon always appears horizontally, while the other can
+    // rotate between 0 and 90 degrees so that both minus icons together
+    // appear as a plus icon.
+    Icon(minusIcon, null, Modifier.rotate(2 * angle), iconTint)
+    Icon(minusIcon, contentDescription, Modifier.rotate(angle), iconTint)
+}
+
+
+@Composable fun PlayPauseIcon(
+    playing: Boolean,
+    contentDescription: String =
+        if (playing) stringResource(R.string.pause_description)
+        else         stringResource(R.string.play_description),
+    tint: Color,
+) {
+    val playToPause = AnimatedImageVector.animatedVectorResource(R.drawable.play_to_pause)
+    val playToPausePainter = rememberAnimatedVectorPainter(playToPause, atEnd = playing)
+    val pauseToPlay = AnimatedImageVector.animatedVectorResource(R.drawable.pause_to_play)
+    val pauseToPlayPainter = rememberAnimatedVectorPainter(pauseToPlay, atEnd = !playing)
+    Icon(painter = if (playing) playToPausePainter
+                   else         pauseToPlayPainter,
+         contentDescription = contentDescription,
+         tint = tint)
 }
 
 /** A simple back arrow IconButton for when only the onClick needs changed. */

@@ -4,9 +4,6 @@
 package com.cliffracertech.soundaura
 
 import androidx.annotation.FloatRange
-import androidx.compose.animation.graphics.res.animatedVectorResource
-import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
-import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -16,7 +13,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -56,9 +52,15 @@ fun TrackView(
     verticalAlignment = Alignment.CenterVertically,
     modifier = modifier.fillMaxWidth(1f).largeSurfaceBackground()
 ){
-    PlayPauseButton(track.playing, track.name, MaterialTheme.colors.primary) {
-        callback.onPlayPauseButtonClick(track.uriString)
-    }
+    val addRemoveContentDescription = stringResource(
+        if (track.playing) R.string.remove_track_from_mix_description
+        else               R.string.add_track_to_mix_description, track.name)
+    AddRemoveButton(
+        added = track.playing,
+        contentDescription = addRemoveContentDescription,
+        backgroundColor = MaterialTheme.colors.surface,
+        tint = MaterialTheme.colors.primary,
+        onClick = { callback.onPlayPauseButtonClick(track.uriString) })
 
     var volume by remember { mutableStateOf(track.volume) }
 
@@ -81,46 +83,6 @@ fun TrackView(
         itemName = track.name,
         onRenameRequest = { id -> callback.onRenameRequest(track.uriString, id) },
         onDeleteRequest = { callback.onDeleteRequest(track.uriString) })
-}
-
-@Composable fun PlayPauseIcon(
-    playing: Boolean,
-    contentDescription: String =
-        if (playing) stringResource(R.string.pause_description)
-        else         stringResource(R.string.play_description),
-    tint: Color
-) {
-    val playToPause = AnimatedImageVector.animatedVectorResource(R.drawable.play_to_pause)
-    val playToPausePainter = rememberAnimatedVectorPainter(playToPause, atEnd = playing)
-    val pauseToPlay = AnimatedImageVector.animatedVectorResource(R.drawable.pause_to_play)
-    val pauseToPlayPainter = rememberAnimatedVectorPainter(pauseToPlay, atEnd = !playing)
-    Icon(painter = if (playing) playToPausePainter
-                   else         pauseToPlayPainter,
-         contentDescription = contentDescription,
-         tint = tint)
-}
-
-/**
- * A button that alternates between a pause icon and a playing icon depending on
- * the parameter playing.
- *
- * @param playing The playing/paused state of the button. If playing == true,
- *     the button will display a pause icon. If playing == false, a play icon
- *     will be displayed instead.
- * @param itemName The name of the item whose play/pause state is being
- *     manipulated. This is used for accessibility labeling.
- * @param tint The tint that will be used for the icon.
- * @param onClick The callback that will be invoked when the button is clicked.
- */
-@Composable fun PlayPauseButton(
-    playing: Boolean,
-    itemName: String,
-    tint: Color,
-    onClick: () -> Unit
-) = IconButton(onClick) {
-    val description = if (playing) stringResource(R.string.item_pause_description, itemName)
-                      else         stringResource(R.string.item_play_description, itemName)
-    PlayPauseIcon(playing, description, tint)
 }
 
 /**

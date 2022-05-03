@@ -19,8 +19,8 @@
     <string name="search_description">Search</string>
     <string name="sort_options_description">Open sorting options</string>
 
-    <string name="item_play_description">Play %1$s</string>
-    <string name="item_pause_description">Pause %1$s</string>
+    <string name="add_track_to_mix_description">Add %1$s to sound mix</string>
+    <string name="remove_track_from_mix_description">Remove %1$s from sound mix</string>
     <string name="item_options_button_description">%1$s more options</string>
 
     <string name="add_button_description">Add track</string>
@@ -51,6 +51,8 @@
 
     <string name="play_description">Play</string>
     <string name="pause_description">Pause</string>
+    <string name="soundaura_play_description">Play SoundAura audio</string>
+    <string name="soundaura_pause_description">Pause SoundAura audio</string>
     <string name="playing_description">Playing</string>
     <string name="paused_description">Paused</string>
     <string name="close_description">Close</string>
