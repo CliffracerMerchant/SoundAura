@@ -10,6 +10,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.room.*
+import androidx.room.migration.Migration
+import com.cliffracertech.soundaura.SoundAuraDatabase.Companion.addAllMigrations
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -25,8 +27,8 @@ data class Track(
     val uriString: String,
     @ColumnInfo(name="name")
     val name: String,
-    @ColumnInfo(name="playing", defaultValue = "0")
-    val playing: Boolean = false,
+    @ColumnInfo(name="isActive", defaultValue = "0")
+    val isActive: Boolean = false,
     @FloatRange(from = 0.0, to = 1.0)
     @ColumnInfo(name="volume", defaultValue = "1.0")
     val volume: Float = 1f
@@ -50,14 +52,14 @@ data class Track(
         other === this -> true
         else -> other.uriString == uriString &&
                 other.name == name &&
-                other.playing == playing &&
+                other.isActive == isActive &&
                 other.volume == volume
     }
 
     override fun hashCode(): Int {
         var result = uriString.hashCode()
         result = 31 * result + name.hashCode()
-        result = 31 * result + playing.hashCode()
+        result = 31 * result + isActive.hashCode()
         result = 31 * result + volume.hashCode()
         return result
     }
@@ -93,11 +95,11 @@ data class Track(
         }
     }
 
-    @Query("SELECT * FROM track WHERE playing")
-    abstract fun getAllPlayingTracks(): Flow<List<Track>>
+    @Query("SELECT * FROM track WHERE isActive")
+    abstract fun getAllActiveTracks(): Flow<List<Track>>
 
-    @Query("UPDATE track set playing = 1 - playing WHERE uriString = :uri")
-    abstract suspend fun togglePlaying(uri: String)
+    @Query("UPDATE track set isActive = 1 - isActive WHERE uriString = :uri")
+    abstract suspend fun toggleIsActive(uri: String)
 
     @Query("UPDATE track SET volume = :volume WHERE uriString = :uri")
     abstract suspend fun updateVolume(uri: String, volume: Float)
@@ -106,23 +108,46 @@ data class Track(
     abstract suspend fun updateName(uri: String, name: String)
 }
 
-@Database(entities = [Track::class], version = 1, exportSchema = true)
+@Database(entities = [Track::class], version = 2, exportSchema = true)
 abstract class SoundAuraDatabase : RoomDatabase() {
     abstract fun trackDao(): TrackDao
+
+    companion object {
+        fun RoomDatabase.Builder<SoundAuraDatabase>.addAllMigrations() =
+            addMigrations(migration1to2)
+
+        private val migration1to2 = Migration(1,2) { db ->
+            db.execSQL("PRAGMA foreign_keys=off")
+            db.execSQL("BEGIN TRANSACTION")
+            db.execSQL("""CREATE TABLE temp_table (
+                `uriString` TEXT NOT NULL PRIMARY KEY,
+                `name` TEXT NOT NULL,
+                `isActive` INTEGER NOT NULL DEFAULT 0,
+                `volume` FLOAT NOT NULL DEFAULT 1.0)""")
+            db.execSQL("""INSERT INTO temp_table (uriString, name, isActive, volume)
+                          SELECT uriString, name, playing, volume FROM track;""")
+            db.execSQL("DROP TABLE track;")
+            db.execSQL("ALTER TABLE temp_table RENAME TO track;")
+            db.execSQL("COMMIT;")
+            db.execSQL("PRAGMA foreign_keys=on;")
+        }
+    }
 }
 
 @Module @InstallIn(SingletonComponent::class)
 class DatabaseModule {
     @Singleton @Provides
     fun provideDatabase(@ApplicationContext app: Context) =
-        Room.databaseBuilder(app, SoundAuraDatabase::class.java, "SoundAuraDb").build()
+        Room.databaseBuilder(app, SoundAuraDatabase::class.java, "SoundAuraDb")
+            .addAllMigrations().build()
 
     @Qualifier @Retention(AnnotationRetention.BINARY)
     annotation class InMemoryDatabase
 
     @InMemoryDatabase @Singleton @Provides
     fun provideInMemoryDatabase(@ApplicationContext app: Context) =
-        Room.inMemoryDatabaseBuilder(app, SoundAuraDatabase::class.java).build()
+        Room.inMemoryDatabaseBuilder(app, SoundAuraDatabase::class.java)
+            .addAllMigrations().build()
 
     @Provides fun provideTrackDao(db: SoundAuraDatabase) = db.trackDao()
 }

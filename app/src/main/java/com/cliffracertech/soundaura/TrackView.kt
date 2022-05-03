@@ -53,10 +53,10 @@ fun TrackView(
     modifier = modifier.fillMaxWidth(1f).largeSurfaceBackground()
 ){
     val addRemoveContentDescription = stringResource(
-        if (track.playing) R.string.remove_track_from_mix_description
-        else               R.string.add_track_to_mix_description, track.name)
+        if (track.isActive) R.string.remove_track_from_mix_description
+        else                R.string.add_track_to_mix_description, track.name)
     AddRemoveButton(
-        added = track.playing,
+        added = track.isActive,
         contentDescription = addRemoveContentDescription,
         backgroundColor = MaterialTheme.colors.surface,
         tint = MaterialTheme.colors.primary,

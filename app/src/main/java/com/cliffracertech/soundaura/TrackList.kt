@@ -105,7 +105,7 @@ class TrackListViewModel(
     }
 
     fun onTrackPlayPauseClick(uriString: String) {
-        scope.launch { trackDao.togglePlaying(uriString) }
+        scope.launch { trackDao.toggleIsActive(uriString) }
     }
 
     fun onTrackVolumeChangeRequest(uriString: String, volume: Float) {

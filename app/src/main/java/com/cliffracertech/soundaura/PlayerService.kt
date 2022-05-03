@@ -38,7 +38,7 @@ import kotlinx.coroutines.flow.onEach
 import javax.inject.Inject
 
 /**
- * A service to play the set of audio tracks marked as playing tracks in the
+ * A service to play the set of audio tracks marked as active tracks in the
  * application's database.
  *
  * PlayerService can either be started independently of an activity with a
@@ -204,7 +204,7 @@ class PlayerService: LifecycleService() {
                 .onEach(::setAutoPauseDuringCallEnabled)
                 .launchIn(this)
 
-            trackDao.getAllPlayingTracks().onEach { tracks ->
+            trackDao.getAllActiveTracks().onEach { tracks ->
                 // remove players whose track is no longer in the track list
                 val uris = tracks.map { it.uriString }
                 uriPlayerMap.keys.retainAll {

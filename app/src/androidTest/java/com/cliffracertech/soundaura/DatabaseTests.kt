@@ -70,18 +70,18 @@ class DatabaseTests {
     @Test fun updatePlaying() = runBlocking {
         addingTracks()
         var tracks = getAllTracks()
-        assertThat(tracks[0].playing || tracks[1].playing || tracks[2].playing).isFalse()
+        assertThat(tracks[0].isActive || tracks[1].isActive || tracks[2].isActive).isFalse()
 
-        dao.togglePlaying(tracks[1].uriString)
-        dao.togglePlaying(tracks[2].uriString)
+        dao.toggleIsActive(tracks[1].uriString)
+        dao.toggleIsActive(tracks[2].uriString)
         tracks = getAllTracks()
-        assertThat(tracks[0].playing).isFalse()
-        assertThat(tracks[1].playing && tracks[2].playing).isTrue()
+        assertThat(tracks[0].isActive).isFalse()
+        assertThat(tracks[1].isActive && tracks[2].isActive).isTrue()
 
-        dao.togglePlaying(tracks[2].uriString)
+        dao.toggleIsActive(tracks[2].uriString)
         tracks = getAllTracks()
-        assertThat(tracks[0].playing || tracks[2].playing).isFalse()
-        assertThat(tracks[1].playing).isTrue()
+        assertThat(tracks[0].isActive || tracks[2].isActive).isFalse()
+        assertThat(tracks[1].isActive).isTrue()
     }
 
     @Test fun updateVolume() = runBlocking {
@@ -199,22 +199,22 @@ class DatabaseTests {
         ).inOrder()
     }
 
-    @Test fun getAllPlayingTracks() = runBlocking {
+    @Test fun getAllActiveTracks() = runBlocking {
         addingTracks()
         var allTracks = getAllTracks()
-        var playingTracks = dao.getAllPlayingTracks().first()
-        assertThat(playingTracks).isEmpty()
+        var activeTracks = dao.getAllActiveTracks().first()
+        assertThat(activeTracks).isEmpty()
 
-        dao.togglePlaying(allTracks[0].uriString)
-        dao.togglePlaying(allTracks[2].uriString)
+        dao.toggleIsActive(allTracks[0].uriString)
+        dao.toggleIsActive(allTracks[2].uriString)
         allTracks = getAllTracks()
-        playingTracks = dao.getAllPlayingTracks().first()
-        assertThat(playingTracks).containsExactly(allTracks[0], allTracks[2])
+        activeTracks = dao.getAllActiveTracks().first()
+        assertThat(activeTracks).containsExactly(allTracks[0], allTracks[2])
 
-        dao.togglePlaying(allTracks[0].uriString)
+        dao.toggleIsActive(allTracks[0].uriString)
         allTracks = getAllTracks()
-        playingTracks = dao.getAllPlayingTracks().first()
-        assertThat(playingTracks).containsExactly(allTracks[2])
+        activeTracks = dao.getAllActiveTracks().first()
+        assertThat(activeTracks).containsExactly(allTracks[2])
         Unit
     }
 }
