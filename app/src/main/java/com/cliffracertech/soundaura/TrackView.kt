@@ -61,12 +61,12 @@ fun TrackView(
     }
 
     var volume by remember { mutableStateOf(track.volume) }
-    val sliderTopPadding = 28.dp
 
     Box(Modifier.weight(1f)) {
         Text(text = track.name, style = MaterialTheme.typography.h6,
              maxLines = 1, overflow = TextOverflow.Ellipsis,
-             modifier = Modifier.padding(start = 4.dp, top = 6.dp))
+             modifier = Modifier.padding(start = 1.dp, top = 6.dp)
+                                .paddingFromBaseline(bottom = 48.dp))
         VolumeSlider(
             volume = volume,
             onVolumeChange = {
@@ -74,7 +74,7 @@ fun TrackView(
                 callback.onVolumeChange(track.uriString, it)
             }, onVolumeChangeFinished = {
                 callback.onVolumeChangeFinished(track.uriString, volume)
-            }, modifier = Modifier.padding(top = sliderTopPadding))
+            }, modifier = Modifier.align(Alignment.BottomStart))
     }
 
     ItemMoreOptionsButton(
@@ -214,7 +214,7 @@ fun LightTrackViewPreview() = SoundAuraTheme(darkTheme =  false) {
 
 @Preview @Composable
 fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme =  true) {
-    TrackView(Track("", "Track 1", volume = 0.5f), TrackViewCallback())
+    TrackView(Track("", "Track 1", true, volume = 0.5f), TrackViewCallback())
 }
 
 @Composable fun RenameDialog(

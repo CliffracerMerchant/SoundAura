@@ -277,7 +277,7 @@ class AddTrackButtonViewModel(
             var numPersistedPermissions = context.contentResolver.persistedUriPermissions.size
 
             failedTracks.clear()
-            insertedTracks.forEachIndexed { index, track ->
+            insertedTracks.forEach { track ->
                 if (numPersistedPermissions < persistedPermissionAllowance) {
                     val trackUri = Uri.parse(track.uriString)
                     context.contentResolver.takePersistableUriPermission(
