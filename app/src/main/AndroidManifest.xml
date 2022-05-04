@@ -4,8 +4,7 @@
     package="com.cliffracertech.soundaura">
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.READ_PHONE_STATE"
-        tools:targetApi="o"
-        android:requiredFeature="false"/>
+        android:required="false" />
 
     <application
         android:name="SoundAuraApplication"
