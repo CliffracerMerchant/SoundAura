@@ -52,14 +52,14 @@ fun PhoneStatePermissionDialog(
     onDismissRequest: () -> Unit,
     onPermissionResult: (Boolean) -> Unit
 ) {
-    var userSawExplanation by rememberSaveable { mutableStateOf(false) }
-    if (showExplanationFirst && !userSawExplanation)
+    var explanationDismissed by rememberSaveable { mutableStateOf(false) }
+    if (showExplanationFirst && !explanationDismissed)
         SoundAuraDialog(
             onDismissRequest = onDismissRequest,
             title = stringResource(R.string.auto_pause_during_calls_setting_title),
             text = stringResource(R.string.request_phone_state_permission_explanation),
-            onConfirm = { userSawExplanation = true })
-    if (!showExplanationFirst || userSawExplanation) {
+            onConfirm = { explanationDismissed = true })
+    if (!showExplanationFirst || explanationDismissed) {
         val launcher = rememberLauncherForActivityResult(
             ActivityResultContracts.RequestPermission(),
             onResult = onPermissionResult)

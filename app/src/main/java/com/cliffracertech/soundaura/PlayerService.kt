@@ -16,8 +16,6 @@ import android.content.pm.PackageManager
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
-import android.media.MediaPlayer
-import android.net.Uri
 import android.os.Build
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
@@ -75,7 +73,7 @@ import javax.inject.Inject
  */
 @AndroidEntryPoint
 class PlayerService: LifecycleService() {
-    private val uriPlayerMap = mutableMapOf<String, MediaPlayer>()
+    private val uriPlayerMap = mutableMapOf<String, Player>()
     private val unpauseLocks = mutableListOf<String>()
     @Inject lateinit var trackDao: TrackDao
     private lateinit var audioManager: AudioManager
@@ -109,7 +107,7 @@ class PlayerService: LifecycleService() {
             isPlaying = value == PlaybackStateCompat.STATE_PLAYING
 
             if (value != PlaybackStateCompat.STATE_STOPPED) {
-                uriPlayerMap.forEach { it.value.setPaused(!isPlaying) }
+                uriPlayerMap.forEach { it.value.isPlaying = isPlaying }
                 playbackStateBuilder.setState(Companion.playbackState, 0, 1f)
                 val actions = PlaybackStateCompat.ACTION_PLAY_PAUSE or
                     if (boundToActivity) 0
@@ -220,13 +218,10 @@ class PlayerService: LifecycleService() {
                 // add players for tracks newly added to the track list
                 tracks.forEach {
                     val player = uriPlayerMap.getOrPut(it.uriString) {
-                        MediaPlayer.create(this@PlayerService, Uri.parse(it.uriString))
-                            ?.apply { isLooping = true }
-                            ?: return@forEach
+                        Player(this@PlayerService, it.uriString)
                     }
-                    player.setVolume(it.volume, it.volume)
-                    if (player.isPlaying != isPlaying)
-                        player.setPaused(!isPlaying)
+                    player.setMonoVolume(it.volume)
+                    player.isPlaying = isPlaying
                 }
             }.launchIn(this)
         }
@@ -249,9 +244,6 @@ class PlayerService: LifecycleService() {
         startForeground(notificationId, notification)
         return super.onStartCommand(intent, flags, startId)
     }
-
-    private fun MediaPlayer.setPaused(paused: Boolean) =
-        if (paused) pause() else start()
 
     /**
      * Automatically pause playback if the parameter condition is true and
@@ -282,7 +274,7 @@ class PlayerService: LifecycleService() {
         }
 
         fun setTrackVolume(uriString: String, volume: Float) {
-            uriPlayerMap[uriString]?.setVolume(volume, volume)
+            uriPlayerMap[uriString]?.setMonoVolume(volume)
         }
     }
 
