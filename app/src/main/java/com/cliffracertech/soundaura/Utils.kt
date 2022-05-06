@@ -125,14 +125,3 @@ inline fun <reified T: Enum<*>> DataStore<Preferences>.enumPreferenceFlow(
     val index = prefs[key] ?: defaultValue.ordinal
     enumValues<T>().getOrNull(index) ?: defaultValue
 }
-
-suspend fun PointerInputScope.detectTapWithoutConsuming(
-    onTap: (Offset) -> Unit
-) {
-    forEachGesture {
-        awaitPointerEventScope {
-            val down = awaitFirstDown(requireUnconsumed = false)
-            onTap.invoke(down.position)
-        }
-    }
-}

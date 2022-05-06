@@ -96,18 +96,12 @@ class MainActivity : ComponentActivity() {
 
         setContentWithTheme {
             val scaffoldState = rememberScaffoldState()
-            // The AddTrackButtonViewModel needs to be notified of global
-            // click events so that it can collapse the AddTrackButton when
-            // a click is performed outside its bounds.
-            val addTrackButtonViewModel: AddTrackButtonViewModel = viewModel()
 
             MessageDisplayer(scaffoldState)
 
             Scaffold(
                 scaffoldState = scaffoldState,
-                modifier = Modifier.pointerInput(Unit) {
-                    detectTapWithoutConsuming(addTrackButtonViewModel::onGlobalClick)
-                }, topBar = {
+                topBar = {
                     SoundAuraActionBar(::onBackPressed)
                 }, bottomBar = {
                     Spacer(Modifier.navigationBarsHeight().fillMaxWidth())
@@ -120,9 +114,7 @@ class MainActivity : ComponentActivity() {
                     // downward by 8dp due to the inherent snack bar padding.
                     Spacer(Modifier.height(48.dp).fillMaxWidth())
                 }, content = {
-                    MainContent(padding = it) { //onSnackBarDismissRequest =
-                        scaffoldState.snackbarHostState.currentSnackbarData?.dismiss()
-                    }
+                    MainContent(padding = it)
                 })
         }
     }
@@ -178,7 +170,6 @@ class MainActivity : ComponentActivity() {
 
     @Composable private fun MainContent(
         padding: PaddingValues,
-        onSnackBarDismissRequest: () -> Unit
     ) = Box(Modifier.fillMaxSize(1f)) {
         val showingAppSettings = viewModel.showingAppSettings
         val ld = LocalLayoutDirection.current
@@ -228,14 +219,12 @@ class MainActivity : ComponentActivity() {
         }
         FloatingActionButtons(
             visible = !showingAppSettings,
-            bottomPadding = buttonBottomPadding,
-            onSnackBarDismissRequest)
+            bottomPadding = buttonBottomPadding)
     }
 
     @Composable private fun BoxScope.FloatingActionButtons(
         visible: Boolean,
-        bottomPadding: Dp,
-        onSnackBarDismissRequest: () -> Unit
+        bottomPadding: Dp
     ) {
         AnimatedVisibility(
             visible = visible,
@@ -269,6 +258,6 @@ class MainActivity : ComponentActivity() {
                 .padding(end = 16.dp, bottom = bottomPadding),
             enter = fadeIn(tween()) + scaleIn(overshootTweenSpec()),
             exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTweenSpec()),
-        ) { StatefulAddTrackButton(onSnackBarDismissRequest) }
+            content = { AddLocalFilesButton() })
     }
 }
