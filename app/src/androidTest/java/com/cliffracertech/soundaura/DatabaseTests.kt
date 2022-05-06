@@ -4,8 +4,10 @@ package com.cliffracertech.soundaura
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.testing.MigrationTestHelper
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -14,11 +16,17 @@ import java.io.IOException
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import org.junit.Rule
 
 @RunWith(AndroidJUnit4::class)
 class DatabaseTests {
     private lateinit var db: SoundAuraDatabase
     private lateinit var dao: TrackDao
+
+    @get:Rule
+    val helper: MigrationTestHelper = MigrationTestHelper(
+        InstrumentationRegistry.getInstrumentation(),
+        SoundAuraDatabase::class.java)
 
     @Before fun createDb() {
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -67,7 +75,7 @@ class DatabaseTests {
         assertThat(items).isEmpty()
     }
 
-    @Test fun updatePlaying() = runBlocking {
+    @Test fun toggleIsActive() = runBlocking {
         addingTracks()
         var tracks = getAllTracks()
         assertThat(tracks[0].isActive || tracks[1].isActive || tracks[2].isActive).isFalse()
@@ -216,5 +224,19 @@ class DatabaseTests {
         activeTracks = dao.getAllActiveTracks().first()
         assertThat(activeTracks).containsExactly(allTracks[2])
         Unit
+    }
+
+    @Test @Throws(IOException::class)
+    fun allMigrations() {
+        val dbName = "migration test database"
+        val oldestDb = helper.createDatabase(dbName, 1)
+        oldestDb.close()
+
+        val newestDb = Room.databaseBuilder(
+            InstrumentationRegistry.getInstrumentation().targetContext,
+            SoundAuraDatabase::class.java,
+            dbName
+        ).also(SoundAuraDatabase::addAllMigrations).build()
+        newestDb.openHelper.writableDatabase.close()
     }
 }

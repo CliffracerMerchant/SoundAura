@@ -113,8 +113,8 @@ abstract class SoundAuraDatabase : RoomDatabase() {
     abstract fun trackDao(): TrackDao
 
     companion object {
-        fun RoomDatabase.Builder<SoundAuraDatabase>.addAllMigrations() =
-            addMigrations(migration1to2)
+        fun addAllMigrations(builder: Builder<SoundAuraDatabase>) =
+            builder.addMigrations(migration1to2)
 
         private val migration1to2 = Migration(1,2) { db ->
             db.execSQL("PRAGMA foreign_keys=off")
@@ -139,7 +139,7 @@ class DatabaseModule {
     @Singleton @Provides
     fun provideDatabase(@ApplicationContext app: Context) =
         Room.databaseBuilder(app, SoundAuraDatabase::class.java, "SoundAuraDb")
-            .addAllMigrations().build()
+            .also(::addAllMigrations).build()
 
     @Qualifier @Retention(AnnotationRetention.BINARY)
     annotation class InMemoryDatabase
@@ -147,7 +147,7 @@ class DatabaseModule {
     @InMemoryDatabase @Singleton @Provides
     fun provideInMemoryDatabase(@ApplicationContext app: Context) =
         Room.inMemoryDatabaseBuilder(app, SoundAuraDatabase::class.java)
-            .addAllMigrations().build()
+            .also(::addAllMigrations).build()
 
     @Provides fun provideTrackDao(db: SoundAuraDatabase) = db.trackDao()
 }

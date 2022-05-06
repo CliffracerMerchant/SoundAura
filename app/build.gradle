@@ -9,6 +9,9 @@ plugins {
 android {
     compileSdk 31
 
+    sourceSets {
+        androidTest.assets.srcDirs += files("$projectDir/schemas".toString())
+    }
     defaultConfig {
         applicationId "com.cliffracertech.soundaura"
         minSdk 24
@@ -16,9 +19,14 @@ android {
         versionCode 1
         versionName "0.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments += ["room.schemaLocation":
+                              "$projectDir/schemas".toString()]
+            }
+        }
         kapt.arguments { arg("room.schemaLocation", "$projectDir/schemas") }
     }
-
     buildTypes {
         debug {
             applicationIdSuffix ".debug"
