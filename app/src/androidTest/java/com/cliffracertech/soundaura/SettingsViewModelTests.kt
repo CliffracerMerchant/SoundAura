@@ -22,6 +22,13 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
+/**
+ * Unfortunately there doesn't seem to be a way to easily revoke permissions
+ * during testing, and no way to grant them within the app without using
+ * UI coordinator. Some of the tests will therefore pass when the read phone
+ * state permission has been granted and fail when it hasn't been, and vice
+ * versa for other tests.
+ */
 class SettingsViewModelTests {
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private val coroutineDispatcher = TestCoroutineDispatcher()
@@ -53,15 +60,17 @@ class SettingsViewModelTests {
         coroutineScope.cancel()
     }
 
-    @Test fun viewModelDefaultValues() {
+    // Should always pass, regardless of read phone state permission
+    @Test fun defaultValues() {
         assertThat(instance.appTheme).isEqualTo(AppTheme.UseSystem)
         assertThat(instance.autoPauseDuringCall).isFalse()
-        assertThat(instance.showingAskForPhoneStatePermissionDialog).isFalse()
+        assertThat(instance.showingPhoneStatePermissionDialog).isFalse()
 
     }
 
+    // Should always pass, regardless of read phone state permission
     @Test fun onAppThemeClick() = runBlockingTest {
-        viewModelDefaultValues()
+        defaultValues()
         instance.onAppThemeClick(AppTheme.Dark)
         assertThat(updatedPreferences()[appThemeKey]).isEqualTo(AppTheme.Dark.ordinal)
         assertThat(instance.appTheme).isEqualTo(AppTheme.Dark)
@@ -70,53 +79,59 @@ class SettingsViewModelTests {
         assertThat(instance.appTheme).isEqualTo(AppTheme.Light)
     }
 
+    // Should only pass when read phone state permission has NOT been granted
     @Test fun onAutoPauseDuringCallClickWithoutPermission() = runBlockingTest {
-        viewModelDefaultValues()
+        defaultValues()
         instance.onAutoPauseDuringCallClick()
-        assertThat(instance.showingAskForPhoneStatePermissionDialog).isTrue()
+        assertThat(instance.showingPhoneStatePermissionDialog).isTrue()
         assertThat(updatedPreferences()[autoPauseDuringCallKey]).isNotEqualTo(true)
         assertThat(instance.autoPauseDuringCall).isFalse()
     }
 
+    // Should only pass when read phone state permission HAS NOT been granted
     @Test fun onAskForPhoneStatePermissionDialogDismiss() {
         onAutoPauseDuringCallClickWithoutPermission()
-        instance.onAskForPhoneStatePermissionDialogDismiss()
-        assertThat(instance.showingAskForPhoneStatePermissionDialog).isFalse()
+        instance.onPhoneStatePermissionDialogDismiss()
+        assertThat(instance.showingPhoneStatePermissionDialog).isFalse()
     }
 
-    @Test fun onAskForPhoneStatePermissionDialogConfirm() = runBlockingTest {
+    // Should only pass when read phone state permission HAS NOT been granted
+    @Test fun onPhoneStatePermissionDialogConfirm() = runBlockingTest {
         onAutoPauseDuringCallClickWithoutPermission()
-        instance.onAskForPhoneStatePermissionDialogConfirm(permissionGranted = false)
-        assertThat(instance.showingAskForPhoneStatePermissionDialog).isFalse()
+        instance.onPhoneStatePermissionDialogConfirm(permissionGranted = false)
+        assertThat(instance.showingPhoneStatePermissionDialog).isFalse()
         assertThat(updatedPreferences()[autoPauseDuringCallKey]).isNotEqualTo(true)
         assertThat(instance.autoPauseDuringCall).isFalse()
 
         onAutoPauseDuringCallClickWithoutPermission()
-        instance.onAskForPhoneStatePermissionDialogConfirm(permissionGranted = true)
-        assertThat(instance.showingAskForPhoneStatePermissionDialog).isFalse()
+        instance.onPhoneStatePermissionDialogConfirm(permissionGranted = true)
+        assertThat(instance.showingPhoneStatePermissionDialog).isFalse()
         assertThat(updatedPreferences()[autoPauseDuringCallKey]).isTrue()
         assertThat(instance.autoPauseDuringCall).isTrue()
     }
 
-    @Test fun onAutoPauseDuringCallClickWithPermission() = runBlockingTest {
-        onAskForPhoneStatePermissionDialogConfirm()
-        instance.onAutoPauseDuringCallClick()
-        assertThat(instance.showingAskForPhoneStatePermissionDialog).isFalse()
-        assertThat(updatedPreferences()[autoPauseDuringCallKey]).isFalse()
-        assertThat(instance.autoPauseDuringCall).isFalse()
-
-        instance.onAutoPauseDuringCallClick()
-        assertThat(instance.showingAskForPhoneStatePermissionDialog).isFalse()
-        assertThat(updatedPreferences()[autoPauseDuringCallKey]).isTrue()
-        assertThat(instance.autoPauseDuringCall).isTrue()
-    }
-
+    // Should only pass when read phone state permission HAS NOT been granted
     @Test fun autoPauseDuringCallAlwaysFalseWithoutPermission() = runBlockingTest {
-        viewModelDefaultValues()
+        defaultValues()
         dataStore.edit {
             it[autoPauseDuringCallKey] = true
         }
         assertThat(updatedPreferences()[autoPauseDuringCallKey]).isTrue()
+        assertThat(instance.autoPauseDuringCall).isFalse()
+    }
+
+    // Should only pass when read phone state permission HAS been granted
+    @Test fun onAutoPauseDuringCallClickWithPermission() = runBlockingTest {
+        defaultValues()
+
+        instance.onAutoPauseDuringCallClick()
+        assertThat(instance.showingPhoneStatePermissionDialog).isFalse()
+        assertThat(updatedPreferences()[autoPauseDuringCallKey]).isTrue()
+        assertThat(instance.autoPauseDuringCall).isTrue()
+
+        instance.onAutoPauseDuringCallClick()
+        assertThat(instance.showingPhoneStatePermissionDialog).isFalse()
+        assertThat(updatedPreferences()[autoPauseDuringCallKey]).isFalse()
         assertThat(instance.autoPauseDuringCall).isFalse()
     }
 }

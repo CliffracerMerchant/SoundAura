@@ -4,7 +4,7 @@
 package com.cliffracertech.soundaura
 
 import android.Manifest
-import android.app.Activity
+import android.content.pm.PackageManager
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable fun AppSettings(
@@ -56,19 +57,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
             onClick = { viewModel.onAutoPauseDuringCallClick() }
         ) {
             Switch(checked = viewModel.autoPauseDuringCall,
-                onCheckedChange = { viewModel.onAutoPauseDuringCallClick() },
-                colors = SwitchDefaults.colors(
-                    uncheckedThumbColor = MaterialTheme.colors.background))
+                   onCheckedChange = { viewModel.onAutoPauseDuringCallClick() },
+                   colors = SwitchDefaults.colors(
+                       uncheckedThumbColor = MaterialTheme.colors.background))
         }
-        if (viewModel.showingAskForPhoneStatePermissionDialog) {
+        if (viewModel.showingPhoneStatePermissionDialog) {
             val context = LocalContext.current
-            val activity = context as? Activity
-            val showExplanation = activity?.shouldShowRequestPermissionRationale(
-                Manifest.permission.READ_PHONE_STATE) ?: true
+            val showExplanation = ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.READ_PHONE_STATE
+                ) == PackageManager.PERMISSION_DENIED
             PhoneStatePermissionDialog(
                 showExplanationFirst = showExplanation,
-                onDismissRequest = viewModel::onAskForPhoneStatePermissionDialogDismiss,
-                onPermissionResult = viewModel::onAskForPhoneStatePermissionDialogConfirm)
+                onDismissRequest = viewModel::onPhoneStatePermissionDialogDismiss,
+                onPermissionResult = viewModel::onPhoneStatePermissionDialogConfirm)
         }
     }
     val titleTutorialSetting = @Composable {

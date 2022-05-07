@@ -3,7 +3,6 @@
 package com.cliffracertech.soundaura
 
 import android.Manifest
-import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.compose.runtime.*
@@ -69,6 +68,10 @@ class SettingsViewModel(
         }
     }
 
+    // This value should always be up to date due to granting or revoking
+    // permissions outside of the app causing an app restart. If the user
+    // approves the read phone state permission inside the app, the value
+    // must be changed to true manually.
     private var hasReadPhoneStatePermission by mutableStateOf(
         ContextCompat.checkSelfPermission(
             context, Manifest.permission.READ_PHONE_STATE
@@ -85,29 +88,29 @@ class SettingsViewModel(
         autoPauseDuringCallPreference && hasReadPhoneStatePermission
     }
 
-    var showingAskForPhoneStatePermissionDialog by mutableStateOf(false)
+    var showingPhoneStatePermissionDialog by mutableStateOf(false)
         private set
 
     fun onAutoPauseDuringCallClick() {
         if (!autoPauseDuringCall && !hasReadPhoneStatePermission)
-            showingAskForPhoneStatePermissionDialog = true
+            showingPhoneStatePermissionDialog = true
         else scope.launch {
             dataStore.edit { it[autoPauseDuringCallKey] = !autoPauseDuringCall }
         }
     }
 
-    fun onAskForPhoneStatePermissionDialogDismiss() {
-        showingAskForPhoneStatePermissionDialog = false
+    fun onPhoneStatePermissionDialogDismiss() {
+        showingPhoneStatePermissionDialog = false
     }
 
-    fun onAskForPhoneStatePermissionDialogConfirm(permissionGranted: Boolean) {
+    fun onPhoneStatePermissionDialogConfirm(permissionGranted: Boolean) {
         if (permissionGranted) scope.launch {
             dataStore.edit {
                 it[autoPauseDuringCallKey] = true
             }
             hasReadPhoneStatePermission = true
         }
-        onAskForPhoneStatePermissionDialogDismiss()
+        onPhoneStatePermissionDialogDismiss()
     }
 }
 

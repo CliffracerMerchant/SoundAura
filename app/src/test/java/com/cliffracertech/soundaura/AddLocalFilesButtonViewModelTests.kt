@@ -22,7 +22,6 @@ import java.io.IOException
 @Config(sdk=[30])
 @RunWith(RobolectricTestRunner::class)
 class AddLocalFilesButtonViewModelTests {
-    private val context = ApplicationProvider.getApplicationContext<Context>()
     private val coroutineDispatcher = StandardTestDispatcher()
     private val coroutineScope = TestScope(coroutineDispatcher + Job())
     private lateinit var instance: AddLocalFilesButtonViewModel

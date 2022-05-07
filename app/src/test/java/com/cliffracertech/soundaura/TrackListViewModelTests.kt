@@ -72,18 +72,18 @@ class TrackListViewModelTests {
             .containsExactlyElementsIn(testTracks.minus(track3)).inOrder()
     }
 
-    @Test fun trackPlayPauseClick() {
+    @Test fun trackAddRemoveClick() {
         tracksPropertyReflectsAddedTracks()
-        assertThat(instance.tracks.map { it.playing }).doesNotContain(true)
+        assertThat(instance.tracks.map { it.isActive }).doesNotContain(true)
         instance.onTrackPlayPauseClick(testTracks[3].uriString)
         Thread.sleep(50L)
-        assertThat(instance.tracks.map { it.playing })
+        assertThat(instance.tracks.map { it.isActive })
             .containsExactlyElementsIn(listOf(false, false, false, true, false))
             .inOrder()
         instance.onTrackPlayPauseClick(testTracks[1].uriString)
         instance.onTrackPlayPauseClick(testTracks[3].uriString)
         Thread.sleep(50L)
-        assertThat(instance.tracks.map { it.playing })
+        assertThat(instance.tracks.map { it.isActive })
             .containsExactlyElementsIn(listOf(false, true, false, false, false))
             .inOrder()
     }
