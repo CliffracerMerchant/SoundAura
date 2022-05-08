@@ -87,16 +87,25 @@ fun Modifier.largeSurfaceBackground() = composed {
     }
 
     // Plus / minus icon
-    val angle by animateFloatAsState(
+    // The combination of the two angles allows the icon to always
+    // rotate clockwise, instead of alternating between clockwise
+    // and counterclockwise.
+    val cwAngle by animateFloatAsState(
         targetValue = if (added) 0f else 90f,
         animationSpec = tween())
-    val iconTint = if (added) backgroundColor else tint
+    val ccwAngle by animateFloatAsState(
+        targetValue = if (added) 180f else 90f,
+        animationSpec = tween())
+    val angle = if (added) ccwAngle else cwAngle
+
+    val iconTint by animateColorAsState(
+        if (added) backgroundColor else tint)
     val minusIcon = painterResource(R.drawable.minus)
 
-    // One minus icon always appears horizontally, while the other can
-    // rotate between 0 and 90 degrees so that both minus icons together
-    // appear as a plus icon.
-    Icon(minusIcon, null, Modifier.rotate(2 * angle), iconTint)
+    // One minus icon always appears horizontally, while the other
+    // can rotate between 0 and 90 degrees so that both minus icons
+    // together appear as a plus icon.
+    Icon(minusIcon, null, Modifier.rotate(2 * angle), tint)
     Icon(minusIcon, contentDescription, Modifier.rotate(angle), iconTint)
 }
 
