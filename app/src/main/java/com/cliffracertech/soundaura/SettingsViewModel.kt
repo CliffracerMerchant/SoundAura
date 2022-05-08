@@ -118,9 +118,9 @@ enum class AppTheme { UseSystem, Light, Dark;
 
     companion object {
         @Composable fun stringValues() = with(LocalContext.current) {
-            remember { arrayOf(getString(R.string.use_system_theme_description),
-                               getString(R.string.light_theme_description),
-                               getString(R.string.dark_theme_description)) }
+            remember { arrayOf(getString(R.string.use_system_theme),
+                               getString(R.string.light_theme),
+                               getString(R.string.dark_theme)) }
         }
     }
 }

@@ -28,7 +28,7 @@ import androidx.compose.ui.window.DialogProperties
 @Composable fun CancelConfirmButtonRow(
     onCancel: (() -> Unit)? = null,
     confirmEnabled: Boolean = true,
-    confirmText: String = stringResource(android.R.string.ok),
+    confirmText: String = stringResource(R.string.ok),
     onConfirm: () -> Unit,
 ) = Row {
     Spacer(Modifier.weight(1f))
@@ -80,7 +80,7 @@ import androidx.compose.ui.window.DialogProperties
     onDismissRequest: () -> Unit,
     showCancelButton: Boolean = true,
     confirmButtonEnabled: Boolean = true,
-    confirmText: String = stringResource(android.R.string.ok),
+    confirmText: String = stringResource(R.string.ok),
     onConfirm: () -> Unit = onDismissRequest,
     content: @Composable () -> Unit = @Composable {
         CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.high) {

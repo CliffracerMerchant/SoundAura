@@ -23,7 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
@@ -152,7 +151,7 @@ class MainActivity : ComponentActivity() {
     /** Compose a message handler that will read messages emitted from a
      * MainActivityViewModel's messages member and display them using snack bars.*/
     @Composable private fun MessageDisplayer(scaffoldState: ScaffoldState) {
-        val dismissLabel = stringResource(R.string.dismiss_description)
+        val dismissLabel = stringResource(R.string.dismiss)
 
         LaunchedEffect(Unit) {
             viewModel.messages.collect { message ->
@@ -243,8 +242,8 @@ class MainActivity : ComponentActivity() {
                 elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
             ) {
                 val description = stringResource(
-                    if (isPlaying) R.string.soundaura_pause_description
-                    else           R.string.soundaura_play_description)
+                    if (isPlaying) R.string.pause_button_description
+                    else           R.string.play_button_description)
                 PlayPauseIcon(
                     playing = isPlaying,
                     contentDescription = description,

@@ -2,7 +2,8 @@
    ~ the terms of the Apache License 2.0. See license.md in
    ~ the project's root directory to see the full license. -->
 
-<resources>
+<resources
+    xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">SoundAura</string>
     <string name="app_version">v0.1</string>
 
@@ -11,12 +12,11 @@
     <string name="player_notification_channel_description">
         A notification with controls for SoundAura\'s background audio service.</string>
 
-    <string name="stopped_description">Stopped</string>
     <string name="tile_inactive_description">Play SoundAura audio</string>
     <string name="tile_active_description">Stop SoundAura audio</string>
 
-    <string name="back_description">Back</string>
-    <string name="search_description">Search</string>
+    <string name="back">Back</string>
+    <string name="search">Search</string>
     <string name="sort_options_description">Open sorting options</string>
 
     <string name="add_track_to_mix_description">Add %1$s to sound mix</string>
@@ -25,8 +25,8 @@
 
     <string name="add_button_description">Add track</string>
     <string name="add_button_expanded_description">Cancel add track</string>
-    <string name="download_description">Download</string>
-    <string name="local_file_description">Local files</string>
+    <string name="download">Download</string>
+    <string name="local_files">Local files</string>
     <string name="download_button_message">
         The download button is non-functional at this time</string>
     <string name="add_local_files_dialog_title">Confirm track name(s)</string>
@@ -40,41 +40,43 @@
         remove some tracks in order to add any more.
     </string>
 
-    <string name="rename_description">Rename</string>
+    <string name="rename">Rename</string>
     <string name="rename_dialog_title">Rename %1$s</string>
 
-    <string name="remove_description">Remove</string>
+    <string name="remove">Remove</string>
     <string name="confirm_remove_title">Remove %1$s?</string>
     <string name="confirm_remove_message">
         This will remove the track from your library,
         but will not delete the file from your device.</string>
 
-    <string name="play_description">Play</string>
-    <string name="pause_description">Pause</string>
-    <string name="soundaura_play_description">Play SoundAura audio</string>
-    <string name="soundaura_pause_description">Pause SoundAura audio</string>
-    <string name="playing_description">Playing</string>
-    <string name="paused_description">Paused</string>
-    <string name="close_description">Close</string>
-    <string name="checked_description">Checked</string>
-    <string name="unchecked_description">Unchecked</string>
-    <string name="dismiss_description">Dismiss</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="play_button_description">Play SoundAura audio</string>
+    <string name="pause_button_description">Pause SoundAura audio</string>
+    <string name="playing">Playing</string>
+    <string name="paused">Paused</string>
+    <string name="stopped">Stopped</string>
+    <string name="close">Close</string>
+    <string name="checked">Checked</string>
+    <string name="unchecked">Unchecked</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="ok" tools:ignore="Typos,ButtonCase">Ok</string>
 
     <string name="pref_sort_key">track_sort</string>
-    <string name="name_ascending_description">Name ascending</string>
-    <string name="name_descending_description">Name descending</string>
-    <string name="order_added_description">Order added</string>
+    <string name="name_ascending">Name ascending</string>
+    <string name="name_descending">Name descending</string>
+    <string name="order_added">Order added</string>
 
     <string name="app_settings_description">SoundAura settings</string>
-    <string name="settings_description">Settings</string>
+    <string name="settings">Settings</string>
 
-    <string name="display_category_description">Display</string>
-    <string name="app_theme_description">App Theme</string>
-    <string name="use_system_theme_description">System</string>
-    <string name="light_theme_description">Light</string>
-    <string name="dark_theme_description">Dark</string>
+    <string name="display">Display</string>
+    <string name="app_theme">App Theme</string>
+    <string name="use_system_theme">System</string>
+    <string name="light_theme">Light</string>
+    <string name="dark_theme">Dark</string>
 
-    <string name="playback_category_description">Playback</string>
+    <string name="playback">Playback</string>
     <string name="auto_pause_during_calls_setting_title">
         Auto-pause during calls</string>
     <string name="auto_pause_during_calls_setting_subtitle">
@@ -128,16 +130,16 @@
     <string name="tile_tutorial_hide_notification_link_text">
         system settings page for SoundAura</string>
 
-    <string name="about_category_description">About</string>
-    <string name="privacy_policy_description">Privacy policy</string>
-    <string name="privacy_policy_text">
+    <string name="about">About</string>
+    <string name="privacy_policy_setting_title">Privacy policy</string>
+    <string name="privacy_policy_setting_body">
         SoundAura does not collect, store, or transmit any personal information.</string>
-    <string name="open_source_licenses_description">Open source licenses</string>
-    <string name="about_app_description">About SoundAura</string>
-    <string name="about_app_body">
+    <string name="open_source_licenses">Open source licenses</string>
+    <string name="about_app_setting_title">About SoundAura</string>
+    <string name="about_app_setting_body">
         SoundAura is an open source ambient sound app. The source code
         is available under the terms of the Apache License, version 2.0.</string>
-    <string name="source_code_description">View source code</string>
+    <string name="view_source_code">View source code</string>
 
     <string name="github_link" translatable="false">
         https://github.com/NicholasHochstetler/SoundAura</string>

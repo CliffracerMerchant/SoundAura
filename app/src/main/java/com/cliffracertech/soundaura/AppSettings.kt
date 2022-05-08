@@ -34,10 +34,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable private fun DisplaySettingsCategory() {
     SettingCategory(
-        title = stringResource(R.string.display_category_description),
+        title = stringResource(R.string.display),
         content = listOf @Composable {
             val viewModel: SettingsViewModel = viewModel()
-            Setting(title = stringResource(R.string.app_theme_description)) {
+            Setting(title = stringResource(R.string.app_theme)) {
                 EnumRadioButtonGroup(
                     modifier = Modifier.padding(end = 16.dp),
                     values = AppTheme.values(),
@@ -78,24 +78,24 @@ import androidx.lifecycle.viewmodel.compose.viewModel
             content = { TileTutorialDialog(onDismissRequest = it) })
     }
     SettingCategory(
-        title = stringResource(R.string.playback_category_description),
+        title = stringResource(R.string.playback),
         content = listOf(autoPauseDuringCallSetting, titleTutorialSetting))
 }
 
 @Composable private fun AboutSettingsCategory() {
-    val title = stringResource(R.string.about_category_description)
+    val title = stringResource(R.string.about)
     val privacyPolicySetting = @Composable {
-        DialogSetting(stringResource(R.string.privacy_policy_description)) {
+        DialogSetting(stringResource(R.string.privacy_policy_setting_title)) {
             PrivacyPolicyDialog(onDismissRequest = it)
         }
     }
     val openSourceLicensesSetting = @Composable {
-        DialogSetting(stringResource(R.string.open_source_licenses_description)) {
+        DialogSetting(stringResource(R.string.open_source_licenses)) {
             OpenSourceLibrariesUsedDialog(onDismissRequest = it)
         }
     }
     val aboutAppSetting = @Composable {
-        DialogSetting(stringResource(R.string.about_app_description)) {
+        DialogSetting(stringResource(R.string.about_app_setting_title)) {
             AboutAppDialog(onDismissRequest = it)
         }
     }

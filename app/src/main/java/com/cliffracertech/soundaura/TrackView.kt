@@ -149,14 +149,14 @@ fun TrackView(
                 showingRenameDialog = true
                 showingOptionsMenu = false
             }) {
-                Text(text = stringResource(R.string.rename_description),
+                Text(text = stringResource(R.string.rename),
                      style = MaterialTheme.typography.button)
             }
             DropdownMenuItem(onClick = {
                 showingDeleteDialog = true
                 showingOptionsMenu = false
             }) {
-                Text(text = stringResource(R.string.remove_description),
+                Text(text = stringResource(R.string.remove),
                      style = MaterialTheme.typography.button)
             }
         }
@@ -188,7 +188,7 @@ fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme =  true) {
     SoundAuraDialog(
         title = stringResource(R.string.rename_dialog_title, itemName),
         confirmButtonEnabled = currentName.isNotBlank(),
-        confirmText = stringResource(R.string.rename_description),
+        confirmText = stringResource(R.string.rename),
         onConfirm = { onConfirm(currentName)
             onDismissRequest() },
         onDismissRequest = onDismissRequest,
@@ -208,7 +208,7 @@ fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme =  true) {
     onDismissRequest = onDismissRequest,
     title = stringResource(R.string.confirm_remove_title, itemName),
     text = stringResource(R.string.confirm_remove_message),
-    confirmText = stringResource(R.string.remove_description),
+    confirmText = stringResource(R.string.remove),
     onConfirm = {
         onConfirm()
         onDismissRequest()

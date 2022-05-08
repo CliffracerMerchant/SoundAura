@@ -47,8 +47,8 @@ fun Modifier.largeSurfaceBackground() = composed {
 @Composable fun RadioButton(checked: Boolean, modifier: Modifier) {
     val vector = if (checked) Icons.Default.RadioButtonChecked
                  else         Icons.Default.RadioButtonUnchecked
-    val desc = stringResource(if (checked) R.string.checked_description
-                              else         R.string.unchecked_description)
+    val desc = stringResource(if (checked) R.string.checked
+                              else         R.string.unchecked)
     Icon(vector, desc, modifier)
 }
 
@@ -113,8 +113,8 @@ fun Modifier.largeSurfaceBackground() = composed {
 @Composable fun PlayPauseIcon(
     playing: Boolean,
     contentDescription: String =
-        if (playing) stringResource(R.string.pause_description)
-        else         stringResource(R.string.play_description),
+        if (playing) stringResource(R.string.pause)
+        else         stringResource(R.string.play),
     tint: Color,
 ) {
     val playToPause = AnimatedImageVector.animatedVectorResource(R.drawable.play_to_pause)
@@ -129,12 +129,12 @@ fun Modifier.largeSurfaceBackground() = composed {
 
 /** A simple back arrow IconButton for when only the onClick needs changed. */
 @Composable fun BackButton(onClick: () -> Unit) = IconButton(onClick) {
-    Icon(Icons.Default.ArrowBack, stringResource(R.string.back_description))
+    Icon(Icons.Default.ArrowBack, stringResource(R.string.back))
 }
 
 /** A simple settings IconButton for when only the onClick needs changed. */
 @Composable fun SettingsButton(onClick: () -> Unit) = IconButton(onClick) {
-    Icon(Icons.Default.Settings, stringResource(R.string.settings_description))
+    Icon(Icons.Default.Settings, stringResource(R.string.settings))
 }
 
 @Composable fun <T>overshootTweenSpec(

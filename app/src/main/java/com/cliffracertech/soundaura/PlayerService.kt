@@ -337,9 +337,8 @@ class PlayerService: LifecycleService() {
     private val togglePlayPauseAction: Action get() {
         val icon = if (isPlaying) R.drawable.ic_baseline_pause_24
                    else           R.drawable.ic_baseline_play_24
-        val description = getString(
-            if (isPlaying) R.string.pause_description
-            else           R.string.play_description)
+        val description = getString(if (isPlaying) R.string.pause
+                                    else           R.string.play)
 
         val intent = if (isPlaying) pauseIntent(this)
                      else           playIntent(this)
@@ -354,17 +353,17 @@ class PlayerService: LifecycleService() {
         val pendingIntent = PendingIntent.getService(
             this, stopActionRequestCode, stopIntent(this), FLAG_IMMUTABLE)
         Action(R.drawable.ic_baseline_close_24,
-               getString(R.string.close_description),
+               getString(R.string.close),
                pendingIntent)
     }
 
     /** A notification to use as the foreground notification for the service */
     private val notification: Notification get() {
         val description = getString(when(playbackState) {
-            PlaybackStateCompat.STATE_PLAYING -> R.string.playing_description
-            PlaybackStateCompat.STATE_PAUSED ->  R.string.paused_description
-            PlaybackStateCompat.STATE_STOPPED -> R.string.stopped_description
-            else -> R.string.stopped_description
+            PlaybackStateCompat.STATE_PLAYING -> R.string.playing
+            PlaybackStateCompat.STATE_PAUSED ->  R.string.paused
+            PlaybackStateCompat.STATE_STOPPED -> R.string.stopped
+            else -> R.string.stopped
         })
 
         val builder = notificationBuilder

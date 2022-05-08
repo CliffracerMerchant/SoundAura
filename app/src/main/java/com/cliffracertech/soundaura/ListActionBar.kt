@@ -155,7 +155,7 @@ import com.google.accompanist.insets.statusBarsPadding
             val vector = AnimatedImageVector.animatedVectorResource(R.drawable.search_to_close)
             val painter = rememberAnimatedVectorPainter(vector, searchQuery != null)
             IconButton(onClick = onSearchButtonClick) {
-                Icon(painter, stringResource(R.string.search_description))
+                Icon(painter, stringResource(R.string.search))
             }
             // Change sort button
             var sortMenuShown by rememberSaveable { mutableStateOf(false) }

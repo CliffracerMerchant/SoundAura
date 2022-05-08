@@ -157,8 +157,8 @@ fun PhoneStatePermissionDialog(
 @Composable fun PrivacyPolicyDialog(
     onDismissRequest: () -> Unit
 ) = SoundAuraDialog(
-    title = stringResource(R.string.privacy_policy_description),
-    text = stringResource(R.string.privacy_policy_text),
+    title = stringResource(R.string.privacy_policy_setting_title),
+    text = stringResource(R.string.privacy_policy_setting_body),
     showCancelButton = false,
     onDismissRequest = onDismissRequest,
     onConfirm = onDismissRequest)
@@ -170,7 +170,7 @@ fun PhoneStatePermissionDialog(
         onDismissRequest = onDismissRequest,
         confirmButton = {
             TextButton(onClick = onDismissRequest) {
-                Text(stringResource(id = android.R.string.ok))
+                Text(stringResource(id = R.string.ok))
             }
         }, modifier = Modifier.padding(16.dp),
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -205,7 +205,7 @@ fun PhoneStatePermissionDialog(
 
             // Content
             Spacer(Modifier.height(12.dp))
-            Text(text = stringResource(R.string.about_app_body),
+            Text(text = stringResource(R.string.about_app_setting_body),
                  style = MaterialTheme.typography.subtitle1)
 
             // Bottom buttons
@@ -218,13 +218,13 @@ fun PhoneStatePermissionDialog(
                 ) {
                     Icon(painterResource(R.drawable.github_logo), null)
                     Spacer(Modifier.width(10.dp))
-                    Text(text = stringResource(R.string.source_code_description),
+                    Text(text = stringResource(R.string.view_source_code),
                          textDecoration = TextDecoration.Underline,
                          color = MaterialTheme.colors.primary)
                 }
                 Spacer(Modifier.weight(1f))
                 TextButton(onDismissRequest, Modifier.minTouchTargetSize()) {
-                    Text(stringResource(android.R.string.ok))
+                    Text(stringResource(R.string.ok))
                 }
             }
         }

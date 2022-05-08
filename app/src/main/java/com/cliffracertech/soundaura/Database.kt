@@ -40,9 +40,9 @@ data class Track(
 
         companion object {
             @Composable fun stringValues() = with(LocalContext.current) {
-                remember { arrayOf(getString(R.string.name_ascending_description),
-                                   getString(R.string.name_descending_description),
-                                   getString(R.string.order_added_description)) }
+                remember { arrayOf(getString(R.string.name_ascending),
+                                   getString(R.string.name_descending),
+                                   getString(R.string.order_added)) }
             }
         }
     }
