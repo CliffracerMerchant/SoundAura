@@ -16,17 +16,12 @@ import android.content.pm.PackageManager
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.media.session.PlaybackState.*
 import android.os.Build
-import android.support.v4.media.session.MediaSessionCompat
-import android.support.v4.media.session.PlaybackStateCompat
 import android.telephony.PhoneStateListener
 import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationCompat.Action
 import androidx.core.content.ContextCompat
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.lifecycle.LifecycleService
@@ -53,7 +48,8 @@ import javax.inject.Inject
  * function addPlaybackChangeListener with a PlaybackChangeListener.
  * PlaybackChangeListener is a functional interface whose single abstract
  * method is called whenever the PlayerService's playback state changes and
- * takes the new PlaybackStateCompat value as a parameter.
+ * takes the new int value (which will be a value of PlaybackState.State)
+ * as a parameter.
  *
  * If an audio device change occurs when isPlaying is true and the new media
  * volume after the device change is zero, PlayerService will automatically
@@ -78,51 +74,38 @@ class PlayerService: LifecycleService() {
     @Inject lateinit var trackDao: TrackDao
     private lateinit var audioManager: AudioManager
     private lateinit var notificationManager: NotificationManager
-    private lateinit var mediaSession: MediaSessionCompat
     private lateinit var telephonyManager: TelephonyManager
 
     private var boundToActivity = false
         set(value) {
             if (value == field) return
             field = value
-            notificationManager.notify(notificationId, notification)
+            updateNotification()
         }
 
-    /** isPlaying is updated in playbackState's custom setter and should not be
-     * changed otherwise. A value of true indicates a PlaybackStateCompat value
-     * of STATE_PLAYING, while false indicates another PlaybackStateCompat value. */
-    private var isPlaying by mutableStateOf(false)
-    private val playbackStateBuilder = PlaybackStateCompat.Builder()
+    private val isPlaying get() = playbackState == STATE_PLAYING
+
     private var playbackState
         get() = Companion.playbackState
         set(value) {
-            if (playbackState == value ||
-                    (value != PlaybackStateCompat.STATE_PLAYING &&
-                     value != PlaybackStateCompat.STATE_PAUSED &&
-                     value != PlaybackStateCompat.STATE_STOPPED))
-                return
+            if (playbackState == value || (value != STATE_PLAYING &&
+                                           value != STATE_PAUSED &&
+                                           value != STATE_STOPPED))
 
             Companion.playbackState = value
             unpauseLocks.clear()
-            isPlaying = value == PlaybackStateCompat.STATE_PLAYING
+            updateNotification()
 
-            if (value != PlaybackStateCompat.STATE_STOPPED) {
+            if (value != STATE_STOPPED)
                 uriPlayerMap.forEach { it.value.isPlaying = isPlaying }
-                playbackStateBuilder.setState(Companion.playbackState, 0, 1f)
-                val actions = PlaybackStateCompat.ACTION_PLAY_PAUSE or
-                    if (boundToActivity) 0
-                    else PlaybackStateCompat.ACTION_STOP
-                playbackStateBuilder.setActions(actions)
-                mediaSession.setPlaybackState(playbackStateBuilder.build())
-                notificationManager.notify(notificationId, notification)
-            } else {
+            else {
                 stopForeground(true)
                 stopSelf()
             }
         }
 
     fun interface PlaybackChangeListener {
-        fun onPlaybackStateChange(@PlaybackStateCompat.State newState: Int)
+        fun onPlaybackStateChange(newState: Int)
     }
 
     companion object {
@@ -134,21 +117,21 @@ class PlayerService: LifecycleService() {
 
         private fun setPlaybackStateIntent(
             context: Context,
-            @PlaybackStateCompat.State state: Int
-        ) : Intent {
+            state: Int
+        ): Intent {
             val key = context.getString(R.string.set_playback_action)
             return Intent(context, PlayerService::class.java)
                 .setAction(key).putExtra(key, state)
         }
 
         fun playIntent(context: Context) =
-            setPlaybackStateIntent(context, PlaybackStateCompat.STATE_PLAYING)
+            setPlaybackStateIntent(context, STATE_PLAYING)
 
         fun pauseIntent(context: Context) =
-            setPlaybackStateIntent(context, PlaybackStateCompat.STATE_PAUSED)
+            setPlaybackStateIntent(context, STATE_PAUSED)
 
         fun stopIntent(context: Context) =
-            setPlaybackStateIntent(context, PlaybackStateCompat.STATE_STOPPED)
+            setPlaybackStateIntent(context, STATE_STOPPED)
 
         private val playbackChangeListeners = mutableListOf<PlaybackChangeListener>()
 
@@ -160,7 +143,7 @@ class PlayerService: LifecycleService() {
             playbackChangeListeners.remove(listener)
         }
 
-        var playbackState = PlaybackStateCompat.STATE_STOPPED
+        var playbackState = STATE_STOPPED
             private set(value) {
                 field = value
                 playbackChangeListeners.forEach {
@@ -174,17 +157,7 @@ class PlayerService: LifecycleService() {
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         telephonyManager = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-        mediaSession = MediaSessionCompat(
-            this, PlayerService::class.toString(), null,
-            PendingIntent.getActivity(this, 0,
-                Intent(this, MainActivity::class.java).apply {
-                    action = Intent.ACTION_MAIN
-                    addCategory(Intent.CATEGORY_LAUNCHER)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }, FLAG_IMMUTABLE))
-        mediaSession.isActive = true
-        mediaSession.setCallback(mediaSessionCallback)
-        playbackState = PlaybackStateCompat.STATE_PAUSED
+
         val intent = Intent(this, PlayerService::class.java)
         ContextCompat.startForegroundService(this, intent)
 
@@ -229,7 +202,7 @@ class PlayerService: LifecycleService() {
 
     override fun onDestroy() {
         uriPlayerMap.forEach { it.value.release() }
-        playbackState = PlaybackStateCompat.STATE_STOPPED
+        playbackState = STATE_STOPPED
         super.onDestroy()
     }
 
@@ -237,11 +210,8 @@ class PlayerService: LifecycleService() {
         val setPlaybackKey = getString(R.string.set_playback_action)
         if (intent?.action == setPlaybackKey) {
             val targetState = intent.extras?.getInt(setPlaybackKey)
-            if (targetState == PlaybackStateCompat.STATE_STOPPED && boundToActivity)
-                playbackState = PlaybackStateCompat.STATE_PAUSED
-            else playbackState = targetState ?: playbackState
-        }
-        startForeground(notificationId, notification)
+            targetState?.let { playbackState = it }
+        } else startForeground(notificationId, updatedNotification())
         return super.onStartCommand(intent, flags, startId)
     }
 
@@ -259,18 +229,18 @@ class PlayerService: LifecycleService() {
      */
     private fun autoPauseIf(condition: Boolean, key: String) {
         if (condition) {
-            playbackState = PlaybackStateCompat.STATE_PAUSED
+            playbackState = STATE_PAUSED
             unpauseLocks.add(key)
         } else if (unpauseLocks.remove(key) && unpauseLocks.isEmpty())
-            playbackState = PlaybackStateCompat.STATE_PLAYING
+            playbackState = STATE_PLAYING
     }
 
     inner class Binder: android.os.Binder() {
         val isPlaying get() = this@PlayerService.isPlaying
 
         fun toggleIsPlaying() {
-            playbackState = if (isPlaying) PlaybackStateCompat.STATE_PAUSED
-                            else           PlaybackStateCompat.STATE_PLAYING
+            playbackState = if (isPlaying) STATE_PAUSED
+                            else           STATE_PLAYING
         }
 
         fun setTrackVolume(uriString: String, volume: Float) {
@@ -287,18 +257,6 @@ class PlayerService: LifecycleService() {
     override fun onUnbind(intent: Intent?): Boolean {
         boundToActivity = false
         return false
-    }
-
-    private val mediaSessionCallback = object: MediaSessionCompat.Callback() {
-        override fun onPlay() {
-            playbackState = PlaybackStateCompat.STATE_PLAYING
-        }
-        override fun onPause() {
-            playbackState = PlaybackStateCompat.STATE_PAUSED
-        }
-        override fun onStop() {
-            playbackState = PlaybackStateCompat.STATE_STOPPED
-        }
     }
 
     private val notificationChannelId by lazy {
@@ -319,7 +277,6 @@ class PlayerService: LifecycleService() {
     private val notificationStyle = androidx.media.app.NotificationCompat.MediaStyle()
 
     private val notificationBuilder by lazy {
-        notificationStyle.setMediaSession(mediaSession.sessionToken)
         NotificationCompat.Builder(this, notificationChannelId)
             .setOngoing(true)
             .setSmallIcon(R.drawable.tile_and_notification_icon)
@@ -334,7 +291,7 @@ class PlayerService: LifecycleService() {
     }
 
     /** A notification action that will toggle the service's isPlaying state. */
-    private val togglePlayPauseAction: Action get() {
+    private val togglePlayPauseAction: NotificationCompat.Action get() {
         val icon = if (isPlaying) R.drawable.ic_baseline_pause_24
                    else           R.drawable.ic_baseline_play_24
         val description = getString(if (isPlaying) R.string.pause
@@ -345,25 +302,27 @@ class PlayerService: LifecycleService() {
         val pendingIntent = PendingIntent.getService(
             this, playPauseActionRequestCode, intent,
             FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE)
-        return Action(icon, description, pendingIntent)
+        return NotificationCompat.Action.Builder(
+            icon, description, pendingIntent
+        ).build()
     }
 
     /** A notification action that will stop the service when triggered. */
     private val stopAction by lazy {
+        val icon = R.drawable.ic_baseline_close_24
+        val description = getString(R.string.close)
         val pendingIntent = PendingIntent.getService(
             this, stopActionRequestCode, stopIntent(this), FLAG_IMMUTABLE)
-        Action(R.drawable.ic_baseline_close_24,
-               getString(R.string.close),
-               pendingIntent)
+        NotificationCompat.Action.Builder(
+            icon, description, pendingIntent
+        ).build()
     }
 
-    /** A notification to use as the foreground notification for the service */
-    private val notification: Notification get() {
+    private fun updatedNotification(): Notification {
         val description = getString(when(playbackState) {
-            PlaybackStateCompat.STATE_PLAYING -> R.string.playing
-            PlaybackStateCompat.STATE_PAUSED ->  R.string.paused
-            PlaybackStateCompat.STATE_STOPPED -> R.string.stopped
-            else -> R.string.stopped
+            STATE_PLAYING -> R.string.playing
+            STATE_PAUSED ->  R.string.paused
+            else ->          R.string.stopped
         })
 
         val builder = notificationBuilder
@@ -371,12 +330,16 @@ class PlayerService: LifecycleService() {
             .clearActions()
             .addAction(togglePlayPauseAction)
 
-        if (!boundToActivity && playbackState != PlaybackStateCompat.STATE_STOPPED) {
+        if (!boundToActivity && playbackState != STATE_STOPPED) {
             builder.addAction(stopAction)
             notificationStyle.setShowActionsInCompactView(0, 1)
         } else notificationStyle.setShowActionsInCompactView(0)
 
         return builder.build()
+    }
+
+    private fun updateNotification() {
+        notificationManager.notify(notificationId, updatedNotification())
     }
 
     private var telephonyCallback: TelephonyCallback? = null
