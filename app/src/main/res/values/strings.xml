@@ -11,6 +11,7 @@
     <string name="player_notification_channel_name">Player controls</string>
     <string name="player_notification_channel_description">
         A notification with controls for SoundAura\'s background audio service.</string>
+    <string name="player_no_sounds_warning_message">There are no active tracks to play</string>
 
     <string name="tile_inactive_description">Play SoundAura audio</string>
     <string name="tile_active_description">Stop SoundAura audio</string>
