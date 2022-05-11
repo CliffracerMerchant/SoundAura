@@ -286,9 +286,13 @@ class PlayerService: LifecycleService() {
         return Binder()
     }
 
-    override fun onUnbind(intent: Intent?): Boolean {
+    override fun onUnbind(intent: Intent): Boolean {
         boundToActivity = false
-        return false
+        return true
+    }
+
+    override fun onRebind(intent: Intent) {
+        boundToActivity = true
     }
 
     private val notificationChannelId by lazy {
