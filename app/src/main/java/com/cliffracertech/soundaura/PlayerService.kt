@@ -4,12 +4,6 @@
 package com.cliffracertech.soundaura
 
 import android.Manifest
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.app.PendingIntent.FLAG_IMMUTABLE
-import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -25,7 +19,6 @@ import android.widget.Toast
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.lifecycle.LifecycleService
@@ -72,13 +65,23 @@ import javax.inject.Inject
  */
 @AndroidEntryPoint
 class PlayerService: LifecycleService() {
+    private var firstTracksValueCollected = false
     private val uriPlayerMap = mutableMapOf<String, Player>()
     private val unpauseLocks = mutableListOf<String>()
     @Inject lateinit var trackDao: TrackDao
     @Inject lateinit var messageHandler: MessageHandler
     private lateinit var audioManager: AudioManager
-    private lateinit var notificationManager: NotificationManager
     private lateinit var telephonyManager: TelephonyManager
+    private val notificationManager by lazy {
+        PlayerNotification(
+            context = this,
+            playIntent = playIntent(this),
+            pauseIntent = pauseIntent(this),
+            stopIntent = stopIntent(this))
+    }
+    private fun updateNotification() =
+        notificationManager.update(playbackState = playbackState,
+                                   showStopAction = !boundToActivity)
 
     private var boundToActivity = false
         set(value) {
@@ -95,29 +98,35 @@ class PlayerService: LifecycleService() {
     private var playbackState
         get() = Companion.playbackState
         set(value) {
-            if (playbackState == value || (value != STATE_PLAYING &&
-                                           value != STATE_PAUSED &&
-                                           value != STATE_STOPPED))
+            if (playbackState == value)
                 return
-            // If there are no active tracks, we want to prevent a change to
-            // STATE_PLAYING and show an explanation message so that the user
-            // understands why their, e.g., play button tap didn't do anything.
-            // If the service was moved directly from a stopped to playing state
-            // then the uriPlayerMap might be null because the first new value
-            // for TrackDao's activeTracks won't have been collected yet. In
-            // this case the body of activeTracks.collect will set the playback
-            // state back to STATE_PAUSED if activeTracks' first value is an
-            // empty list.
-            if (value == STATE_PLAYING && uriPlayerMap.isEmpty()) {
+            if (value != STATE_PLAYING && value != STATE_PAUSED && value != STATE_STOPPED)
+                return
+
+            if (value == STATE_PLAYING && uriPlayerMap.isEmpty() && firstTracksValueCollected) {
+                // If there are no active tracks, we want to prevent a change to
+                // STATE_PLAYING and show an explanation message so that the user
+                // understands why their, e.g., play button tap didn't do anything.
+                // If the service was moved directly from a stopped to playing state
+                // then the uriPlayerMap might be null because the first new value
+                // for TrackDao's activeTracks won't have been collected yet. In
+                // this case the body of activeTracks.collect will set the playback
+                // state back to STATE_PAUSED if activeTracks' first value is an
+                // empty list. It is assumed here that if the service is bound to an
+                // activity, then the activity will display messages posted to an
+                // injected MessageHandler instance through, e.g., a snack bar. If
+                // the service is not bound to an activity, then the message will be
+                // displayed via a Toast instead.
                 val stringResId = R.string.player_no_sounds_warning_message
-                // It is assumed here that if the service is bound to an
-                // activity, then the activity will display messages posted
-                // to an injected MessageHandler instance through, e.g., a
-                // snack bar. If the service is not bound to an activity,
-                // then the message will be displayed via a Toast instead.
                 if (boundToActivity)
                     messageHandler.postMessage(StringResource(stringResId))
                 else Toast.makeText(this, stringResId, Toast.LENGTH_SHORT).show()
+                Companion.playbackState = STATE_PAUSED
+                updateNotification()
+                return
+            } else if (value == STATE_STOPPED && boundToActivity) {
+                // The service is not intended to be stopped when it is bound to an
+                // activity, so in this case we will set the state to paused instead.
                 Companion.playbackState = STATE_PAUSED
                 updateNotification()
                 return
@@ -141,9 +150,6 @@ class PlayerService: LifecycleService() {
     }
 
     companion object {
-        private const val playPauseActionRequestCode = 1
-        private const val stopActionRequestCode = 2
-        private const val notificationId = 1
         private const val autoPauseAudioDeviceChangeKey = "auto_pause_audio_device_change"
         private const val autoPauseOngoingCallKey = "auto_pause_ongoing_call"
 
@@ -178,9 +184,9 @@ class PlayerService: LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
-        notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         telephonyManager = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
 
+        Companion.playbackState = STATE_PAUSED
         val intent = Intent(this, PlayerService::class.java)
         ContextCompat.startForegroundService(this, intent)
 
@@ -201,40 +207,15 @@ class PlayerService: LifecycleService() {
             dataStore.preferenceFlow(autoPauseDuringCallsKey, false)
                 .onEach(::setAutoPauseDuringCallEnabled)
                 .launchIn(this)
-
-            trackDao.getAllActiveTracks().onEach { tracks ->
-                // remove players whose track is no longer in the track list
-                val uris = tracks.map { it.uriString }
-                uriPlayerMap.keys.retainAll {
-                    val inNewList = it in uris
-                    if (!inNewList)
-                        uriPlayerMap[it]?.release()
-                    inNewList
-                }
-                // add players for tracks newly added to the track list
-                tracks.forEach {
-                    val player = uriPlayerMap.getOrPut(it.uriString) {
-                        Player(this@PlayerService, it.uriString)
-                    }
-                    player.setMonoVolume(it.volume)
-                    player.isPlaying = isPlaying
-                }
-                // if there are no active tracks in the new list, this will pause playback
-                // and show the user a message explaining why the playback was paused
-                if (isPlaying && tracks.isEmpty()) {
-                    val stringResId = R.string.player_no_sounds_warning_message
-                    if (boundToActivity)
-                        messageHandler.postMessage(StringResource(stringResId))
-                    else Toast.makeText(this@PlayerService, stringResId, Toast.LENGTH_SHORT).show()
-                    playbackState = STATE_PAUSED
-                }
-            }.launchIn(this)
+            trackDao.getAllActiveTracks()
+                .onEach(::updateUriPlayerMap)
+                .launchIn(this)
         }
     }
 
     override fun onDestroy() {
+        Companion.playbackState = STATE_STOPPED
         uriPlayerMap.values.forEach(Player::release)
-        playbackState = STATE_STOPPED
         super.onDestroy()
     }
 
@@ -243,28 +224,11 @@ class PlayerService: LifecycleService() {
         if (intent?.action == setPlaybackKey) {
             val targetState = intent.extras?.getInt(setPlaybackKey)
             targetState?.let { playbackState = it }
-        } else startForeground(notificationId, updatedNotification())
+        } else notificationManager.startForeground(
+            service = this,
+            playbackState = playbackState,
+            showStopAction = !boundToActivity)
         return super.onStartCommand(intent, flags, startId)
-    }
-
-    /**
-     * Automatically pause playback if the parameter condition is true and
-     * isPlaying is true. If this auto-pause succeeds, an unpause lock will be
-     * added to the player with a key equal to the parameter key. Calling
-     * autoPauseIf with the same key with a false condition will remove the
-     * corresponding unpause lock, and, if there are no other unpause locks,
-     * resume playback. Different causes of the auto-pause event should
-     * therefore utilize unique keys (e.g. one for auto-pausing when a call is
-     * started, and another for auto-pausing when other media starts playing).
-     * Manually setting playbackState will reset all unpause locks so that the
-     * user can override this behavior.
-     */
-    private fun autoPauseIf(condition: Boolean, key: String) {
-        if (condition) {
-            playbackState = STATE_PAUSED
-            unpauseLocks.add(key)
-        } else if (unpauseLocks.remove(key) && unpauseLocks.isEmpty())
-            playbackState = STATE_PLAYING
     }
 
     inner class Binder: android.os.Binder() {
@@ -295,92 +259,58 @@ class PlayerService: LifecycleService() {
         boundToActivity = true
     }
 
-    private val notificationChannelId by lazy {
-        val channelId = getString(R.string.player_notification_channel_id)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-            notificationManager.getNotificationChannel(channelId) == null
-        ) {
-            val title = getString(R.string.player_notification_channel_name)
-            val importance = NotificationManager.IMPORTANCE_LOW
-            val channel = NotificationChannel(channelId, title, importance)
-            channel.description = getString(R.string.player_notification_channel_description)
-            channel.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-            notificationManager.createNotificationChannel(channel)
+    private fun updateUriPlayerMap(tracks: List<Track>) {
+        firstTracksValueCollected = true
+
+        // remove players whose track is no longer in the track list
+        val uris = tracks.map { it.uriString }
+        uriPlayerMap.keys.retainAll {
+            val inNewList = it in uris
+            if (!inNewList)
+                uriPlayerMap[it]?.release()
+            inNewList
         }
-        channelId
-    }
-
-    private val notificationStyle = androidx.media.app.NotificationCompat.MediaStyle()
-
-    private val notificationBuilder by lazy {
-        NotificationCompat.Builder(this, notificationChannelId)
-            .setOngoing(true)
-            .setSmallIcon(R.drawable.tile_and_notification_icon)
-            .setContentIntent(PendingIntent.getActivity(this, 0,
-                Intent(this, MainActivity::class.java).apply {
-                    action = Intent.ACTION_MAIN
-                    addCategory(Intent.CATEGORY_LAUNCHER)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }, FLAG_IMMUTABLE))
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setStyle(notificationStyle)
-    }
-
-    /** A notification action that will toggle the service's isPlaying state. */
-    private val togglePlayPauseAction: NotificationCompat.Action get() {
-        val icon = if (isPlaying) R.drawable.ic_baseline_pause_24
-                   else           R.drawable.ic_baseline_play_24
-        val description = getString(if (isPlaying) R.string.pause
-                                    else           R.string.play)
-        val intent = if (isPlaying) pauseIntent(this)
-                     else           playIntent(this)
-        val pendingIntent = PendingIntent.getService(
-            this, playPauseActionRequestCode, intent,
-            FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE)
-
-        return NotificationCompat.Action.Builder(
-            icon, description, pendingIntent
-        ).build()
-    }
-
-    /** A notification action that will stop the service when triggered. */
-    private val stopAction by lazy {
-        val icon = R.drawable.ic_baseline_close_24
-        val description = getString(R.string.close)
-        val pendingIntent = PendingIntent.getService(
-            this, stopActionRequestCode, stopIntent(this), FLAG_IMMUTABLE)
-
-        NotificationCompat.Action.Builder(
-            icon, description, pendingIntent
-        ).build()
-    }
-
-    private fun updatedNotification(): Notification {
-        val description = getString(when(playbackState) {
-            STATE_PLAYING -> R.string.playing
-            STATE_PAUSED ->  R.string.paused
-            else ->          R.string.stopped
-        })
-
-        val builder = notificationBuilder
-            .setContentTitle(description)
-            .clearActions()
-            .addAction(togglePlayPauseAction)
-
-        if (!boundToActivity) {
-            builder.addAction(stopAction)
-            notificationStyle.setShowActionsInCompactView(0, 1)
-        } else notificationStyle.setShowActionsInCompactView(0)
-
-        return builder.build()
-    }
-
-    private fun updateNotification() {
-        notificationManager.notify(notificationId, updatedNotification())
+        // add players for tracks newly added to the track list
+        tracks.forEach {
+            val player = uriPlayerMap.getOrPut(it.uriString) {
+                Player(this@PlayerService, it.uriString)
+            }
+            player.setMonoVolume(it.volume)
+            player.isPlaying = isPlaying
+        }
+        // if there are no active tracks in the new list, this will pause playback
+        // and show the user a message explaining why the playback was paused
+        if (isPlaying && tracks.isEmpty()) {
+            val stringResId = R.string.player_no_sounds_warning_message
+            if (boundToActivity)
+                messageHandler.postMessage(StringResource(stringResId))
+            else Toast.makeText(this@PlayerService, stringResId, Toast.LENGTH_SHORT).show()
+            playbackState = STATE_PAUSED
+        }
     }
 
     private var phoneStateListener: PhoneStateListener? = null
     private var telephonyCallback: TelephonyCallback? = null
+
+    /**
+     * Automatically pause playback if the parameter condition is true and
+     * isPlaying is true. If this auto-pause succeeds, an unpause lock will be
+     * added to the player with a key equal to the parameter key. Calling
+     * autoPauseIf with the same key with a false condition will remove the
+     * corresponding unpause lock, and, if there are no other unpause locks,
+     * resume playback. Different causes of the auto-pause event should
+     * therefore utilize unique keys (e.g. one for auto-pausing when a call is
+     * started, and another for auto-pausing when other media starts playing).
+     * Manually setting playbackState will reset all unpause locks so that the
+     * user can override this behavior.
+     */
+    private fun autoPauseIf(condition: Boolean, key: String) {
+        if (condition) {
+            playbackState = STATE_PAUSED
+            unpauseLocks.add(key)
+        } else if (unpauseLocks.remove(key) && unpauseLocks.isEmpty())
+            playbackState = STATE_PLAYING
+    }
 
     @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
     private fun setAutoPauseDuringCallEnabled(enabled: Boolean) {
