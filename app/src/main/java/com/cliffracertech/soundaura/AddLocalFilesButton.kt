@@ -202,5 +202,5 @@ val List<String>.containsBlanks get() =
             onValueChange = { this@Editor[index] = it },
             textStyle = MaterialTheme.typography.body1,
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(1f))
+            modifier = Modifier.fillMaxWidth())
     }})

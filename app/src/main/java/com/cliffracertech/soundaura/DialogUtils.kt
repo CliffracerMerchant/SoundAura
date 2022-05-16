@@ -16,31 +16,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
-/**
- * A row containing a confirm text button and, optionally, a cancel text
- * button, for use in a dialog box.
- *
- * @param onCancel The callback that will be invoked when the cancel
- *     button is tapped. If null, the cancel button will not appear.
- * @param confirmEnabled Whether or not the confirm button is enabled.
- * @param onConfirm The callback that will be invoked when the confirm button is tapped.
- */
-@Composable fun CancelConfirmButtonRow(
-    onCancel: (() -> Unit)? = null,
-    confirmEnabled: Boolean = true,
-    confirmText: String = stringResource(R.string.ok),
-    onConfirm: () -> Unit,
-) = Row {
-    Spacer(Modifier.weight(1f))
-    if (onCancel != null)
-        TextButton(onCancel, Modifier.minTouchTargetSize()) {
-            Text(stringResource(android.R.string.cancel))
-        }
-    TextButton(onConfirm, Modifier.minTouchTargetSize(), confirmEnabled) {
-        Text(confirmText)
-    }
-}
-
 // SoundAuraDialog was created to have more control over the layout of the dialog
 // than the stock Compose AlertDialog allows, and due to the fact that the standard
 // AlertDialog was not adding space in between the title and the content TextField
@@ -76,7 +51,7 @@ import androidx.compose.ui.window.DialogProperties
         ProvideTextStyle(textStyle) { Text(it) }
     }, text: String? = null,
     titleContentSpacing: Dp = 12.dp,
-    contentButtonSpacing: Dp = 8.dp,
+    contentButtonSpacing: Dp = 12.dp,
     onDismissRequest: () -> Unit,
     showCancelButton: Boolean = true,
     confirmButtonEnabled: Boolean = true,
@@ -87,20 +62,37 @@ import androidx.compose.ui.window.DialogProperties
             val textStyle = MaterialTheme.typography.subtitle1
             ProvideTextStyle(textStyle) { Text(text ?: "") }
         }
-    },
+    }
 ) = Dialog(onDismissRequest) {
     Surface(shape = MaterialTheme.shapes.medium) {
-        Column(Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp)) {
-            if (title != null) {
-                titleLayout(title)
-                Spacer(Modifier.height(titleContentSpacing))
+        Column(Modifier.padding(top = 16.dp)) {
+            Column(Modifier.padding(horizontal = 16.dp)) {
+                if (title != null) {
+                    titleLayout(title)
+                    Spacer(Modifier.height(titleContentSpacing))
+                }
+                content()
             }
-            content()
+
             Spacer(Modifier.height(contentButtonSpacing))
-            val cancelCallback = if (!showCancelButton) null
-                                 else onDismissRequest
-            CancelConfirmButtonRow(
-                cancelCallback, confirmButtonEnabled, confirmText, onConfirm)
+
+            Divider()
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
+                if (showCancelButton) TextButton(
+                    onClick = onDismissRequest,
+                    modifier = Modifier.minTouchTargetSize().weight(1f),
+                    shape = MaterialTheme.shapes.medium.bottomStartShape(),
+                    content = { Text(stringResource(android.R.string.cancel)) })
+                VerticalDivider()
+                TextButton(
+                    onClick = onConfirm,
+                    modifier = Modifier.minTouchTargetSize().weight(1f),
+                    enabled = confirmButtonEnabled,
+                    shape = if (showCancelButton)
+                                MaterialTheme.shapes.medium.bottomEndShape()
+                            else MaterialTheme.shapes.medium.bottomShape(),
+                    content = { Text(confirmText) })
+            }
         }
     }
 }
@@ -128,7 +120,7 @@ import androidx.compose.ui.window.DialogProperties
 @Composable fun MultiStepDialog(
     title: String,
     titleContentSpacing: Dp = 12.dp,
-    contentButtonSpacing: Dp = 8.dp,
+    contentButtonSpacing: Dp = 12.dp,
     onDismissRequest: () -> Unit,
     onFinish: () -> Unit = onDismissRequest,
     pages: List<@Composable () -> Unit>
@@ -136,59 +128,55 @@ import androidx.compose.ui.window.DialogProperties
     require(pages.isNotEmpty())
 
     Surface(Modifier.padding(24.dp), MaterialTheme.shapes.medium) {
-        Column(Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp)) {
+        Column(Modifier.padding(top = 16.dp)) {
             var previousPage by rememberSaveable { mutableStateOf(0) }
             var currentPage by rememberSaveable { mutableStateOf(0) }
 
-            Row {
-                Text(title, style = MaterialTheme.typography.body1)
-                Spacer(Modifier.weight(1f))
-                Text(stringResource(R.string.multi_step_dialog_indicator, currentPage + 1, pages.size),
-                     style = MaterialTheme.typography.subtitle1)
-            }
+            Column(Modifier.padding(horizontal = 16.dp)) {
+                Row {
+                    Text(title, style = MaterialTheme.typography.body1)
+                    Spacer(Modifier.weight(1f))
+                    Text(stringResource(R.string.multi_step_dialog_indicator, currentPage + 1, pages.size),
+                         style = MaterialTheme.typography.subtitle1)
+                }
+                Spacer(Modifier.height(titleContentSpacing))
 
-            Spacer(Modifier.height(titleContentSpacing))
-
-            CompositionLocalProvider(LocalTextStyle provides MaterialTheme.typography.subtitle1) {
-                SlideAnimatedContent(
-                    targetState = currentPage,
-                    modifier = Modifier.animateContentSize(tween()),
-                    leftToRight = currentPage >= previousPage
-                ) { pages[it]() }
+                CompositionLocalProvider(LocalTextStyle provides MaterialTheme.typography.subtitle1) {
+                    SlideAnimatedContent(
+                        targetState = currentPage,
+                        modifier = Modifier.animateContentSize(tween()),
+                        leftToRight = currentPage >= previousPage
+                    ) { pages[it]() }
+                }
             }
 
             Spacer(Modifier.height(contentButtonSpacing))
 
-            Row {
-                val firstButtonText: String
-                val secondButtonText: String
-                val firstButtonOnClick: () -> Unit
-                val secondButtonOnClick: () -> Unit
-
-                if (currentPage == 0) {
-                    firstButtonText = "Cancel"
-                    firstButtonOnClick = onDismissRequest
-                } else {
-                    firstButtonText = "Previous"
-                    firstButtonOnClick = {
-                        previousPage = currentPage
-                        currentPage -= 1
-                    }
+            Divider()
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
+                TextButton(
+                    onClick = {
+                        if (currentPage == 0)
+                            onDismissRequest()
+                        else previousPage = currentPage--
+                    }, modifier = Modifier.minTouchTargetSize().weight(1f),
+                    shape = MaterialTheme.shapes.medium.bottomStartShape()
+                ) {
+                    Text(if (currentPage == 0) "Cancel"
+                         else                  "Previous")
                 }
-                if (currentPage == pages.lastIndex) {
-                    secondButtonText = "Finish"
-                    secondButtonOnClick = onFinish
-                } else {
-                    secondButtonText = "Next"
-                    secondButtonOnClick = {
-                        previousPage = currentPage
-                        currentPage += 1
-                    }
+                VerticalDivider()
+                TextButton(
+                    onClick = {
+                        if (currentPage == pages.lastIndex)
+                            onFinish()
+                        else previousPage = currentPage++
+                    }, modifier = Modifier.minTouchTargetSize().weight(1f),
+                    shape = MaterialTheme.shapes.medium.bottomEndShape()
+                ) {
+                    Text(if (currentPage == pages.lastIndex) "Finish"
+                         else                                "Next")
                 }
-
-                TextButton(firstButtonOnClick) { Text(firstButtonText) }
-                Spacer(Modifier.weight(1f))
-                TextButton(secondButtonOnClick) { Text(secondButtonText) }
             }
         }
     }

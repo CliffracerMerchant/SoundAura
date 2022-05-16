@@ -169,7 +169,7 @@ class MainActivity : ComponentActivity() {
 
     @Composable private fun MainContent(
         padding: PaddingValues,
-    ) = Box(Modifier.fillMaxSize(1f)) {
+    ) = Box(Modifier.fillMaxSize()) {
         val showingAppSettings = viewModel.showingAppSettings
         val ld = LocalLayoutDirection.current
 

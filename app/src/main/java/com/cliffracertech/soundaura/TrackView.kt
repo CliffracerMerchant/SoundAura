@@ -50,7 +50,7 @@ fun TrackView(
     modifier: Modifier = Modifier
 ) = Row(
     verticalAlignment = Alignment.CenterVertically,
-    modifier = modifier.fillMaxWidth(1f).largeSurfaceBackground()
+    modifier = modifier.fillMaxWidth().largeSurfaceBackground()
 ){
     val addRemoveContentDescription = stringResource(
         if (track.isActive) R.string.remove_track_from_mix_description

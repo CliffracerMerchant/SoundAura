@@ -20,7 +20,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
     contentPadding: PaddingValues
 ) = Surface(
     color = MaterialTheme.colors.background,
-    modifier = Modifier.fillMaxSize(1f)
+    modifier = Modifier.fillMaxSize()
 ) {
     LazyColumn(
         contentPadding = contentPadding,

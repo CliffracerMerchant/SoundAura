@@ -184,48 +184,56 @@ fun PhoneStatePermissionDialog(
     onDismissRequest: () -> Unit
 ) = Dialog(onDismissRequest) {
     Surface(shape = MaterialTheme.shapes.medium) {
-        Column(Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp)) {
-
-            // Title
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(painter = painterResource(R.drawable.tile_and_notification_icon),
-                     contentDescription = null,
-                     modifier = Modifier.size(24.dp),
-                     tint = MaterialTheme.colors.primary)
-                Spacer(Modifier.width(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(text = stringResource(R.string.app_name),
-                         modifier = Modifier.alignByBaseline(),
-                         style = MaterialTheme.typography.body1)
-                    Text(text = stringResource(R.string.app_version),
-                         modifier = Modifier.alignByBaseline(),
-                         style = MaterialTheme.typography.subtitle1)
+        Column(Modifier.padding(top = 16.dp)) {//, start = 16.dp, end = 16.dp)) {
+            Column(Modifier.padding(horizontal = 16.dp)) {
+                // Title
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(painter = painterResource(R.drawable.tile_and_notification_icon),
+                         contentDescription = null,
+                         modifier = Modifier.size(24.dp),
+                         tint = MaterialTheme.colors.primary)
+                    Spacer(Modifier.width(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(text = stringResource(R.string.app_name),
+                             modifier = Modifier.alignByBaseline(),
+                             style = MaterialTheme.typography.body1)
+                        Text(text = stringResource(R.string.app_version),
+                             modifier = Modifier.alignByBaseline(),
+                             style = MaterialTheme.typography.subtitle1)
+                    }
                 }
-            }
 
-            // Content
+                // Content
+                Spacer(Modifier.height(12.dp))
+                Text(text = stringResource(R.string.about_app_setting_body),
+                     style = MaterialTheme.typography.subtitle1)
+            }
             Spacer(Modifier.height(12.dp))
-            Text(text = stringResource(R.string.about_app_setting_body),
-                 style = MaterialTheme.typography.subtitle1)
 
             // Bottom buttons
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Divider()
+            Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
+                verticalAlignment = Alignment.CenterVertically) {
                 val uriHandler = LocalUriHandler.current
                 val gitHubLink = stringResource(R.string.github_link)
                 TextButton(
                     onClick = { uriHandler.openUri(gitHubLink) },
-                    contentPadding = PaddingValues(vertical = 18.dp)
+                    modifier = Modifier.minTouchTargetSize().weight(1f),
+                    shape = MaterialTheme.shapes.medium.bottomStartShape()
                 ) {
-                    Icon(painterResource(R.drawable.github_logo), null)
+                    Icon(painterResource(R.drawable.github_logo), null,
+                         Modifier.size(20.dp))
                     Spacer(Modifier.width(10.dp))
                     Text(text = stringResource(R.string.view_source_code),
                          textDecoration = TextDecoration.Underline,
                          color = MaterialTheme.colors.primary)
                 }
-                Spacer(Modifier.weight(1f))
-                TextButton(onDismissRequest, Modifier.minTouchTargetSize()) {
-                    Text(stringResource(R.string.ok))
-                }
+                VerticalDivider()
+                TextButton(
+                    onClick = onDismissRequest,
+                    modifier = Modifier.minTouchTargetSize().weight(0.5f),
+                    shape = MaterialTheme.shapes.medium.bottomEndShape(),
+                    content = { Text(stringResource(R.string.ok)) })
             }
         }
     }

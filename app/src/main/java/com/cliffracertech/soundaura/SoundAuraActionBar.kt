@@ -85,7 +85,7 @@ class ActionBarViewModel(
         }, title = viewModel.title.resolve(LocalContext.current),
         searchQuery = viewModel.searchQuery,
         onSearchQueryChanged = { viewModel.searchQuery = it },
-        showSearchAndChangeSortButtons = !viewModel.showingAppSettings,
+        showRightAlignedContent = !viewModel.showingAppSettings,
         onSearchButtonClick = viewModel::onSearchButtonClick,
         sortOptions = Track.Sort.values(),
         sortOptionNames = Track.Sort.stringValues(),

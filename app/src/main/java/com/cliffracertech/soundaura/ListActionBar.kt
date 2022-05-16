@@ -40,7 +40,7 @@ import com.google.accompanist.insets.statusBarsPadding
 @Composable fun GradientToolBar(
     content: @Composable RowScope.() -> Unit
 ) = Column(Modifier
-    .fillMaxWidth(1f)
+    .fillMaxWidth()
     .background(Brush.horizontalGradient(listOf(
         MaterialTheme.colors.primary,
         MaterialTheme.colors.secondary)))
@@ -64,30 +64,33 @@ import com.google.accompanist.insets.statusBarsPadding
  * replaced by the search query if it is not null.
  *
  * @param showBackButtonForNavigation Whether or not the back button should be
- * visible due to other state held outside the action bar. If searchQuery is
- * not null, the back button will be shown regardless.
+ *     visible due to other state held outside the action bar. If searchQuery
+ *     is not null, the back button will be shown regardless.
  * @param onBackButtonClick The callback that will be invoked when the back
- * button is clicked while showBackButtonForNavigation is true. If the back
- * button is shown due to there being a non-null search query, the back button
- * will close the search query and onBackButtonClick will not be called.
+ *     button is clicked while showBackButtonForNavigation is true. If the
+ *     back button is shown due to a non-null search query, the back button
+ *     will close the search query and onBackButtonClick will not be called.
  * @param title The title that will be displayed when there is no search query.
  * @param searchQuery The current search query that will be displayed if not null.
- * @param onSearchQueryChanged The callback that will be invoked when the user
- * input should modify the value of the search query.
- * @param showSearchAndChangeSortButtons Whether or not the search and change
- * sort buttons should be visible.
- * @param onSearchButtonClick The callback that will be invoked when the user
- * clicks the search button. Typically this should set the search query to an
- * empty string if it is already null so that the search query entry will appear,
- * or set it to null if it is not null so that the search query entry will be closed.
- * @param sortOptions An array of all possible sorting enum values (usually
- * accessed with enumValues<>()
- * @param sortOptionNames An array containing the string values that should
- * represent each sorting option.
- * @param currentSortOption A value of the type parameter that indicates the
- * currently selected sort option.
- * @param otherContent A composable containing other contents that should be
- * placed at the end of the action bar.
+ * @param onSearchQueryChanged The callback that will be invoked when the
+ *     user input should modify the value of the search query.
+ * @param showRightAlignedContent Whether or not the contents to the right
+ *     of the back button and title / search query should be shown. If false
+ *     the search button, change sort button, and any content described in
+ *     the parameter content will be invisible.
+ * @param onSearchButtonClick The callback that will be invoked when the
+ *     user clicks the search button. Typically this should set the search
+ *     query to an empty string if it is already null so that the search
+ *     query entry will appear, or set it to null if it is not null so that
+ *     the search query entry will be closed.
+ * @param sortOptions An array of all possible sorting enum values,
+ *     usually accessed with enumValues<>()
+ * @param sortOptionNames An array containing the string values that
+ *     should represent each sorting option.
+ * @param currentSortOption A value of the type parameter that indicates
+ *     the currently selected sort option.
+ * @param otherContent A composable containing other contents that should
+ *     be placed at the end of the action bar.
  */
 @Composable fun <T> ListActionBar(
     showBackButtonForNavigation: Boolean = false,
@@ -95,7 +98,7 @@ import com.google.accompanist.insets.statusBarsPadding
     title: String,
     searchQuery: String? = null,
     onSearchQueryChanged: (String?) -> Unit,
-    showSearchAndChangeSortButtons: Boolean = true,
+    showRightAlignedContent: Boolean = true,
     onSearchButtonClick: () -> Unit,
     sortOptions: Array<T>,
     sortOptionNames: Array<String>,
@@ -107,11 +110,12 @@ import com.google.accompanist.insets.statusBarsPadding
     AnimatedContent(
         targetState = showBackButtonForNavigation || searchQuery != null,
         contentAlignment = Alignment.Center,
-        transitionSpec = { ContentTransform(
-            slideInHorizontally(tween()) { -it },
-            slideOutHorizontally(tween()) { -it },
-            0f, SizeTransform(false) { _, _ -> tween() },
-        )}
+        transitionSpec = {
+            ContentTransform(
+                targetContentEnter = slideInHorizontally(tween()) { -it },
+                initialContentExit = slideOutHorizontally(tween()) { -it },
+                sizeTransform = SizeTransform(clip = false) { _, _ -> tween() })
+        }
     ) { backButtonIsVisible ->
         if (!backButtonIsVisible)
             Spacer(Modifier.width(24.dp))
@@ -123,8 +127,10 @@ import com.google.accompanist.insets.statusBarsPadding
     }
 
     // Title / search query
-    // This outer crossfade is for when the search query appears/disappears.
-    Crossfade(searchQuery != null, Modifier.weight(1f)) { searchQueryIsNotNull ->
+    Crossfade(// This outer crossfade is for when the search query appears/disappears.
+        targetState = searchQuery != null,
+        modifier = Modifier.weight(1f)
+    ) { searchQueryIsNotNull ->
         // lastSearchQuery is used so that when the search query changes from a
         // non-null non-blank value to null, the search query will be recomposed
         // with the value of lastSearchQuery instead of null during the search
@@ -137,14 +143,14 @@ import com.google.accompanist.insets.statusBarsPadding
             AutoFocusSearchQuery(text, onSearchQueryChanged)
             if (searchQuery != null)
                 lastSearchQuery = searchQuery
-        // This inner crossfade is for when the title changes.
-        } else Crossfade(title) {
+        } else Crossfade(title) { // This inner crossfade is for when the title changes.
             Text(it, style = MaterialTheme.typography.h6, maxLines = 1)
         }
     }
 
+    // Right aligned content
     AnimatedVisibility(
-        visible = showSearchAndChangeSortButtons,
+        visible = showRightAlignedContent,
         enter = slideInHorizontally(tween()) { it },
         exit = slideOutHorizontally(tween()) { it },
     ) {
@@ -181,8 +187,8 @@ import com.google.accompanist.insets.statusBarsPadding
  * the currently selected value.
  *
  * @param expanded Whether the dropdown menu is displayed
- * @param values An array of all possible values for the enum type
- *               (usually accessed with enumValues<T>()
+ * @param values An array of all possible values for the enum type,
+ *               usually accessed with enumValues<T>()
  * @param valueNames A string array containing string values to use to
  *                   represent each value of the parameter enum type T.
  * @param currentValue The currently selected enum value
@@ -212,8 +218,8 @@ import com.google.accompanist.insets.statusBarsPadding
 }
 
 /**
- * A search query that auto-focuses when composed or recomposed, and displays
- * an underline instead of a background.
+ * A search query that auto-focuses when first composed,
+ * and displays an underline as a background.
  *
  * @param query The current value of the search query
  * @param onQueryChanged The callback to be invoked when user input changes the query
@@ -285,7 +291,7 @@ import com.google.accompanist.insets.statusBarsPadding
         title = "Nested screen",
         searchQuery = null,
         onSearchQueryChanged = { },
-        showSearchAndChangeSortButtons = false,
+        showRightAlignedContent = false,
         sortOptions = Track.Sort.values(),
         sortOptionNames = Track.Sort.stringValues(),
         currentSortOption = Track.Sort.NameAsc,

@@ -10,10 +10,11 @@ import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CornerBasedShape
+import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.LocalContentColor
@@ -177,3 +178,36 @@ fun Modifier.largeSurfaceBackground() = composed {
     }
     AnimatedContent(targetState, modifier, { transition }, content = content)
 }
+
+private val pointCorner = CornerSize(0.dp)
+
+/** Return a shape that matches just the bottomStart corner
+ * of the receiver shape, with otherwise sharp corners.*/
+@Composable fun CornerBasedShape.bottomStartShape() =
+    RoundedCornerShape(
+        topStart = pointCorner,
+        topEnd = pointCorner,
+        bottomEnd = pointCorner,
+        bottomStart = bottomStart)
+
+/** Return a shape that matches just the bottomEnd corner
+ * of the receiver shape, with otherwise sharp corners.*/
+@Composable fun CornerBasedShape.bottomEndShape() =
+    RoundedCornerShape(
+        topStart = pointCorner,
+        topEnd = pointCorner,
+        bottomStart = pointCorner,
+        bottomEnd = bottomEnd)
+
+/** Return a shape that matches the bottom edge
+ * of the receiver shape, with sharp top corners.*/
+@Composable fun CornerBasedShape.bottomShape() =
+    RoundedCornerShape(
+        topStart = pointCorner,
+        topEnd = pointCorner,
+        bottomStart = bottomStart,
+        bottomEnd = bottomEnd)
+
+@Composable fun VerticalDivider() =
+    Box(Modifier.fillMaxHeight().width(1.dp)
+        .background(MaterialTheme.colors.onSurface.copy(alpha = 0.12f)))
