@@ -62,6 +62,7 @@
     <string name="unchecked">Unchecked</string>
     <string name="dismiss">Dismiss</string>
     <string name="ok" tools:ignore="Typos,ButtonCase">Ok</string>
+    <string name="cancel">Cancel</string>
 
     <string name="pref_sort_key">track_sort</string>
     <string name="name_ascending">Name ascending</string>
@@ -98,6 +99,9 @@
         Control playback using a tile</string>
     <string name="tile_tutorial_title">Tile Tutorial</string>
     <string name="multi_step_dialog_indicator">%1$d of %2$d</string>
+    <string name="previous">Previous</string>
+    <string name="next">Next</string>
+    <string name="finish">Finish</string>
     <string name="tile_tutorial_intro_text">
         In addition to its notification, you can control SoundAura
         through a quick settings tile.</string>

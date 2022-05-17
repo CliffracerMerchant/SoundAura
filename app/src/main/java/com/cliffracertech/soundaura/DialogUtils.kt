@@ -78,11 +78,12 @@ import androidx.compose.ui.window.DialogProperties
 
             Divider()
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
-                if (showCancelButton) TextButton(
-                    onClick = onDismissRequest,
-                    modifier = Modifier.minTouchTargetSize().weight(1f),
-                    shape = MaterialTheme.shapes.medium.bottomStartShape(),
-                    content = { Text(stringResource(android.R.string.cancel)) })
+                if (showCancelButton)
+                    TextButton(
+                        onClick = onDismissRequest,
+                        modifier = Modifier.minTouchTargetSize().weight(1f),
+                        shape = MaterialTheme.shapes.medium.bottomStartShape(),
+                        content = { Text(stringResource(R.string.cancel)) })
                 VerticalDivider()
                 TextButton(
                     onClick = onConfirm,
@@ -162,8 +163,9 @@ import androidx.compose.ui.window.DialogProperties
                     }, modifier = Modifier.minTouchTargetSize().weight(1f),
                     shape = MaterialTheme.shapes.medium.bottomStartShape()
                 ) {
-                    Text(if (currentPage == 0) "Cancel"
-                         else                  "Previous")
+                    Text(stringResource(if (currentPage == 0)
+                                            R.string.cancel
+                                        else R.string.previous))
                 }
                 VerticalDivider()
                 TextButton(
@@ -174,8 +176,9 @@ import androidx.compose.ui.window.DialogProperties
                     }, modifier = Modifier.minTouchTargetSize().weight(1f),
                     shape = MaterialTheme.shapes.medium.bottomEndShape()
                 ) {
-                    Text(if (currentPage == pages.lastIndex) "Finish"
-                         else                                "Next")
+                    Text(stringResource(if (currentPage == pages.lastIndex)
+                                            R.string.finish
+                                        else R.string.next))
                 }
             }
         }
