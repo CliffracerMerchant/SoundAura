@@ -8,6 +8,7 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.VolumeUp
@@ -15,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -54,43 +56,44 @@ fun TrackView(
     track: Track,
     callback: TrackViewCallback,
     modifier: Modifier = Modifier
-) = Row(
-    verticalAlignment = Alignment.CenterVertically,
-    modifier = modifier.fillMaxWidth().largeSurfaceBackground()
-){
-    AddRemoveButtonOrErrorIcon(
-        showError = track.hasError,
-        isAdded = track.isActive,
-        contentDescription = if (track.hasError) null else {
-            val id = if (track.isActive)
-                         R.string.remove_track_from_mix_description
-                     else R.string.add_track_to_mix_description
-            stringResource(id, track.name)
-        }, onAddRemoveClick = {
-            callback.onAddRemoveButtonClick(track.uriString)
-        })
+) = Surface(modifier, MaterialTheme.shapes.large) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        AddRemoveButtonOrErrorIcon(
+            showError = track.hasError,
+            isAdded = track.isActive,
+            contentDescription = if (track.hasError) null else {
+                val id = if (track.isActive)
+                             R.string.remove_track_from_mix_description
+                         else R.string.add_track_to_mix_description
+                stringResource(id, track.name)
+            }, onAddRemoveClick = {
+                callback.onAddRemoveButtonClick(track.uriString)
+            })
 
-    Box(Modifier.weight(1f)) {
-        // 0.5dp start padding is required to make the text align with the volume icon
-        Text(text = track.name, style = MaterialTheme.typography.h6,
-             maxLines = 1, overflow = TextOverflow.Ellipsis,
-             modifier = Modifier.padding(start = (0.5).dp, top = 6.dp)
-                                .paddingFromBaseline(bottom = 48.dp))
-        VolumeSliderOrErrorMessage(
-            volume = track.volume,
-            onVolumeChange = { volume ->
-                callback.onVolumeChange(track.uriString, volume)
-            }, onVolumeChangeFinished = { volume ->
-                callback.onVolumeChangeFinished(track.uriString, volume)
-            }, modifier = Modifier.align(Alignment.BottomStart),
-            errorMessage = if (!track.hasError) null else
-                stringResource(R.string.file_error_message))
+        Box(Modifier.weight(1f)) {
+            // 0.5dp start padding is required to make the text align with the volume icon
+            Text(text = track.name, style = MaterialTheme.typography.h6,
+                 maxLines = 1, overflow = TextOverflow.Ellipsis,
+                 modifier = Modifier.padding(start = (0.5).dp, top = 6.dp)
+                                    .paddingFromBaseline(bottom = 48.dp))
+            VolumeSliderOrErrorMessage(
+                volume = track.volume,
+                onVolumeChange = { volume ->
+                    callback.onVolumeChange(track.uriString, volume)
+                }, onVolumeChangeFinished = { volume ->
+                    callback.onVolumeChangeFinished(track.uriString, volume)
+                }, modifier = Modifier.align(Alignment.BottomStart),
+                errorMessage = if (!track.hasError) null else
+                    stringResource(R.string.file_error_message))
+        }
+
+        MoreOptionsOrDeleteButton(
+            showAsDelete = track.hasError,
+            itemName = track.name,
+            onRenameRequest = { id -> callback.onRenameRequest(track.uriString, id) },
+            onDeleteRequest = { callback.onDeleteRequest(track.uriString) },
+            moreOptionsButtonTint = MaterialTheme.colors.secondary)
     }
-
-    ItemMoreOptionsButton(
-        itemName = track.name,
-        onRenameRequest = { id -> callback.onRenameRequest(track.uriString, id) },
-        onDeleteRequest = { callback.onDeleteRequest(track.uriString) })
 }
 
 /**
@@ -184,35 +187,48 @@ fun TrackView(
 }
 
 /**
- * A more options button for an item in a list view.
+ * Compose either a more options button or a delete button for an item
+ * in a list. When the more options button is clicked an options menu
+ * for the item is shown that in turn displays rename and delete options.
+ * The user tapping one of these options will open an appropriate dialog.
  *
- * ItemMoreOptionsButton displays as a overflow icon button that, when clicked,
- * opens an options menu for the item that in turn displays rename and delete
- * options. The user tapping one of these options will open an appropriate
- * dialog.
- *
+ * @param showAsDelete Whether the delete button will show instead of
+ *     the more options button. showAsDelete should be true when there
+ *     is a problem with the item that prevents renaming.
  * @param itemName The name of the item that is being interacted with.
  * @param onRenameRequest The callback that will be invoked when the
  *     user requests through the rename dialog that they wish to change
  *     the item's name to the callback's string parameter.
  * @param onDeleteRequest The callback that will be invoked when the user
- *     requests through the delete dialog that they wish to delete the item.
+ *     requests through the delete dialog that they wish to delete the
+ *     item, or when showAsDelete is true and the button is clicked.
+ * @param moreOptionsButtonTint The tint that will be used for the more
+ *     options button. The delete button will use the value of the local
+ *     theme's MaterialTheme.colors.error value instead.
  */
-@Composable fun ItemMoreOptionsButton(
+@Composable fun MoreOptionsOrDeleteButton(
+    showAsDelete: Boolean,
     itemName: String,
     onRenameRequest: (String) -> Unit,
     onDeleteRequest: () -> Unit,
-) {
-    var showingOptionsMenu by rememberSaveable { mutableStateOf(false) }
-    var showingRenameDialog by rememberSaveable { mutableStateOf(false) }
-    var showingDeleteDialog by rememberSaveable { mutableStateOf(false) }
+    moreOptionsButtonTint: Color = LocalContentColor.current,
+) = AnimatedContent(showAsDelete) {
+    if (it) IconButton(onDeleteRequest) {
+        Icon(imageVector = Icons.Default.Delete,
+             contentDescription = stringResource(
+                 R.string.remove_item_description, itemName),
+             tint = MaterialTheme.colors.error)
+    } else {
+        var showingOptionsMenu by rememberSaveable { mutableStateOf(false) }
+        IconButton({ showingOptionsMenu = true }) {
+            Icon(imageVector = Icons.Default.MoreVert,
+                 contentDescription = stringResource(
+                     R.string.item_options_button_description, itemName),
+                 tint = moreOptionsButtonTint)
+        }
 
-    IconButton(onClick = { showingOptionsMenu = !showingOptionsMenu }) {
-        val description = stringResource(R.string.item_options_button_description, itemName)
-        Icon(imageVector = Icons.Default.MoreVert,
-             tint = MaterialTheme.colors.secondary,
-             contentDescription = description)
-
+        var showingRenameDialog by rememberSaveable { mutableStateOf(false) }
+        var showingDeleteDialog by rememberSaveable { mutableStateOf(false) }
         DropdownMenu(
             expanded = showingOptionsMenu,
             onDismissRequest = { showingOptionsMenu = false }
@@ -221,34 +237,65 @@ fun TrackView(
                 showingRenameDialog = true
                 showingOptionsMenu = false
             }) {
-                Text(text = stringResource(R.string.rename),
-                     style = MaterialTheme.typography.button)
+                Text(stringResource(R.string.rename))
             }
             DropdownMenuItem(onClick = {
                 showingDeleteDialog = true
                 showingOptionsMenu = false
             }) {
-                Text(text = stringResource(R.string.remove),
-                     style = MaterialTheme.typography.button)
+                Text(stringResource(R.string.remove))
             }
         }
+
+        if (showingRenameDialog)
+            RenameDialog(itemName, { showingRenameDialog = false }, onRenameRequest)
+
+        if (showingDeleteDialog)
+            ConfirmRemoveDialog(itemName, { showingDeleteDialog = false }, onDeleteRequest)
     }
-
-    if (showingRenameDialog)
-        RenameDialog(itemName, { showingRenameDialog = false }, onRenameRequest)
-
-    if (showingDeleteDialog)
-        ConfirmRemoveDialog(itemName, { showingDeleteDialog = false }, onDeleteRequest)
 }
 
 @Preview @Composable
-fun LightTrackViewPreview() = SoundAuraTheme(darkTheme =  false) {
-    TrackView(Track("", "Track 1", volume = 0.5f), TrackViewCallback())
+fun LightTrackViewPreview() = SoundAuraTheme(darkTheme = false) {
+    TrackView(
+        callback = TrackViewCallback(),
+        track = Track(
+            uriString = "",
+            name = "Track 1",
+            volume = 0.5f))
+}
+
+@Preview(showBackground = true) @Composable
+fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme = true) {
+    TrackView(
+        callback = TrackViewCallback(),
+        track = Track(
+            uriString = "",
+            name = "Track 1",
+            isActive = true,
+            volume = 0.25f))
 }
 
 @Preview @Composable
-fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme =  true) {
-    TrackView(Track("", "Track 1", true, volume = 0.5f), TrackViewCallback())
+fun LightTrackErrorPreview() = SoundAuraTheme(darkTheme = false) {
+    TrackView(
+        callback = TrackViewCallback(),
+        track = Track(
+            uriString = "",
+            name = "Track 1",
+            volume = 1.00f,
+            hasError = true))
+}
+
+@Preview(showBackground = true) @Composable
+fun DarkTrackErrorPreview() = SoundAuraTheme(darkTheme = true) {
+    TrackView(
+        callback = TrackViewCallback(),
+        track = Track(
+            uriString = "",
+            name = "Track 1",
+            volume = 1.00f,
+            hasError = true))
 }
 
 @Composable fun RenameDialog(
