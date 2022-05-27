@@ -82,9 +82,6 @@ data class Track(
     @Query("UPDATE track set hasError = 1 WHERE uriString = :uri")
     abstract suspend fun notifyError(uri: String)
 
-    @Query("UPDATE TRACK SET hasError = 0 WHERE uriString = :uri")
-    abstract suspend fun clearError(uri: String)
-
     @Query("UPDATE track set isActive = 1 - isActive WHERE uriString = :uri")
     abstract suspend fun toggleIsActive(uri: String)
 

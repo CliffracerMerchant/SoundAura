@@ -7,41 +7,70 @@ import android.content.Context
 import android.media.MediaPlayer
 import android.net.Uri
 
-/** A MediaPlayer wrapper that prepares a pair of MediaPlayers. The
- * pair of players allows for seamless looping of the provided uri. */
+/**
+ * A MediaPlayer wrapper that allows for seamless looping of the provided uri.
+ * If there is a problem with the provided uri, then the inner MediaPlayer
+ * instance creation can fail. In this case, isPlaying will always return false
+ * and setting isPlaying will have no effect.
+ *
+ * @param context A context instance. Note that the provided context instance
+ *     is held onto for the lifetime of the Player instance, and so should not
+ *     be a component that the Player might outlive.
+ * @param uriString A string describing the uri that the Player will play.
+ * @param onFail A callback that will be invoked if the MediaPlayer creation
+ *     fails. The parameter is the uri, in string form, of the file being
+ *     read. This callback is used instead of, e.g., a factory method that
+ *     can return null if creation fails due to the fact that creation can
+ *     fail at any point in the future when the player is looped.
+ */
 class Player(
     private val context: Context,
-    uriString: String,
+    private val uriString: String,
+    private val onFail: (String) -> Unit,
 ) {
     private val uri = Uri.parse(uriString)
-    private lateinit var nextPlayer: MediaPlayer
-    private var currentPlayer = MediaPlayer.create(context, uri)?.prepareNext()
-        ?: throw IllegalArgumentException("Media player creation for the" +
-                                          "provided uri string $uriString failed.")
+    private var nextPlayer: MediaPlayer? = null
+    private var currentPlayer: MediaPlayer? = createPlayer()
 
-    private fun MediaPlayer.prepareNext(): MediaPlayer = apply {
-        nextPlayer = MediaPlayer.create(context, uri)
-        setNextMediaPlayer(nextPlayer)
-        setOnCompletionListener {
+    init {
+        prepareNextPlayer()
+    }
+
+    private fun prepareNextPlayer() {
+        val currentPlayer = this.currentPlayer ?: return
+        nextPlayer = createPlayer()
+        currentPlayer.setNextMediaPlayer(nextPlayer)
+        currentPlayer.setOnCompletionListener {
             it.release()
-            currentPlayer = nextPlayer.prepareNext()
+            this.currentPlayer = nextPlayer
+            prepareNextPlayer()
         }
     }
 
+    private fun createPlayer() =
+        MediaPlayer.create(context, uri) ?: run {
+            onFail(uriString)
+            null
+        }
+
     /** The isPlaying state of the player. Setting the property
      * to false will pause the player rather than stopping it. */
-    var isPlaying get() = currentPlayer.isPlaying
+    var isPlaying
+        get() = currentPlayer?.isPlaying ?: false
         set(value) {
-            if (value == currentPlayer.isPlaying) return
-            if (value) currentPlayer.start()
-            else       currentPlayer.pause()
+            if (value == currentPlayer?.isPlaying) return
+            if (value) currentPlayer?.start()
+            else currentPlayer?.pause()
         }
 
     /** Set the volume for both audio channels at once. */
-    fun setMonoVolume(volume: Float) = currentPlayer.setVolume(volume, volume)
+    fun setMonoVolume(volume: Float) {
+        currentPlayer?.setVolume(volume, volume)
+        nextPlayer?.setVolume(volume, volume)
+    }
 
     fun release() {
-        currentPlayer.release()
-        nextPlayer.release()
+        currentPlayer?.release()
+        nextPlayer?.release()
     }
 }
