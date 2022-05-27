@@ -70,21 +70,21 @@ fun TrackView(
             callback.onAddRemoveButtonClick(track.uriString)
         })
 
-    var volume by remember { mutableStateOf(track.volume) }
-
     Box(Modifier.weight(1f)) {
+        // 0.5dp start padding is required to make the text align with the volume icon
         Text(text = track.name, style = MaterialTheme.typography.h6,
              maxLines = 1, overflow = TextOverflow.Ellipsis,
-             modifier = Modifier.padding(start = 1.dp, top = 6.dp)
+             modifier = Modifier.padding(start = (0.5).dp, top = 6.dp)
                                 .paddingFromBaseline(bottom = 48.dp))
-        VolumeSlider(
-            volume = volume,
-            onVolumeChange = {
-                volume = it
-                callback.onVolumeChange(track.uriString, it)
-            }, onVolumeChangeFinished = {
+        VolumeSliderOrErrorMessage(
+            volume = track.volume,
+            onVolumeChange = { volume ->
+                callback.onVolumeChange(track.uriString, volume)
+            }, onVolumeChangeFinished = { volume ->
                 callback.onVolumeChangeFinished(track.uriString, volume)
-            }, modifier = Modifier.align(Alignment.BottomStart))
+            }, modifier = Modifier.align(Alignment.BottomStart),
+            errorMessage = if (!track.hasError) null else
+                stringResource(R.string.file_error_message))
     }
 
     ItemMoreOptionsButton(
@@ -130,29 +130,57 @@ fun TrackView(
 }
 
 /**
- * A slider to change a volume level.
+ * Compose a slider to change a volume level or an error message
+ * that explains why the volume level can not be changed.
  *
- * @param volume The current volume level, in the range of 0.0f to 1.0f
- * @param onVolumeChange The callback that will be invoked as the slider is being dragged
- * @param modifier The modifier for the slider
- * @param onVolumeChangeFinished The callback that will be invoked when the slider's
- *                               thumb has been released after a drag event
+ * @param volume The current volume level, in the range of 0.0f to 1.0f.
+ * @param onVolumeChange The callback that will be invoked as the slider
+ *      is being dragged.
+ * @param modifier The modifier for the slider/error message.
+ * @param errorMessage The error message that will be shown
+ *     if not null instead of the volume slider.
+ * @param onVolumeChangeFinished The callback that will be invoked
+ *     when the slider's thumb has been released after a drag event.
  */
-@Composable fun VolumeSlider(
+@Composable fun VolumeSliderOrErrorMessage(
     @FloatRange(from=0.0, to=1.0)
     volume: Float,
     onVolumeChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
-    onVolumeChangeFinished: (() -> Unit)? = null,
-) = Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-
-    Icon(imageVector = Icons.Default.VolumeUp,
-         contentDescription = null,
-         modifier = Modifier.size(20.dp),
-         tint = MaterialTheme.colors.primary)
-    GradientSlider(value = volume, onValueChange = onVolumeChange,
-                   modifier = Modifier.padding(start = 2.dp, end = 0.dp),
-                   onValueChangeFinished = onVolumeChangeFinished)
+    errorMessage: String? = null,
+    onVolumeChangeFinished: ((Float) -> Unit)? = null,
+) = AnimatedContent(
+    targetState = errorMessage != null,
+    modifier = modifier,
+    transitionSpec = { fadeIn() with fadeOut() },
+) { hasError ->
+    if (hasError) {
+        // 0.5dp start padding is required to make the text
+        // align with where the volume icon would appear if
+        // there were no error message.
+        Text(text = errorMessage ?: "",
+             color = MaterialTheme.colors.error,
+             style = MaterialTheme.typography.body1,
+             maxLines = 1, overflow = TextOverflow.Ellipsis,
+             modifier = Modifier.padding(start = (0.5).dp)
+                                .paddingFromBaseline(bottom = 18.dp))
+    } else {
+        var currentVolume by remember(volume) { mutableStateOf(volume) }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(imageVector = Icons.Default.VolumeUp,
+                 contentDescription = null,
+                 modifier = Modifier.size(20.dp),
+                 tint = MaterialTheme.colors.primary)
+            GradientSlider(
+                value = currentVolume,
+                onValueChange = {
+                    currentVolume = it
+                    onVolumeChange(it)
+                }, onValueChangeFinished = {
+                    onVolumeChangeFinished?.invoke(currentVolume)
+                })
+        }
+    }
 }
 
 /**
