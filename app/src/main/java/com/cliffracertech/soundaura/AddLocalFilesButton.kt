@@ -163,12 +163,12 @@ class AddLocalFilesButtonViewModel(
     }
 
     if (chosenUris == null)
-        LaunchedEffect(Unit) { launcher.launch(arrayOf("audio/*")) }
+        LaunchedEffect(Unit) { launcher.launch(arrayOf("audio/*", "application/ogg")) }
     else SoundAuraDialog(
         title = stringResource(R.string.add_local_files_dialog_title),
         onDismissRequest = onDismissRequest,
         confirmButtonEnabled = chosenUris != null &&
-                !trackNames.containsBlanks,
+                               !trackNames.containsBlanks,
         onConfirm = {
             val uris = chosenUris ?: return@SoundAuraDialog
             onConfirmRequest(uris, trackNames)
