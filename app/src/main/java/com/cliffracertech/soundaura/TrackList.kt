@@ -139,7 +139,7 @@ class TrackListViewModel(
     val context = LocalContext.current
     val itemCallback = remember {
         TrackViewCallback(
-            onPlayPauseButtonClick = viewModel::onTrackPlayPauseClick,
+            onAddRemoveButtonClick = viewModel::onTrackPlayPauseClick,
             onVolumeChange = onVolumeChange,
             onVolumeChangeFinished = viewModel::onTrackVolumeChangeRequest,
             onRenameRequest = viewModel::onTrackRenameDialogConfirm,

@@ -4,9 +4,11 @@
 package com.cliffracertech.soundaura
 
 import androidx.annotation.FloatRange
+import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.runtime.*
@@ -20,16 +22,18 @@ import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 
 /**
- * A pseudo-interface that contains callbacks for TrackView interactions.
+ * A pseudo-interface that contains callbacks for TrackView interactions. The
+ * first parameter for each of the callbacks is the uri of the track in String
+ * form.
  *
- * @param onPlayPauseButtonClick The callback that will be invoked when the play/pause button is clicked.
+ * @param onAddRemoveButtonClick The callback that will be invoked when the add/remove button is clicked.
  * @param onVolumeChange The callback that will be invoked when the volume slider's value is changing.
  * @param onVolumeChangeFinished The callback that will be invoked when the volume slider's handle is released.
  * @param onRenameRequest The callback that will be invoked when a rename of the track is requested.
  * @param onDeleteRequest The callback that will be invoked when the deletion of the track is requested.
  */
 class TrackViewCallback(
-    val onPlayPauseButtonClick: (String) -> Unit = { _ -> },
+    val onAddRemoveButtonClick: (String) -> Unit = { _ -> },
     val onVolumeChange: (String, Float) -> Unit = { _, _ -> },
     val onVolumeChangeFinished: (String, Float) -> Unit = { _, _ -> },
     val onRenameRequest: (String, String) -> Unit = { _, _ -> },
@@ -37,8 +41,10 @@ class TrackViewCallback(
 )
 
 /**
- * A view that displays a play/pause icon, a title, a volume slider, and a
- * more options button for the provided Track Instance.
+ * A view that displays an add/remove button, a title, a volume slider, and a
+ * more options button for the provided Track Instance. If the track's hasError
+ * field is true, then an error icon will be displayed instead of the add/remove
+ * button.
  *
  * @param track The Track instance that is being represented.
  * @param callback The TrackViewCallback that describes how to respond to user interactions.
@@ -52,15 +58,17 @@ fun TrackView(
     verticalAlignment = Alignment.CenterVertically,
     modifier = modifier.fillMaxWidth().largeSurfaceBackground()
 ){
-    val addRemoveContentDescription = stringResource(
-        if (track.isActive) R.string.remove_track_from_mix_description
-        else                R.string.add_track_to_mix_description, track.name)
-    AddRemoveButton(
-        added = track.isActive,
-        contentDescription = addRemoveContentDescription,
-        backgroundColor = MaterialTheme.colors.surface,
-        tint = MaterialTheme.colors.primary,
-        onClick = { callback.onPlayPauseButtonClick(track.uriString) })
+    AddRemoveButtonOrErrorIcon(
+        showError = track.hasError,
+        isAdded = track.isActive,
+        contentDescription = if (track.hasError) null else {
+            val id = if (track.isActive)
+                         R.string.remove_track_from_mix_description
+                     else R.string.add_track_to_mix_description
+            stringResource(id, track.name)
+        }, onAddRemoveClick = {
+            callback.onAddRemoveButtonClick(track.uriString)
+        })
 
     var volume by remember { mutableStateOf(track.volume) }
 
@@ -83,6 +91,42 @@ fun TrackView(
         itemName = track.name,
         onRenameRequest = { id -> callback.onRenameRequest(track.uriString, id) },
         onDeleteRequest = { callback.onDeleteRequest(track.uriString) })
+}
+
+/**
+ * Compose either an add/remove button or an error icon. The error icon can be
+ * shown when some error prevents the add/removed state from being changed.
+ *
+ * @param showError Whether an error icon will be shown instead of the
+ *     add/remove button.
+ * @param isAdded Whether the add/remove button will display itself as already
+ *     added when it is shown at all.
+ * @param contentDescription The content description that will be used for the
+ *     error icon or add/remove button.
+ * @param backgroundColor The color that is being displayed behind the
+ *     AddRemoveButtonOrErrorIcon. This is used so that the button can appear
+ *     empty when isAdded is false.
+ * @param onAddRemoveClick The callback that will be invoked when showError is
+ *     false and the add/remove button is clicked.
+ */
+@Composable fun AddRemoveButtonOrErrorIcon(
+    showError: Boolean,
+    isAdded: Boolean,
+    contentDescription: String? = null,
+    backgroundColor: Color = MaterialTheme.colors.surface,
+    onAddRemoveClick: () -> Unit
+) = AnimatedContent(showError) {
+    if (it) Icon(
+        imageVector = Icons.Default.Error,
+        contentDescription = contentDescription,
+        modifier = Modifier.size(48.dp).padding(10.dp),
+        tint = MaterialTheme.colors.error)
+    else AddRemoveButton(
+        added = isAdded,
+        contentDescription = contentDescription,
+        backgroundColor = backgroundColor,
+        tint = MaterialTheme.colors.primary,
+        onClick = onAddRemoveClick)
 }
 
 /**
