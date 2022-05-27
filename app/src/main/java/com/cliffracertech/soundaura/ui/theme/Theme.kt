@@ -29,6 +29,7 @@ private val LightColorPalette = lightColors(
     secondaryVariant = LightThemeGradientEndVariant,
     background = LightBackground,
     surface = LightSurface,
+    error = LightError,
     onBackground = LightOnSurface,
     onSurface = LightOnSurface,
     onPrimary = LightOnPrimary)
