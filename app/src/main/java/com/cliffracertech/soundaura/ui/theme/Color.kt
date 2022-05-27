@@ -13,6 +13,7 @@ val LightBackground = Color(0xFFF1F3F5)
 val LightSurface = Color(0xFFDEE2E6)
 val LightOnSurface = Color(0xFF2E3236)
 val LightOnPrimary = Color(0xFF2E3236)
+val LightError = Color(0xFFCF6679)
 
 val DarkThemeGradientStart = Color(0xFF3AAD77)
 val DarkThemeGradientEnd = Color(0xFF30A8A8)

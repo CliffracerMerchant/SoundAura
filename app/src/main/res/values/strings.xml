@@ -22,7 +22,18 @@
 
     <string name="add_track_to_mix_description">Add %1$s to sound mix</string>
     <string name="remove_track_from_mix_description">Remove %1$s from sound mix</string>
+    <string name="file_error_message">File missing/corrupt</string>
     <string name="item_options_button_description">%1$s more options</string>
+    <string name="remove_item_description">Remove %1$s</string>
+
+    <string name="rename">Rename</string>
+    <string name="rename_dialog_title">Rename %1$s</string>
+
+    <string name="remove">Remove</string>
+    <string name="confirm_remove_title">Remove %1$s?</string>
+    <string name="confirm_remove_message">
+        This will remove the track from your library,
+        but will not delete the file from your device.</string>
 
     <string name="add_button_description">Add track</string>
     <string name="add_button_expanded_description">Cancel add track</string>
@@ -40,15 +51,6 @@
         Android\'s file permission limit of %2$d. You must
         remove some tracks in order to add any more.
     </string>
-
-    <string name="rename">Rename</string>
-    <string name="rename_dialog_title">Rename %1$s</string>
-
-    <string name="remove">Remove</string>
-    <string name="confirm_remove_title">Remove %1$s?</string>
-    <string name="confirm_remove_message">
-        This will remove the track from your library,
-        but will not delete the file from your device.</string>
 
     <string name="play">Play</string>
     <string name="pause">Pause</string>
@@ -106,7 +108,7 @@
         In addition to its notification, you can control SoundAura
         through a quick settings tile.</string>
     <string name="tile_tutorial_add_tile_text">
-        To add it to your active quick setting tiles, tap the fully
+        To add it to your active quick settings tiles, tap the fully
         expanded status bar\'s edit button, and drag the SoundAura
         tile into your list of current tiles.</string>
     <string name="tile_tutorial_add_tile_help_button_text">
@@ -116,10 +118,10 @@
     <string name="tile_tutorial_add_tile_help_button_hide_description">
         hide add tile help</string>
     <string name="tile_tutorial_add_tile_help_text">
-        The button to edit your quick setting tiles might appear
+        The button to edit your quick settings tiles might appear
         differently depending on your device manufacturer and
         Android version. If you can\'t figure out how to add quick
-        setting tiles, try searching \'edit quick setting tiles\'
+        settings tiles, try searching \'edit quick settings tiles\'
         along with your device manufacturer on an internet search
         engine.</string>
     <string name="tile_tutorial_add_tile_button_text">Add tile</string>

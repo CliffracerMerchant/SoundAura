@@ -22,9 +22,11 @@ import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -138,7 +140,7 @@ class PlayerService: LifecycleService() {
             updateNotification()
 
             if (value != STATE_STOPPED)
-                uriPlayerMap.forEach { it.value.isPlaying = isPlaying }
+                uriPlayerMap.values.forEach { it.isPlaying = isPlaying }
             else {
                 stopForeground(true)
                 stopSelf()
@@ -271,11 +273,15 @@ class PlayerService: LifecycleService() {
             inNewList
         }
         // add players for tracks newly added to the track list
-        tracks.forEach {
-            val player = uriPlayerMap.getOrPut(it.uriString) {
-                Player(this@PlayerService, it.uriString)
+        tracks.forEach { track ->
+            val player = uriPlayerMap.getOrPut(track.uriString) {
+                Player(this@PlayerService, track.uriString) {
+                    lifecycleScope.launch {
+                        trackDao.notifyError(track.uriString)
+                    }
+                }
             }
-            player.setMonoVolume(it.volume)
+            player.setMonoVolume(track.volume)
             player.isPlaying = isPlaying
         }
         // if there are no active tracks in the new list, this will pause playback

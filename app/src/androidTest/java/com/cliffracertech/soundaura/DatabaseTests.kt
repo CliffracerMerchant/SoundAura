@@ -30,7 +30,8 @@ class DatabaseTests {
 
     @Before fun createDb() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        db = Room.inMemoryDatabaseBuilder(context, SoundAuraDatabase::class.java).build()
+        db = Room.inMemoryDatabaseBuilder(
+            context, SoundAuraDatabase::class.java).build()
         dao = db.trackDao()
     }
 
@@ -75,6 +76,22 @@ class DatabaseTests {
         assertThat(items).isEmpty()
     }
 
+    @Test fun setName() = runBlocking {
+        addingTracks()
+        var tracks = getAllTracks()
+        val oldTrack1Name = "track 1"
+        assertThat(tracks[1].name).isEqualTo(oldTrack1Name)
+
+        val newTrack1Name = "new track 1 name"
+        dao.setName(tracks[1].uriString, newTrack1Name)
+        tracks = getAllTracks()
+        assertThat(tracks[1].name).isEqualTo(newTrack1Name)
+
+        dao.setName(tracks[1].uriString, oldTrack1Name)
+        tracks = getAllTracks()
+        assertThat(tracks[1].name).isEqualTo(oldTrack1Name)
+    }
+
     @Test fun toggleIsActive() = runBlocking {
         addingTracks()
         var tracks = getAllTracks()
@@ -92,37 +109,43 @@ class DatabaseTests {
         assertThat(tracks[1].isActive).isTrue()
     }
 
-    @Test fun updateVolume() = runBlocking {
+    @Test fun setVolume() = runBlocking {
         addingTracks()
         var tracks = getAllTracks()
         assertThat(tracks[1].volume).isEqualTo(1f)
         assertThat(tracks[2].volume).isEqualTo(1f)
 
-        dao.updateVolume(tracks[1].uriString, 0.5f)
-        dao.updateVolume(tracks[2].uriString, 0.25f)
+        dao.setVolume(tracks[1].uriString, 0.5f)
+        dao.setVolume(tracks[2].uriString, 0.25f)
         tracks = getAllTracks()
         assertThat(tracks[1].volume).isEqualTo(0.5f)
         assertThat(tracks[2].volume).isEqualTo(0.25f)
 
-        dao.updateVolume(tracks[2].uriString, 1f)
+        dao.setVolume(tracks[2].uriString, 1f)
         tracks = getAllTracks()
         assertThat(tracks[2].volume).isEqualTo(1f)
     }
 
-    @Test fun updateName() = runBlocking {
+    @Test fun setHasError() = runBlocking {
         addingTracks()
         var tracks = getAllTracks()
-        val oldTrack1Name = "track 1"
-        assertThat(tracks[1].name).isEqualTo(oldTrack1Name)
+        assertThat(tracks[0].hasError).isFalse()
+        assertThat(tracks[1].hasError).isFalse()
+        assertThat(tracks[2].hasError).isFalse()
 
-        val newTrack1Name = "new track 1 name"
-        dao.updateName(tracks[1].uriString, newTrack1Name)
+        dao.notifyError(tracks[1].uriString)
         tracks = getAllTracks()
-        assertThat(tracks[1].name).isEqualTo(newTrack1Name)
+        assertThat(tracks[0].hasError).isFalse()
+        assertThat(tracks[1].hasError).isTrue()
+        assertThat(tracks[2].hasError).isFalse()
 
-        dao.updateName(tracks[1].uriString, oldTrack1Name)
+        dao.notifyError(tracks[0].uriString)
+        dao.clearError(tracks[1].uriString)
+        dao.notifyError(tracks[2].uriString)
         tracks = getAllTracks()
-        assertThat(tracks[1].name).isEqualTo(oldTrack1Name)
+        assertThat(tracks[0].hasError).isTrue()
+        assertThat(tracks[1].hasError).isFalse()
+        assertThat(tracks[2].hasError).isTrue()
     }
 
     @Test fun getAllTracksSortedByNameAsc() = runBlocking {
@@ -144,7 +167,7 @@ class DatabaseTests {
         tracks = dao.getAllTracks(Track.Sort.NameAsc, "b").first()
         assertThat(tracks).containsExactly(testTracks[0])
 
-        dao.updateName(testTracks[0].uriString, "f track")
+        dao.setName(testTracks[0].uriString, "f track")
         tracks = dao.getAllTracks(Track.Sort.NameAsc, "track").first()
         assertThat(tracks).containsExactly(
             testTracks[2], testTracks[1], testTracks[0].copy(name = "f track")
@@ -170,7 +193,7 @@ class DatabaseTests {
         tracks = dao.getAllTracks(Track.Sort.NameDesc, "b").first()
         assertThat(tracks).containsExactly(testTracks[0])
 
-        dao.updateName(testTracks[0].uriString, "f track")
+        dao.setName(testTracks[0].uriString, "f track")
         tracks = dao.getAllTracks(Track.Sort.NameDesc, "track").first()
         assertThat(tracks).containsExactly(
             testTracks[0].copy(name = "f track"), testTracks[1], testTracks[2]

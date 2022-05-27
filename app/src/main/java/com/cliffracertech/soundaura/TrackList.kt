@@ -98,8 +98,10 @@ class TrackListViewModel(
     fun onDeleteTrackDialogConfirm(context: Context, uriString: String) {
         scope.launch {
             val uri = Uri.parse(uriString)
-            context.contentResolver.releasePersistableUriPermission(
-                uri, FLAG_GRANT_READ_URI_PERMISSION)
+            try {
+                context.contentResolver.releasePersistableUriPermission(
+                    uri, FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (e: SecurityException) {}
             trackDao.delete(uriString)
         }
     }
@@ -109,11 +111,11 @@ class TrackListViewModel(
     }
 
     fun onTrackVolumeChangeRequest(uriString: String, volume: Float) {
-        scope.launch { trackDao.updateVolume(uriString, volume) }
+        scope.launch { trackDao.setVolume(uriString, volume) }
     }
 
     fun onTrackRenameDialogConfirm(uriString: String, name: String) {
-        scope.launch { trackDao.updateName(uriString, name) }
+        scope.launch { trackDao.setName(uriString, name) }
     }
 }
 
@@ -137,7 +139,7 @@ class TrackListViewModel(
     val context = LocalContext.current
     val itemCallback = remember {
         TrackViewCallback(
-            onPlayPauseButtonClick = viewModel::onTrackPlayPauseClick,
+            onAddRemoveButtonClick = viewModel::onTrackPlayPauseClick,
             onVolumeChange = onVolumeChange,
             onVolumeChangeFinished = viewModel::onTrackVolumeChangeRequest,
             onRenameRequest = viewModel::onTrackRenameDialogConfirm,

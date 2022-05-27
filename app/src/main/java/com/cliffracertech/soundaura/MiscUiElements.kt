@@ -28,7 +28,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -37,12 +36,6 @@ import androidx.compose.ui.unit.dp
 
 fun Modifier.minTouchTargetSize() =
     sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-
-/** A modifier that sets the background to be a MaterialTheme.shapes.large
- * shape filled in with a MaterialTheme.colors.surface color. */
-fun Modifier.largeSurfaceBackground() = composed {
-    background(MaterialTheme.colors.surface, MaterialTheme.shapes.large)
-}
 
 /** Return a radio button icon with its checked state set according to the value of @param checked. */
 @Composable fun RadioButton(checked: Boolean, modifier: Modifier) {
