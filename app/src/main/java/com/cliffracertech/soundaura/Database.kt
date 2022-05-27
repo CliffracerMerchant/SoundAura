@@ -4,7 +4,6 @@
 package com.cliffracertech.soundaura
 
 import android.content.Context
-import android.net.Uri
 import androidx.annotation.FloatRange
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -31,11 +30,10 @@ data class Track(
     val isActive: Boolean = false,
     @FloatRange(from = 0.0, to = 1.0)
     @ColumnInfo(name="volume", defaultValue = "1.0")
-    val volume: Float = 1f
+    val volume: Float = 1f,
+    @ColumnInfo(name="hasError", defaultValue = "0")
+    val hasError: Boolean = false,
 ) {
-    constructor(uri: Uri, name: String) :
-        this(uri.toString(), name)
-
     enum class Sort { NameAsc, NameDesc, OrderAdded;
 
         companion object {
@@ -45,23 +43,6 @@ data class Track(
                                    getString(R.string.order_added)) }
             }
         }
-    }
-
-    override fun equals(other: Any?) = when {
-        other !is Track -> false
-        other === this -> true
-        else -> other.uriString == uriString &&
-                other.name == name &&
-                other.isActive == isActive &&
-                other.volume == volume
-    }
-
-    override fun hashCode(): Int {
-        var result = uriString.hashCode()
-        result = 31 * result + name.hashCode()
-        result = 31 * result + isActive.hashCode()
-        result = 31 * result + volume.hashCode()
-        return result
     }
 }
 
@@ -98,23 +79,29 @@ data class Track(
     @Query("SELECT * FROM track WHERE isActive")
     abstract fun getAllActiveTracks(): Flow<List<Track>>
 
+    @Query("UPDATE track set hasError = 1 WHERE uriString = :uri")
+    abstract suspend fun notifyError(uri: String)
+
+    @Query("UPDATE TRACK SET hasError = 0 WHERE uriString = :uri")
+    abstract suspend fun clearError(uri: String)
+
     @Query("UPDATE track set isActive = 1 - isActive WHERE uriString = :uri")
     abstract suspend fun toggleIsActive(uri: String)
 
     @Query("UPDATE track SET volume = :volume WHERE uriString = :uri")
-    abstract suspend fun updateVolume(uri: String, volume: Float)
+    abstract suspend fun setVolume(uri: String, volume: Float)
 
     @Query("UPDATE track SET name = :name WHERE uriString = :uri")
-    abstract suspend fun updateName(uri: String, name: String)
+    abstract suspend fun setName(uri: String, name: String)
 }
 
-@Database(entities = [Track::class], version = 2, exportSchema = true)
+@Database(entities = [Track::class], version = 3, exportSchema = true)
 abstract class SoundAuraDatabase : RoomDatabase() {
     abstract fun trackDao(): TrackDao
 
     companion object {
         fun addAllMigrations(builder: Builder<SoundAuraDatabase>) =
-            builder.addMigrations(migration1to2)
+            builder.addMigrations(migration1to2, migration2to3)
 
         private val migration1to2 = Migration(1,2) { db ->
             db.execSQL("PRAGMA foreign_keys=off")
@@ -131,6 +118,11 @@ abstract class SoundAuraDatabase : RoomDatabase() {
             db.execSQL("COMMIT;")
             db.execSQL("PRAGMA foreign_keys=on;")
         }
+
+        private val migration2to3 = Migration(2,3) { db ->
+            db.execSQL("ALTER TABLE track ADD COLUMN `hasError` INTEGER NOT NULL DEFAULT 0")
+        }
+
     }
 }
 
