@@ -15,16 +15,14 @@ behaves differently than most other audio apps in the following ways:
   call option is enabled in the app settings.
 - It uses a notification to show its controls instead of showing
   them in the media session section of the status bar.
-If enough users desire a more conventionally behaving app that obeys audio
-focus rules and shows its controls in the media session section of the status
-bar, the option to toggle behavior between these two modes might be added in
-the future.
+The option to toggle behavior between this current behavior and an audio
+focus respecting one is planned in the next release. 
   
 SoundAura is built using:
 - Kotlin
 - MVVM paradigm (though without a repository layer due to there being only one data source)
 - Room persistence library and Jetpack DataStore for the data
-- Jetpack Compose for the ui
+- Jetpack Compose for the UI
 - Hilt for dependency injection
 - Junit and Robolectric for testing
 
@@ -48,12 +46,15 @@ SoundAura is built using:
   manually affected the playback state in the mean time.
 - No permissions required, except the read phone state permission for
   the optional auto-pause during calls.
-    
+
+## Planned Features
+- The ability to switch between an audio-focus respecting mode and
+  the current behavior.
 
 ## Privacy Policy
 SoundAura does not collect, store, or transmit any personal information.
 
 ## License
 SoundAura's source code is released under the terms of the Apache License,
-version 2.0. See the file license in the repository's root directory to
+version 2.0. See the file 'license' in the repository's root directory to
 see the full license text.
