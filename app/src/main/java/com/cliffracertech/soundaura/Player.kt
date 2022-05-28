@@ -17,6 +17,10 @@ import android.net.Uri
  *     is held onto for the lifetime of the Player instance, and so should not
  *     be a component that the Player might outlive.
  * @param uriString A string describing the uri that the Player will play.
+ * @param startPlaying The initial isPlaying state of the Player. If true, the
+ *     player will have start called on it after a successful creation.
+ * @param initialVolume The initial volume of the player. This volume will call
+ *     setMonoVolume for the player, and so will apply to both audio channels.
  * @param onFail A callback that will be invoked if the MediaPlayer creation
  *     fails. The parameter is the uri, in string form, of the file being
  *     read. This callback is used instead of, e.g., a factory method that
@@ -26,14 +30,29 @@ import android.net.Uri
 class Player(
     private val context: Context,
     private val uriString: String,
+    startPlaying: Boolean = false,
+    initialVolume: Float = 1f,
     private val onFail: (String) -> Unit,
 ) {
     private val uri = Uri.parse(uriString)
     private var nextPlayer: MediaPlayer? = null
     private var currentPlayer: MediaPlayer? = createPlayer()
 
+    /** The isPlaying state of the player. Setting the property
+     * to false will pause the player rather than stopping it. */
+    var isPlaying
+        get() = currentPlayer?.isPlaying ?: false
+        set(value) {
+            if (value == currentPlayer?.isPlaying) return
+            if (value) currentPlayer?.start()
+            else currentPlayer?.pause()
+        }
+
     init {
         prepareNextPlayer()
+        if (startPlaying)
+            isPlaying = true
+        setMonoVolume(initialVolume)
     }
 
     private fun prepareNextPlayer() {
@@ -51,16 +70,6 @@ class Player(
         MediaPlayer.create(context, uri) ?: run {
             onFail(uriString)
             null
-        }
-
-    /** The isPlaying state of the player. Setting the property
-     * to false will pause the player rather than stopping it. */
-    var isPlaying
-        get() = currentPlayer?.isPlaying ?: false
-        set(value) {
-            if (value == currentPlayer?.isPlaying) return
-            if (value) currentPlayer?.start()
-            else currentPlayer?.pause()
         }
 
     /** Set the volume for both audio channels at once. */
