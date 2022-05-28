@@ -133,19 +133,17 @@ class DatabaseTests {
         assertThat(tracks[1].hasError).isFalse()
         assertThat(tracks[2].hasError).isFalse()
 
-        dao.notifyError(tracks[1].uriString)
+        dao.notifyOfError(tracks[1].uriString)
         tracks = getAllTracks()
         assertThat(tracks[0].hasError).isFalse()
         assertThat(tracks[1].hasError).isTrue()
         assertThat(tracks[2].hasError).isFalse()
 
-        dao.notifyError(tracks[0].uriString)
-        dao.clearError(tracks[1].uriString)
-        dao.notifyError(tracks[2].uriString)
+        dao.notifyOfError(tracks[0].uriString)
         tracks = getAllTracks()
         assertThat(tracks[0].hasError).isTrue()
-        assertThat(tracks[1].hasError).isFalse()
-        assertThat(tracks[2].hasError).isTrue()
+        assertThat(tracks[1].hasError).isTrue()
+        assertThat(tracks[2].hasError).isFalse()
     }
 
     @Test fun getAllTracksSortedByNameAsc() = runBlocking {

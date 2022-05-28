@@ -67,8 +67,7 @@ import javax.inject.Inject
  */
 @AndroidEntryPoint
 class PlayerService: LifecycleService() {
-    private var firstTracksValueCollected = false
-    private val uriPlayerMap = mutableMapOf<String, Player>()
+    private val playerSet = TrackPlayerSet(this, ::onPlayerCreationFailure)
     private val unpauseLocks = mutableListOf<String>()
     @Inject lateinit var trackDao: TrackDao
     @Inject lateinit var messageHandler: MessageHandler
@@ -105,12 +104,12 @@ class PlayerService: LifecycleService() {
             if (value != STATE_PLAYING && value != STATE_PAUSED && value != STATE_STOPPED)
                 return
 
-            if (value == STATE_PLAYING && uriPlayerMap.isEmpty() && firstTracksValueCollected) {
+            if (value == STATE_PLAYING && playerSet.isEmpty && playerSet.isInitialized) {
                 // If there are no active tracks, we want to prevent a change to
                 // STATE_PLAYING and show an explanation message so that the user
                 // understands why their, e.g., play button tap didn't do anything.
                 // If the service was moved directly from a stopped to playing state
-                // then the uriPlayerMap might be null because the first new value
+                // then the PlayerSet might be empty because the first new value
                 // for TrackDao's activeTracks won't have been collected yet. In
                 // this case the body of activeTracks.collect will set the playback
                 // state back to STATE_PAUSED if activeTracks' first value is an
@@ -140,7 +139,7 @@ class PlayerService: LifecycleService() {
             updateNotification()
 
             if (value != STATE_STOPPED)
-                uriPlayerMap.values.forEach { it.isPlaying = isPlaying }
+                playerSet.setIsPlaying(isPlaying)
             else {
                 stopForeground(true)
                 stopSelf()
@@ -210,14 +209,14 @@ class PlayerService: LifecycleService() {
                 .onEach(::setAutoPauseDuringCallEnabled)
                 .launchIn(this)
             trackDao.getAllActiveTracks()
-                .onEach(::updateUriPlayerMap)
+                .onEach(::updatePlayers)
                 .launchIn(this)
         }
     }
 
     override fun onDestroy() {
         Companion.playbackState = STATE_STOPPED
-        uriPlayerMap.values.forEach(Player::release)
+        playerSet.releaseAll()
         super.onDestroy()
     }
 
@@ -241,9 +240,8 @@ class PlayerService: LifecycleService() {
                             else           STATE_PLAYING
         }
 
-        fun setTrackVolume(uriString: String, volume: Float) {
-            uriPlayerMap[uriString]?.setMonoVolume(volume)
-        }
+        fun setTrackVolume(uriString: String, volume: Float) =
+            playerSet.setPlayerVolume(uriString, volume)
     }
 
     override fun onBind(intent: Intent): Binder {
@@ -261,29 +259,15 @@ class PlayerService: LifecycleService() {
         boundToActivity = true
     }
 
-    private fun updateUriPlayerMap(tracks: List<Track>) {
-        firstTracksValueCollected = true
+    private fun onPlayerCreationFailure(uriString: String) {
+        lifecycleScope.launch {
+            trackDao.notifyOfError(uriString)
+        }
+    }
 
-        // remove players whose track is no longer in the track list
-        val uris = tracks.map { it.uriString }
-        uriPlayerMap.keys.retainAll {
-            val inNewList = it in uris
-            if (!inNewList)
-                uriPlayerMap[it]?.release()
-            inNewList
-        }
-        // add players for tracks newly added to the track list
-        tracks.forEach { track ->
-            val player = uriPlayerMap.getOrPut(track.uriString) {
-                Player(this@PlayerService, track.uriString) {
-                    lifecycleScope.launch {
-                        trackDao.notifyError(track.uriString)
-                    }
-                }
-            }
-            player.setMonoVolume(track.volume)
-            player.isPlaying = isPlaying
-        }
+    private fun updatePlayers(tracks: List<Track>) {
+        playerSet.update(tracks, isPlaying)
+
         // if there are no active tracks in the new list, this will pause playback
         // and show the user a message explaining why the playback was paused
         if (isPlaying && tracks.isEmpty()) {
@@ -352,12 +336,14 @@ class PlayerService: LifecycleService() {
             val telephonyCallback = object : TelephonyCallback(), TelephonyCallback.CallStateListener {
                 override fun onCallStateChanged(state: Int) = onCallStateChange(state)
             }
-            telephonyManager.registerTelephonyCallback(
-                mainExecutor, telephonyCallback)
-        } else telephonyManager.listen(object: PhoneStateListener() {
-            override fun onCallStateChanged(state: Int, phoneNumber: String?) =
-                onCallStateChange(state)
-        }, PhoneStateListener.LISTEN_CALL_STATE)
+            telephonyManager.registerTelephonyCallback(mainExecutor, telephonyCallback)
+        } else {
+            val listener = object: PhoneStateListener() {
+                override fun onCallStateChanged(state: Int, phoneNumber: String?) =
+                    onCallStateChange(state)
+            }
+            telephonyManager.listen(listener, PhoneStateListener.LISTEN_CALL_STATE)
+        }
 
         android.os.Binder.restoreCallingIdentity(id)
     }

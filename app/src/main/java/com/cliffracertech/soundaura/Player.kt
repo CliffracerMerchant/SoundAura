@@ -83,3 +83,68 @@ class Player(
         nextPlayer?.release()
     }
 }
+
+/**
+ * A set of Player instances.
+ *
+ * TrackPlayerSet manages a set of Player instances for a list of Tracks.
+ * The set of players is updated by calling the function update with the
+ * new List<Track> instance and a boolean value indicating whether newly
+ * added tracks should start playing immediately.
+ *
+ * Whether or not the collection of players is empty can be queried with the
+ * property isEmpty. The property isInitialized, which will start as false but
+ * will be set to true after the first call to update, is also provided so that
+ * the TrackPlayerSet being empty because the provided List<Track> is empty can
+ * be differentiated from the TrackPlayerSet being empty because update hasn't
+ * been called yet (this might happen for instance if update is called in
+ * response to a asynchronous database get method).
+ *
+ * The isPlaying state can be set for all players at once with the method
+ * setIsPlaying, while the volume for individual tracks can be set with the
+ * method setPlayerVolume. The function releaseAll should be called before the
+ * TrackPlayerSet is destroyed so that all Player instances are released first.
+ */
+class TrackPlayerSet(
+    private val context: Context,
+    private val onCreatePlayerFailure: (String) -> Unit
+) {
+    var isInitialized = false
+        private set
+    private val uriPlayerMap = mutableMapOf<String, Player>()
+
+    val isEmpty get() = uriPlayerMap.isEmpty()
+
+    fun setIsPlaying(isPlaying: Boolean) =
+        uriPlayerMap.values.forEach {
+            it.isPlaying = isPlaying
+        }
+
+    fun setPlayerVolume(uriString: String, volume: Float) =
+        uriPlayerMap[uriString]?.setMonoVolume(volume) ?: Unit
+
+    fun releaseAll() = uriPlayerMap.values.forEach { it.release() }
+
+    fun update(tracks: List<Track>, startPlayingNewTracks: Boolean) {
+        isInitialized = true
+
+        // remove players whose track is no longer in the track list
+        val uris = tracks.map { it.uriString }
+        uriPlayerMap.keys.retainAll {
+            val inNewList = it in uris
+            if (!inNewList)
+                uriPlayerMap[it]?.release()
+            inNewList
+        }
+        // add players for tracks newly added to the track list
+        tracks.forEach { track ->
+            uriPlayerMap.getOrPut(track.uriString) {
+                Player(context = context,
+                       uriString = track.uriString,
+                       startPlaying = startPlayingNewTracks,
+                       initialVolume = track.volume,
+                       onFail = onCreatePlayerFailure)
+            }
+        }
+    }
+}
