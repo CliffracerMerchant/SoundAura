@@ -106,7 +106,7 @@ class TrackListViewModel(
         }
     }
 
-    fun onTrackPlayPauseClick(uriString: String) {
+    fun onTrackAddRemoveButtonClick(uriString: String) {
         scope.launch { trackDao.toggleIsActive(uriString) }
     }
 
@@ -119,8 +119,10 @@ class TrackListViewModel(
     }
 }
 
-/** Compose a TrackList, using an instance of TrackListViewModel to
+/**
+ * Compose a TrackList, using an instance of TrackListViewModel to
  * obtain the list of tracks and to respond to item related callbacks.
+ *
  * @param padding A PaddingValues instance whose values will be
  *     as the contentPadding for the TrackList
 *  @param state The LazyListState used for the TrackList. state
@@ -129,7 +131,8 @@ class TrackListViewModel(
  *     case, e.g., the scrolling position needs to be remembered
  *     even when the StatefulTrackList leaves the composition.
  * @param onVolumeChange The callback that will be invoked when
- *     a TrackView's volume slider is moved. */
+ *     a TrackView's volume slider is moved.
+ */
 @Composable fun StatefulTrackList(
     padding: PaddingValues,
     state: LazyListState = rememberLazyListState(),
@@ -139,7 +142,7 @@ class TrackListViewModel(
     val context = LocalContext.current
     val itemCallback = remember {
         TrackViewCallback(
-            onAddRemoveButtonClick = viewModel::onTrackPlayPauseClick,
+            onAddRemoveButtonClick = viewModel::onTrackAddRemoveButtonClick,
             onVolumeChange = onVolumeChange,
             onVolumeChangeFinished = viewModel::onTrackVolumeChangeRequest,
             onRenameRequest = viewModel::onTrackRenameDialogConfirm,
