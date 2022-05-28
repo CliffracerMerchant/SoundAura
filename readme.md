@@ -1,4 +1,4 @@
-![API](https://badgen.net/badge/API/23+/green)
+![API](https://badgen.net/badge/API/24+/green)
 # SoundAura
 
 SoundAura is an open source ambient sound app. SoundAura does not include

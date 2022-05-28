@@ -81,8 +81,7 @@ class PlayerService: LifecycleService() {
             stopIntent = stopIntent(this))
     }
     private fun updateNotification() =
-        notificationManager.update(playbackState = playbackState,
-                                   showStopAction = !boundToActivity)
+        notificationManager.update(playbackState, showStopAction = !boundToActivity)
 
     private var boundToActivity = false
         set(value) {
@@ -110,18 +109,9 @@ class PlayerService: LifecycleService() {
                 // understands why their, e.g., play button tap didn't do anything.
                 // If the service was moved directly from a stopped to playing state
                 // then the PlayerSet might be empty because the first new value
-                // for TrackDao's activeTracks won't have been collected yet. In
-                // this case the body of activeTracks.collect will set the playback
-                // state back to STATE_PAUSED if activeTracks' first value is an
-                // empty list. It is assumed here that if the service is bound to an
-                // activity, then the activity will display messages posted to an
-                // injected MessageHandler instance through, e.g., a snack bar. If
-                // the service is not bound to an activity, then the message will be
-                // displayed via a Toast instead.
-                val stringResId = R.string.player_no_sounds_warning_message
-                if (boundToActivity)
-                    messageHandler.postMessage(StringResource(stringResId))
-                else Toast.makeText(this, stringResId, Toast.LENGTH_SHORT).show()
+                // for TrackDao's activeTracks won't have been collected yet.
+                // The updatePlayers method will handle this edge case.
+                showAutoStopPlaybackExplanation()
                 Companion.playbackState = STATE_PAUSED
                 updateNotification()
                 return
@@ -265,17 +255,37 @@ class PlayerService: LifecycleService() {
         }
     }
 
+    private fun showAutoStopPlaybackExplanation() {
+        // It is assumed here that if the service is bound to an activity, then
+        // the activity will display messages posted to an injected MessageHandler
+        // instance through, e.g., a snack bar. If the service is not bound to an
+        // activity, then the message will be displayed via a Toast instead.
+        val stringResId = R.string.player_no_sounds_warning_message
+        if (boundToActivity)
+            messageHandler.postMessage(StringResource(stringResId))
+        else Toast.makeText(this@PlayerService, stringResId, Toast.LENGTH_SHORT).show()
+    }
+
     private fun updatePlayers(tracks: List<Track>) {
+        val firstUpdate = !playerSet.isInitialized
         playerSet.update(tracks, isPlaying)
 
-        // if there are no active tracks in the new list, this will pause playback
-        // and show the user a message explaining why the playback was paused
+        // If the new track list is empty when isPlaying is true, we want
+        // to pause playback because there are no tracks to play.
         if (isPlaying && tracks.isEmpty()) {
-            val stringResId = R.string.player_no_sounds_warning_message
-            if (boundToActivity)
-                messageHandler.postMessage(StringResource(stringResId))
-            else Toast.makeText(this@PlayerService, stringResId, Toast.LENGTH_SHORT).show()
             playbackState = STATE_PAUSED
+            // If this playback auto pause happened implicitly due to the user making
+            // the last active track inactive, no user feedback should be necessary.
+            // If this playback auto pause happened following an explicit attempt by
+            // the user to start playback when there were no active tracks, then we
+            // want to display a message to the user in this case explaining why the
+            // explicit attempt to start playback failed. Normally this case would be
+            // caught by playbackState's custom setter, but if the service is moved
+            // directly from a stopped to playing state, then the first value of
+            // trackDao's activeTracks won't have been collected yet and playbackState's
+            // custom setter therefore won't know if it should prevent the change to
+            // STATE_PLAYING. This check will show the explanation in this edge case.
+            if (firstUpdate) showAutoStopPlaybackExplanation()
         }
     }
 
@@ -333,10 +343,10 @@ class PlayerService: LifecycleService() {
         val id = android.os.Binder.clearCallingIdentity()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val telephonyCallback = object : TelephonyCallback(), TelephonyCallback.CallStateListener {
+            val callback = object : TelephonyCallback(), TelephonyCallback.CallStateListener {
                 override fun onCallStateChanged(state: Int) = onCallStateChange(state)
             }
-            telephonyManager.registerTelephonyCallback(mainExecutor, telephonyCallback)
+            telephonyManager.registerTelephonyCallback(mainExecutor, callback)
         } else {
             val listener = object: PhoneStateListener() {
                 override fun onCallStateChanged(state: Int, phoneNumber: String?) =
