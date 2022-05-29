@@ -12,7 +12,6 @@ import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.media.session.PlaybackState.*
 import android.os.Build
-import android.telephony.PhoneStateListener
 import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
 import android.widget.Toast
@@ -92,18 +91,31 @@ class PlayerService: LifecycleService() {
 
     /** isPlaying is only used so that binding clients have access to a
      * snapshot aware version of playbackState. Its value is updated in
-     * playbackState's setter, and should not be changed elsewhere.*/
+     * setPlaybackState, and should not be changed elsewhere to ensure
+     * that mismatched state does not occur.*/
     private var isPlaying by mutableStateOf(false)
 
-    private var playbackState
-        get() = Companion.playbackState
-        set(value) {
-            if (playbackState == value)
-                return
-            if (value != STATE_PLAYING && value != STATE_PAUSED && value != STATE_STOPPED)
-                return
+    /**
+     * Set the companion object's playbackState and ensure that all state
+     * derived from the companion's playbackState (e.g. the notification
+     * state and the value of isPlaying) is updated. Except for when the
+     * service is being created or destroyed, the companion's playback
+     * state should not be altered outside of setPlaybackState to ensure
+     * that mismatched state does not occur.
+     *
+     * @param state The desired PlaybackState.
+     * @param clearUnpauseLocks Whether or not to reset all unpause locks.
+     *     This should only be true when the playback state is being set
+     *     to STATE_PAUSED as the result of an autoPauseIf call.
+     */
+    private fun setPlaybackState(state: Int, clearUnpauseLocks: Boolean = true) {
+        if (playbackState == state)
+            return
+        if (state != STATE_PLAYING && state != STATE_PAUSED && state != STATE_STOPPED)
+            return
 
-            if (value == STATE_PLAYING && playerSet.isEmpty && playerSet.isInitialized) {
+        val newState = when {
+            state == STATE_PLAYING && playerSet.isEmpty && playerSet.isInitialized -> {
                 // If there are no active tracks, we want to prevent a change to
                 // STATE_PLAYING and show an explanation message so that the user
                 // understands why their, e.g., play button tap didn't do anything.
@@ -112,32 +124,24 @@ class PlayerService: LifecycleService() {
                 // for TrackDao's activeTracks won't have been collected yet.
                 // The updatePlayers method will handle this edge case.
                 showAutoStopPlaybackExplanation()
-                Companion.playbackState = STATE_PAUSED
-                updateNotification()
-                return
-            } else if (value == STATE_STOPPED && boundToActivity) {
+                STATE_PAUSED
+            } state == STATE_STOPPED && boundToActivity -> {
                 // The service is not intended to be stopped when it is bound to an
                 // activity, so in this case we will set the state to paused instead.
-                Companion.playbackState = STATE_PAUSED
-                updateNotification()
-                return
-            }
-
-            Companion.playbackState = value
-            isPlaying = value == STATE_PLAYING
-            unpauseLocks.clear()
-            updateNotification()
-
-            if (value != STATE_STOPPED)
-                playerSet.setIsPlaying(isPlaying)
-            else {
-                stopForeground(true)
-                stopSelf()
-            }
+                STATE_PAUSED
+            } else -> state
         }
-
-    fun interface PlaybackChangeListener {
-        fun onPlaybackStateChange(newState: Int)
+        if (clearUnpauseLocks)
+            unpauseLocks.clear()
+        playbackState = newState
+        isPlaying = newState == STATE_PLAYING
+        updateNotification()
+        if (newState != STATE_STOPPED)
+            playerSet.setIsPlaying(isPlaying)
+        else {
+            stopForeground(true)
+            stopSelf()
+        }
     }
 
     companion object {
@@ -153,6 +157,9 @@ class PlayerService: LifecycleService() {
         fun pauseIntent(context: Context) = setPlaybackIntent(context, STATE_PAUSED)
         fun stopIntent(context: Context) = setPlaybackIntent(context, STATE_STOPPED)
 
+        fun interface PlaybackChangeListener {
+            fun onPlaybackStateChange(newState: Int)
+        }
         private val playbackChangeListeners = mutableListOf<PlaybackChangeListener>()
 
         fun addPlaybackChangeListener(listener: PlaybackChangeListener) {
@@ -177,7 +184,7 @@ class PlayerService: LifecycleService() {
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         telephonyManager = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
 
-        Companion.playbackState = STATE_PAUSED
+        playbackState = STATE_PAUSED
         val intent = Intent(this, PlayerService::class.java)
         ContextCompat.startForegroundService(this, intent)
 
@@ -205,7 +212,7 @@ class PlayerService: LifecycleService() {
     }
 
     override fun onDestroy() {
-        Companion.playbackState = STATE_STOPPED
+        playbackState = STATE_STOPPED
         playerSet.releaseAll()
         super.onDestroy()
     }
@@ -214,8 +221,9 @@ class PlayerService: LifecycleService() {
         val setPlaybackKey = getString(R.string.set_playback_action)
         if (intent?.action == setPlaybackKey) {
             val targetState = intent.extras?.getInt(setPlaybackKey)
-            targetState?.let { playbackState = it }
-        } else notificationManager.startForeground(
+            targetState?.let { setPlaybackState(it) }
+        }
+        notificationManager.startForeground(
             service = this,
             playbackState = playbackState,
             showStopAction = !boundToActivity)
@@ -226,8 +234,8 @@ class PlayerService: LifecycleService() {
         val isPlaying get() = this@PlayerService.isPlaying
 
         fun toggleIsPlaying() {
-            playbackState = if (isPlaying) STATE_PAUSED
-                            else           STATE_PLAYING
+            setPlaybackState(if (isPlaying) STATE_PAUSED
+                             else           STATE_PLAYING)
         }
 
         fun setTrackVolume(uriString: String, volume: Float) =
@@ -273,7 +281,7 @@ class PlayerService: LifecycleService() {
         // If the new track list is empty when isPlaying is true, we want
         // to pause playback because there are no tracks to play.
         if (isPlaying && tracks.isEmpty()) {
-            playbackState = STATE_PAUSED
+            setPlaybackState(STATE_PAUSED)
             // If this playback auto pause happened implicitly due to the user making
             // the last active track inactive, no user feedback should be necessary.
             // If this playback auto pause happened following an explicit attempt by
@@ -289,9 +297,6 @@ class PlayerService: LifecycleService() {
         }
     }
 
-    private var phoneStateListener: PhoneStateListener? = null
-    private var telephonyCallback: TelephonyCallback? = null
-
     /**
      * Automatically pause playback if the parameter condition is true and
      * isPlaying is true. If this auto-pause succeeds, an unpause lock will be
@@ -306,11 +311,15 @@ class PlayerService: LifecycleService() {
      */
     private fun autoPauseIf(condition: Boolean, key: String) {
         if (condition) {
-            playbackState = STATE_PAUSED
+            setPlaybackState(STATE_PAUSED, clearUnpauseLocks = false)
             unpauseLocks.add(key)
         } else if (unpauseLocks.remove(key) && unpauseLocks.isEmpty())
-            playbackState = STATE_PLAYING
+            setPlaybackState(STATE_PLAYING)
     }
+
+    @Suppress("DEPRECATION")
+    private var phoneStateListener: android.telephony.PhoneStateListener? = null
+    private var telephonyCallback: TelephonyCallback? = null
 
     @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
     private fun setAutoPauseDuringCallEnabled(enabled: Boolean) {
@@ -322,7 +331,7 @@ class PlayerService: LifecycleService() {
                 telephonyCallback = null
             } else {
                 phoneStateListener?.let {
-                    telephonyManager.listen(it, PhoneStateListener.LISTEN_NONE)
+                    telephonyManager.listen(it, android.telephony.PhoneStateListener.LISTEN_NONE)
                 }
                 phoneStateListener = null
             }
@@ -348,11 +357,11 @@ class PlayerService: LifecycleService() {
             }
             telephonyManager.registerTelephonyCallback(mainExecutor, callback)
         } else {
-            val listener = object: PhoneStateListener() {
+            val listener = object: android.telephony.PhoneStateListener() {
                 override fun onCallStateChanged(state: Int, phoneNumber: String?) =
                     onCallStateChange(state)
             }
-            telephonyManager.listen(listener, PhoneStateListener.LISTEN_CALL_STATE)
+            telephonyManager.listen(listener, android.telephony.PhoneStateListener.LISTEN_CALL_STATE)
         }
 
         android.os.Binder.restoreCallingIdentity(id)
