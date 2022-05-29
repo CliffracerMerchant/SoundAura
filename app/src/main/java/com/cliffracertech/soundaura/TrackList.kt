@@ -38,7 +38,7 @@ import javax.inject.Inject
  * with instances of TrackView. The created TrackViews will use the
  * provided @param trackViewCallback for callbacks.
  *
- * @param modifier The modifier that will be used for the entire TrackList.
+ * @param modifier The modifier that will be used for the TrackList.
  * @param state The LazyListState used for the TrackList's scrolling state.
  * @param contentPadding The PaddingValues instance that will be used as
  *     the content padding for the TrackList's items.
@@ -123,6 +123,7 @@ class TrackListViewModel(
  * Compose a TrackList, using an instance of TrackListViewModel to
  * obtain the list of tracks and to respond to item related callbacks.
  *
+ * @param modifier The Modifier that will be used for the TrackList.
  * @param padding A PaddingValues instance whose values will be
  *     as the contentPadding for the TrackList
 *  @param state The LazyListState used for the TrackList. state
@@ -134,6 +135,7 @@ class TrackListViewModel(
  *     a TrackView's volume slider is moved.
  */
 @Composable fun StatefulTrackList(
+    modifier: Modifier = Modifier,
     padding: PaddingValues,
     state: LazyListState = rememberLazyListState(),
     onVolumeChange: (String, Float) -> Unit,
@@ -151,6 +153,7 @@ class TrackListViewModel(
             })
     }
     TrackList(
+        modifier = modifier,
         tracks = viewModel.tracks,
         state = state,
         contentPadding = padding,

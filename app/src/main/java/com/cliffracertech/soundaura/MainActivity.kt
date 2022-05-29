@@ -190,18 +190,18 @@ class MainActivity : ComponentActivity() {
             leftToRight = !showingAppSettings
         ) { showingAppSettingsScreen ->
             if (showingAppSettingsScreen) {
-                val padding = remember(padding) {
+                val appSettingsPadding = remember(padding) {
                     PaddingValues(
                         start = 8.dp + padding.calculateStartPadding(ld),
                         top = 8.dp + padding.calculateTopPadding(),
                         end = 8.dp + padding.calculateEndPadding(ld),
                         bottom = buttonBottomPadding)
                 }
-                AppSettings(padding)
+                AppSettings(Modifier.fillMaxSize(), appSettingsPadding)
             } else {
                 // The track list is given an additional 64dp padding
                 // to account for the size of the FABs themselves.
-                val padding = remember(padding) {
+                val trackListPadding = remember(padding) {
                     PaddingValues(
                         start = 8.dp + padding.calculateStartPadding(ld),
                         top = 8.dp + padding.calculateTopPadding(),
@@ -209,7 +209,8 @@ class MainActivity : ComponentActivity() {
                         bottom = 64.dp + buttonBottomPadding)
                 }
                 StatefulTrackList(
-                    padding = padding,
+                    modifier = Modifier.fillMaxSize(),
+                    padding = trackListPadding,
                     state = trackListState,
                     onVolumeChange = { uri, volume ->
                         boundPlayerService?.setTrackVolume(uri, volume)
