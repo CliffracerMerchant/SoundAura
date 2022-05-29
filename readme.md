@@ -15,6 +15,7 @@ behaves differently than most other audio apps in the following ways:
   call option is enabled in the app settings.
 - It uses a notification to show its controls instead of showing
   them in the media session section of the status bar.
+  
 The option to toggle behavior between this current behavior and an audio
 focus respecting one is planned in the next release. 
   
@@ -39,13 +40,13 @@ SoundAura is built using:
 - Auto-pause on audio-device changes: If SoundAura is playing, and an
   audio device change occurs that results in a system media volume of
   zero (e.g. the user unplugs or disconnects their headphones and the
-  device's media volume is zero for its speaker), SoundAura will auto-
-  pause its playback since it can't be heard anyways. If another audio
-  device change occurs that makes the media volume go above zero,
-  SoundAura will also automatically unpause itself unless the user
-  manually affected the playback state in the mean time.
-- No permissions required, except the read phone state permission for
-  the optional auto-pause during calls.
+  device's media volume is zero for its speaker), SoundAura will auto-pause
+  its playback since it can't be heard anyways. If another audio device
+  change occurs that makes the media volume go above zero, SoundAura
+  will also automatically unpause itself unless the user manually
+  affected the playback state in the mean time. No permissions required,
+  except the read phone state permission for the optional auto-pause
+  during calls.
 
 ## Planned Features
 - The ability to switch between an audio-focus respecting mode and
