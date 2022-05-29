@@ -85,12 +85,12 @@ class Player(
 }
 
 /**
- * A set of Player instances.
+ * A collection of Player instances.
  *
- * TrackPlayerSet manages a set of Player instances for a list of Tracks.
- * The set of players is updated by calling the function update with the
- * new List<Track> instance and a boolean value indicating whether newly
- * added tracks should start playing immediately.
+ * TrackPlayerSet manages a collection of Player instances for a list of
+ * Tracks. The collection of players is updated by calling the function update
+ * with the new List<Track> instance and a boolean value indicating whether
+ * newly added tracks should start playing immediately.
  *
  * Whether or not the collection of players is empty can be queried with the
  * property isEmpty. The property isInitialized, which will start as false but
@@ -104,6 +104,12 @@ class Player(
  * setIsPlaying, while the volume for individual tracks can be set with the
  * method setPlayerVolume. The function releaseAll should be called before the
  * TrackPlayerSet is destroyed so that all Player instances are released first.
+ *
+ * @param context A context instance. Note that the context instance will be
+ *     held onto for the lifetime of the TrackPlayerSet.
+ * @param onCreatePlayerFailure The callback that will be invoked when the
+ *     Player creation for a particular Track fails. The single string
+ *     parameter is the uri string of the Track whose Player creation failed.
  */
 class TrackPlayerSet(
     private val context: Context,
