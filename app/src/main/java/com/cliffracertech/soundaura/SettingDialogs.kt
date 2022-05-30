@@ -9,7 +9,7 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -111,8 +111,15 @@ fun PhoneStatePermissionDialog(
                              else R.string.tile_tutorial_add_tile_help_button_show_description),
                          modifier = Modifier.rotate(iconRotation))
                 }
-                AnimatedVisibility(showingAddTileHelp) {
-                    Text(stringResource(R.string.tile_tutorial_add_tile_help_text))
+                AnimatedContent(showingAddTileHelp) {
+                    // This spacer when the showingAddTileHelp is false is to make the
+                    // first page of content closer in size to the second so the
+                    // dialog's window doesn't change in size as much when transitioning
+                    // between pages. Obviously a single static value is not ideal
+                    // because it will not change to account for screen size or text
+                    // size changes, but it at least helps a bit for typical text sizes.
+                    if (!it) Spacer(Modifier.size((26.5).dp))
+                    else Text(stringResource(R.string.tile_tutorial_add_tile_help_text))
                 }
             }
         }
