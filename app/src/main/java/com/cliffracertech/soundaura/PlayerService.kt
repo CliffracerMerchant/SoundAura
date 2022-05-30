@@ -15,8 +15,8 @@ import android.os.Build
 import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
 import android.widget.Toast
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -139,7 +139,7 @@ class PlayerService: LifecycleService() {
         if (newState != STATE_STOPPED)
             playerSet.setIsPlaying(isPlaying)
         else {
-            stopForeground(true)
+            notificationManager.stopForeground(this)
             stopSelf()
         }
     }
@@ -213,6 +213,7 @@ class PlayerService: LifecycleService() {
 
     override fun onDestroy() {
         playbackState = STATE_STOPPED
+        notificationManager.stopForeground(this)
         playerSet.releaseAll()
         super.onDestroy()
     }

@@ -9,10 +9,11 @@ import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.content.Context
 import android.content.Context.NOTIFICATION_SERVICE
 import android.content.Intent
-import android.media.session.PlaybackState.STATE_PAUSED
-import android.media.session.PlaybackState.STATE_PLAYING
+import android.graphics.drawable.Icon
+import android.media.session.MediaSession
+import android.media.session.PlaybackState
+import android.media.session.PlaybackState.*
 import android.os.Build
-import androidx.core.app.NotificationCompat
 
 /**
  * A manager for a notification for a foreground media playing service.
@@ -25,7 +26,8 @@ import androidx.core.app.NotificationCompat
  * value, and whether or not the stop action should be shown. Generally
  * startForeground should be called once in the onCreate of the client service,
  * and update should be called thereafter whenever the playback state or the
- * visibility of the stop action changes.
+ * visibility of the stop action changes. The notification can be cleared when
+ * the service is stopping by calling the action stopForeground with the service.
 
  * @param context A context instance. Note that this context is held onto for
  *     PlayerNotification's lifetime, an so may result in memory leaks if used
@@ -47,9 +49,35 @@ class PlayerNotification(
     private val playPauseActionRequestCode = 1
     private val stopActionRequestCode = 2
     val id = 1
+    private val mediaSession = MediaSession(context, PlayerService::class.toString())
 
     private val notificationManager =
         context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+
+    init { mediaSession.isActive = true }
+
+    fun startForeground(
+        service: Service,
+        playbackState: Int,
+        showStopAction: Boolean
+    ) {
+        val notification = updatedNotification(playbackState, showStopAction)
+        service.startForeground(id, notification)
+        val newPlaybackState = updatedPlaybackState(playbackState, showStopAction)
+        mediaSession.setPlaybackState(newPlaybackState)
+    }
+
+    fun stopForeground(service: Service) {
+        service.stopForeground(true)
+        mediaSession.release()
+    }
+
+    fun update(playbackState: Int, showStopAction: Boolean) {
+        val notification = updatedNotification(playbackState, showStopAction)
+        notificationManager.notify(id, notification)
+        val newPlaybackState = updatedPlaybackState(playbackState, showStopAction)
+        mediaSession.setPlaybackState(newPlaybackState)
+    }
 
     private val channelId = run {
         val channelId = context.getString(R.string.player_notification_channel_id)
@@ -67,11 +95,15 @@ class PlayerNotification(
         channelId
     }
 
-    private val notificationStyle = androidx.media.app.NotificationCompat.MediaStyle()
+    private val notificationStyle =
+        Notification.MediaStyle()
+            .also { it.setMediaSession(mediaSession.sessionToken) }
 
-    private val notificationBuilder =
-        NotificationCompat.Builder(context, channelId)
-            .setOngoing(true)
+    private val notificationBuilder = run {
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                          Notification.Builder(context, channelId)
+                      else Notification.Builder(context)
+        builder.setOngoing(true)
             .setSmallIcon(R.drawable.tile_and_notification_icon)
             .setContentIntent(PendingIntent.getActivity(context, 0,
                 Intent(context, MainActivity::class.java).apply {
@@ -79,13 +111,14 @@ class PlayerNotification(
                     addCategory(Intent.CATEGORY_LAUNCHER)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }, FLAG_IMMUTABLE))
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
             .setStyle(notificationStyle)
-
+    }
     /** A notification action that will toggle the service's isPlaying state. */
-    private fun togglePlayPauseAction(isPlaying: Boolean): NotificationCompat.Action {
-        val icon = if (isPlaying) R.drawable.ic_baseline_pause_24
-                   else           R.drawable.ic_baseline_play_24
+    private fun togglePlayPauseAction(isPlaying: Boolean): Notification.Action {
+        val iconResId = if (isPlaying) R.drawable.ic_baseline_pause_24
+                        else           R.drawable.ic_baseline_play_24
+        val icon = Icon.createWithResource(context, iconResId)
         val description = context.getString(if (isPlaying) R.string.pause
                                             else           R.string.play)
         val intent = if (isPlaying) pauseIntent
@@ -94,19 +127,20 @@ class PlayerNotification(
             context, playPauseActionRequestCode, intent,
             FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE)
 
-        return NotificationCompat.Action.Builder(
+        return Notification.Action.Builder(
             icon, description, pendingIntent
         ).build()
     }
 
     /** A notification action that will stop the service when triggered. */
-    private val stopAction = run {
-        val icon = R.drawable.ic_baseline_close_24
+    private val stopAction: Notification.Action get() = run {
+        val iconResId = R.drawable.ic_baseline_close_24
+        val icon = Icon.createWithResource(context, iconResId)
         val description = context.getString(R.string.close)
         val pendingIntent = PendingIntent.getService(
             context, stopActionRequestCode, stopIntent, FLAG_IMMUTABLE)
 
-        NotificationCompat.Action.Builder(
+        Notification.Action.Builder(
             icon, description, pendingIntent
         ).build()
     }
@@ -120,32 +154,28 @@ class PlayerNotification(
             STATE_PAUSED ->  R.string.paused
             else ->          R.string.stopped
         })
+        val builder = notificationBuilder.setContentTitle(description)
 
-        val builder = notificationBuilder
-            .setContentTitle(description)
-            .clearActions()
-            .addAction(togglePlayPauseAction(
-                isPlaying = playbackState == STATE_PLAYING))
-
+        val playPauseAction = togglePlayPauseAction(
+            isPlaying = playbackState == STATE_PLAYING)
         if (showStopAction) {
-            builder.addAction(stopAction)
+            builder.setActions(playPauseAction, stopAction)
             notificationStyle.setShowActionsInCompactView(0, 1)
-        } else notificationStyle.setShowActionsInCompactView(0)
-
+        } else {
+            builder.setActions(playPauseAction)
+            notificationStyle.setShowActionsInCompactView(0)
+        }
         return builder.build()
     }
 
-    fun startForeground(
-        service: Service,
+    private val playbackStateBuilder = PlaybackState.Builder()
+
+    private fun updatedPlaybackState(
         playbackState: Int,
         showStopAction: Boolean
-    ) {
-        val notification = updatedNotification(playbackState, showStopAction)
-        service.startForeground(id, notification)
-    }
-
-    fun update(playbackState: Int, showStopAction: Boolean) {
-        val notification = updatedNotification(playbackState, showStopAction)
-        notificationManager.notify(id, notification)
-    }
+    ) = playbackStateBuilder
+        .setState(playbackState, 0L, 0f)
+        .setActions(ACTION_PLAY_PAUSE or
+            if (showStopAction) ACTION_STOP else 0L)
+        .build()
 }
