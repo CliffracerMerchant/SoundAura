@@ -11,6 +11,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -139,7 +141,7 @@ class TrackListViewModel(
     padding: PaddingValues,
     state: LazyListState = rememberLazyListState(),
     onVolumeChange: (String, Float) -> Unit,
-) {
+) = Surface(modifier, color = MaterialTheme.colors.background) {
     val viewModel: TrackListViewModel = viewModel()
     val context = LocalContext.current
     val itemCallback = remember {
