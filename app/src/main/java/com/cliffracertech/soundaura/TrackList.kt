@@ -11,6 +11,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,7 +40,7 @@ import javax.inject.Inject
  * with instances of TrackView. The created TrackViews will use the
  * provided @param trackViewCallback for callbacks.
  *
- * @param modifier The modifier that will be used for the entire TrackList.
+ * @param modifier The modifier that will be used for the TrackList.
  * @param state The LazyListState used for the TrackList's scrolling state.
  * @param contentPadding The PaddingValues instance that will be used as
  *     the content padding for the TrackList's items.
@@ -106,7 +108,7 @@ class TrackListViewModel(
         }
     }
 
-    fun onTrackPlayPauseClick(uriString: String) {
+    fun onTrackAddRemoveButtonClick(uriString: String) {
         scope.launch { trackDao.toggleIsActive(uriString) }
     }
 
@@ -119,8 +121,11 @@ class TrackListViewModel(
     }
 }
 
-/** Compose a TrackList, using an instance of TrackListViewModel to
+/**
+ * Compose a TrackList, using an instance of TrackListViewModel to
  * obtain the list of tracks and to respond to item related callbacks.
+ *
+ * @param modifier The Modifier that will be used for the TrackList.
  * @param padding A PaddingValues instance whose values will be
  *     as the contentPadding for the TrackList
 *  @param state The LazyListState used for the TrackList. state
@@ -129,17 +134,19 @@ class TrackListViewModel(
  *     case, e.g., the scrolling position needs to be remembered
  *     even when the StatefulTrackList leaves the composition.
  * @param onVolumeChange The callback that will be invoked when
- *     a TrackView's volume slider is moved. */
+ *     a TrackView's volume slider is moved.
+ */
 @Composable fun StatefulTrackList(
+    modifier: Modifier = Modifier,
     padding: PaddingValues,
     state: LazyListState = rememberLazyListState(),
     onVolumeChange: (String, Float) -> Unit,
-) {
+) = Surface(modifier, color = MaterialTheme.colors.background) {
     val viewModel: TrackListViewModel = viewModel()
     val context = LocalContext.current
     val itemCallback = remember {
         TrackViewCallback(
-            onAddRemoveButtonClick = viewModel::onTrackPlayPauseClick,
+            onAddRemoveButtonClick = viewModel::onTrackAddRemoveButtonClick,
             onVolumeChange = onVolumeChange,
             onVolumeChangeFinished = viewModel::onTrackVolumeChangeRequest,
             onRenameRequest = viewModel::onTrackRenameDialogConfirm,
@@ -148,6 +155,7 @@ class TrackListViewModel(
             })
     }
     TrackList(
+        modifier = modifier,
         tracks = viewModel.tracks,
         state = state,
         contentPadding = padding,

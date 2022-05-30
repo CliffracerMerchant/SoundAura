@@ -164,8 +164,8 @@ fun Modifier.minTouchTargetSize() =
     content: @Composable (AnimatedVisibilityScope.(S) -> Unit)
 ) {
     val transition = remember(leftToRight) {
-        val enterOffset = { size: Int -> size * if (leftToRight) 1 else -1 }
-        val exitOffset = { size: Int -> size * if (leftToRight) -1 else 1 }
+        val enterOffset = { size: Int -> size / if (leftToRight) 1 else -1 }
+        val exitOffset = { size: Int -> size / if (leftToRight) -4 else 4 }
         slideInHorizontally(tween(), enterOffset) with
         slideOutHorizontally(tween(), exitOffset)
     }

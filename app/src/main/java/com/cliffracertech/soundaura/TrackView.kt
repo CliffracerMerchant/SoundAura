@@ -46,7 +46,8 @@ class TrackViewCallback(
  * A view that displays an add/remove button, a title, a volume slider, and a
  * more options button for the provided Track Instance. If the track's hasError
  * field is true, then an error icon will be displayed instead of the add/remove
- * button.
+ * button, an error message will be displayed in place of the volume slider, and
+ * the more options menu button will be replaced by a delete icon.
  *
  * @param track The Track instance that is being represented.
  * @param callback The TrackViewCallback that describes how to respond to user interactions.
@@ -98,7 +99,7 @@ fun TrackView(
 
 /**
  * Compose either an add/remove button or an error icon. The error icon can be
- * shown when some error prevents the add/removed state from being changed.
+ * shown when some error prevents the added/removed state from being changed.
  *
  * @param showError Whether an error icon will be shown instead of the
  *     add/remove button.
@@ -308,9 +309,10 @@ fun DarkTrackErrorPreview() = SoundAuraTheme(darkTheme = true) {
         title = stringResource(R.string.rename_dialog_title, itemName),
         confirmButtonEnabled = currentName.isNotBlank(),
         confirmText = stringResource(R.string.rename),
-        onConfirm = { onConfirm(currentName)
-            onDismissRequest() },
-        onDismissRequest = onDismissRequest,
+        onConfirm = {
+            onConfirm(currentName)
+            onDismissRequest()
+        }, onDismissRequest = onDismissRequest,
         content = { TextField(
             value = currentName,
             onValueChange = { currentName = it },

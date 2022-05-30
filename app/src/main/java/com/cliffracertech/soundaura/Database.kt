@@ -80,7 +80,7 @@ data class Track(
     abstract fun getAllActiveTracks(): Flow<List<Track>>
 
     @Query("UPDATE track set hasError = 1 WHERE uriString = :uri")
-    abstract suspend fun notifyError(uri: String)
+    abstract suspend fun notifyOfError(uri: String)
 
     @Query("UPDATE track set isActive = 1 - isActive WHERE uriString = :uri")
     abstract suspend fun toggleIsActive(uri: String)

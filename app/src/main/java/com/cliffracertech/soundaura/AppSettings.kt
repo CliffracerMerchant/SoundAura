@@ -17,11 +17,9 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable fun AppSettings(
+    modifier: Modifier = Modifier,
     contentPadding: PaddingValues
-) = Surface(
-    color = MaterialTheme.colors.background,
-    modifier = Modifier.fillMaxSize()
-) {
+) = Surface(modifier, color = MaterialTheme.colors.background) {
     LazyColumn(
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(8.dp)

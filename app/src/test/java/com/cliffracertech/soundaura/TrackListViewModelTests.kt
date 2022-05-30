@@ -9,7 +9,6 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.*
 import org.junit.After
@@ -75,13 +74,13 @@ class TrackListViewModelTests {
     @Test fun trackAddRemoveClick() {
         tracksPropertyReflectsAddedTracks()
         assertThat(instance.tracks.map { it.isActive }).doesNotContain(true)
-        instance.onTrackPlayPauseClick(testTracks[3].uriString)
+        instance.onTrackAddRemoveButtonClick(testTracks[3].uriString)
         Thread.sleep(50L)
         assertThat(instance.tracks.map { it.isActive })
             .containsExactlyElementsIn(listOf(false, false, false, true, false))
             .inOrder()
-        instance.onTrackPlayPauseClick(testTracks[1].uriString)
-        instance.onTrackPlayPauseClick(testTracks[3].uriString)
+        instance.onTrackAddRemoveButtonClick(testTracks[1].uriString)
+        instance.onTrackAddRemoveButtonClick(testTracks[3].uriString)
         Thread.sleep(50L)
         assertThat(instance.tracks.map { it.isActive })
             .containsExactlyElementsIn(listOf(false, true, false, false, false))

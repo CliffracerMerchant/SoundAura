@@ -21,9 +21,7 @@ class SearchQueryState @Inject constructor() {
  * A manager of messages to be displayed to the user, e.g. through a SnackBar.
  *
  * New messages can be posted using the postMessage function. MessageHandler
- * users can collect the SharedFlow member messages for new messages. A
- * messages emission of null should be interpreted as an indication that any
- * on-screen messages should be cleared.
+ * users can collect the SharedFlow member messages for new messages.
  */
 @Singleton
 class MessageHandler @Inject constructor() {

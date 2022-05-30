@@ -9,8 +9,9 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.ClickableText
@@ -75,7 +76,7 @@ fun PhoneStatePermissionDialog(
     title = stringResource(R.string.tile_tutorial_title),
     onDismissRequest = onDismissRequest,
     pages = listOf(@Composable {
-        Column {
+        Column(Modifier.background(MaterialTheme.colors.surface)) {
             Text(stringResource(R.string.tile_tutorial_intro_text))
 
 //            if (Build.VERSION.SDK_INT >= 33) {
@@ -110,14 +111,24 @@ fun PhoneStatePermissionDialog(
                              else R.string.tile_tutorial_add_tile_help_button_show_description),
                          modifier = Modifier.rotate(iconRotation))
                 }
-                AnimatedVisibility(showingAddTileHelp) {
-                    Text(stringResource(R.string.tile_tutorial_add_tile_help_text))
+                AnimatedContent(showingAddTileHelp) {
+                    // This spacer when the showingAddTileHelp is false is to make the
+                    // first page of content closer in size to the second so the
+                    // dialog's window doesn't change in size as much when transitioning
+                    // between pages. Obviously a single static value is not ideal
+                    // because it will not change to account for screen size or text
+                    // size changes, but it at least helps a bit for typical text sizes.
+                    if (!it) Spacer(Modifier.size((26.5).dp))
+                    else Text(stringResource(R.string.tile_tutorial_add_tile_help_text))
                 }
             }
         }
 //        }
     }, @Composable {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(
+            Modifier.background(MaterialTheme.colors.surface),
+            Arrangement.spacedBy(16.dp)
+        ) {
             Text(stringResource(R.string.tile_tutorial_tile_usage_text))
             val context = LocalContext.current
             val hideNotificationLinkText = stringResource(
