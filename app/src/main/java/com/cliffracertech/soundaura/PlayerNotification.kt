@@ -176,6 +176,6 @@ class PlayerNotification(
     ) = playbackStateBuilder
         .setState(playbackState, 0L, 0f)
         .setActions(ACTION_PLAY_PAUSE or
-            if (showStopAction) ACTION_STOP else 0)
+            if (showStopAction) ACTION_STOP else 0L)
         .build()
 }
