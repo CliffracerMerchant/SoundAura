@@ -9,6 +9,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -47,8 +51,22 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 }
 
 @Composable private fun PlaybackSettingsCategory() {
+    val viewModel: SettingsViewModel = viewModel()
+    val switchColors = SwitchDefaults.colors(
+        uncheckedThumbColor = MaterialTheme.colors.background)
+
+    val ignoreAudioFocusSetting = @Composable {
+        var isChecked by rememberSaveable { mutableStateOf(false) }
+        Setting(
+            title = stringResource(R.string.ignore_audio_focus_setting_title),
+            onClick = { isChecked = !isChecked }
+        ) {
+            Switch(checked = isChecked,
+                   onCheckedChange = { isChecked = !isChecked },
+                   colors = switchColors)
+        }
+    }
     val autoPauseDuringCallSetting = @Composable {
-        val viewModel: SettingsViewModel = viewModel()
         Setting(
             title = stringResource(R.string.auto_pause_during_calls_setting_title),
             subtitle = stringResource(R.string.auto_pause_during_calls_setting_subtitle),
@@ -56,8 +74,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
         ) {
             Switch(checked = viewModel.autoPauseDuringCall,
                    onCheckedChange = { viewModel.onAutoPauseDuringCallClick() },
-                   colors = SwitchDefaults.colors(
-                       uncheckedThumbColor = MaterialTheme.colors.background))
+                   colors = switchColors)
         }
         if (viewModel.showingPhoneStatePermissionDialog) {
             val context = LocalContext.current
@@ -77,7 +94,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
     }
     SettingCategory(
         title = stringResource(R.string.playback),
-        content = listOf(autoPauseDuringCallSetting, titleTutorialSetting))
+        content = listOf(
+            ignoreAudioFocusSetting,
+            autoPauseDuringCallSetting,
+            titleTutorialSetting))
 }
 
 @Composable private fun AboutSettingsCategory() {

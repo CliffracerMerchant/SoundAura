@@ -66,7 +66,6 @@
     <string name="ok" tools:ignore="Typos,ButtonCase">Ok</string>
     <string name="cancel">Cancel</string>
 
-    <string name="pref_sort_key">track_sort</string>
     <string name="name_ascending">Name ascending</string>
     <string name="name_descending">Name descending</string>
     <string name="order_added">Order added</string>
@@ -81,6 +80,8 @@
     <string name="dark_theme">Dark</string>
 
     <string name="playback">Playback</string>
+    <string name="ignore_audio_focus_setting_title">
+        Ignore audio focus</string>
     <string name="auto_pause_during_calls_setting_title">
         Auto-pause during calls</string>
     <string name="auto_pause_during_calls_setting_subtitle">
@@ -156,6 +157,7 @@
     <string name="set_playback_action" translatable="false">
         com.cliffracertech.soundaura.action.playPause</string>
 
+    <string name="pref_sort_key" translatable ="false">track_sort</string>
     <string name="pref_app_theme_key" translatable="false">app_theme</string>
     <string name="pref_auto_pause_during_calls_key" translatable="false">
         auto_pause_during_calls</string>
