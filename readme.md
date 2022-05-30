@@ -53,7 +53,7 @@ SoundAura is built using:
   the current behavior.
 
 ## Screenshots
-![Demo](media/demo.mp4)
+https://user-images.githubusercontent.com/42116365/171025181-05d4769b-f0aa-4a43-86c8-e8e9da5c2866.mp4
 ![ScreenShot1](media/screenshot1.png)
 ![ScreenShot2](media/screenshot2.png)
 ![ScreenShot3](media/screenshot3.png)
