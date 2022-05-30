@@ -11,7 +11,8 @@ import android.net.Uri
  * A MediaPlayer wrapper that allows for seamless looping of the provided uri.
  * If there is a problem with the provided uri, then the inner MediaPlayer
  * instance creation can fail. In this case, isPlaying will always return false
- * and setting isPlaying will have no effect.
+ * and setting isPlaying will have no effect. The current volume for both audio
+ * channels can also be retrieved or set via the property volume.
  *
  * @param context A context instance. Note that the provided context instance
  *     is held onto for the lifetime of the Player instance, and so should not
@@ -38,6 +39,13 @@ class Player(
     private var nextPlayer: MediaPlayer? = null
     private var currentPlayer: MediaPlayer? = createPlayer()
 
+    var volume: Float = initialVolume
+        set(value) {
+            field = value
+            currentPlayer?.setVolume(volume, volume)
+            nextPlayer?.setVolume(volume, volume)
+        }
+
     /** The isPlaying state of the player. Setting the property
      * to false will pause the player rather than stopping it. */
     var isPlaying
@@ -52,12 +60,13 @@ class Player(
         prepareNextPlayer()
         if (startPlaying)
             isPlaying = true
-        setMonoVolume(initialVolume)
+        volume = initialVolume
     }
 
     private fun prepareNextPlayer() {
         val currentPlayer = this.currentPlayer ?: return
         nextPlayer = createPlayer()
+        nextPlayer?.setVolume(volume, volume)
         currentPlayer.setNextMediaPlayer(nextPlayer)
         currentPlayer.setOnCompletionListener {
             it.release()
@@ -71,12 +80,6 @@ class Player(
             onFail(uriString)
             null
         }
-
-    /** Set the volume for both audio channels at once. */
-    fun setMonoVolume(volume: Float) {
-        currentPlayer?.setVolume(volume, volume)
-        nextPlayer?.setVolume(volume, volume)
-    }
 
     fun release() {
         currentPlayer?.release()
@@ -127,7 +130,9 @@ class TrackPlayerSet(
         }
 
     fun setPlayerVolume(uriString: String, volume: Float) =
-        uriPlayerMap[uriString]?.setMonoVolume(volume) ?: Unit
+        uriPlayerMap[uriString]?.run {
+            this.volume = volume
+        } ?: Unit
 
     fun releaseAll() = uriPlayerMap.values.forEach { it.release() }
 
