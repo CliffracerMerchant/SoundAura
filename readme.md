@@ -52,6 +52,13 @@ SoundAura is built using:
 - The ability to switch between an audio-focus respecting mode and
   the current behavior.
 
+## Screenshots
+![Demo](media/demo.mp4)
+![ScreenShot1](media/screenshot1.png)
+![ScreenShot2](media/screenshot2.png)
+![ScreenShot3](media/screenshot3.png)
+![ScreenShot4](media/screenshot4.png)
+
 ## Privacy Policy
 SoundAura does not collect, store, or transmit any personal information.
 
