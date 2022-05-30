@@ -5,14 +5,15 @@ package com.cliffracertech.soundaura
 
 import android.Manifest
 import android.content.pm.PackageManager
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.*
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Surface
+import androidx.compose.material.Switch
+import androidx.compose.material.SwitchDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -56,13 +57,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
         uncheckedThumbColor = MaterialTheme.colors.background)
 
     val ignoreAudioFocusSetting = @Composable {
-        var isChecked by rememberSaveable { mutableStateOf(false) }
         Setting(
             title = stringResource(R.string.ignore_audio_focus_setting_title),
-            onClick = { isChecked = !isChecked }
+            onClick = viewModel::onIgnoreAudioFocusClick
         ) {
-            Switch(checked = isChecked,
-                   onCheckedChange = { isChecked = !isChecked },
+            Switch(checked = viewModel.ignoreAudioFocus,
+                   onCheckedChange = { viewModel.onIgnoreAudioFocusClick() },
                    colors = switchColors)
         }
     }
@@ -70,7 +70,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
         Setting(
             title = stringResource(R.string.auto_pause_during_calls_setting_title),
             subtitle = stringResource(R.string.auto_pause_during_calls_setting_subtitle),
-            onClick = { viewModel.onAutoPauseDuringCallClick() }
+            onClick = viewModel::onAutoPauseDuringCallClick
         ) {
             Switch(checked = viewModel.autoPauseDuringCall,
                    onCheckedChange = { viewModel.onAutoPauseDuringCallClick() },

@@ -159,6 +159,8 @@
 
     <string name="pref_sort_key" translatable ="false">track_sort</string>
     <string name="pref_app_theme_key" translatable="false">app_theme</string>
+    <string name="pref_ignore_audio_focus_key" translatable="false">
+        ignore_audio_focus</string>
     <string name="pref_auto_pause_during_calls_key" translatable="false">
         auto_pause_during_calls</string>
 </resources>
