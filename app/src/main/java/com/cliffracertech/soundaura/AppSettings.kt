@@ -5,7 +5,9 @@ package com.cliffracertech.soundaura
 
 import android.Manifest
 import android.content.pm.PackageManager
+import androidx.compose.animation.*
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,6 +16,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Switch
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -60,25 +63,35 @@ import androidx.lifecycle.viewmodel.compose.viewModel
             Switch(checked = viewModel.ignoreAudioFocus,
                    onCheckedChange = { viewModel.onIgnoreAudioFocusClick() })
         }
-        Divider()
-        Setting(
-            title = stringResource(R.string.auto_pause_during_calls_setting_title),
-            subtitle = stringResource(R.string.auto_pause_during_calls_setting_subtitle),
-            onClick = viewModel::onAutoPauseDuringCallClick
+
+        AnimatedVisibility(
+            visible = viewModel.autoPauseDuringCallsSettingVisible,
+            enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
+            exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top)
         ) {
-            Switch(checked = viewModel.autoPauseDuringCall,
-                   onCheckedChange = { viewModel.onAutoPauseDuringCallClick() })
+            Column {
+                Divider()
+                Setting(
+                    title = stringResource(R.string.auto_pause_during_calls_setting_title),
+                    subtitle = stringResource(R.string.auto_pause_during_calls_setting_subtitle),
+                    onClick = viewModel::onAutoPauseDuringCallClick
+                ) {
+                    Switch(checked = viewModel.autoPauseDuringCall,
+                           onCheckedChange = { viewModel.onAutoPauseDuringCallClick() })
+                }
+                if (viewModel.showingPhoneStatePermissionDialog) {
+                    val context = LocalContext.current
+                    val showExplanation = ContextCompat.checkSelfPermission(
+                            context, Manifest.permission.READ_PHONE_STATE
+                        ) == PackageManager.PERMISSION_DENIED
+                    PhoneStatePermissionDialog(
+                        showExplanationFirst = showExplanation,
+                        onDismissRequest = viewModel::onPhoneStatePermissionDialogDismiss,
+                        onPermissionResult = viewModel::onPhoneStatePermissionDialogConfirm)
+                }
+            }
         }
-        if (viewModel.showingPhoneStatePermissionDialog) {
-            val context = LocalContext.current
-            val showExplanation = ContextCompat.checkSelfPermission(
-                    context, Manifest.permission.READ_PHONE_STATE
-                ) == PackageManager.PERMISSION_DENIED
-            PhoneStatePermissionDialog(
-                showExplanationFirst = showExplanation,
-                onDismissRequest = viewModel::onPhoneStatePermissionDialogDismiss,
-                onPermissionResult = viewModel::onPhoneStatePermissionDialogConfirm)
-        }
+
         Divider()
         DialogSetting(stringResource(R.string.control_playback_using_tile_setting_title)) {
             TileTutorialDialog(it)

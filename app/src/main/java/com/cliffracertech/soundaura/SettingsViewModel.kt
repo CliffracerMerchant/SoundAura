@@ -76,10 +76,15 @@ class SettingsViewModel(
         scope = scope)
 
     fun onIgnoreAudioFocusClick() {
-        scope.launch {
-            dataStore.edit { it[ignoreAudioFocusKey] = !ignoreAudioFocus }
-        }
+        scope.launch { dataStore.edit {
+            val newIgnoreAudioFocus = !ignoreAudioFocus
+            if (!newIgnoreAudioFocus)
+                it[autoPauseDuringCallKey] = false
+            it[ignoreAudioFocusKey] = newIgnoreAudioFocus
+        }}
     }
+
+    val autoPauseDuringCallsSettingVisible by derivedStateOf { ignoreAudioFocus }
 
     // This value should always be up to date due to granting or revoking
     // permissions outside of the app causing an app restart. If the user
@@ -97,17 +102,20 @@ class SettingsViewModel(
             scope = scope)
 
     val autoPauseDuringCall by derivedStateOf {
-        autoPauseDuringCallPreference && hasReadPhoneStatePermission
+        autoPauseDuringCallPreference &&
+        hasReadPhoneStatePermission &&
+        autoPauseDuringCallsSettingVisible
     }
 
     var showingPhoneStatePermissionDialog by mutableStateOf(false)
         private set
 
     fun onAutoPauseDuringCallClick() {
+        if (!ignoreAudioFocus) return
         if (!autoPauseDuringCall && !hasReadPhoneStatePermission)
             showingPhoneStatePermissionDialog = true
         else scope.launch {
-            dataStore.edit { it[autoPauseDuringCallKey] = !autoPauseDuringCall }
+            dataStore.edit { it[autoPauseDuringCallKey] = !autoPauseDuringCallPreference }
         }
     }
 
