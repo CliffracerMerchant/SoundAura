@@ -7,13 +7,15 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.media.*
-import android.media.AudioManager.*
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
+import android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+import android.media.AudioManager.STREAM_MUSIC
 import android.media.session.PlaybackState.*
 import android.os.Build
 import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,12 +25,16 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import androidx.media.AudioAttributesCompat
-import androidx.media.AudioAttributesCompat.*
+import androidx.media.AudioAttributesCompat.CONTENT_TYPE_UNKNOWN
+import androidx.media.AudioAttributesCompat.USAGE_MEDIA
 import androidx.media.AudioFocusRequestCompat
 import androidx.media.AudioManagerCompat
 import androidx.media.AudioManagerCompat.AUDIOFOCUS_GAIN
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -359,17 +365,9 @@ class PlayerService: LifecycleService() {
      * started, and another for auto-pausing when other media starts playing).
      */
     private fun autoPauseIf(condition: Boolean, key: String) {
-        if (unpauseLocks.contains(key) && !condition) {
-            Log.d("SoundAura", "removing pause lock for key $key")
-            if (unpauseLocks.size == 1)
-                Log.d("SoundAura", "no unpause locks remaining, resuming playback")
-            else Log.d("SoundAura", "${unpauseLocks.size - 1} unpause locks remaining")
-        }
         if (condition) {
-            if (unpauseLocks.add(key)) {
-                Log.d("SoundAura", "adding pause lock for key $key")
+            if (unpauseLocks.add(key))
                 setPlaybackState(STATE_PAUSED, clearUnpauseLocks = false)
-            }
         } else if (unpauseLocks.remove(key) && unpauseLocks.isEmpty())
             setPlaybackState(STATE_PLAYING)
     }
@@ -424,13 +422,14 @@ class PlayerService: LifecycleService() {
     private fun updateNotification() =
         notificationManager.update(playbackState, showStopAction = !boundToActivity)
 
-    private val audioFocusRequest = AudioFocusRequestCompat.Builder(AUDIOFOCUS_GAIN)
-        .setAudioAttributes(AudioAttributesCompat.Builder()
-            .setContentType(CONTENT_TYPE_UNKNOWN)
-            .setUsage(USAGE_MEDIA).build())
-        .setOnAudioFocusChangeListener { audioFocus ->
-            hasAudioFocus = audioFocus == AUDIOFOCUS_GAIN
-        }.build()
+    private val audioFocusRequest =
+        AudioFocusRequestCompat.Builder(AUDIOFOCUS_GAIN)
+            .setAudioAttributes(AudioAttributesCompat.Builder()
+                .setContentType(CONTENT_TYPE_UNKNOWN)
+                .setUsage(USAGE_MEDIA).build())
+            .setOnAudioFocusChangeListener { audioFocus ->
+                hasAudioFocus = audioFocus == AUDIOFOCUS_GAIN
+            }.build()
 
     /** Request audio focus, and return whether the request was granted. */
     private fun requestAudioFocus(): Boolean =
