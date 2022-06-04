@@ -118,7 +118,7 @@ fun PhoneStatePermissionDialog(
                     // between pages. Obviously a single static value is not ideal
                     // because it will not change to account for screen size or text
                     // size changes, but it at least helps a bit for typical text sizes.
-                    if (!it) Spacer(Modifier.size((26.5).dp))
+                    if (!it) Spacer(Modifier.size((10).dp))
                     else Text(stringResource(R.string.tile_tutorial_add_tile_help_text))
                 }
             }

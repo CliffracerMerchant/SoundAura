@@ -15,27 +15,44 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 
 /** A settings category displayed on a large surface background.
  * @param title The title of the category
- * @param content A list of composables containing each setting item. */
-@Composable
-fun SettingCategory(
+ * @param content A composable lambda that contains the category's content. */
+@Composable fun SettingCategory(
     title: String,
-    content: List<@Composable () -> Unit>
+    content: @Composable () -> Unit
 ) = Surface(shape = MaterialTheme.shapes.large) {
     Column(Modifier.padding(20.dp, 16.dp, 20.dp, 6.dp)) {
         Text(title, style = MaterialTheme.typography.h6)
         Spacer(Modifier.height(8.dp))
         Divider()
-        Column {
-            content.forEachIndexed { index, item ->
-                item()
-                if (index != content.lastIndex)
-                    Divider()
-            }
-        }
+        content()
+    }
+}
+
+@Preview @Composable
+fun LightSettingCategoryPreview() = SoundAuraTheme(false) {
+    SettingCategory("Setting Category A") {
+        Setting("Setting 1") { Checkbox(false, { }) }
+        Divider()
+        Setting("Setting 2") { Switch(true, { }) }
+        Divider()
+        DialogSetting("Setting 3") { }
+    }
+}
+
+@Preview(showBackground = true) @Composable
+fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
+    SettingCategory("Setting Category B6") {
+        Setting("Setting 1") { Checkbox(false, { }) }
+        Divider()
+        Setting("Setting 2") { Switch(true, { }) }
+        Divider()
+        DialogSetting("Setting 3") { }
     }
 }
 
@@ -49,8 +66,7 @@ fun SettingCategory(
  * @param onValueClick The callback that will be invoked when an enum
  *                     value is clicked.
  */
-@Composable
-fun <T> EnumRadioButtonGroup(
+@Composable fun <T> EnumRadioButtonGroup(
     modifier: Modifier = Modifier,
     values: Array<T>,
     valueNames: Array<String>,
@@ -82,8 +98,7 @@ fun <T> EnumRadioButtonGroup(
  *                the setting is clicked. Defaults to null.
  * @param content A composable containing the content used to change the setting.
  */
-@Composable
-fun Setting(
+@Composable fun Setting(
     title: String,
     icon: (@Composable () -> Unit)? = null,
     subtitle: String? = null,
@@ -122,8 +137,7 @@ fun Setting(
  *     when the title is clicked. The provided () -> Unit lambda argument should
  *     be used as the onDismissRequest for the inner dialog.
  */
-@Composable
-fun DialogSetting(
+@Composable fun DialogSetting(
     title: String,
     icon: (@Composable () -> Unit)? = null,
     description: String? = null,
