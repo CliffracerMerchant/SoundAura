@@ -4,7 +4,7 @@
 package com.cliffracertech.soundaura
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
@@ -116,7 +116,9 @@ import androidx.compose.ui.window.DialogProperties
  *     finish button. The finish button will replace the next button when
  *     the last page of content is being displayed.
  * @param pages The list of composable lambdas that will be used as the
- *     content for each page of the dialog.
+ *     content for each page of the dialog. The provided modifier should be
+ *     used for the root layout of each page of content so that the pages'
+ *     margins will match those of the dialog's title.
  */
 @Composable fun MultiStepDialog(
     title: String,
@@ -124,7 +126,7 @@ import androidx.compose.ui.window.DialogProperties
     contentButtonSpacing: Dp = 12.dp,
     onDismissRequest: () -> Unit,
     onFinish: () -> Unit = onDismissRequest,
-    pages: List<@Composable () -> Unit>
+    pages: List<@Composable (Modifier) -> Unit>
 ) = Dialog(onDismissRequest, DialogProperties(usePlatformDefaultWidth = false)) {
     require(pages.isNotEmpty())
 
@@ -133,8 +135,14 @@ import androidx.compose.ui.window.DialogProperties
             var previousPage by rememberSaveable { mutableStateOf(0) }
             var currentPage by rememberSaveable { mutableStateOf(0) }
 
-            Column(Modifier.padding(horizontal = 16.dp)) {
-                Row {
+            Column {
+                // The horizontal padding is applied to each item here instead of to
+                // the parent column so that the pages can have their background set
+                // before the padding is applied. This improves the look of the page
+                // slide animations.
+                val horizontalPaddingModifier = Modifier.padding(horizontal = 16.dp)
+
+                Row(horizontalPaddingModifier) {
                     Text(title, style = MaterialTheme.typography.body1)
                     Spacer(Modifier.weight(1f))
                     Text(stringResource(R.string.multi_step_dialog_indicator, currentPage + 1, pages.size),
@@ -142,12 +150,14 @@ import androidx.compose.ui.window.DialogProperties
                 }
                 Spacer(Modifier.height(titleContentSpacing))
 
+                val pageModifier = Modifier.background(MaterialTheme.colors.surface)
+                                           .then(horizontalPaddingModifier)
                 CompositionLocalProvider(LocalTextStyle provides MaterialTheme.typography.subtitle1) {
                     SlideAnimatedContent(
                         targetState = currentPage,
-                        modifier = Modifier.animateContentSize(tween()),
+                        modifier = Modifier.animateContentSize(),
                         leftToRight = currentPage >= previousPage
-                    ) { pages[it]() }
+                    ) { pages[it](pageModifier) }
                 }
             }
 

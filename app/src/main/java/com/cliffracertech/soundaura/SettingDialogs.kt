@@ -75,8 +75,8 @@ fun PhoneStatePermissionDialog(
 ) = MultiStepDialog(
     title = stringResource(R.string.tile_tutorial_title),
     onDismissRequest = onDismissRequest,
-    pages = listOf(@Composable {
-        Column(Modifier.background(MaterialTheme.colors.surface)) {
+    pages = listOf(@Composable { pageModifier ->
+        Column(pageModifier) {
             Text(stringResource(R.string.tile_tutorial_intro_text))
 
 //            if (Build.VERSION.SDK_INT >= 33) {
@@ -124,11 +124,8 @@ fun PhoneStatePermissionDialog(
             }
         }
 //        }
-    }, @Composable {
-        Column(
-            Modifier.background(MaterialTheme.colors.surface),
-            Arrangement.spacedBy(16.dp)
-        ) {
+    }, @Composable { pageModifier ->
+        Column(pageModifier, Arrangement.spacedBy(16.dp)) {
             Text(stringResource(R.string.tile_tutorial_tile_usage_text))
             val context = LocalContext.current
             val hideNotificationLinkText = stringResource(
