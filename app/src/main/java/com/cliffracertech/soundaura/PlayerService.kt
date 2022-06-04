@@ -7,13 +7,13 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.media.AudioDeviceCallback
-import android.media.AudioDeviceInfo
-import android.media.AudioManager
+import android.media.*
+import android.media.AudioManager.*
 import android.media.session.PlaybackState.*
 import android.os.Build
 import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,9 +22,13 @@ import androidx.core.content.ContextCompat
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import androidx.media.AudioAttributesCompat
+import androidx.media.AudioAttributesCompat.*
+import androidx.media.AudioFocusRequestCompat
+import androidx.media.AudioManagerCompat
+import androidx.media.AudioManagerCompat.AUDIOFOCUS_GAIN
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -67,7 +71,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class PlayerService: LifecycleService() {
     private val playerSet = TrackPlayerSet(this, ::onPlayerCreationFailure)
-    private val unpauseLocks = mutableListOf<String>()
+    private val unpauseLocks = mutableSetOf<String>()
     @Inject lateinit var trackDao: TrackDao
     @Inject lateinit var messageHandler: MessageHandler
     private lateinit var audioManager: AudioManager
@@ -79,14 +83,29 @@ class PlayerService: LifecycleService() {
             pauseIntent = pauseIntent(this),
             stopIntent = stopIntent(this))
     }
-    private fun updateNotification() =
-        notificationManager.update(playbackState, showStopAction = !boundToActivity)
 
     private var boundToActivity = false
         set(value) {
             if (value == field) return
             field = value
             updateNotification()
+        }
+
+    private var ignoreAudioFocus = false
+        set(ignore) {
+            if (field == ignore) return
+            field = ignore
+            if (ignore) {
+                abandonAudioFocus()
+                hasAudioFocus = true
+            } else if (isPlaying)
+                hasAudioFocus = requestAudioFocus()
+        }
+
+    private var hasAudioFocus = false
+        set(hasFocus) {
+            field = hasFocus
+            autoPauseIf(!hasFocus, autoPauseAudioFocusLossKey)
         }
 
     /** isPlaying is only used so that binding clients have access to a
@@ -123,14 +142,28 @@ class PlayerService: LifecycleService() {
                 // then the PlayerSet might be empty because the first new value
                 // for TrackDao's activeTracks won't have been collected yet.
                 // The updatePlayers method will handle this edge case.
-                showAutoStopPlaybackExplanation()
+                showAutoPausePlaybackExplanation()
                 STATE_PAUSED
             } state == STATE_STOPPED && boundToActivity -> {
                 // The service is not intended to be stopped when it is bound to an
                 // activity, so in this case we will set the state to paused instead.
                 STATE_PAUSED
+            } state == STATE_PLAYING && !hasAudioFocus -> {
+                hasAudioFocus = requestAudioFocus()
+                if (hasAudioFocus) STATE_PLAYING
+                else {
+                    // autoPauseIf is not called directly here because it calls
+                    // setPlaybackState itself and we don't want to get stuck in
+                    // an infinite loop, but we do want playback to resume if
+                    // audio focus is later gained.
+                    unpauseLocks.add(autoPauseAudioFocusLossKey)
+                    STATE_PAUSED
+                }
             } else -> state
         }
+        if (newState == playbackState)
+            return
+
         if (clearUnpauseLocks)
             unpauseLocks.clear()
         playbackState = newState
@@ -147,6 +180,7 @@ class PlayerService: LifecycleService() {
     companion object {
         private const val autoPauseAudioDeviceChangeKey = "auto_pause_audio_device_change"
         private const val autoPauseOngoingCallKey = "auto_pause_ongoing_call"
+        private const val autoPauseAudioFocusLossKey = "auto_pause_audio_focus_loss"
 
         private fun setPlaybackIntent(context: Context, state: Int): Intent {
             val key = context.getString(R.string.set_playback_action)
@@ -190,21 +224,37 @@ class PlayerService: LifecycleService() {
 
         audioManager.registerAudioDeviceCallback(object: AudioDeviceCallback() {
             override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) {
-                val volume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                val volume = audioManager.getStreamVolume(STREAM_MUSIC)
                 autoPauseIf(volume == 0, autoPauseAudioDeviceChangeKey)
             }
             override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) {
-                val volume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                val volume = audioManager.getStreamVolume(STREAM_MUSIC)
                 autoPauseIf(volume == 0, autoPauseAudioDeviceChangeKey)
             }
         }, null)
 
         repeatWhenStarted {
+            val ignoreAudioFocusKey = booleanPreferencesKey(
+                getString(R.string.pref_ignore_audio_focus_key))
+            val ignoreAudioFocusFlow =
+                dataStore.preferenceFlow(ignoreAudioFocusKey, false)
+            ignoreAudioFocusFlow
+                .onEach { ignoreAudioFocus = it }
+                .launchIn(this)
+
             val autoPauseDuringCallsKey = booleanPreferencesKey(
                 getString(R.string.pref_auto_pause_during_calls_key))
+            // We want setAutoPauseDuringCallEnabled(true) to be called only
+            // if the preference is true AND ignoreAudioFocus is true. If
+            // ignoreAudioFocus is false, the phone will be paused anyways
+            // due to the app losing audio focus during calls.
             dataStore.preferenceFlow(autoPauseDuringCallsKey, false)
+                .combine(ignoreAudioFocusFlow) { pauseDuringCalls, ignoreAudioFocus ->
+                    pauseDuringCalls && ignoreAudioFocus
+                }.distinctUntilChanged()
                 .onEach(::setAutoPauseDuringCallEnabled)
                 .launchIn(this)
+
             trackDao.getAllActiveTracks()
                 .onEach(::updatePlayers)
                 .launchIn(this)
@@ -264,7 +314,7 @@ class PlayerService: LifecycleService() {
         }
     }
 
-    private fun showAutoStopPlaybackExplanation() {
+    private fun showAutoPausePlaybackExplanation() {
         // It is assumed here that if the service is bound to an activity, then
         // the activity will display messages posted to an injected MessageHandler
         // instance through, e.g., a snack bar. If the service is not bound to an
@@ -272,7 +322,7 @@ class PlayerService: LifecycleService() {
         val stringResId = R.string.player_no_sounds_warning_message
         if (boundToActivity)
             messageHandler.postMessage(StringResource(stringResId))
-        else Toast.makeText(this@PlayerService, stringResId, Toast.LENGTH_SHORT).show()
+        else Toast.makeText(this, stringResId, Toast.LENGTH_SHORT).show()
     }
 
     private fun updatePlayers(tracks: List<Track>) {
@@ -291,10 +341,10 @@ class PlayerService: LifecycleService() {
             // explicit attempt to start playback failed. Normally this case would be
             // caught by playbackState's custom setter, but if the service is moved
             // directly from a stopped to playing state, then the first value of
-            // trackDao's activeTracks won't have been collected yet and playbackState's
+            // trackDao's activeTracks won't have been collected yet, and playbackState's
             // custom setter therefore won't know if it should prevent the change to
             // STATE_PLAYING. This check will show the explanation in this edge case.
-            if (firstUpdate) showAutoStopPlaybackExplanation()
+            if (firstUpdate) showAutoPausePlaybackExplanation()
         }
     }
 
@@ -307,13 +357,19 @@ class PlayerService: LifecycleService() {
      * resume playback. Different causes of the auto-pause event should
      * therefore utilize unique keys (e.g. one for auto-pausing when a call is
      * started, and another for auto-pausing when other media starts playing).
-     * Manually setting playbackState will reset all unpause locks so that the
-     * user can override this behavior.
      */
     private fun autoPauseIf(condition: Boolean, key: String) {
+        if (unpauseLocks.contains(key) && !condition) {
+            Log.d("SoundAura", "removing pause lock for key $key")
+            if (unpauseLocks.size == 1)
+                Log.d("SoundAura", "no unpause locks remaining, resuming playback")
+            else Log.d("SoundAura", "${unpauseLocks.size - 1} unpause locks remaining")
+        }
         if (condition) {
-            setPlaybackState(STATE_PAUSED, clearUnpauseLocks = false)
-            unpauseLocks.add(key)
+            if (unpauseLocks.add(key)) {
+                Log.d("SoundAura", "adding pause lock for key $key")
+                setPlaybackState(STATE_PAUSED, clearUnpauseLocks = false)
+            }
         } else if (unpauseLocks.remove(key) && unpauseLocks.isEmpty())
             setPlaybackState(STATE_PLAYING)
     }
@@ -324,7 +380,11 @@ class PlayerService: LifecycleService() {
 
     @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
     private fun setAutoPauseDuringCallEnabled(enabled: Boolean) {
-        if (!enabled) {
+        val hasReadPhoneState = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.READ_PHONE_STATE
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (!enabled || !hasReadPhoneState) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 telephonyCallback?.let {
                     telephonyManager.unregisterTelephonyCallback(it)
@@ -336,35 +396,49 @@ class PlayerService: LifecycleService() {
                 }
                 phoneStateListener = null
             }
-            return
+            autoPauseIf(false, autoPauseOngoingCallKey)
         }
-
-        val readPhoneState = ContextCompat.checkSelfPermission(
-            this, Manifest.permission.READ_PHONE_STATE)
-        if (readPhoneState != PackageManager.PERMISSION_GRANTED && enabled)
-            return
-
-        val onCallStateChange = { state: Int ->
-            autoPauseIf(key = autoPauseOngoingCallKey, condition =
-                state == TelephonyManager.CALL_STATE_RINGING ||
-                state == TelephonyManager.CALL_STATE_OFFHOOK)
-        }
-
-        val id = android.os.Binder.clearCallingIdentity()
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val callback = object : TelephonyCallback(), TelephonyCallback.CallStateListener {
-                override fun onCallStateChanged(state: Int) = onCallStateChange(state)
+        else withClearCallingIdentity {
+            val onCallStateChange = { state: Int ->
+                autoPauseIf(key = autoPauseOngoingCallKey, condition =
+                    state == TelephonyManager.CALL_STATE_RINGING ||
+                    state == TelephonyManager.CALL_STATE_OFFHOOK)
             }
-            telephonyManager.registerTelephonyCallback(mainExecutor, callback)
-        } else {
-            val listener = object: android.telephony.PhoneStateListener() {
-                override fun onCallStateChanged(state: Int, phoneNumber: String?) =
-                    onCallStateChange(state)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val listener = object : TelephonyCallback(), TelephonyCallback.CallStateListener {
+                    override fun onCallStateChanged(state: Int) =
+                        onCallStateChange(state)
+                }
+                telephonyManager.registerTelephonyCallback(mainExecutor, listener)
+            } else {
+                val listener = object : android.telephony.PhoneStateListener() {
+                    override fun onCallStateChanged(state: Int, phoneNumber: String?) =
+                        onCallStateChange(state)
+                }
+                val state = android.telephony.PhoneStateListener.LISTEN_CALL_STATE
+                telephonyManager.listen(listener, state)
             }
-            telephonyManager.listen(listener, android.telephony.PhoneStateListener.LISTEN_CALL_STATE)
         }
+    }
 
-        android.os.Binder.restoreCallingIdentity(id)
+    private fun updateNotification() =
+        notificationManager.update(playbackState, showStopAction = !boundToActivity)
+
+    private val audioFocusRequest = AudioFocusRequestCompat.Builder(AUDIOFOCUS_GAIN)
+        .setAudioAttributes(AudioAttributesCompat.Builder()
+            .setContentType(CONTENT_TYPE_UNKNOWN)
+            .setUsage(USAGE_MEDIA).build())
+        .setOnAudioFocusChangeListener { audioFocus ->
+            hasAudioFocus = audioFocus == AUDIOFOCUS_GAIN
+        }.build()
+
+    /** Request audio focus, and return whether the request was granted. */
+    private fun requestAudioFocus(): Boolean =
+        AudioManagerCompat.requestAudioFocus(
+            audioManager, audioFocusRequest
+        ) == AUDIOFOCUS_REQUEST_GRANTED
+
+    private fun abandonAudioFocus() {
+        AudioManagerCompat.abandonAudioFocusRequest(audioManager, audioFocusRequest)
     }
 }

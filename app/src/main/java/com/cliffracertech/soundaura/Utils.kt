@@ -125,3 +125,11 @@ inline fun <reified T: Enum<*>> DataStore<Preferences>.enumPreferenceFlow(
     val index = prefs[key] ?: defaultValue.ordinal
     enumValues<T>().getOrNull(index) ?: defaultValue
 }
+
+/** Run the provided block after a clearCallingIdentity
+ * call and before a restoreCallingIdentity call. */
+fun withClearCallingIdentity(block: () -> Unit) {
+    val id = android.os.Binder.clearCallingIdentity()
+    block()
+    android.os.Binder.restoreCallingIdentity(id)
+}
