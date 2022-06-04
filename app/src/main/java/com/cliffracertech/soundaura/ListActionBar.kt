@@ -4,7 +4,6 @@
 package com.cliffracertech.soundaura
 
 import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
@@ -112,9 +111,9 @@ import com.google.accompanist.insets.statusBarsPadding
         contentAlignment = Alignment.Center,
         transitionSpec = {
             ContentTransform(
-                targetContentEnter = slideInHorizontally(tween()) { -it },
-                initialContentExit = slideOutHorizontally(tween()) { -it },
-                sizeTransform = SizeTransform(clip = false) { _, _ -> tween() })
+                targetContentEnter = slideInHorizontally { -it },
+                initialContentExit = slideOutHorizontally { -it },
+                sizeTransform = SizeTransform(clip = false))
         }
     ) { backButtonIsVisible ->
         if (!backButtonIsVisible)
@@ -152,8 +151,8 @@ import com.google.accompanist.insets.statusBarsPadding
     // Right aligned content
     AnimatedVisibility(
         visible = showRightAlignedContent,
-        enter = slideInHorizontally(tween()) { it },
-        exit = slideOutHorizontally(tween()) { it },
+        enter = slideInHorizontally { it },
+        exit = slideOutHorizontally { it },
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             // Search button
