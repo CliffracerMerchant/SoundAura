@@ -89,16 +89,11 @@
     <string name="auto_pause_during_calls_setting_subtitle">
         Requires read phone state permission\nOnly needed when ignoring audio focus</string>
     <string name="request_phone_state_permission_explanation">
-        SoundAura needs to access your device\'s phone state in order
-        to be able to automatically pause playback during a phone call.
-        \n\nOther apps may not need this permission to pause playback
-        during a phone call because they use Android\'s audio focus
-        feature, through which the system will tell them when they need
-        to pause. SoundAura intentionally eschews normal audio focus
-        rules because it is intended as a background sound app that
-        should play alongside other audio.\n\nUnfortunately the only
-        other way for SoundAura to be able to detect ongoing phone
-        calls is with the permission to read the phone\'s state.</string>
+        When ignoring audio focus, SoundAura needs to access your device\'s
+        phone state in order to be able to automatically pause playback
+        during a phone call. This permission is not necessary when obeying
+        audio focus because SoundAura will lose audio focus when a call is
+        ongoing.</string>
 
     <string name="control_playback_using_tile_setting_title">
         Control playback using a tile</string>
