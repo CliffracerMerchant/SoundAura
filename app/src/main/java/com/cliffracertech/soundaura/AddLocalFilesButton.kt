@@ -119,7 +119,9 @@ class AddLocalFilesButtonViewModel(
         onClick = viewModel::onClick,
         elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
     ) {
-        Icon(Icons.Default.Add, stringResource(R.string.add_button_description))
+        Icon(imageVector = Icons.Default.Add,
+            contentDescription = stringResource(R.string.add_button_description),
+            tint = MaterialTheme.colors.onPrimary)
     }
 
     if (viewModel.showingDialog)
