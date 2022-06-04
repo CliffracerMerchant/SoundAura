@@ -82,10 +82,12 @@
     <string name="playback">Playback</string>
     <string name="ignore_audio_focus_setting_title">
         Ignore audio focus</string>
+    <string name="ignore_audio_focus_setting_subtitle">
+        Allows playback alongside other apps</string>
     <string name="auto_pause_during_calls_setting_title">
         Auto-pause during calls</string>
     <string name="auto_pause_during_calls_setting_subtitle">
-        Requires read phone state permission</string>
+        Requires read phone state permission\nOnly needed when ignoring audio focus</string>
     <string name="request_phone_state_permission_explanation">
         SoundAura needs to access your device\'s phone state in order
         to be able to automatically pause playback during a phone call.
