@@ -27,7 +27,9 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
     content: @Composable () -> Unit
 ) = Surface(shape = MaterialTheme.shapes.large) {
     Column(Modifier.padding(20.dp, 16.dp, 20.dp, 6.dp)) {
-        Text(title, style = MaterialTheme.typography.h6)
+        Text(text = title,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            style = MaterialTheme.typography.h6)
         Spacer(Modifier.height(8.dp))
         Divider()
         content()
