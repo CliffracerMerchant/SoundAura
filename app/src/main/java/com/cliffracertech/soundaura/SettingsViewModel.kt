@@ -52,6 +52,8 @@ class SettingsViewModel(
     private val scope = coroutineScope ?: viewModelScope
     private val appThemeKey = intPreferencesKey(
         context.getString(R.string.pref_app_theme_key))
+    private val ignoreAudioFocusKey = booleanPreferencesKey(
+        context.getString(R.string.pref_ignore_audio_focus_key))
     private val autoPauseDuringCallKey = booleanPreferencesKey(
         context.getString(R.string.pref_auto_pause_during_calls_key))
 
@@ -68,6 +70,22 @@ class SettingsViewModel(
         }
     }
 
+    val ignoreAudioFocus by dataStore.preferenceState(
+        key = ignoreAudioFocusKey,
+        initialValue = false,
+        scope = scope)
+
+    fun onIgnoreAudioFocusClick() {
+        scope.launch { dataStore.edit {
+            val newIgnoreAudioFocus = !ignoreAudioFocus
+            if (!newIgnoreAudioFocus)
+                it[autoPauseDuringCallKey] = false
+            it[ignoreAudioFocusKey] = newIgnoreAudioFocus
+        }}
+    }
+
+    val autoPauseDuringCallsSettingVisible by derivedStateOf { ignoreAudioFocus }
+
     // This value should always be up to date due to granting or revoking
     // permissions outside of the app causing an app restart. If the user
     // approves the read phone state permission inside the app, the value
@@ -77,7 +95,6 @@ class SettingsViewModel(
             context, Manifest.permission.READ_PHONE_STATE
         ) == PackageManager.PERMISSION_GRANTED)
 
-
     private val autoPauseDuringCallPreference by
         dataStore.preferenceState(
             key = autoPauseDuringCallKey,
@@ -85,17 +102,20 @@ class SettingsViewModel(
             scope = scope)
 
     val autoPauseDuringCall by derivedStateOf {
-        autoPauseDuringCallPreference && hasReadPhoneStatePermission
+        autoPauseDuringCallPreference &&
+        hasReadPhoneStatePermission &&
+        autoPauseDuringCallsSettingVisible
     }
 
     var showingPhoneStatePermissionDialog by mutableStateOf(false)
         private set
 
     fun onAutoPauseDuringCallClick() {
+        if (!ignoreAudioFocus) return
         if (!autoPauseDuringCall && !hasReadPhoneStatePermission)
             showingPhoneStatePermissionDialog = true
         else scope.launch {
-            dataStore.edit { it[autoPauseDuringCallKey] = !autoPauseDuringCall }
+            dataStore.edit { it[autoPauseDuringCallKey] = !autoPauseDuringCallPreference }
         }
     }
 

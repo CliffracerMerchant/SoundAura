@@ -5,10 +5,18 @@ package com.cliffracertech.soundaura
 
 import android.Manifest
 import android.content.pm.PackageManager
-import androidx.compose.foundation.layout.*
+import androidx.compose.animation.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.*
+import androidx.compose.material.Divider
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Surface
+import androidx.compose.material.Switch
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -30,75 +38,77 @@ import androidx.lifecycle.viewmodel.compose.viewModel
     }
 }
 
-@Composable private fun DisplaySettingsCategory() {
-    SettingCategory(
-        title = stringResource(R.string.display),
-        content = listOf @Composable {
-            val viewModel: SettingsViewModel = viewModel()
-            Setting(title = stringResource(R.string.app_theme)) {
-                EnumRadioButtonGroup(
-                    modifier = Modifier.padding(end = 16.dp),
-                    values = AppTheme.values(),
-                    valueNames = AppTheme.stringValues(),
-                    currentValue = viewModel.appTheme,
-                    onValueClick = viewModel::onAppThemeClick)
-            }
-        })
-}
-
-@Composable private fun PlaybackSettingsCategory() {
-    val autoPauseDuringCallSetting = @Composable {
+@Composable private fun DisplaySettingsCategory() =
+    SettingCategory(stringResource(R.string.display)) {
         val viewModel: SettingsViewModel = viewModel()
-        Setting(
-            title = stringResource(R.string.auto_pause_during_calls_setting_title),
-            subtitle = stringResource(R.string.auto_pause_during_calls_setting_subtitle),
-            onClick = { viewModel.onAutoPauseDuringCallClick() }
-        ) {
-            Switch(checked = viewModel.autoPauseDuringCall,
-                   onCheckedChange = { viewModel.onAutoPauseDuringCallClick() },
-                   colors = SwitchDefaults.colors(
-                       uncheckedThumbColor = MaterialTheme.colors.background))
-        }
-        if (viewModel.showingPhoneStatePermissionDialog) {
-            val context = LocalContext.current
-            val showExplanation = ContextCompat.checkSelfPermission(
-                    context, Manifest.permission.READ_PHONE_STATE
-                ) == PackageManager.PERMISSION_DENIED
-            PhoneStatePermissionDialog(
-                showExplanationFirst = showExplanation,
-                onDismissRequest = viewModel::onPhoneStatePermissionDialogDismiss,
-                onPermissionResult = viewModel::onPhoneStatePermissionDialogConfirm)
+        Setting(title = stringResource(R.string.app_theme)) {
+            EnumRadioButtonGroup(
+                modifier = Modifier.padding(end = 16.dp),
+                values = AppTheme.values(),
+                valueNames = AppTheme.stringValues(),
+                currentValue = viewModel.appTheme,
+                onValueClick = viewModel::onAppThemeClick)
         }
     }
-    val titleTutorialSetting = @Composable {
-        DialogSetting(
-            title = stringResource(R.string.control_playback_using_tile_setting_title),
-            content = { TileTutorialDialog(onDismissRequest = it) })
-    }
-    SettingCategory(
-        title = stringResource(R.string.playback),
-        content = listOf(autoPauseDuringCallSetting, titleTutorialSetting))
-}
 
-@Composable private fun AboutSettingsCategory() {
-    val title = stringResource(R.string.about)
-    val privacyPolicySetting = @Composable {
+@Composable private fun PlaybackSettingsCategory() =
+    SettingCategory(stringResource(R.string.playback)) {
+        val viewModel: SettingsViewModel = viewModel()
+
+        Setting(
+            title = stringResource(R.string.ignore_audio_focus_setting_title),
+            subtitle = stringResource(R.string.ignore_audio_focus_setting_subtitle),
+            onClick = viewModel::onIgnoreAudioFocusClick
+        ) {
+            Switch(checked = viewModel.ignoreAudioFocus,
+                   onCheckedChange = { viewModel.onIgnoreAudioFocusClick() })
+        }
+
+        AnimatedVisibility(
+            visible = viewModel.autoPauseDuringCallsSettingVisible,
+            enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
+            exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top)
+        ) {
+            Column {
+                Divider()
+                Setting(
+                    title = stringResource(R.string.auto_pause_during_calls_setting_title),
+                    subtitle = stringResource(R.string.auto_pause_during_calls_setting_subtitle),
+                    onClick = viewModel::onAutoPauseDuringCallClick
+                ) {
+                    Switch(checked = viewModel.autoPauseDuringCall,
+                           onCheckedChange = { viewModel.onAutoPauseDuringCallClick() })
+                }
+                if (viewModel.showingPhoneStatePermissionDialog) {
+                    val context = LocalContext.current
+                    val showExplanation = ContextCompat.checkSelfPermission(
+                            context, Manifest.permission.READ_PHONE_STATE
+                        ) == PackageManager.PERMISSION_DENIED
+                    PhoneStatePermissionDialog(
+                        showExplanationFirst = showExplanation,
+                        onDismissRequest = viewModel::onPhoneStatePermissionDialogDismiss,
+                        onPermissionResult = viewModel::onPhoneStatePermissionDialogConfirm)
+                }
+            }
+        }
+
+        Divider()
+        DialogSetting(stringResource(R.string.control_playback_using_tile_setting_title)) {
+            TileTutorialDialog(it)
+        }
+    }
+
+@Composable private fun AboutSettingsCategory() =
+    SettingCategory(stringResource(R.string.about)) {
         DialogSetting(stringResource(R.string.privacy_policy_setting_title)) {
             PrivacyPolicyDialog(onDismissRequest = it)
         }
-    }
-    val openSourceLicensesSetting = @Composable {
+        Divider()
         DialogSetting(stringResource(R.string.open_source_licenses)) {
             OpenSourceLibrariesUsedDialog(onDismissRequest = it)
         }
-    }
-    val aboutAppSetting = @Composable {
+        Divider()
         DialogSetting(stringResource(R.string.about_app_setting_title)) {
             AboutAppDialog(onDismissRequest = it)
         }
     }
-    SettingCategory(title, listOf(
-        privacyPolicySetting,
-        openSourceLicensesSetting,
-        aboutAppSetting))
-}
