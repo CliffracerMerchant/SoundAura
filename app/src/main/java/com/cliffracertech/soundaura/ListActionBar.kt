@@ -141,6 +141,7 @@ import com.google.accompanist.insets.statusBarsPadding
         if (searchQueryIsNotNull) {
             val text = searchQuery ?: lastSearchQuery
             AutoFocusSearchQuery(text, onSearchQueryChanged)
+            @Suppress("UNUSED_VALUE")
             if (searchQuery != null)
                 lastSearchQuery = searchQuery
         } else Crossfade(title) { // This inner crossfade is for when the title changes.
@@ -154,8 +155,6 @@ import com.google.accompanist.insets.statusBarsPadding
         enter = slideInHorizontally(tween()) { it },
         exit = slideOutHorizontally(tween()) { it },
     ) {
-        // This inner row is used so that the search and change sort buttons
-        // as well as any additional content are all animated together.
         Row(verticalAlignment = Alignment.CenterVertically) {
             // Search button
             val vector = AnimatedImageVector.animatedVectorResource(R.drawable.search_to_close)
@@ -229,7 +228,7 @@ import com.google.accompanist.insets.statusBarsPadding
     onQueryChanged: (String) -> Unit
 ) {
     val focusManager = LocalFocusManager.current
-    val focusRequester = FocusRequester()
+    val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     BasicTextField(
@@ -240,15 +239,17 @@ import com.google.accompanist.insets.statusBarsPadding
         keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
         modifier = Modifier
             .focusRequester(focusRequester)
-            .onFocusChanged { if (it.isFocused) keyboardController?.show() },
+            .onFocusChanged {
+                if (it.isFocused) keyboardController?.show()
+            },
         singleLine = true,
-        decorationBox = { innerTextField ->
-            Box {
-                innerTextField()
-                Divider(Modifier.align(Alignment.BottomStart),
-                        LocalContentColor.current, thickness = (1.5).dp)
-            }
-        })
+    ) { innerTextField ->
+        Box {
+            innerTextField()
+            Divider(Modifier.align(Alignment.BottomStart),
+                    LocalContentColor.current, (1.5).dp)
+        }
+    }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 }
 
