@@ -1,23 +1,12 @@
 ![API](https://badgen.net/badge/API/24+/green)
 # SoundAura
 
-SoundAura is an open source ambient sound app. SoundAura does not include
-any audio tracks to save on download size, but allows users to add files
-from their local device and play any (reasonable) number of them concurrently,
-with individual volume controls for each track.
-
-SoundAura is intended to play audio in the background at the same time as the
-user might be playing other audio (e.g. a podcast or audiobook). As such, it
-behaves differently than most other audio apps in the following ways:
-- It ignores normal audio focus rules and will keep playing
-  even when other apps start playing audio. The exception is
-  that it will pause during calls if the auto-pause during
-  call option is enabled in the app settings.
-- It uses a notification to show its controls instead of showing
-  them in the media session section of the status bar.
-  
-The option to toggle behavior between this current behavior and an audio
-focus respecting one is planned in the next release. 
+SoundAura is an open source ambient sound app. It does not include any audio
+tracks to save on download size, but allows users to add local files from
+their device and play any (reasonable) number of them concurrently, with
+individual volume controls for each track. SoundAura can also switch between
+an audio focus respecting mode, and an ignore audio focus mode. Ignoring
+audio focus will allow SoundAura to play audio alongside other apps.
   
 SoundAura is built using:
 - Kotlin
@@ -30,13 +19,16 @@ SoundAura is built using:
 ## Features
 - A library of user-added tracks based on the device's local files.
 - Individual track volume control
-- A notification to control playback when the app is in the background.
+- A media notification to control playback when the app is in the background.
 - A quick settings tile to control playback. If the quick settings tile
   is in use, the notification can be manually hidden if desired to save
   notification space.
-- Auto-pause during calls. Due to the fact that SoundAura ignores audio
-  focus rules, this unfortunately requires the read phone state permission
-  to function, and is enabled in the app settings.
+- Auto-pause during calls. If SoundAura is respecting audio focus rules,
+  then auto-pausing during phone calls will happen automatically due to
+  the app losing audio focus. If audio focus is ignored, SoundAura requires
+  the read phone state permission to be able to detect when a phone call is
+  ongoing. Auto-pause during calls when ignoring audio focus is toggled on
+  in the app settings.
 - Auto-pause on audio-device changes: If SoundAura is playing, and an
   audio device change occurs that results in a system media volume of
   zero (e.g. the user unplugs or disconnects their headphones and the
@@ -44,13 +36,9 @@ SoundAura is built using:
   its playback since it can't be heard anyways. If another audio device
   change occurs that makes the media volume go above zero, SoundAura
   will also automatically unpause itself unless the user manually
-  affected the playback state in the mean time. No permissions required,
-  except the read phone state permission for the optional auto-pause
-  during calls.
-
-## Planned Features
-- The ability to switch between an audio-focus respecting mode and
-  the current behavior.
+  affected the playback state in the mean time.
+- No permissions required, except the read phone state permission for the
+  optional auto-pause during calls when ignoring audio focus.
 
 ## Screenshots
 
