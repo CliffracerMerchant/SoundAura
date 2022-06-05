@@ -44,10 +44,12 @@ SoundAura is built using:
 
 https://user-images.githubusercontent.com/42116365/171025181-05d4769b-f0aa-4a43-86c8-e8e9da5c2866.mp4
 
-[[media/screenshot1.png|width=200px]]
-[[media/screenshot2.png|width=200px]]
-[[media/screenshot3.png|width=200px]]
-[[media/screenshot4.png|width=200px]]
+<p float="left">
+  <img src="media/screenshot1.png" width="200" height="434">
+  <img src="media/screenshot2.png" width="200" height="434">
+  <img src="media/screenshot3.png" width="200" height="434">
+  <img src="media/screenshot4.png" width="200" height="434">
+</p>
 
 ## Privacy Policy
 SoundAura does not collect, store, or transmit any personal information.
