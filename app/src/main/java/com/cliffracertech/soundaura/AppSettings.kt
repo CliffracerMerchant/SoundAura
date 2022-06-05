@@ -65,7 +65,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
         }
 
         AnimatedVisibility(
-            visible = viewModel.autoPauseDuringCallsSettingVisible,
+            visible = viewModel.autoPauseDuringCallSettingVisible,
             enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
             exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top)
         ) {
