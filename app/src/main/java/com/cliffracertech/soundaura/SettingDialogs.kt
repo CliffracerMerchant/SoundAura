@@ -112,14 +112,7 @@ fun PhoneStatePermissionDialog(
                          modifier = Modifier.rotate(iconRotation))
                 }
                 AnimatedContent(showingAddTileHelp) {
-                    // This spacer when the showingAddTileHelp is false is to make the
-                    // first page of content closer in size to the second so the
-                    // dialog's window doesn't change in size as much when transitioning
-                    // between pages. Obviously a single static value is not ideal
-                    // because it will not change to account for screen size or text
-                    // size changes, but it at least helps a bit for typical text sizes.
-                    if (!it) Spacer(Modifier.size((10).dp))
-                    else Text(stringResource(R.string.tile_tutorial_add_tile_help_text))
+                    if (it) Text(stringResource(R.string.tile_tutorial_add_tile_help_text))
                 }
             }
         }

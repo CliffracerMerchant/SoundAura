@@ -111,7 +111,7 @@ import androidx.compose.ui.window.DialogProperties
  * @param onDismissRequest The callback that will be invoked when the user
  *     taps the cancel button (which will replace the previous button if on
  *     the first page of content), or when they tap outside the dialog, or
- *     when back button is pressed.
+ *     when the back button is pressed.
  * @param onFinish The callback that will be invoked when the user taps the
  *     finish button. The finish button will replace the next button when
  *     the last page of content is being displayed.
