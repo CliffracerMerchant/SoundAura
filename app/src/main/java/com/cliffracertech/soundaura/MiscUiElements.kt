@@ -84,12 +84,8 @@ fun Modifier.minTouchTargetSize() =
     // The combination of the two angles allows the icon to always
     // rotate clockwise, instead of alternating between clockwise
     // and counterclockwise.
-    val cwAngle by animateFloatAsState(
-        targetValue = if (added) 0f else 90f,
-        animationSpec = tween())
-    val ccwAngle by animateFloatAsState(
-        targetValue = if (added) 180f else 90f,
-        animationSpec = tween())
+    val cwAngle by animateFloatAsState(if (added) 0f else 90f)
+    val ccwAngle by animateFloatAsState(if (added) 180f else 90f)
     val angle = if (added) ccwAngle else cwAngle
 
     val iconTint by animateColorAsState(
@@ -166,8 +162,8 @@ fun Modifier.minTouchTargetSize() =
     val transition = remember(leftToRight) {
         val enterOffset = { size: Int -> size / if (leftToRight) 1 else -1 }
         val exitOffset = { size: Int -> size / if (leftToRight) -4 else 4 }
-        slideInHorizontally(tween(), enterOffset) with
-        slideOutHorizontally(tween(), exitOffset)
+        slideInHorizontally(initialOffsetX = enterOffset) with
+        slideOutHorizontally(targetOffsetX = exitOffset)
     }
     AnimatedContent(targetState, modifier, { transition }, content = content)
 }

@@ -84,7 +84,7 @@ class SettingsViewModel(
         }}
     }
 
-    val autoPauseDuringCallsSettingVisible by derivedStateOf { ignoreAudioFocus }
+    val autoPauseDuringCallSettingVisible by derivedStateOf { ignoreAudioFocus }
 
     // This value should always be up to date due to granting or revoking
     // permissions outside of the app causing an app restart. If the user
@@ -104,7 +104,7 @@ class SettingsViewModel(
     val autoPauseDuringCall by derivedStateOf {
         autoPauseDuringCallPreference &&
         hasReadPhoneStatePermission &&
-        autoPauseDuringCallsSettingVisible
+        autoPauseDuringCallSettingVisible
     }
 
     var showingPhoneStatePermissionDialog by mutableStateOf(false)
