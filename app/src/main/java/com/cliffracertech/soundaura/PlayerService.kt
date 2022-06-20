@@ -12,10 +12,11 @@ import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED
 import android.media.AudioManager.STREAM_MUSIC
-import android.media.session.PlaybackState.*
 import android.os.Build
+import android.support.v4.media.session.PlaybackStateCompat.*
 import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -187,12 +188,13 @@ class PlayerService: LifecycleService() {
         private const val autoPauseAudioDeviceChangeKey = "auto_pause_audio_device_change"
         private const val autoPauseOngoingCallKey = "auto_pause_ongoing_call"
         private const val autoPauseAudioFocusLossKey = "auto_pause_audio_focus_loss"
+        private const val setPlaybackAction = "com.cliffracertech.soundaura.action.setPlayback"
 
-        private fun setPlaybackIntent(context: Context, state: Int): Intent {
-            val key = context.getString(R.string.set_playback_action)
-            return Intent(context, PlayerService::class.java)
-                .setAction(key).putExtra(key, state)
-        }
+        private fun setPlaybackIntent(context: Context, state: Int) =
+            Intent(context, PlayerService::class.java)
+                .setAction(setPlaybackAction)
+                .putExtra(setPlaybackAction, state)
+
         fun playIntent(context: Context) = setPlaybackIntent(context, STATE_PLAYING)
         fun pauseIntent(context: Context) = setPlaybackIntent(context, STATE_PAUSED)
         fun stopIntent(context: Context) = setPlaybackIntent(context, STATE_STOPPED)
@@ -275,10 +277,9 @@ class PlayerService: LifecycleService() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val setPlaybackKey = getString(R.string.set_playback_action)
-        if (intent?.action == setPlaybackKey) {
-            val targetState = intent.extras?.getInt(setPlaybackKey)
-            targetState?.let { setPlaybackState(it) }
+        if (intent?.action == setPlaybackAction) {
+            val targetState = intent.extras?.getInt(setPlaybackAction)
+            targetState?.let(::setPlaybackState)
         }
         notificationManager.startForeground(
             service = this,
@@ -384,9 +385,7 @@ class PlayerService: LifecycleService() {
 
         if (!enabled || !hasReadPhoneState) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                telephonyCallback?.let {
-                    telephonyManager.unregisterTelephonyCallback(it)
-                }
+                telephonyCallback?.let(telephonyManager::unregisterTelephonyCallback)
                 telephonyCallback = null
             } else {
                 phoneStateListener?.let {
