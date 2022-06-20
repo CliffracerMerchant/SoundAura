@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -260,4 +261,20 @@ class MainActivity : ComponentActivity() {
             exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTweenSpec()),
             content = { AddLocalFilesButton() })
     }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?) =
+        when (keyCode) {
+            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+                boundPlayerService?.toggleIsPlaying()
+                true
+            }
+            KeyEvent.KEYCODE_MEDIA_STOP -> {
+                boundPlayerService?.let {
+                    if (it.isPlaying)
+                        it.toggleIsPlaying()
+                }
+                true
+            }
+            else -> super.onKeyDown(keyCode, event)
+        }
 }

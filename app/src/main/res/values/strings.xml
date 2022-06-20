@@ -150,8 +150,6 @@
 
     <string name="player_notification_channel_id" translatable="false">
         player_controls</string>
-    <string name="set_playback_action" translatable="false">
-        com.cliffracertech.soundaura.action.playPause</string>
 
     <string name="pref_sort_key" translatable ="false">track_sort</string>
     <string name="pref_app_theme_key" translatable="false">app_theme</string>
