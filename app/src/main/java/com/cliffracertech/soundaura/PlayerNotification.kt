@@ -112,6 +112,7 @@ class PlayerNotification(
         NotificationCompat.Builder(context, channelId)
             .setOngoing(true)
             .setSmallIcon(R.drawable.tile_and_notification_icon)
+            .setContentTitle(context.getString(R.string.app_name))
             .setContentIntent(PendingIntent.getActivity(context, 0,
                 Intent(context, MainActivity::class.java).apply {
                     action = Intent.ACTION_MAIN
@@ -166,7 +167,8 @@ class PlayerNotification(
         })
         val playPauseAction = togglePlayPauseAction(
             isPlaying = playbackState == STATE_PLAYING)
-        val builder = notificationBuilder.setContentTitle(description)
+        val builder = notificationBuilder
+            .setContentText(description)
             .clearActions()
             .addAction(playPauseAction)
 
