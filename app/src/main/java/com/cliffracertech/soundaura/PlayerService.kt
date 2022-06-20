@@ -16,7 +16,6 @@ import android.os.Build
 import android.support.v4.media.session.PlaybackStateCompat.*
 import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -326,7 +325,7 @@ class PlayerService: LifecycleService() {
         // the activity will display messages posted to an injected MessageHandler
         // instance through, e.g., a snack bar. If the service is not bound to an
         // activity, then the message will be displayed via a Toast instead.
-        val stringResId = R.string.player_no_sounds_warning_message
+        val stringResId = R.string.player_no_tracks_warning_message
         if (boundToActivity)
             messageHandler.postMessage(StringResource(stringResId))
         else Toast.makeText(this, stringResId, Toast.LENGTH_SHORT).show()
