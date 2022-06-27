@@ -24,10 +24,13 @@ import androidx.compose.ui.window.DialogProperties
 /**
  * Compose an alert dialog.
  *
+ * @param horizontalPadding The horizontal padding for the content. The value
+ *     is also used as the horizontal padding for the default title layout.
  * @param title The string representing the dialog's title. Can be null, in
  *     which case the title will not be displayed.
  * @param titleLayout The layout that will be used for the dialog's title.
  *     Will default to a composable Text using the value of the title parameter.
+ *     Will not be displayed if title == null
  * @param text The string representing the dialog's message. Will only be used
  *     if the content parameter is not overridden, in which case it will default
  *     to a composable Text containing the value of this parameter.
@@ -45,10 +48,17 @@ import androidx.compose.ui.window.DialogProperties
  *     described by the text parameter.
  */
 @Composable fun SoundAuraDialog(
+    horizontalPadding: Dp = 16.dp,
     title: String? = null,
     titleLayout: @Composable (String) -> Unit = @Composable {
-        val textStyle = MaterialTheme.typography.body1
-        ProvideTextStyle(textStyle) { Text(it) }
+        Box(Modifier.padding(
+            top = 16.dp,
+            start = horizontalPadding,
+            end = horizontalPadding)
+        ) {
+            val textStyle = MaterialTheme.typography.body1
+            ProvideTextStyle(textStyle) { Text(it) }
+        }
     }, text: String? = null,
     titleContentSpacing: Dp = 12.dp,
     contentButtonSpacing: Dp = 12.dp,
@@ -65,12 +75,12 @@ import androidx.compose.ui.window.DialogProperties
     }
 ) = Dialog(onDismissRequest) {
     Surface(shape = MaterialTheme.shapes.medium) {
-        Column(Modifier.padding(top = 16.dp)) {
-            Column(Modifier.padding(horizontal = 16.dp)) {
-                if (title != null) {
-                    titleLayout(title)
-                    Spacer(Modifier.height(titleContentSpacing))
-                }
+        Column {
+            if (title != null) {
+                titleLayout(title)
+                Spacer(Modifier.height(titleContentSpacing))
+            }
+            Box(Modifier.padding(horizontal = horizontalPadding)) {
                 content()
             }
 
