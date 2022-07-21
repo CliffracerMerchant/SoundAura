@@ -47,16 +47,16 @@ data class Track(
 }
 
 @Dao abstract class TrackDao {
-    @Insert abstract suspend fun insert(track: Track): Long
+    @Insert abstract fun insert(track: Track): Long
 
     @Insert(onConflict  = OnConflictStrategy.IGNORE)
-    abstract suspend fun insert(track: List<Track>): List<Long>
+    abstract fun insert(track: List<Track>): List<Long>
 
     @Query("DELETE FROM track WHERE uriString = :uriString")
-    abstract suspend fun delete(uriString: String)
+    abstract fun delete(uriString: String)
 
     @Query("DELETE FROM track WHERE uriString in (:uriStrings)")
-    abstract suspend fun delete(uriStrings: List<String>)
+    abstract fun delete(uriStrings: List<String>)
 
     @Query("SELECT * FROM track WHERE name LIKE :filter ORDER BY name COLLATE NOCASE ASC")
     protected abstract fun getAllTracksSortedByNameAsc(filter: String): Flow<List<Track>>
@@ -80,16 +80,16 @@ data class Track(
     abstract fun getAllActiveTracks(): Flow<List<Track>>
 
     @Query("UPDATE track set hasError = 1 WHERE uriString = :uri")
-    abstract suspend fun notifyOfError(uri: String)
+    abstract fun notifyOfError(uri: String)
 
     @Query("UPDATE track set isActive = 1 - isActive WHERE uriString = :uri")
-    abstract suspend fun toggleIsActive(uri: String)
+    abstract fun toggleIsActive(uri: String)
 
     @Query("UPDATE track SET volume = :volume WHERE uriString = :uri")
-    abstract suspend fun setVolume(uri: String, volume: Float)
+    abstract fun setVolume(uri: String, volume: Float)
 
     @Query("UPDATE track SET name = :name WHERE uriString = :uri")
-    abstract suspend fun setName(uri: String, name: String)
+    abstract fun setName(uri: String, name: String)
 }
 
 @Database(entities = [Track::class], version = 3, exportSchema = true)

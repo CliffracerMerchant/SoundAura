@@ -109,12 +109,9 @@ import com.google.accompanist.insets.statusBarsPadding
     AnimatedContent(
         targetState = showBackButtonForNavigation || searchQuery != null,
         contentAlignment = Alignment.Center,
-        transitionSpec = {
-            ContentTransform(
-                targetContentEnter = slideInHorizontally { -it },
-                initialContentExit = slideOutHorizontally { -it },
-                sizeTransform = SizeTransform(clip = false))
-        }
+        transitionSpec = { slideInHorizontally { -it } with
+                           slideOutHorizontally { -it } using
+                           SizeTransform(clip = false) }
     ) { backButtonIsVisible ->
         if (!backButtonIsVisible)
             Spacer(Modifier.width(24.dp))

@@ -38,7 +38,6 @@ import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.scopes.ActivityRetainedScoped
-import kotlinx.coroutines.flow.collect
 import javax.inject.Inject
 
 @ActivityRetainedScoped
