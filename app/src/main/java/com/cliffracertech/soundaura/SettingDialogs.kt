@@ -211,7 +211,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
     onDismissRequest: () -> Unit
 ) = Dialog(onDismissRequest) {
     Surface(shape = MaterialTheme.shapes.medium) {
-        Column(Modifier.padding(top = 16.dp)) {//, start = 16.dp, end = 16.dp)) {
+        Column(Modifier.padding(top = 16.dp)) {
             Column(Modifier.padding(horizontal = 16.dp)) {
                 // Title
                 Row(verticalAlignment = Alignment.CenterVertically) {

@@ -58,7 +58,7 @@ import androidx.compose.ui.window.DialogProperties
             start = horizontalPadding,
             end = horizontalPadding)
         ) {
-            val textStyle = MaterialTheme.typography.body1
+            val textStyle = MaterialTheme.typography.h6
             ProvideTextStyle(textStyle) { Text(it) }
         }
     }, text: String? = null,

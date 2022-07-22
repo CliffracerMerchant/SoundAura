@@ -29,7 +29,7 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
     Column(Modifier.padding(20.dp, 16.dp, 20.dp, 6.dp)) {
         Text(text = title,
             modifier = Modifier.align(Alignment.CenterHorizontally),
-            style = MaterialTheme.typography.h6)
+            style = MaterialTheme.typography.h5)
         Spacer(Modifier.height(8.dp))
         Divider()
         content()
@@ -119,7 +119,7 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
         modifier = Modifier.weight(1f).padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        Text(title, style = MaterialTheme.typography.body1)
+        Text(title, style = MaterialTheme.typography.h6)
 
         if (subtitle != null)
             Text(subtitle, style = MaterialTheme.typography.body2)
