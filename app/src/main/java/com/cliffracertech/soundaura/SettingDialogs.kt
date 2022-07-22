@@ -9,9 +9,8 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.ClickableText
@@ -19,7 +18,9 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -38,6 +39,31 @@ import androidx.compose.ui.window.DialogProperties
 import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 
 /**
+ * Launch a dialog to explain the consequences of the 'Play in background' setting.
+ *
+ * @param onDismissRequest The callback that will be invoked if the dialog is dismissed.
+ */
+@Composable fun PlayInBackgroundExplanationDialog(
+    onDismissRequest: () -> Unit,
+) = SoundAuraDialog(
+    windowPadding = PaddingValues(20.dp),
+    title = stringResource(R.string.play_in_background_setting_title),
+    onDismissRequest = onDismissRequest,
+    showCancelButton = false,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ProvideTextStyle(MaterialTheme.typography.subtitle1) {
+            Text(stringResource(R.string.play_in_background_explanation))
+            BulletedList(listOf(
+                stringResource(R.string.play_in_background_explanation_bullet_1),
+                stringResource(R.string.play_in_background_explanation_bullet_2),
+                stringResource(R.string.play_in_background_explanation_bullet_3),
+                stringResource(R.string.play_in_background_explanation_bullet_4)))
+        }
+    }
+}
+
+/**
  * Launch a dialog to request the READ_PHONE_STATE permission.
  * @param showExplanationFirst Whether or not a dialog box explaining
  *     why the permission is needed will be shown.
@@ -47,8 +73,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
  *     the user grants or rejects the permission. The Boolean parameter
  *     will be true if the permission was granted, or false otherwise.
  */
-@Composable
-fun PhoneStatePermissionDialog(
+@Composable fun PhoneStatePermissionDialog(
     showExplanationFirst: Boolean,
     onDismissRequest: () -> Unit,
     onPermissionResult: (Boolean) -> Unit
@@ -95,8 +120,9 @@ fun PhoneStatePermissionDialog(
             Text(stringResource(R.string.tile_tutorial_add_tile_text))
             Column {
                 var showingAddTileHelp by rememberSaveable { mutableStateOf(false) }
-                Row(modifier = Modifier.minTouchTargetSize()
-                        .clickable { showingAddTileHelp = !showingAddTileHelp },
+                Row(modifier = Modifier
+                    .minTouchTargetSize()
+                    .clickable { showingAddTileHelp = !showingAddTileHelp },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(stringResource(R.string.tile_tutorial_add_tile_help_button_text),
@@ -214,7 +240,8 @@ fun PhoneStatePermissionDialog(
             // Bottom buttons
             Divider()
             Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
-                verticalAlignment = Alignment.CenterVertically) {
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 val uriHandler = LocalUriHandler.current
                 val gitHubLink = stringResource(R.string.github_link)
                 TextButton(

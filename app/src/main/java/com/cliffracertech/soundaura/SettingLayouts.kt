@@ -24,7 +24,7 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
  * @param content A composable lambda that contains the category's content. */
 @Composable fun SettingCategory(
     title: String,
-    content: @Composable () -> Unit
+    content: @Composable ColumnScope.() -> Unit
 ) = Surface(shape = MaterialTheme.shapes.large) {
     Column(Modifier.padding(20.dp, 16.dp, 20.dp, 6.dp)) {
         Text(text = title,
@@ -115,16 +115,16 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
     if (icon != null)
         Box(Modifier.size(48.dp)) { icon() }
 
-    Column(Modifier.weight(1f), Arrangement.Center) {
-        Text(text = title,
-            modifier = Modifier.padding(top = 8.dp),
-            style = MaterialTheme.typography.body1)
-        if (subtitle != null) {
-            Spacer(Modifier.height(2.dp))
-            Text(text = subtitle, style = MaterialTheme.typography.body2)
-        }
-        Spacer(Modifier.height(8.dp))
+    Column(
+        modifier = Modifier.weight(1f).padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(title, style = MaterialTheme.typography.body1)
+
+        if (subtitle != null)
+            Text(subtitle, style = MaterialTheme.typography.body2)
     }
+
     content()
 }
 

@@ -165,3 +165,22 @@ fun Modifier.minTouchTargetSize() =
 @Composable fun VerticalDivider() =
     Box(Modifier.fillMaxHeight().width((1.5).dp)
         .background(MaterialTheme.colors.onSurface.copy(alpha = 0.12f)))
+
+/**
+ * Compose a bulleted list of strings.
+ *
+ * @param items The list of strings to display in bulleted form.
+ * @param modifier The modifier to use for the entire list.
+ */
+@Composable fun BulletedList(
+    items: List<String>,
+    modifier: Modifier = Modifier,
+) = Column(modifier, Arrangement.spacedBy(8.dp)) {
+    for (item in items) {
+        Row {
+            Text("\u2022")
+            Spacer(Modifier.width(12.dp))
+            Text(item)
+        }
+    }
+}

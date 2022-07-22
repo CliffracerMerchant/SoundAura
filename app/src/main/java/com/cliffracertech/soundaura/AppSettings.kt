@@ -6,9 +6,13 @@ package com.cliffracertech.soundaura
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.compose.animation.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.*
+import androidx.compose.material.Divider
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Surface
+import androidx.compose.material.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,8 +58,18 @@ import androidx.lifecycle.viewmodel.compose.viewModel
             subtitle = stringResource(R.string.play_in_background_setting_description),
             onClick = viewModel::onPlayInBackgroundTitleClick
         ) {
-            Switch(checked = viewModel.playInBackground,
-                   onCheckedChange = { viewModel.onPlayInBackgroundSwitchClick() })
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Vertical Divider
+                Box(Modifier.width((1.5).dp).height(40.dp)
+                    .background(MaterialTheme.colors.onSurface.copy(alpha = 0.12f)))
+
+                Spacer(Modifier.width(6.dp))
+                Switch(checked = viewModel.playInBackground,
+                    onCheckedChange = { viewModel.onPlayInBackgroundSwitchClick() })
+            }
+            if (viewModel.showingPlayInBackgroundExplanation)
+                PlayInBackgroundExplanationDialog(
+                    viewModel::onPlayInBackgroundExplanationDismiss)
         }
 
         AnimatedVisibility(
