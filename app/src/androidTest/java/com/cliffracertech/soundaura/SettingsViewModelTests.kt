@@ -46,7 +46,7 @@ class SettingsViewModelTests {
     private val appThemeKey = intPreferencesKey(
         context.getString(R.string.pref_app_theme_key))
     private val ignoreAudioFocusKey = booleanPreferencesKey(
-        context.getString(R.string.pref_ignore_audio_focus_key))
+        context.getString(R.string.pref_play_in_background_key))
     private val autoPauseDuringCallKey = booleanPreferencesKey(
         context.getString(R.string.pref_auto_pause_during_calls_key))
 
@@ -71,9 +71,9 @@ class SettingsViewModelTests {
     }
 
     @Test fun defaultValues() {
-        Log.d("SoundAura", "instance.ignoreAudioFocus = ${instance.ignoreAudioFocus}")
         assertThat(instance.appTheme).isEqualTo(AppTheme.UseSystem)
-        assertThat(instance.ignoreAudioFocus).isFalse()
+        assertThat(instance.playInBackground).isFalse()
+        assertThat(instance.showingPlayInBackgroundExplanation).isFalse()
         assertThat(instance.autoPauseDuringCallSettingVisible).isFalse()
         assertThat(instance.autoPauseDuringCall).isFalse()
         assertThat(instance.showingPhoneStatePermissionDialog).isFalse()
@@ -90,16 +90,28 @@ class SettingsViewModelTests {
         assertThat(instance.appTheme).isEqualTo(AppTheme.Light)
     }
 
-    @Test fun onIgnoreAudioFocusClick() = runBlockingTest {
+    @Test fun onPlayInBackgroundTitleClick() {
         defaultValues()
-        instance.onIgnoreAudioFocusClick()
+        instance.onPlayInBackgroundTitleClick()
+        assertThat(instance.showingPlayInBackgroundExplanation).isTrue()
+    }
+
+    @Test fun onPlayInBackgroundExplanationDialogDismiss() = runBlockingTest {
+        onPlayInBackgroundTitleClick()
+        instance.onPlayInBackgroundExplanationDismiss()
+        assertThat(instance.showingPlayInBackgroundExplanation).isFalse()
+    }
+
+    @Test fun onPlayInBackgroundSwitchClick() = runBlockingTest {
+        defaultValues()
+        instance.onPlayInBackgroundSwitchClick()
         assertThat(updatedPreferences()[ignoreAudioFocusKey]).isTrue()
-        assertThat(instance.ignoreAudioFocus).isTrue()
+        assertThat(instance.playInBackground).isTrue()
         assertThat(instance.autoPauseDuringCallSettingVisible).isTrue()
 
-        instance.onIgnoreAudioFocusClick()
+        instance.onPlayInBackgroundSwitchClick()
         assertThat(updatedPreferences()[ignoreAudioFocusKey]).isFalse()
-        assertThat(instance.ignoreAudioFocus).isFalse()
+        assertThat(instance.playInBackground).isFalse()
         assertThat(instance.autoPauseDuringCallSettingVisible).isFalse()
 
         instance.onAutoPauseDuringCallClick()
@@ -111,7 +123,7 @@ class SettingsViewModelTests {
             return@runBlockingTest
         defaultValues()
 
-        instance.onIgnoreAudioFocusClick()
+        instance.onPlayInBackgroundSwitchClick()
         instance.onAutoPauseDuringCallClick()
         assertThat(instance.showingPhoneStatePermissionDialog).isFalse()
         assertThat(updatedPreferences()[autoPauseDuringCallKey]).isTrue()
@@ -127,7 +139,7 @@ class SettingsViewModelTests {
         if (hasReadPhoneStatePermission)
             return@runBlockingTest
         defaultValues()
-        instance.onIgnoreAudioFocusClick()
+        instance.onPlayInBackgroundSwitchClick()
         instance.onAutoPauseDuringCallClick()
         assertThat(instance.showingPhoneStatePermissionDialog).isTrue()
         assertThat(updatedPreferences()[autoPauseDuringCallKey]).isNotEqualTo(true)
@@ -144,7 +156,7 @@ class SettingsViewModelTests {
     @Test fun onPhoneStatePermissionDialogConfirm() = runBlockingTest {
         if (hasReadPhoneStatePermission)
             return@runBlockingTest
-        instance.onIgnoreAudioFocusClick()
+        instance.onPlayInBackgroundSwitchClick()
         assertThat(instance.autoPauseDuringCall).isFalse()
         assertThat(instance.showingPhoneStatePermissionDialog).isFalse()
 
@@ -173,7 +185,7 @@ class SettingsViewModelTests {
         assertThat(updatedPreferences()[autoPauseDuringCallKey]).isTrue()
         assertThat(instance.autoPauseDuringCall).isFalse()
 
-        instance.onIgnoreAudioFocusClick()
+        instance.onPlayInBackgroundSwitchClick()
         assertThat(instance.autoPauseDuringCall).isEqualTo(hasReadPhoneStatePermission)
     }
 }
