@@ -56,7 +56,7 @@ import javax.inject.Inject
  * function addPlaybackChangeListener with a PlaybackChangeListener.
  * PlaybackChangeListener is a functional interface whose single abstract
  * method is called whenever the PlayerService's playback state changes and
- * takes the new PlaybackState value as a parameter.
+ * takes the new PlaybackStateCompat value as a parameter.
  *
  * If an audio device change occurs when isPlaying is true and the new media
  * volume after the device change is zero, PlayerService will automatically
@@ -64,7 +64,9 @@ import javax.inject.Inject
  * media volume back up to above zero and isPlaying has not been called
  * manually since PlayerService was auto-paused, it will also automatically
  * unpause itself. This auto-pause also works for ongoing calls if the
- * READ_PHONE_STATE permission has been granted to the app.
+ * READ_PHONE_STATE permission has been granted to the app, and the boolean
+ * value in the app's datastore pointed to by the string value
+ * R.string.pref_auto_pause_during_calls_key is true.
  *
  * To ensure that the volume for already playing tracks is changed without
  * perceptible lag, PlayerService will not respond to track volume changes made
@@ -97,7 +99,7 @@ class PlayerService: LifecycleService() {
             updateNotification()
         }
 
-    private var ignoreAudioFocus = false
+    private var playInBackground = false
         set(ignore) {
             if (field == ignore) return
             field = ignore
@@ -128,7 +130,9 @@ class PlayerService: LifecycleService() {
      * state should not be altered outside of setPlaybackState to ensure
      * that mismatched state does not occur.
      *
-     * @param state The desired PlaybackState.
+     * @param state The desired PlaybackStateCompat value. The supported
+     *     values are STATE_PLAYING, STATE_PAUSED, and STATE_STOPPED. Other
+     *     values will be ignored.
      * @param clearUnpauseLocks Whether or not to reset all unpause locks.
      *     This should only be true when the playback state is being set
      *     to STATE_PAUSED as the result of an autoPauseIf call.
@@ -241,12 +245,12 @@ class PlayerService: LifecycleService() {
         }, null)
 
         repeatWhenStarted {
-            val ignoreAudioFocusKey = booleanPreferencesKey(
-                getString(R.string.pref_ignore_audio_focus_key))
-            val ignoreAudioFocusFlow =
-                dataStore.preferenceFlow(ignoreAudioFocusKey, false)
-            ignoreAudioFocusFlow
-                .onEach { ignoreAudioFocus = it }
+            val playInBackgroundKey = booleanPreferencesKey(
+                getString(R.string.pref_play_in_background_key))
+            val playInBackgroundFlow =
+                dataStore.preferenceFlow(playInBackgroundKey, false)
+            playInBackgroundFlow
+                .onEach { playInBackground = it }
                 .launchIn(this)
 
             val autoPauseDuringCallsKey = booleanPreferencesKey(
@@ -256,8 +260,8 @@ class PlayerService: LifecycleService() {
             // ignoreAudioFocus is false, the phone will be paused anyways
             // due to the app losing audio focus during calls.
             dataStore.preferenceFlow(autoPauseDuringCallsKey, false)
-                .combine(ignoreAudioFocusFlow) { pauseDuringCalls, ignoreAudioFocus ->
-                    pauseDuringCalls && ignoreAudioFocus
+                .combine(playInBackgroundFlow) { pauseDuringCalls, playInBackground ->
+                    pauseDuringCalls && playInBackground
                 }.distinctUntilChanged()
                 .onEach(::setAutoPauseDuringCallEnabled)
                 .launchIn(this)
