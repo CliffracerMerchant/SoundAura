@@ -78,6 +78,13 @@ class PlayerNotification(
             field = value
             val newMediaSession = if (!value) null else
                 MediaSessionCompat(service, PlayerNotification::class.toString())
+            mediaSession?.isActive = false
+            newMediaSession?.isActive = true
+            newMediaSession?.setCallback(object: MediaSessionCompat.Callback() {
+                override fun onPlay() { service.startService(playIntent) }
+                override fun onPause() { service.startService(pauseIntent) }
+                override fun onStop() { service.startService(stopIntent) }
+            })
             mediaSession = newMediaSession
             updateNotificationStyle()
             service.startForeground(notificationId, updatedNotification())
@@ -115,12 +122,6 @@ class PlayerNotification(
     init {
         // useMediaSession is set again here so that the custom setter will run
         this.useMediaSession = useMediaSession
-        mediaSession?.isActive = true
-        mediaSession?.setCallback(object: MediaSessionCompat.Callback() {
-            override fun onPlay() { service.startService(playIntent) }
-            override fun onPause() { service.startService(pauseIntent) }
-            override fun onStop() { service.startService(stopIntent) }
-        })
         updateNotificationStyle()
     }
 
@@ -218,7 +219,7 @@ class PlayerNotification(
         showStopAction: Boolean
     ) = playbackStateBuilder
         .setState(playbackState, PLAYBACK_POSITION_UNKNOWN, 1f)
-        .setActions(ACTION_PLAY_PAUSE or
-            if (showStopAction) ACTION_STOP else 0L)
+        .setActions(ACTION_PLAY_PAUSE or ACTION_PLAY or ACTION_PAUSE or
+                    if (showStopAction) ACTION_STOP else 0L)
         .build()
 }
