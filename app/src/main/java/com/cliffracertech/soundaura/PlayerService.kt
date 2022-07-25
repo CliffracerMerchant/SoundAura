@@ -31,11 +31,9 @@ import androidx.media.AudioFocusRequestCompat
 import androidx.media.AudioManagerCompat
 import androidx.media.AudioManagerCompat.AUDIOFOCUS_GAIN
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 /**
@@ -50,7 +48,10 @@ import javax.inject.Inject
  * its current play/pause state in string form, along with actions to toggle
  * the play/pause state and to close the service. The play/pause action will
  * always be visible, but the close action is hidden when the service is bound
- * to any clients.
+ * to any clients. This notification will either appear as a media session if
+ * the value of the datastore preference pointed to by the string value
+ * R.string.pref_play_in_background_key is false, or will appear as a regular
+ * notification if the play in background preference is true.
  *
  * Changes in the playback state can be listened to by calling the static
  * function addPlaybackChangeListener with a PlaybackChangeListener.
@@ -84,13 +85,7 @@ class PlayerService: LifecycleService() {
     @Inject lateinit var messageHandler: MessageHandler
     private lateinit var audioManager: AudioManager
     private lateinit var telephonyManager: TelephonyManager
-    private val notificationManager by lazy {
-        PlayerNotification(
-            context = this,
-            playIntent = playIntent(this),
-            pauseIntent = pauseIntent(this),
-            stopIntent = stopIntent(this))
-    }
+    private lateinit var notificationManager: PlayerNotification
 
     private var boundToActivity = false
         set(value) {
@@ -100,10 +95,11 @@ class PlayerService: LifecycleService() {
         }
 
     private var playInBackground = false
-        set(ignore) {
-            if (field == ignore) return
-            field = ignore
-            if (ignore) {
+        set(value) {
+            field = value
+            notificationManager.useMediaSession = !value
+
+            if (value) {
                 abandonAudioFocus()
                 hasAudioFocus = true
             } else if (isPlaying)
@@ -134,7 +130,7 @@ class PlayerService: LifecycleService() {
      *     values are STATE_PLAYING, STATE_PAUSED, and STATE_STOPPED. Other
      *     values will be ignored.
      * @param clearUnpauseLocks Whether or not to reset all unpause locks.
-     *     This should only be true when the playback state is being set
+     *     This should only be false when the playback state is being set
      *     to STATE_PAUSED as the result of an autoPauseIf call.
      */
     private fun setPlaybackState(state: Int, clearUnpauseLocks: Boolean = true) {
@@ -182,7 +178,7 @@ class PlayerService: LifecycleService() {
         if (newState != STATE_STOPPED)
             playerSet.setIsPlaying(isPlaying)
         else {
-            notificationManager.stopForeground(this)
+            notificationManager.stopForeground()
             stopSelf()
         }
     }
@@ -244,13 +240,22 @@ class PlayerService: LifecycleService() {
             }
         }, null)
 
+        val playInBackgroundKey = booleanPreferencesKey(
+            getString(R.string.pref_play_in_background_key))
+        val playInBackgroundFlow =
+            dataStore.preferenceFlow(playInBackgroundKey, false)
+
+        val playInBackground = runBlocking { playInBackgroundFlow.first() }
+        notificationManager = PlayerNotification(
+            service = this,
+            playIntent = playIntent(this),
+            pauseIntent = pauseIntent(this),
+            stopIntent = stopIntent(this),
+            useMediaSession = !playInBackground)
+
         repeatWhenStarted {
-            val playInBackgroundKey = booleanPreferencesKey(
-                getString(R.string.pref_play_in_background_key))
-            val playInBackgroundFlow =
-                dataStore.preferenceFlow(playInBackgroundKey, false)
             playInBackgroundFlow
-                .onEach { playInBackground = it }
+                .onEach { this@PlayerService.playInBackground = it }
                 .launchIn(this)
 
             val autoPauseDuringCallsKey = booleanPreferencesKey(
@@ -274,7 +279,7 @@ class PlayerService: LifecycleService() {
 
     override fun onDestroy() {
         playbackState = STATE_STOPPED
-        notificationManager.stopForeground(this)
+        notificationManager.stopForeground()
         playerSet.releaseAll()
         super.onDestroy()
     }
@@ -285,7 +290,6 @@ class PlayerService: LifecycleService() {
             targetState?.let(::setPlaybackState)
         }
         notificationManager.startForeground(
-            service = this,
             playbackState = playbackState,
             showStopAction = !boundToActivity)
         return super.onStartCommand(intent, flags, startId)
