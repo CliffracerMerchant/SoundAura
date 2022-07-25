@@ -160,7 +160,7 @@ import androidx.compose.ui.window.DialogProperties
                 val horizontalPaddingModifier = Modifier.padding(horizontal = 16.dp)
 
                 Row(horizontalPaddingModifier) {
-                    Text(title, style = MaterialTheme.typography.body1)
+                    Text(title, style = MaterialTheme.typography.h6)
                     Spacer(Modifier.weight(1f))
                     Text(stringResource(R.string.multi_step_dialog_indicator, currentPage + 1, pages.size),
                          style = MaterialTheme.typography.subtitle1)

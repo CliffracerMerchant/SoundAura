@@ -223,7 +223,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(text = stringResource(R.string.app_name),
                              modifier = Modifier.alignByBaseline(),
-                             style = MaterialTheme.typography.body1)
+                             style = MaterialTheme.typography.h6)
                         Text(text = stringResource(R.string.app_version),
                              modifier = Modifier.alignByBaseline(),
                              style = MaterialTheme.typography.subtitle1)
