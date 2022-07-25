@@ -91,10 +91,11 @@
         Make playback controls appear in a regular notification instead
         of in the media controls section of the status bar</string>
     <string name="play_in_background_explanation_bullet_3">
-        Make playback ignore hardware media buttons (e.g. a headset\'s play/pause button)</string>
+        Make playback ignore hardware media buttons (e.g. a headset\'s
+        play/pause button) unless the app is in the foreground</string>
     <string name="play_in_background_explanation_bullet_4">
         Prevent playback from auto-pausing during calls, unless the \'Auto-pause during
-        calls\' setting is enabled and the read phone state permission is granted.
+        calls\' setting is enabled and the read phone state permission is granted
     </string>
 
     <string name="auto_pause_during_calls_setting_title">Auto-pause during calls</string>

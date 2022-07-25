@@ -266,13 +266,21 @@ class MainActivity : ComponentActivity() {
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
                 boundPlayerService?.toggleIsPlaying()
                 true
-            }
-            KeyEvent.KEYCODE_MEDIA_STOP -> {
-                boundPlayerService?.let {
-                    if (it.isPlaying)
-                        it.toggleIsPlaying()
-                }
-                true
+            } KeyEvent.KEYCODE_MEDIA_PLAY -> {
+                if (boundPlayerService?.isPlaying == false) {
+                    boundPlayerService?.toggleIsPlaying()
+                    true
+                } else false
+            } KeyEvent.KEYCODE_MEDIA_PAUSE -> {
+                if (boundPlayerService?.isPlaying == true) {
+                    boundPlayerService?.toggleIsPlaying()
+                    true
+                } else false
+            } KeyEvent.KEYCODE_MEDIA_STOP -> {
+                if (boundPlayerService?.isPlaying == true) {
+                    boundPlayerService?.toggleIsPlaying()
+                    true
+                } else false
             }
             else -> super.onKeyDown(keyCode, event)
         }
