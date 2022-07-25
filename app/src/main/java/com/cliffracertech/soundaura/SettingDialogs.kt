@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
@@ -35,7 +36,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 
 /**
@@ -193,18 +193,21 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 /** Show a dialog to display all of the open source libraries used
  * in the app, as well as their licenses. */
 @Composable fun OpenSourceLibrariesUsedDialog(onDismissRequest: () -> Unit) =
-    AlertDialog(
+    SoundAuraDialog(
+        windowPadding = PaddingValues(16.dp),
+        title = stringResource(R.string.open_source_licenses),
         onDismissRequest = onDismissRequest,
-        confirmButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text(stringResource(id = R.string.ok))
-            }
-        }, modifier = Modifier.padding(16.dp),
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-        text = { Box(Modifier.fillMaxSize()) { LibrariesContainer() }})
-        // Putting the LibrariesContainer inside the box prevents a
-        // visual bug where the dialog appears at a smaller size at
-        // first, and then changes to its full size.
+        showCancelButton = false,
+    ) {
+        // For some reason the LibrariesContainer prevents the ok button from
+        // being shown if it isn't height constrained. 32 (2 * 16 for the top
+        // and bottom window margins) and 120 (2 * 60 for the title and ok
+        // button) is subtracted from the screen height to figure out the max
+        // container height.
+        val screenHeight = LocalConfiguration.current.screenHeightDp
+        val containerHeight = screenHeight - 32 - 120
+        LibrariesContainer(Modifier.height(containerHeight.dp))
+    }
 
 /** Show a dialog displaying information about the app to the user. */
 @Composable fun AboutAppDialog(
