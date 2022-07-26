@@ -51,9 +51,18 @@ class Player(
     var isPlaying
         get() = currentPlayer?.isPlaying ?: false
         set(value) {
-            if (value == currentPlayer?.isPlaying) return
-            if (value) currentPlayer?.start()
-            else currentPlayer?.pause()
+            try {
+                if (value) currentPlayer?.start()
+                else       currentPlayer?.pause()
+            } catch(e: IllegalStateException) {
+                // An IllegalStateException can be thrown here if the pause is called
+                // immediately after creation when the player is still initializing
+                currentPlayer?.setOnPreparedListener {
+                    if (value) currentPlayer?.start()
+                    else       currentPlayer?.pause()
+                    currentPlayer?.setOnPreparedListener(null)
+                }
+            }
         }
 
     init {
