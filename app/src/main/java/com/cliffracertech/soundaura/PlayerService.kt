@@ -96,6 +96,7 @@ class PlayerService: LifecycleService() {
 
     private var playInBackground = false
         set(value) {
+            if (field == value) return
             field = value
             notificationManager.useMediaSession = !value
 
@@ -108,6 +109,7 @@ class PlayerService: LifecycleService() {
 
     private var hasAudioFocus = false
         set(hasFocus) {
+            if (field == hasFocus) return
             field = hasFocus
             autoPauseIf(!hasFocus, autoPauseAudioFocusLossKey)
         }
@@ -178,6 +180,8 @@ class PlayerService: LifecycleService() {
         if (newState != STATE_STOPPED)
             playerSet.setIsPlaying(isPlaying)
         else {
+            if (!playInBackground && hasAudioFocus)
+                abandonAudioFocus()
             notificationManager.stopForeground()
             stopSelf()
         }
@@ -433,8 +437,8 @@ class PlayerService: LifecycleService() {
             .setAudioAttributes(AudioAttributesCompat.Builder()
                 .setContentType(CONTENT_TYPE_UNKNOWN)
                 .setUsage(USAGE_MEDIA).build())
-            .setOnAudioFocusChangeListener { audioFocus ->
-                hasAudioFocus = audioFocus == AUDIOFOCUS_GAIN
+            .setOnAudioFocusChangeListener { focusChange ->
+                hasAudioFocus = focusChange == AUDIOFOCUS_GAIN
             }.build()
 
     /** Request audio focus, and return whether the request was granted. */
