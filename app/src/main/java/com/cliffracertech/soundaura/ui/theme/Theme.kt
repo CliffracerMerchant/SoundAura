@@ -12,10 +12,10 @@ import androidx.compose.ui.graphics.Color
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
 private val DarkColorPalette = darkColors(
-    primary = DarkThemeGradientStart,
-    primaryVariant = DarkThemeGradientStartVariant,
-    secondary = DarkThemeGradientEnd,
-    secondaryVariant = DarkThemeGradientEndVariant,
+    primary = DarkThemePrimary,
+    primaryVariant = DarkThemePrimaryVariant,
+    secondary = DarkThemeSecondary,
+    secondaryVariant = DarkThemeSecondaryVariant,
     background = DarkBackground,
     surface = DarkSurface,
     onBackground = DarkOnSurface,
@@ -23,10 +23,10 @@ private val DarkColorPalette = darkColors(
     onPrimary = DarkOnPrimary)
 
 private val LightColorPalette = lightColors(
-    primary = LightThemeGradientStart,
-    primaryVariant = LightThemeGradientStartVariant,
-    secondary = LightThemeGradientEnd,
-    secondaryVariant = LightThemeGradientEndVariant,
+    primary = LightThemePrimary,
+    primaryVariant = LightThemePrimaryVariant,
+    secondary = LightThemeSecondary,
+    secondaryVariant = LightThemeSecondaryVariant,
     background = LightBackground,
     surface = LightSurface,
     error = LightError,

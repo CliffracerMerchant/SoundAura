@@ -41,8 +41,8 @@ import com.google.accompanist.insets.statusBarsPadding
 ) = Column(Modifier
     .fillMaxWidth()
     .background(Brush.horizontalGradient(listOf(
-        MaterialTheme.colors.primary,
-        MaterialTheme.colors.secondary)))
+        MaterialTheme.colors.primaryVariant,
+        MaterialTheme.colors.secondaryVariant)))
     .statusBarsPadding()
 ) {
     Row(Modifier.height(56.dp), verticalAlignment = Alignment.CenterVertically) {

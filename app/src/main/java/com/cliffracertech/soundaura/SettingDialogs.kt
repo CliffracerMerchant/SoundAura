@@ -249,7 +249,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
                 val gitHubLink = stringResource(R.string.github_link)
                 TextButton(
                     onClick = { uriHandler.openUri(gitHubLink) },
-                    modifier = Modifier.minTouchTargetSize().weight(1f),
+                    modifier = Modifier.weight(1f),
                     shape = MaterialTheme.shapes.medium.bottomStartShape()
                 ) {
                     Icon(painterResource(R.drawable.github_logo), null,
@@ -264,7 +264,10 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
                     onClick = onDismissRequest,
                     modifier = Modifier.minTouchTargetSize().weight(0.5f),
                     shape = MaterialTheme.shapes.medium.bottomEndShape(),
-                    content = { Text(stringResource(R.string.ok)) })
+                ) {
+                    Text(text = stringResource(R.string.ok),
+                         color = MaterialTheme.colors.primary)
+                }
             }
         }
     }

@@ -145,7 +145,7 @@ import com.google.android.material.math.MathUtils.lerp
  */
 object GradientSliderDefaults {
     /**
-     * Creates a [SliderColors] that represents the different colors used in parts of the
+     * Creates a [GradientSliderColors] that represents the different colors used in parts of the
      * [GradientSlider] in different states.
      *
      * For the name references below the words "active" and "inactive" are used. Active part of

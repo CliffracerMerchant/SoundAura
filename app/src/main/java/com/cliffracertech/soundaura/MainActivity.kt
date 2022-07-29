@@ -237,9 +237,9 @@ class MainActivity : ComponentActivity() {
             val isPlaying by boundPlayerService?.isPlaying.mapToNonNullState(false)
             FloatingActionButton(
                 onClick = { boundPlayerService?.toggleIsPlaying() },
-                backgroundColor = lerp(MaterialTheme.colors.primary,
-                                       MaterialTheme.colors.secondary, 0.5f),
-//                    elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp)
+                backgroundColor = lerp(MaterialTheme.colors.primaryVariant,
+                                       MaterialTheme.colors.secondaryVariant, 0.5f),
+//                elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp)
                 elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
             ) {
                 val description = stringResource(
@@ -258,7 +258,9 @@ class MainActivity : ComponentActivity() {
                 .padding(end = 16.dp, bottom = bottomPadding),
             enter = fadeIn(tween()) + scaleIn(overshootTweenSpec()),
             exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTweenSpec()),
-            content = { AddLocalFilesButton() })
+        ) {
+            AddLocalFilesButton(MaterialTheme.colors.secondaryVariant)
+        }
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?) =

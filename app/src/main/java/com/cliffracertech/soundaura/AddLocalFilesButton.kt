@@ -22,6 +22,7 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -110,13 +111,18 @@ class AddLocalFilesButtonViewModel(
     }
 }
 
-/** Compose a button to add local files with state provided by an
- * instance of AddTrackButtonViewModelAddTrackButtonViewModel. */
-@Composable fun AddLocalFilesButton() {
+/**
+ * Compose a button to add local files with state provided by an
+ * instance of AddTrackButtonViewModelAddTrackButtonViewModel.
+ *
+ * @param backgroundColor The color to use for the button's background.
+ */
+@Composable fun AddLocalFilesButton(backgroundColor: Color) {
     val viewModel: AddLocalFilesButtonViewModel = viewModel()
 
     FloatingActionButton(
         onClick = viewModel::onClick,
+        backgroundColor = backgroundColor,
         elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
     ) {
         Icon(imageVector = Icons.Default.Add,
