@@ -30,8 +30,8 @@ SoundAura is built using:
   then auto-pausing during phone calls will happen automatically due to
   the app losing audio focus. If audio focus is ignored due to 'play in
   background' being turned on, SoundAura requires the read phone state
-  permission to be able to detect when a phone call is ongoing. Auto-
-  pause during calls is toggled on in the app settings if the 'play in
+  permission to be able to detect when a phone call is ongoing. Auto-pause
+  during calls is toggled on in the app settings if the 'play in
   background' setting is turned on.
 - Auto-pause on audio device changes: If SoundAura is playing, and an
   audio device change occurs that results in a system media volume of
