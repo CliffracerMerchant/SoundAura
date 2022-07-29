@@ -33,7 +33,7 @@ SoundAura is built using:
   permission to be able to detect when a phone call is ongoing. Auto-
   pause during calls is toggled on in the app settings if the 'play in
   background' setting is turned on.
-- Auto-pause on audio-device changes: If SoundAura is playing, and an
+- Auto-pause on audio device changes: If SoundAura is playing, and an
   audio device change occurs that results in a system media volume of
   zero (e.g. the user unplugs or disconnects their headphones and the
   device's media volume is zero for its speaker), SoundAura will auto-pause
