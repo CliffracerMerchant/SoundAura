@@ -2,11 +2,7 @@
  * License 2.0. See license.md in the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.runtime.*
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.Lifecycle
@@ -14,7 +10,6 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlin.reflect.KProperty
@@ -74,7 +69,7 @@ suspend fun <T> DataStore<Preferences>.awaitPreferenceState(
  * DataStore preference pointed to by the parameter key, with an initial value
  * of parameter initialValue. The parameter key is a Preferences.Key<Int>
  * instance whose value indicates the ordinal of the current enum value. */
-inline fun <reified T: Enum<*>> DataStore<Preferences>.enumPreferenceState(
+inline fun <reified T: Enum<T>> DataStore<Preferences>.enumPreferenceState(
     key: Preferences.Key<Int>,
     scope: CoroutineScope,
     initialValue: T = enumValues<T>()[0],
@@ -94,7 +89,7 @@ inline fun <reified T: Enum<*>> DataStore<Preferences>.enumPreferenceState(
  * is read from the receiver DataStore object. The provided default value will
  * only be used if the receiver DataStore does not have a value associated with
  * the provided key. */
-suspend inline fun <reified T: Enum<*>> DataStore<Preferences>.awaitEnumPreferenceState(
+suspend inline fun <reified T: Enum<T>> DataStore<Preferences>.awaitEnumPreferenceState(
     key: Preferences.Key<Int>,
     scope: CoroutineScope,
     defaultValue: T = enumValues<T>()[0],
@@ -118,7 +113,7 @@ fun <T> DataStore<Preferences>.preferenceFlow(
  * preference pointed to by @param key, with a default value of @param
  * defaultValue. @param key should be an Preferences.Key<Int> instance whose
  * value indicates the ordinal of the current enum value. */
-inline fun <reified T: Enum<*>> DataStore<Preferences>.enumPreferenceFlow(
+inline fun <reified T: Enum<T>> DataStore<Preferences>.enumPreferenceFlow(
     key: Preferences.Key<Int>,
     defaultValue: T = enumValues<T>()[0],
 ) = data.map { prefs ->

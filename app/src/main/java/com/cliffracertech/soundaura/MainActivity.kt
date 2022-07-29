@@ -38,7 +38,6 @@ import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.scopes.ActivityRetainedScoped
-import kotlinx.coroutines.flow.collect
 import javax.inject.Inject
 
 @ActivityRetainedScoped
@@ -238,9 +237,9 @@ class MainActivity : ComponentActivity() {
             val isPlaying by boundPlayerService?.isPlaying.mapToNonNullState(false)
             FloatingActionButton(
                 onClick = { boundPlayerService?.toggleIsPlaying() },
-                backgroundColor = lerp(MaterialTheme.colors.primary,
-                                       MaterialTheme.colors.secondary, 0.5f),
-//                    elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp)
+                backgroundColor = lerp(MaterialTheme.colors.primaryVariant,
+                                       MaterialTheme.colors.secondaryVariant, 0.5f),
+//                elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp)
                 elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
             ) {
                 val description = stringResource(
@@ -259,7 +258,9 @@ class MainActivity : ComponentActivity() {
                 .padding(end = 16.dp, bottom = bottomPadding),
             enter = fadeIn(tween()) + scaleIn(overshootTweenSpec()),
             exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTweenSpec()),
-            content = { AddLocalFilesButton() })
+        ) {
+            AddLocalFilesButton(MaterialTheme.colors.secondaryVariant)
+        }
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?) =
@@ -267,13 +268,21 @@ class MainActivity : ComponentActivity() {
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
                 boundPlayerService?.toggleIsPlaying()
                 true
-            }
-            KeyEvent.KEYCODE_MEDIA_STOP -> {
-                boundPlayerService?.let {
-                    if (it.isPlaying)
-                        it.toggleIsPlaying()
-                }
-                true
+            } KeyEvent.KEYCODE_MEDIA_PLAY -> {
+                if (boundPlayerService?.isPlaying == false) {
+                    boundPlayerService?.toggleIsPlaying()
+                    true
+                } else false
+            } KeyEvent.KEYCODE_MEDIA_PAUSE -> {
+                if (boundPlayerService?.isPlaying == true) {
+                    boundPlayerService?.toggleIsPlaying()
+                    true
+                } else false
+            } KeyEvent.KEYCODE_MEDIA_STOP -> {
+                if (boundPlayerService?.isPlaying == true) {
+                    boundPlayerService?.toggleIsPlaying()
+                    true
+                } else false
             }
             else -> super.onKeyDown(keyCode, event)
         }

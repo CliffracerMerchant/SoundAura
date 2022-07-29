@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -73,7 +74,7 @@ fun TrackView(
 
         Box(Modifier.weight(1f)) {
             // 0.5dp start padding is required to make the text align with the volume icon
-            Text(text = track.name, style = MaterialTheme.typography.h6,
+            Text(text = track.name, style = MaterialTheme.typography.h5,
                  maxLines = 1, overflow = TextOverflow.Ellipsis,
                  modifier = Modifier.padding(start = (0.5).dp, top = 6.dp)
                                     .paddingFromBaseline(bottom = 48.dp))
@@ -93,7 +94,7 @@ fun TrackView(
             itemName = track.name,
             onRenameRequest = { id -> callback.onRenameRequest(track.uriString, id) },
             onDeleteRequest = { callback.onDeleteRequest(track.uriString) },
-            moreOptionsButtonTint = MaterialTheme.colors.secondary)
+            moreOptionsButtonTint = MaterialTheme.colors.secondaryVariant)
     }
 }
 
@@ -129,7 +130,7 @@ fun TrackView(
         added = isAdded,
         contentDescription = contentDescription,
         backgroundColor = backgroundColor,
-        tint = MaterialTheme.colors.primary,
+        tint = MaterialTheme.colors.primaryVariant,
         onClick = onAddRemoveClick)
 }
 
@@ -174,7 +175,7 @@ fun TrackView(
             Icon(imageVector = Icons.Default.VolumeUp,
                  contentDescription = null,
                  modifier = Modifier.size(20.dp),
-                 tint = MaterialTheme.colors.primary)
+                 tint = MaterialTheme.colors.primaryVariant)
             GradientSlider(
                 value = currentVolume,
                 onValueChange = {
@@ -182,7 +183,14 @@ fun TrackView(
                     onVolumeChange(it)
                 }, onValueChangeFinished = {
                     onVolumeChangeFinished?.invoke(currentVolume)
-                })
+                }, colors = GradientSliderDefaults.colors(
+                    thumbColor = MaterialTheme.colors.primaryVariant,
+                    thumbColorEnd = MaterialTheme.colors.secondaryVariant,
+                    activeTrackBrush = Brush.horizontalGradient(listOf(
+                        MaterialTheme.colors.primaryVariant,
+                        MaterialTheme.colors.secondaryVariant))
+                ))
+
         }
     }
 }
@@ -244,7 +252,7 @@ fun TrackView(
                 showingDeleteDialog = true
                 showingOptionsMenu = false
             }) {
-                Text(stringResource(R.string.remove))
+                Text(stringResource(R.string.remove), style = MaterialTheme.typography.button)
             }
         }
 

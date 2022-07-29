@@ -41,8 +41,8 @@ import com.google.accompanist.insets.statusBarsPadding
 ) = Column(Modifier
     .fillMaxWidth()
     .background(Brush.horizontalGradient(listOf(
-        MaterialTheme.colors.primary,
-        MaterialTheme.colors.secondary)))
+        MaterialTheme.colors.primaryVariant,
+        MaterialTheme.colors.secondaryVariant)))
     .statusBarsPadding()
 ) {
     Row(Modifier.height(56.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -109,12 +109,9 @@ import com.google.accompanist.insets.statusBarsPadding
     AnimatedContent(
         targetState = showBackButtonForNavigation || searchQuery != null,
         contentAlignment = Alignment.Center,
-        transitionSpec = {
-            ContentTransform(
-                targetContentEnter = slideInHorizontally { -it },
-                initialContentExit = slideOutHorizontally { -it },
-                sizeTransform = SizeTransform(clip = false))
-        }
+        transitionSpec = { slideInHorizontally { -it } with
+                           slideOutHorizontally { -it } using
+                           SizeTransform(clip = false) }
     ) { backButtonIsVisible ->
         if (!backButtonIsVisible)
             Spacer(Modifier.width(24.dp))
@@ -144,7 +141,7 @@ import com.google.accompanist.insets.statusBarsPadding
             if (searchQuery != null)
                 lastSearchQuery = searchQuery
         } else Crossfade(title) { // This inner crossfade is for when the title changes.
-            Text(it, style = MaterialTheme.typography.h6, maxLines = 1)
+            Text(it, style = MaterialTheme.typography.h5, maxLines = 1)
         }
     }
 

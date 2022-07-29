@@ -3,7 +3,6 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
@@ -24,10 +23,15 @@ import androidx.compose.ui.window.DialogProperties
 /**
  * Compose an alert dialog.
  *
+ * @param windowPadding The PaddingValues instance to use for the dialog's window.
+ *     If null, the platform default dialog window padding will be used instead.
+ * @param horizontalPadding The horizontal padding for the content. The value
+ *     is also used as the horizontal padding for the default title layout.
  * @param title The string representing the dialog's title. Can be null, in
  *     which case the title will not be displayed.
  * @param titleLayout The layout that will be used for the dialog's title.
  *     Will default to a composable Text using the value of the title parameter.
+ *     Will not be displayed if title == null
  * @param text The string representing the dialog's message. Will only be used
  *     if the content parameter is not overridden, in which case it will default
  *     to a composable Text containing the value of this parameter.
@@ -45,10 +49,18 @@ import androidx.compose.ui.window.DialogProperties
  *     described by the text parameter.
  */
 @Composable fun SoundAuraDialog(
+    windowPadding: PaddingValues? = null,
+    horizontalPadding: Dp = 16.dp,
     title: String? = null,
     titleLayout: @Composable (String) -> Unit = @Composable {
-        val textStyle = MaterialTheme.typography.body1
-        ProvideTextStyle(textStyle) { Text(it) }
+        Box(Modifier.padding(
+            top = 16.dp,
+            start = horizontalPadding,
+            end = horizontalPadding)
+        ) {
+            val textStyle = MaterialTheme.typography.h6
+            ProvideTextStyle(textStyle) { Text(it) }
+        }
     }, text: String? = null,
     titleContentSpacing: Dp = 12.dp,
     contentButtonSpacing: Dp = 12.dp,
@@ -63,14 +75,19 @@ import androidx.compose.ui.window.DialogProperties
             ProvideTextStyle(textStyle) { Text(text ?: "") }
         }
     }
-) = Dialog(onDismissRequest) {
-    Surface(shape = MaterialTheme.shapes.medium) {
-        Column(Modifier.padding(top = 16.dp)) {
-            Column(Modifier.padding(horizontal = 16.dp)) {
-                if (title != null) {
-                    titleLayout(title)
-                    Spacer(Modifier.height(titleContentSpacing))
-                }
+) = Dialog(
+    onDismissRequest = onDismissRequest,
+    properties = DialogProperties(usePlatformDefaultWidth = windowPadding == null)
+) {
+    val surfaceModifier = if (windowPadding == null) Modifier
+                          else Modifier.padding(windowPadding)
+    Surface(surfaceModifier, MaterialTheme.shapes.medium) {
+        Column {
+            if (title != null) {
+                titleLayout(title)
+                Spacer(Modifier.height(titleContentSpacing))
+            }
+            Box(Modifier.padding(horizontal = horizontalPadding)) {
                 content()
             }
 
@@ -143,7 +160,7 @@ import androidx.compose.ui.window.DialogProperties
                 val horizontalPaddingModifier = Modifier.padding(horizontal = 16.dp)
 
                 Row(horizontalPaddingModifier) {
-                    Text(title, style = MaterialTheme.typography.body1)
+                    Text(title, style = MaterialTheme.typography.h6)
                     Spacer(Modifier.weight(1f))
                     Text(stringResource(R.string.multi_step_dialog_indicator, currentPage + 1, pages.size),
                          style = MaterialTheme.typography.subtitle1)
@@ -152,10 +169,9 @@ import androidx.compose.ui.window.DialogProperties
 
                 val pageModifier = Modifier.background(MaterialTheme.colors.surface)
                                            .then(horizontalPaddingModifier)
-                CompositionLocalProvider(LocalTextStyle provides MaterialTheme.typography.subtitle1) {
+                ProvideTextStyle(MaterialTheme.typography.subtitle1) {
                     SlideAnimatedContent(
                         targetState = currentPage,
-                        modifier = Modifier.animateContentSize(),
                         leftToRight = currentPage >= previousPage
                     ) { pages[it](pageModifier) }
                 }

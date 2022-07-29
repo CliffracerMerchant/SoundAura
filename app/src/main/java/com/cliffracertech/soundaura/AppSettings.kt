@@ -6,10 +6,8 @@ package com.cliffracertech.soundaura
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.compose.animation.*
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
@@ -56,12 +54,22 @@ import androidx.lifecycle.viewmodel.compose.viewModel
         val viewModel: SettingsViewModel = viewModel()
 
         Setting(
-            title = stringResource(R.string.ignore_audio_focus_setting_title),
-            subtitle = stringResource(R.string.ignore_audio_focus_setting_subtitle),
-            onClick = viewModel::onIgnoreAudioFocusClick
+            title = stringResource(R.string.play_in_background_setting_title),
+            subtitle = stringResource(R.string.play_in_background_setting_description),
+            onClick = viewModel::onPlayInBackgroundTitleClick
         ) {
-            Switch(checked = viewModel.ignoreAudioFocus,
-                   onCheckedChange = { viewModel.onIgnoreAudioFocusClick() })
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Vertical Divider
+                Box(Modifier.width((1.5).dp).height(40.dp)
+                    .background(MaterialTheme.colors.onSurface.copy(alpha = 0.12f)))
+
+                Spacer(Modifier.width(6.dp))
+                Switch(checked = viewModel.playInBackground,
+                    onCheckedChange = { viewModel.onPlayInBackgroundSwitchClick() })
+            }
+            if (viewModel.showingPlayInBackgroundExplanation)
+                PlayInBackgroundExplanationDialog(
+                    viewModel::onPlayInBackgroundExplanationDismiss)
         }
 
         AnimatedVisibility(

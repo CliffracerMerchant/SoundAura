@@ -16,7 +16,6 @@ import android.os.Build
 import android.support.v4.media.session.PlaybackStateCompat.*
 import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,11 +31,9 @@ import androidx.media.AudioFocusRequestCompat
 import androidx.media.AudioManagerCompat
 import androidx.media.AudioManagerCompat.AUDIOFOCUS_GAIN
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 /**
@@ -51,13 +48,16 @@ import javax.inject.Inject
  * its current play/pause state in string form, along with actions to toggle
  * the play/pause state and to close the service. The play/pause action will
  * always be visible, but the close action is hidden when the service is bound
- * to any clients.
+ * to any clients. This notification will either appear as a media session if
+ * the value of the datastore preference pointed to by the string value
+ * R.string.pref_play_in_background_key is false, or will appear as a regular
+ * notification if the play in background preference is true.
  *
  * Changes in the playback state can be listened to by calling the static
  * function addPlaybackChangeListener with a PlaybackChangeListener.
  * PlaybackChangeListener is a functional interface whose single abstract
  * method is called whenever the PlayerService's playback state changes and
- * takes the new PlaybackState value as a parameter.
+ * takes the new PlaybackStateCompat value as a parameter.
  *
  * If an audio device change occurs when isPlaying is true and the new media
  * volume after the device change is zero, PlayerService will automatically
@@ -65,7 +65,9 @@ import javax.inject.Inject
  * media volume back up to above zero and isPlaying has not been called
  * manually since PlayerService was auto-paused, it will also automatically
  * unpause itself. This auto-pause also works for ongoing calls if the
- * READ_PHONE_STATE permission has been granted to the app.
+ * READ_PHONE_STATE permission has been granted to the app, and the boolean
+ * value in the app's datastore pointed to by the string value
+ * R.string.pref_auto_pause_during_calls_key is true.
  *
  * To ensure that the volume for already playing tracks is changed without
  * perceptible lag, PlayerService will not respond to track volume changes made
@@ -83,13 +85,7 @@ class PlayerService: LifecycleService() {
     @Inject lateinit var messageHandler: MessageHandler
     private lateinit var audioManager: AudioManager
     private lateinit var telephonyManager: TelephonyManager
-    private val notificationManager by lazy {
-        PlayerNotification(
-            context = this,
-            playIntent = playIntent(this),
-            pauseIntent = pauseIntent(this),
-            stopIntent = stopIntent(this))
-    }
+    private lateinit var notificationManager: PlayerNotification
 
     private var boundToActivity = false
         set(value) {
@@ -98,11 +94,13 @@ class PlayerService: LifecycleService() {
             updateNotification()
         }
 
-    private var ignoreAudioFocus = false
-        set(ignore) {
-            if (field == ignore) return
-            field = ignore
-            if (ignore) {
+    private var playInBackground = false
+        set(value) {
+            if (field == value) return
+            field = value
+            notificationManager.useMediaSession = !value
+
+            if (value) {
                 abandonAudioFocus()
                 hasAudioFocus = true
             } else if (isPlaying)
@@ -111,6 +109,7 @@ class PlayerService: LifecycleService() {
 
     private var hasAudioFocus = false
         set(hasFocus) {
+            if (field == hasFocus) return
             field = hasFocus
             autoPauseIf(!hasFocus, autoPauseAudioFocusLossKey)
         }
@@ -129,9 +128,11 @@ class PlayerService: LifecycleService() {
      * state should not be altered outside of setPlaybackState to ensure
      * that mismatched state does not occur.
      *
-     * @param state The desired PlaybackState.
+     * @param state The desired PlaybackStateCompat value. The supported
+     *     values are STATE_PLAYING, STATE_PAUSED, and STATE_STOPPED. Other
+     *     values will be ignored.
      * @param clearUnpauseLocks Whether or not to reset all unpause locks.
-     *     This should only be true when the playback state is being set
+     *     This should only be false when the playback state is being set
      *     to STATE_PAUSED as the result of an autoPauseIf call.
      */
     private fun setPlaybackState(state: Int, clearUnpauseLocks: Boolean = true) {
@@ -179,7 +180,9 @@ class PlayerService: LifecycleService() {
         if (newState != STATE_STOPPED)
             playerSet.setIsPlaying(isPlaying)
         else {
-            notificationManager.stopForeground(this)
+            if (!playInBackground && hasAudioFocus)
+                abandonAudioFocus()
+            notificationManager.stopForeground()
             stopSelf()
         }
     }
@@ -241,13 +244,22 @@ class PlayerService: LifecycleService() {
             }
         }, null)
 
+        val playInBackgroundKey = booleanPreferencesKey(
+            getString(R.string.pref_play_in_background_key))
+        val playInBackgroundFlow =
+            dataStore.preferenceFlow(playInBackgroundKey, false)
+
+        val playInBackground = runBlocking { playInBackgroundFlow.first() }
+        notificationManager = PlayerNotification(
+            service = this,
+            playIntent = playIntent(this),
+            pauseIntent = pauseIntent(this),
+            stopIntent = stopIntent(this),
+            useMediaSession = !playInBackground)
+
         repeatWhenStarted {
-            val ignoreAudioFocusKey = booleanPreferencesKey(
-                getString(R.string.pref_ignore_audio_focus_key))
-            val ignoreAudioFocusFlow =
-                dataStore.preferenceFlow(ignoreAudioFocusKey, false)
-            ignoreAudioFocusFlow
-                .onEach { ignoreAudioFocus = it }
+            playInBackgroundFlow
+                .onEach { this@PlayerService.playInBackground = it }
                 .launchIn(this)
 
             val autoPauseDuringCallsKey = booleanPreferencesKey(
@@ -257,8 +269,8 @@ class PlayerService: LifecycleService() {
             // ignoreAudioFocus is false, the phone will be paused anyways
             // due to the app losing audio focus during calls.
             dataStore.preferenceFlow(autoPauseDuringCallsKey, false)
-                .combine(ignoreAudioFocusFlow) { pauseDuringCalls, ignoreAudioFocus ->
-                    pauseDuringCalls && ignoreAudioFocus
+                .combine(playInBackgroundFlow) { pauseDuringCalls, playInBackground ->
+                    pauseDuringCalls && playInBackground
                 }.distinctUntilChanged()
                 .onEach(::setAutoPauseDuringCallEnabled)
                 .launchIn(this)
@@ -271,7 +283,7 @@ class PlayerService: LifecycleService() {
 
     override fun onDestroy() {
         playbackState = STATE_STOPPED
-        notificationManager.stopForeground(this)
+        notificationManager.stopForeground()
         playerSet.releaseAll()
         super.onDestroy()
     }
@@ -282,7 +294,6 @@ class PlayerService: LifecycleService() {
             targetState?.let(::setPlaybackState)
         }
         notificationManager.startForeground(
-            service = this,
             playbackState = playbackState,
             showStopAction = !boundToActivity)
         return super.onStartCommand(intent, flags, startId)
@@ -326,7 +337,7 @@ class PlayerService: LifecycleService() {
         // the activity will display messages posted to an injected MessageHandler
         // instance through, e.g., a snack bar. If the service is not bound to an
         // activity, then the message will be displayed via a Toast instead.
-        val stringResId = R.string.player_no_sounds_warning_message
+        val stringResId = R.string.player_no_tracks_warning_message
         if (boundToActivity)
             messageHandler.postMessage(StringResource(stringResId))
         else Toast.makeText(this, stringResId, Toast.LENGTH_SHORT).show()
@@ -426,8 +437,8 @@ class PlayerService: LifecycleService() {
             .setAudioAttributes(AudioAttributesCompat.Builder()
                 .setContentType(CONTENT_TYPE_UNKNOWN)
                 .setUsage(USAGE_MEDIA).build())
-            .setOnAudioFocusChangeListener { audioFocus ->
-                hasAudioFocus = audioFocus == AUDIOFOCUS_GAIN
+            .setOnAudioFocusChangeListener { focusChange ->
+                hasAudioFocus = focusChange == AUDIOFOCUS_GAIN
             }.build()
 
     /** Request audio focus, and return whether the request was granted. */

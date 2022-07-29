@@ -12,13 +12,7 @@ import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.CornerBasedShape
-import androidx.compose.foundation.shape.CornerSize
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.LocalContentColor
-import androidx.compose.material.MaterialTheme
+import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.RadioButtonChecked
@@ -147,7 +141,7 @@ fun Modifier.minTouchTargetSize() =
  * @param targetState The key that will cause a change in the SlideAnimatedContent's
  *     content when its value changes.
  * @param modifier The modifier that will be applied to the content.
- * @param leftToRight Whether the existing content should be slid off screen
+ * @param leftToRight Whether the existing content should slide off screen
  *     to the left with the new content sliding in from the right, or the
  *     other way around.
  * @param content The composable that itself composes the contents depending
@@ -168,35 +162,25 @@ fun Modifier.minTouchTargetSize() =
     AnimatedContent(targetState, modifier, { transition }, content = content)
 }
 
-private val pointCorner = CornerSize(0.dp)
-
-/** Return a shape that matches just the bottomStart corner
- * of the receiver shape, with otherwise sharp corners.*/
-@Composable fun CornerBasedShape.bottomStartShape() =
-    RoundedCornerShape(
-        topStart = pointCorner,
-        topEnd = pointCorner,
-        bottomEnd = pointCorner,
-        bottomStart = bottomStart)
-
-/** Return a shape that matches just the bottomEnd corner
- * of the receiver shape, with otherwise sharp corners.*/
-@Composable fun CornerBasedShape.bottomEndShape() =
-    RoundedCornerShape(
-        topStart = pointCorner,
-        topEnd = pointCorner,
-        bottomStart = pointCorner,
-        bottomEnd = bottomEnd)
-
-/** Return a shape that matches the bottom edge
- * of the receiver shape, with sharp top corners.*/
-@Composable fun CornerBasedShape.bottomShape() =
-    RoundedCornerShape(
-        topStart = pointCorner,
-        topEnd = pointCorner,
-        bottomStart = bottomStart,
-        bottomEnd = bottomEnd)
-
 @Composable fun VerticalDivider() =
-    Box(Modifier.fillMaxHeight().width(1.dp)
+    Box(Modifier.fillMaxHeight().width((1.5).dp)
         .background(MaterialTheme.colors.onSurface.copy(alpha = 0.12f)))
+
+/**
+ * Compose a bulleted list of strings.
+ *
+ * @param items The list of strings to display in bulleted form.
+ * @param modifier The modifier to use for the entire list.
+ */
+@Composable fun BulletedList(
+    items: List<String>,
+    modifier: Modifier = Modifier,
+) = Column(modifier, Arrangement.spacedBy(8.dp)) {
+    for (item in items) {
+        Row {
+            Text("\u2022")
+            Spacer(Modifier.width(12.dp))
+            Text(item)
+        }
+    }
+}

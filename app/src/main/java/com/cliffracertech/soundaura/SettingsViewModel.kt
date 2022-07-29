@@ -52,8 +52,8 @@ class SettingsViewModel(
     private val scope = coroutineScope ?: viewModelScope
     private val appThemeKey = intPreferencesKey(
         context.getString(R.string.pref_app_theme_key))
-    private val ignoreAudioFocusKey = booleanPreferencesKey(
-        context.getString(R.string.pref_ignore_audio_focus_key))
+      private val playInBackgroundKey = booleanPreferencesKey(
+        context.getString(R.string.pref_play_in_background_key))
     private val autoPauseDuringCallKey = booleanPreferencesKey(
         context.getString(R.string.pref_auto_pause_during_calls_key))
 
@@ -70,21 +70,31 @@ class SettingsViewModel(
         }
     }
 
-    val ignoreAudioFocus by dataStore.preferenceState(
-        key = ignoreAudioFocusKey,
+    val playInBackground by dataStore.preferenceState(
+        key = playInBackgroundKey,
         initialValue = false,
         scope = scope)
 
-    fun onIgnoreAudioFocusClick() {
+    var showingPlayInBackgroundExplanation by mutableStateOf(false)
+        private set
+
+    fun onPlayInBackgroundExplanationDismiss() {
+        showingPlayInBackgroundExplanation = false
+    }
+
+    fun onPlayInBackgroundTitleClick() {
+        showingPlayInBackgroundExplanation = true
+    }
+
+    fun onPlayInBackgroundSwitchClick() {
         scope.launch { dataStore.edit {
-            val newIgnoreAudioFocus = !ignoreAudioFocus
-            if (!newIgnoreAudioFocus)
-                it[autoPauseDuringCallKey] = false
-            it[ignoreAudioFocusKey] = newIgnoreAudioFocus
+            val newValue = !playInBackground
+            if (!newValue) it[autoPauseDuringCallKey] = false
+            it[playInBackgroundKey] = newValue
         }}
     }
 
-    val autoPauseDuringCallSettingVisible by derivedStateOf { ignoreAudioFocus }
+    val autoPauseDuringCallSettingVisible by derivedStateOf { playInBackground }
 
     // This value should always be up to date due to granting or revoking
     // permissions outside of the app causing an app restart. If the user
@@ -111,7 +121,8 @@ class SettingsViewModel(
         private set
 
     fun onAutoPauseDuringCallClick() {
-        if (!ignoreAudioFocus) return
+        if (!playInBackground)
+            return
         if (!autoPauseDuringCall && !hasReadPhoneStatePermission)
             showingPhoneStatePermissionDialog = true
         else scope.launch {
