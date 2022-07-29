@@ -11,8 +11,8 @@
     <string name="player_notification_channel_name">Player controls</string>
     <string name="player_notification_channel_description">
         A notification with controls for SoundAura\'s background audio service.</string>
-    <string name="player_no_tracks_warning_message">There are no active tracks to play.
-        Tap the add button next to a track\'s name first.</string>
+    <string name="player_no_tracks_warning_message">
+        There are no active tracks to play. Tap a track\'s add button first.</string>
 
     <string name="tile_inactive_description">Play SoundAura audio</string>
     <string name="tile_active_description">Stop SoundAura audio</string>
