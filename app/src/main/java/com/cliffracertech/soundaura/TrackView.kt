@@ -5,6 +5,9 @@ package com.cliffracertech.soundaura
 
 import androidx.annotation.FloatRange
 import androidx.compose.animation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -23,6 +26,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
+import kotlin.math.roundToInt
 
 /**
  * A pseudo-interface that contains callbacks for TrackView interactions. The
@@ -48,13 +52,14 @@ class TrackViewCallback(
  * more options button for the provided Track Instance. If the track's hasError
  * field is true, then an error icon will be displayed instead of the add/remove
  * button, an error message will be displayed in place of the volume slider, and
- * the more options menu button will be replaced by a delete icon.
+ * the more options menu button will be replaced by a delete icon. The more
+ * options button will also be replaced by a numerical display of the track's
+ * volume when the volume slider is being dragged.
  *
  * @param track The Track instance that is being represented.
  * @param callback The TrackViewCallback that describes how to respond to user interactions.
  */
-@Composable
-fun TrackView(
+@Composable fun TrackView(
     track: Track,
     callback: TrackViewCallback,
     modifier: Modifier = Modifier
@@ -72,6 +77,14 @@ fun TrackView(
                 callback.onAddRemoveButtonClick(track.uriString)
             })
 
+        val volumeSliderInteractionSource = remember { MutableInteractionSource() }
+        var volumeSliderValue by remember(track.volume) { mutableStateOf(track.volume) }
+        val volumeSliderIsBeingPressed by volumeSliderInteractionSource.collectIsPressedAsState()
+        val volumeSliderIsBeingDragged by volumeSliderInteractionSource.collectIsDraggedAsState()
+        val volumeIsChanging by derivedStateOf {
+            volumeSliderIsBeingPressed || volumeSliderIsBeingDragged
+        }
+
         Box(Modifier.weight(1f)) {
             // 0.5dp start padding is required to make the text align with the volume icon
             Text(text = track.name, style = MaterialTheme.typography.h5,
@@ -79,22 +92,28 @@ fun TrackView(
                  modifier = Modifier.padding(start = (0.5).dp, top = 6.dp)
                                     .paddingFromBaseline(bottom = 48.dp))
             VolumeSliderOrErrorMessage(
-                volume = track.volume,
+                volume = volumeSliderValue,
                 onVolumeChange = { volume ->
+                    volumeSliderValue = volume
                     callback.onVolumeChange(track.uriString, volume)
-                }, onVolumeChangeFinished = { volume ->
-                    callback.onVolumeChangeFinished(track.uriString, volume)
+                }, onVolumeChangeFinished = {
+                    callback.onVolumeChangeFinished(track.uriString, volumeSliderValue)
                 }, modifier = Modifier.align(Alignment.BottomStart),
+                sliderInteractionSource = volumeSliderInteractionSource,
                 errorMessage = if (!track.hasError) null else
                     stringResource(R.string.file_error_message))
         }
 
-        MoreOptionsOrDeleteButton(
-            showAsDelete = track.hasError,
-            itemName = track.name,
-            onRenameRequest = { id -> callback.onRenameRequest(track.uriString, id) },
+        TrackViewEndContentImpl(
+            content = when {
+                track.hasError ->   TrackViewEndContent.DeleteButton
+                volumeIsChanging -> TrackViewEndContent.VolumeDisplay
+                else ->             TrackViewEndContent.MoreOptionsButton
+            }, itemName = track.name,
+            onRenameRequest = { callback.onRenameRequest(track.uriString, it) },
             onDeleteRequest = { callback.onDeleteRequest(track.uriString) },
-            moreOptionsButtonTint = MaterialTheme.colors.secondaryVariant)
+            volume = volumeSliderValue,
+            tint = MaterialTheme.colors.secondaryVariant)
     }
 }
 
@@ -140,8 +159,11 @@ fun TrackView(
  *
  * @param volume The current volume level, in the range of 0.0f to 1.0f.
  * @param onVolumeChange The callback that will be invoked as the slider
- *      is being dragged.
+ *     is being dragged.
  * @param modifier The modifier for the slider/error message.
+ * @param sliderInteractionSource The MutableInteractionSource that will
+ *     be used for the volume slider. If not provided, will default to a
+ *     remembered new instance of MutableInteractionSource.
  * @param errorMessage The error message that will be shown
  *     if not null instead of the volume slider.
  * @param onVolumeChangeFinished The callback that will be invoked
@@ -152,8 +174,10 @@ fun TrackView(
     volume: Float,
     onVolumeChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
+    sliderInteractionSource: MutableInteractionSource =
+        remember { MutableInteractionSource() },
     errorMessage: String? = null,
-    onVolumeChangeFinished: ((Float) -> Unit)? = null,
+    onVolumeChangeFinished: (() -> Unit)? = null,
 ) = AnimatedContent(
     targetState = errorMessage != null,
     modifier = modifier,
@@ -170,20 +194,17 @@ fun TrackView(
              modifier = Modifier.padding(start = (0.5).dp)
                                 .paddingFromBaseline(bottom = 18.dp))
     } else {
-        var currentVolume by remember(volume) { mutableStateOf(volume) }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(imageVector = Icons.Default.VolumeUp,
                  contentDescription = null,
                  modifier = Modifier.size(20.dp),
                  tint = MaterialTheme.colors.primaryVariant)
             GradientSlider(
-                value = currentVolume,
-                onValueChange = {
-                    currentVolume = it
-                    onVolumeChange(it)
-                }, onValueChangeFinished = {
-                    onVolumeChangeFinished?.invoke(currentVolume)
-                }, colors = GradientSliderDefaults.colors(
+                value = volume,
+                onValueChange = onVolumeChange,
+                onValueChangeFinished = { onVolumeChangeFinished?.invoke() },
+                interactionSource = sliderInteractionSource,
+                colors = GradientSliderDefaults.colors(
                     thumbColor = MaterialTheme.colors.primaryVariant,
                     thumbColorEnd = MaterialTheme.colors.secondaryVariant,
                     activeTrackBrush = Brush.horizontalGradient(listOf(
@@ -195,15 +216,27 @@ fun TrackView(
     }
 }
 
+/** An enum detailing the possible content for the end of a TrackView's layout. */
+enum class TrackViewEndContent {
+    /** The TrackView will display a more options
+     * button that opens a popup menu when clicked. */
+    MoreOptionsButton,
+    /** The TrackView will display a delete button that calls
+     * the TrackView's callback's onDeleteRequest when clicked. */
+    DeleteButton,
+    /** The TrackView will display the track's volume
+     * as an integer string in the range of 0 - 100. */
+    VolumeDisplay
+}
+
 /**
- * Compose either a more options button or a delete button for an item
- * in a list. When the more options button is clicked an options menu
- * for the item is shown that in turn displays rename and delete options.
- * The user tapping one of these options will open an appropriate dialog.
+ * Compose the end content for a TrackView. This content will change
+ * according to the value of the parameter content to match one of
+ * the possible values for the TrackViewEndContent enum.
  *
- * @param showAsDelete Whether the delete button will show instead of
- *     the more options button. showAsDelete should be true when there
- *     is a problem with the item that prevents renaming.
+ * @param content The value of TrackViewEndContent that describes what
+ *     will be displayed. The visible content will be crossfaded between
+ *     when this value changes.
  * @param itemName The name of the item that is being interacted with.
  * @param onRenameRequest The callback that will be invoked when the
  *     user requests through the rename dialog that they wish to change
@@ -211,29 +244,26 @@ fun TrackView(
  * @param onDeleteRequest The callback that will be invoked when the user
  *     requests through the delete dialog that they wish to delete the
  *     item, or when showAsDelete is true and the button is clicked.
- * @param moreOptionsButtonTint The tint that will be used for the more
- *     options button. The delete button will use the value of the local
- *     theme's MaterialTheme.colors.error value instead.
+ * @param tint The tint that will be used for the more options button
+ *     and the volume display. The delete button will use the value
+ *     of the local theme's MaterialTheme.colors.error value instead.
  */
-@Composable fun MoreOptionsOrDeleteButton(
-    showAsDelete: Boolean,
+@Composable fun TrackViewEndContentImpl(
+    content: TrackViewEndContent,
     itemName: String,
     onRenameRequest: (String) -> Unit,
     onDeleteRequest: () -> Unit,
-    moreOptionsButtonTint: Color = LocalContentColor.current,
-) = AnimatedContent(showAsDelete) {
-    if (it) IconButton(onDeleteRequest) {
-        Icon(imageVector = Icons.Default.Delete,
-             contentDescription = stringResource(
-                 R.string.remove_item_description, itemName),
-             tint = MaterialTheme.colors.error)
-    } else {
+    @FloatRange(from=0.0, to=1.0)
+    volume: Float,
+    tint: Color = LocalContentColor.current,
+) = Crossfade(content) { when(it) {
+    TrackViewEndContent.MoreOptionsButton -> {
         var showingOptionsMenu by rememberSaveable { mutableStateOf(false) }
         IconButton({ showingOptionsMenu = true }) {
             Icon(imageVector = Icons.Default.MoreVert,
-                 contentDescription = stringResource(
-                     R.string.item_options_button_description, itemName),
-                 tint = moreOptionsButtonTint)
+                contentDescription = stringResource(
+                    R.string.item_options_button_description, itemName),
+                tint = tint)
         }
 
         var showingRenameDialog by rememberSaveable { mutableStateOf(false) }
@@ -262,50 +292,22 @@ fun TrackView(
         if (showingDeleteDialog)
             ConfirmRemoveDialog(itemName, { showingDeleteDialog = false }, onDeleteRequest)
     }
-}
-
-@Preview @Composable
-fun LightTrackViewPreview() = SoundAuraTheme(darkTheme = false) {
-    TrackView(
-        callback = TrackViewCallback(),
-        track = Track(
-            uriString = "",
-            name = "Track 1",
-            volume = 0.5f))
-}
-
-@Preview(showBackground = true) @Composable
-fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme = true) {
-    TrackView(
-        callback = TrackViewCallback(),
-        track = Track(
-            uriString = "",
-            name = "Track 1",
-            isActive = true,
-            volume = 0.25f))
-}
-
-@Preview @Composable
-fun LightTrackErrorPreview() = SoundAuraTheme(darkTheme = false) {
-    TrackView(
-        callback = TrackViewCallback(),
-        track = Track(
-            uriString = "",
-            name = "Track 1",
-            volume = 1.00f,
-            hasError = true))
-}
-
-@Preview(showBackground = true) @Composable
-fun DarkTrackErrorPreview() = SoundAuraTheme(darkTheme = true) {
-    TrackView(
-        callback = TrackViewCallback(),
-        track = Track(
-            uriString = "",
-            name = "Track 1",
-            volume = 1.00f,
-            hasError = true))
-}
+    TrackViewEndContent.VolumeDisplay -> {
+        Box(Modifier.minTouchTargetSize(), Alignment.Center) {
+            Text(text = (volume * 100).roundToInt().toString(),
+                color = tint,
+                style = MaterialTheme.typography.subtitle2)
+        }
+    }
+    TrackViewEndContent.DeleteButton -> {
+        IconButton(onDeleteRequest) {
+            Icon(imageVector = Icons.Default.Delete,
+                contentDescription = stringResource(
+                    R.string.remove_item_description, itemName),
+                tint = MaterialTheme.colors.error)
+        }
+    }
+}}
 
 @Composable fun RenameDialog(
     itemName: String,
@@ -342,3 +344,46 @@ fun DarkTrackErrorPreview() = SoundAuraTheme(darkTheme = true) {
         onConfirm()
         onDismissRequest()
     })
+
+@Preview @Composable
+fun LightTrackViewPreview() = SoundAuraTheme(darkTheme = false) {
+    TrackView(
+        callback = TrackViewCallback(),
+        track = Track(
+            uriString = "",
+            name = "Track 1",
+            volume = 0.5f))
+    }
+
+@Preview(showBackground = true) @Composable
+fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme = true) {
+    TrackView(
+        callback = TrackViewCallback(),
+        track = Track(
+            uriString = "",
+            name = "Track 2",
+            isActive = true,
+            volume = 0.25f))
+}
+
+@Preview @Composable
+fun LightTrackErrorPreview() = SoundAuraTheme(darkTheme = false) {
+    TrackView(
+        callback = TrackViewCallback(),
+        track = Track(
+            uriString = "",
+            name = "Track 3",
+            volume = 1.00f,
+            hasError = true))
+}
+
+@Preview(showBackground = true) @Composable
+fun DarkTrackErrorPreview() = SoundAuraTheme(darkTheme = true) {
+    TrackView(
+        callback = TrackViewCallback(),
+        track = Track(
+            uriString = "",
+            name = "Track 4",
+            volume = 1.00f,
+            hasError = true))
+}
