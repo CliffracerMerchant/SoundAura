@@ -52,13 +52,14 @@ class TrackViewCallback(
  * more options button for the provided Track Instance. If the track's hasError
  * field is true, then an error icon will be displayed instead of the add/remove
  * button, an error message will be displayed in place of the volume slider, and
- * the more options menu button will be replaced by a delete icon.
+ * the more options menu button will be replaced by a delete icon. The more
+ * options button will also be replaced by a numerical display of the track's
+ * volume when the volume slider is being dragged.
  *
  * @param track The Track instance that is being represented.
  * @param callback The TrackViewCallback that describes how to respond to user interactions.
  */
-@Composable
-fun TrackView(
+@Composable fun TrackView(
     track: Track,
     callback: TrackViewCallback,
     modifier: Modifier = Modifier
@@ -308,49 +309,6 @@ enum class TrackViewEndContent {
     }
 }}
 
-@Preview @Composable
-fun LightTrackViewPreview() = SoundAuraTheme(darkTheme = false) {
-    TrackView(
-        callback = TrackViewCallback(),
-        track = Track(
-            uriString = "",
-            name = "Track 1",
-            volume = 0.5f))
-}
-
-@Preview(showBackground = true) @Composable
-fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme = true) {
-    TrackView(
-        callback = TrackViewCallback(),
-        track = Track(
-            uriString = "",
-            name = "Track 1",
-            isActive = true,
-            volume = 0.25f))
-}
-
-@Preview @Composable
-fun LightTrackErrorPreview() = SoundAuraTheme(darkTheme = false) {
-    TrackView(
-        callback = TrackViewCallback(),
-        track = Track(
-            uriString = "",
-            name = "Track 1",
-            volume = 1.00f,
-            hasError = true))
-}
-
-@Preview(showBackground = true) @Composable
-fun DarkTrackErrorPreview() = SoundAuraTheme(darkTheme = true) {
-    TrackView(
-        callback = TrackViewCallback(),
-        track = Track(
-            uriString = "",
-            name = "Track 1",
-            volume = 1.00f,
-            hasError = true))
-}
-
 @Composable fun RenameDialog(
     itemName: String,
     onDismissRequest: () -> Unit,
@@ -386,3 +344,46 @@ fun DarkTrackErrorPreview() = SoundAuraTheme(darkTheme = true) {
         onConfirm()
         onDismissRequest()
     })
+
+@Preview @Composable
+fun LightTrackViewPreview() = SoundAuraTheme(darkTheme = false) {
+    TrackView(
+        callback = TrackViewCallback(),
+        track = Track(
+            uriString = "",
+            name = "Track 1",
+            volume = 0.5f))
+    }
+
+@Preview(showBackground = true) @Composable
+fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme = true) {
+    TrackView(
+        callback = TrackViewCallback(),
+        track = Track(
+            uriString = "",
+            name = "Track 2",
+            isActive = true,
+            volume = 0.25f))
+}
+
+@Preview @Composable
+fun LightTrackErrorPreview() = SoundAuraTheme(darkTheme = false) {
+    TrackView(
+        callback = TrackViewCallback(),
+        track = Track(
+            uriString = "",
+            name = "Track 3",
+            volume = 1.00f,
+            hasError = true))
+}
+
+@Preview(showBackground = true) @Composable
+fun DarkTrackErrorPreview() = SoundAuraTheme(darkTheme = true) {
+    TrackView(
+        callback = TrackViewCallback(),
+        track = Track(
+            uriString = "",
+            name = "Track 4",
+            volume = 1.00f,
+            hasError = true))
+}
