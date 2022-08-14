@@ -114,6 +114,30 @@ class PlayerService: LifecycleService() {
             autoPauseIf(!hasFocus, autoPauseAudioFocusLossKey)
         }
 
+    /** An enum describing the behavior of the PlayerService when the
+     * current audio device is changed to one with a media audio stream
+     * volume of zero. The described behaviors will only be used when the
+     * zero media volume is the result of a audio device change. If the
+     * zero media volume is a result of the user manually changing it to
+     * zero on the current audio device, playback will not be affected. */
+    enum class OnZeroMediaVolumeAudioDeviceBehavior {
+        /** PlayerService will be automatically stopped to conserve battery. */
+        AutoStop,
+        /** Playback will be automatically paused, and then resumed when another
+         * audio device change brings the media volume back up above zero. */
+        AutoPause,
+        /** Playback will not be affected.*/
+        DoNothing
+    }
+    private var onZeroMediaVolumeAudioDeviceBehavior =
+            OnZeroMediaVolumeAudioDeviceBehavior.AutoStop
+        set(value) {
+            if (field == value) return
+            if (field == OnZeroMediaVolumeAudioDeviceBehavior.AutoPause)
+                unpauseLocks.remove(autoPauseAudioDeviceChangeKey)
+            field = value
+        }
+
     /** isPlaying is only used so that binding clients have access to a
      * snapshot aware version of playbackState. Its value is updated in
      * setPlaybackState, and should not be changed elsewhere to ensure
@@ -233,15 +257,21 @@ class PlayerService: LifecycleService() {
         val intent = Intent(this, PlayerService::class.java)
         ContextCompat.startForegroundService(this, intent)
 
+        val onAudioDeviceChange = {
+            val volumeIsZero = audioManager.getStreamVolume(STREAM_MUSIC) == 0
+            when (onZeroMediaVolumeAudioDeviceBehavior) {
+                OnZeroMediaVolumeAudioDeviceBehavior.AutoStop -> {
+                    if (volumeIsZero) setPlaybackState(STATE_STOPPED)
+                } OnZeroMediaVolumeAudioDeviceBehavior.AutoPause -> {
+                    autoPauseIf(volumeIsZero, key = autoPauseAudioDeviceChangeKey)
+                } OnZeroMediaVolumeAudioDeviceBehavior.DoNothing -> {}
+            }
+        }
         audioManager.registerAudioDeviceCallback(object: AudioDeviceCallback() {
-            override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) {
-                val volume = audioManager.getStreamVolume(STREAM_MUSIC)
-                autoPauseIf(volume == 0, autoPauseAudioDeviceChangeKey)
-            }
-            override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) {
-                val volume = audioManager.getStreamVolume(STREAM_MUSIC)
-                autoPauseIf(volume == 0, autoPauseAudioDeviceChangeKey)
-            }
+            override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) =
+                onAudioDeviceChange()
+            override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) =
+                onAudioDeviceChange()
         }, null)
 
         val playInBackgroundKey = booleanPreferencesKey(
