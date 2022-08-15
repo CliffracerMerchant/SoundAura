@@ -104,11 +104,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
         EnumDialogSetting(
             title = stringResource(R.string.on_zero_volume_behavior_setting_title),
             description = stringResource(R.string.on_zero_volume_behavior_setting_description),
-            values = enumValues<OnZeroMediaVolumeAudioDeviceBehavior>(),
-            valueNames = OnZeroMediaVolumeAudioDeviceBehavior.valueStrings(),
-            valueDescriptions = OnZeroMediaVolumeAudioDeviceBehavior.valueDescriptions(),
-            currentValue = viewModel.onZeroMediaVolumeAudioDeviceBehavior,
-            onValueClick = viewModel::onOnZeroMediaVolumeAudioDeviceBehaviorClick)
+            values = enumValues<OnZeroVolumeAudioDeviceBehavior>(),
+            valueNames = OnZeroVolumeAudioDeviceBehavior.valueStrings(),
+            valueDescriptions = OnZeroVolumeAudioDeviceBehavior.valueDescriptions(),
+            currentValue = viewModel.onZeroVolumeAudioDeviceBehavior,
+            onValueClick = viewModel::onOnZeroVolumeAudioDeviceBehaviorClick)
 
         Divider()
         DialogSetting(stringResource(R.string.control_playback_using_tile_setting_title)) {

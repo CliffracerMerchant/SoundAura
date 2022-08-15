@@ -22,6 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import androidx.media.AudioAttributesCompat
@@ -114,11 +115,14 @@ class PlayerService: LifecycleService() {
             autoPauseIf(!hasFocus, autoPauseAudioFocusLossKey)
         }
 
-    private var onZeroMediaVolumeAudioDeviceBehavior =
-            OnZeroMediaVolumeAudioDeviceBehavior.AutoStop
+    private var onZeroVolumeAudioDeviceBehavior = OnZeroVolumeAudioDeviceBehavior.AutoStop
         set(value) {
             if (field == value) return
-            if (field == OnZeroMediaVolumeAudioDeviceBehavior.AutoPause)
+            if (field == OnZeroVolumeAudioDeviceBehavior.AutoPause)
+                // Because the unpause lock is removed directly here instead
+                // of through a call to autoPauseIf, playback will not resume
+                // here if it was only paused due to a prior change to a zero
+                // volume audio device. This in intended.
                 unpauseLocks.remove(autoPauseAudioDeviceChangeKey)
             field = value
         }
@@ -151,13 +155,13 @@ class PlayerService: LifecycleService() {
             return
 
         val newState = when {
-            state == STATE_PLAYING && playerSet.isEmpty && playerSet.isInitialized -> {
+            state == STATE_PLAYING && playerSet.isInitialized && playerSet.isEmpty -> {
                 // If there are no active tracks, we want to prevent a change to
                 // STATE_PLAYING and show an explanation message so that the user
                 // understands why their, e.g., play button tap didn't do anything.
-                // If the service was moved directly from a stopped to playing state
-                // then the PlayerSet might be empty because the first new value
-                // for TrackDao's activeTracks won't have been collected yet.
+                // If the service was moved directly from a stopped to playing
+                // state then the PlayerSet might be empty because the first new
+                // value for TrackDao's activeTracks won't have been collected yet.
                 // The updatePlayers method will handle this edge case.
                 showAutoPausePlaybackExplanation()
                 STATE_PAUSED
@@ -244,12 +248,12 @@ class PlayerService: LifecycleService() {
 
         val onAudioDeviceChange = {
             val volumeIsZero = audioManager.getStreamVolume(STREAM_MUSIC) == 0
-            when (onZeroMediaVolumeAudioDeviceBehavior) {
-                OnZeroMediaVolumeAudioDeviceBehavior.AutoStop -> {
+            when (onZeroVolumeAudioDeviceBehavior) {
+                OnZeroVolumeAudioDeviceBehavior.AutoStop -> {
                     if (volumeIsZero) setPlaybackState(STATE_STOPPED)
-                } OnZeroMediaVolumeAudioDeviceBehavior.AutoPause -> {
+                } OnZeroVolumeAudioDeviceBehavior.AutoPause -> {
                     autoPauseIf(volumeIsZero, key = autoPauseAudioDeviceChangeKey)
-                } OnZeroMediaVolumeAudioDeviceBehavior.DoNothing -> {}
+                } OnZeroVolumeAudioDeviceBehavior.DoNothing -> {}
             }
         }
         audioManager.registerAudioDeviceCallback(object: AudioDeviceCallback() {
@@ -264,30 +268,36 @@ class PlayerService: LifecycleService() {
         val playInBackgroundFlow =
             dataStore.preferenceFlow(playInBackgroundKey, false)
 
-        val playInBackground = runBlocking { playInBackgroundFlow.first() }
+        val playInBackgroundFirstValue = runBlocking { playInBackgroundFlow.first() }
         notificationManager = PlayerNotification(
             service = this,
             playIntent = playIntent(this),
             pauseIntent = pauseIntent(this),
             stopIntent = stopIntent(this),
-            useMediaSession = !playInBackground)
+            useMediaSession = !playInBackgroundFirstValue)
 
         repeatWhenStarted {
             playInBackgroundFlow
-                .onEach { this@PlayerService.playInBackground = it }
+                .onEach { playInBackground = it }
                 .launchIn(this)
 
             val autoPauseDuringCallsKey = booleanPreferencesKey(
                 getString(R.string.pref_auto_pause_during_calls_key))
             // We want setAutoPauseDuringCallEnabled(true) to be called only
-            // if the preference is true AND ignoreAudioFocus is true. If
-            // ignoreAudioFocus is false, the phone will be paused anyways
+            // if the preference is true AND playInBackground is true. If
+            // playInBackground is false, the phone will be paused anyways
             // due to the app losing audio focus during calls.
             dataStore.preferenceFlow(autoPauseDuringCallsKey, false)
                 .combine(playInBackgroundFlow) { pauseDuringCalls, playInBackground ->
                     pauseDuringCalls && playInBackground
                 }.distinctUntilChanged()
                 .onEach(::setAutoPauseDuringCallEnabled)
+                .launchIn(this)
+
+            val onZeroVolumeAudioDeviceBehaviorKey = intPreferencesKey(
+                getString(R.string.on_zero_volume_behavior_key))
+            dataStore.enumPreferenceFlow<OnZeroVolumeAudioDeviceBehavior>(onZeroVolumeAudioDeviceBehaviorKey)
+                .onEach { onZeroVolumeAudioDeviceBehavior = it }
                 .launchIn(this)
 
             trackDao.getAllActiveTracks()

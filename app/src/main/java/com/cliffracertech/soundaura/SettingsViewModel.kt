@@ -56,7 +56,7 @@ class SettingsViewModel(
         context.getString(R.string.pref_play_in_background_key))
     private val autoPauseDuringCallKey = booleanPreferencesKey(
         context.getString(R.string.pref_auto_pause_during_calls_key))
-    private val onZeroMediaVolumeAudioDeviceBehaviorKey = intPreferencesKey(
+    private val onZeroVolumeAudioDeviceBehaviorKey = intPreferencesKey(
         context.getString(R.string.on_zero_volume_behavior_key))
 
     // The thread must be blocked when reading the first value
@@ -146,16 +146,16 @@ class SettingsViewModel(
         onPhoneStatePermissionDialogDismiss()
     }
 
-    val onZeroMediaVolumeAudioDeviceBehavior by
-        dataStore.enumPreferenceState<OnZeroMediaVolumeAudioDeviceBehavior>(
-            onZeroMediaVolumeAudioDeviceBehaviorKey, scope)
+    val onZeroVolumeAudioDeviceBehavior by
+        dataStore.enumPreferenceState<OnZeroVolumeAudioDeviceBehavior>(
+            onZeroVolumeAudioDeviceBehaviorKey, scope)
 
-    fun onOnZeroMediaVolumeAudioDeviceBehaviorClick(
-        behavior: OnZeroMediaVolumeAudioDeviceBehavior
+    fun onOnZeroVolumeAudioDeviceBehaviorClick(
+        behavior: OnZeroVolumeAudioDeviceBehavior
     ) {
         scope.launch {
             dataStore.edit {
-                it[onZeroMediaVolumeAudioDeviceBehaviorKey] = behavior.ordinal
+                it[onZeroVolumeAudioDeviceBehaviorKey] = behavior.ordinal
             }
         }
     }
@@ -181,7 +181,7 @@ enum class AppTheme { UseSystem, Light, Dark;
  * volume is the result of a audio device change. If the zero media
  * volume is a result of the user manually changing it to zero on the
  * current audio device, playback will not be affected. */
-enum class OnZeroMediaVolumeAudioDeviceBehavior {
+enum class OnZeroVolumeAudioDeviceBehavior {
     /** PlayerService will be automatically stopped to conserve battery. */
     AutoStop,
     /** Playback will be automatically paused, and then resumed when another
