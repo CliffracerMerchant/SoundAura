@@ -181,3 +181,72 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
     if (showingDialog)
         content { showingDialog = false }
 }
+
+/**
+ * Compose a DialogSetting that displays the name of a setting that has
+ * several discrete values described by the enum type T. The current value
+ * of the setting will be displayed beneath the title. When clicked, a
+ * dialog displaying all of the values of the enum will be displayed to
+ * allow the user to change the value.
+ *
+ * @param title The title of the setting. This will be displayed in the
+ *     setting layout, and will also be used as the title of the dialog
+ *     window.
+ * @param description An optional description of the setting. This will
+ *     only be displayed in the dialog window, below the title but before
+ *     the enum value's radio buttons.
+ * @param values An array containing all possible values for the enum
+ *     setting, usually obtained with an enumValues<T>() call.
+ * @param valueNames An array the same length as values that contains
+ *     string titles for each of the enum values.
+ * @param valueDescriptions An optional array containing further
+ *     descriptions for each enum value. These descriptions will
+ *     not be displayed if valueDescriptions is null.
+ * @param currentValue The current enum value of the setting.
+ * @param onValueClick The callback that will be invoked when an option
+ *     is clicked.
+ */
+@Composable fun <T: Enum<T>> EnumDialogSetting(
+    title: String,
+    description: String?,
+    values: Array<T>,
+    valueNames: Array<String>,
+    valueDescriptions: Array<String>,
+    currentValue: T,
+    onValueClick: (T) -> Unit
+) = DialogSetting(
+    title = title,
+    icon = null,
+    description = valueNames[currentValue.ordinal]
+) { onDismissRequest ->
+    SoundAuraDialog(
+        windowPadding = PaddingValues(18.dp),
+        // To prevent the EnumRadioButtonGroup's intrinsic start padding from
+        // stacking with the dialog window's start padding, the horizontal
+        // padding for the entire dialog window is set to zero, and then set to
+        // the default 16.dp for just the title and description below the title.
+        horizontalPadding = 0.dp,
+        title = title,
+        titleLayout = {
+            Text(text = it, style = MaterialTheme.typography.h6,
+                 modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp))
+        }, contentButtonSpacing = 4.dp, // reduced because the EnumRadioButtonGroup already has spacing
+        onDismissRequest = onDismissRequest,
+        showCancelButton = false,
+    ) {
+        Column {
+            if (description != null) {
+                Text(text = description, style = MaterialTheme.typography.subtitle1,
+                     modifier = Modifier.padding(horizontal = 16.dp))
+                Spacer(Modifier.height(6.dp))
+            }
+            EnumRadioButtonGroup(
+                modifier = Modifier.padding(end = 12.dp),
+                values = values,
+                valueNames = valueNames,
+                valueDescriptions = valueDescriptions,
+                currentValue = currentValue,
+                onValueClick = onValueClick)
+        }
+    }
+}
