@@ -102,11 +102,34 @@
     <string name="auto_pause_during_calls_setting_subtitle">
         Requires read phone state permission\nOnly needed when playing in background</string>
     <string name="request_phone_state_permission_explanation">
-        When not playing audio in the background, your device will let SoundAura know
-        that it should pause playback during a call. When audio is playing in the
-        background however, this will not occur. The read phone state permission is
-        needed in this case so that SoundAura can detect when a call is ongoing and
-        pause playback accordingly.</string>
+        When not playing audio in the background, your device will let SoundAura
+        know that it should pause playback during a call. This will not occur when
+        audio is playing in the background. The read phone state permission is
+        needed in this case so that SoundAura can detect when a call is ongoing
+        and pause playback accordingly.</string>
+
+    <string name="on_zero_volume_behavior_setting_title">
+        Behavior on zero volume</string>
+    <string name="on_zero_volume_behavior_setting_description">
+        This setting will determine how playback will respond to an audio
+        device change that results in a volume of zero (e.g. disconnecting
+        a headset while the phone\'s speakerphone volume is zero).</string>
+    <string name="stop_playback_on_zero_volume_title">Stop playback</string>
+    <string name="stop_playback_on_zero_volume_description">
+        Automatically stop the app\'s background service if the app is not in
+        the foreground (playback will only pause if the app is in the foreground).</string>
+    <string name="pause_playback_on_zero_volume_title">Pause playback</string>
+    <string name="pause_playback_on_zero_volume_description">
+        Playback will automatically resume if another audio device change results
+        in a greater than zero media volume (e.g. you reconnect a headset). This
+        setting may result in slightly higher battery usage due to the
+        app remaining in a paused state in the background.</string>
+    <string name="do_nothing_on_zero_volume_title">Do nothing</string>
+    <string name="do_nothing_on_zero_volume_description">
+        This setting will result in the highest battery usage because
+        the app will remain playing even though it cannot be heard.
+    </string>
+
 
     <string name="control_playback_using_tile_setting_title">
         Control playback using a tile</string>
