@@ -43,7 +43,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
             EnumRadioButtonGroup(
                 modifier = Modifier.padding(end = 16.dp),
                 values = AppTheme.values(),
-                valueNames = AppTheme.stringValues(),
+                valueNames = AppTheme.valueStrings(),
                 currentValue = viewModel.appTheme,
                 onValueClick = viewModel::onAppThemeClick)
         }
@@ -99,6 +99,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
                 }
             }
         }
+
+        Divider()
+        EnumDialogSetting(
+            title = stringResource(R.string.on_zero_volume_behavior_setting_title),
+            description = stringResource(R.string.on_zero_volume_behavior_setting_description),
+            values = enumValues<OnZeroMediaVolumeAudioDeviceBehavior>(),
+            valueNames = OnZeroMediaVolumeAudioDeviceBehavior.valueStrings(),
+            valueDescriptions = OnZeroMediaVolumeAudioDeviceBehavior.valueDescriptions(),
+            currentValue = viewModel.onZeroMediaVolumeAudioDeviceBehavior,
+            onValueClick = viewModel::onOnZeroMediaVolumeAudioDeviceBehaviorClick)
 
         Divider()
         DialogSetting(stringResource(R.string.control_playback_using_tile_setting_title)) {

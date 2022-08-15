@@ -169,6 +169,9 @@
     <string name="pref_play_in_background_key" translatable="false">play_in_background</string>
     <string name="pref_auto_pause_during_calls_key" translatable="false">
         auto_pause_during_calls</string>
+    <string name="on_zero_volume_behavior_key" translatable="false">
+        on_zero_volume_audio_device_behavior
+    </string>
 </resources>
 
 

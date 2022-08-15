@@ -52,10 +52,12 @@ class SettingsViewModel(
     private val scope = coroutineScope ?: viewModelScope
     private val appThemeKey = intPreferencesKey(
         context.getString(R.string.pref_app_theme_key))
-      private val playInBackgroundKey = booleanPreferencesKey(
+    private val playInBackgroundKey = booleanPreferencesKey(
         context.getString(R.string.pref_play_in_background_key))
     private val autoPauseDuringCallKey = booleanPreferencesKey(
         context.getString(R.string.pref_auto_pause_during_calls_key))
+    private val onZeroMediaVolumeAudioDeviceBehaviorKey = intPreferencesKey(
+        context.getString(R.string.on_zero_volume_behavior_key))
 
     // The thread must be blocked when reading the first value
     // of the app theme from the DataStore or else the screen
@@ -143,15 +145,70 @@ class SettingsViewModel(
         }
         onPhoneStatePermissionDialogDismiss()
     }
+
+    val onZeroMediaVolumeAudioDeviceBehavior by
+        dataStore.enumPreferenceState<OnZeroMediaVolumeAudioDeviceBehavior>(
+            onZeroMediaVolumeAudioDeviceBehaviorKey, scope)
+
+    fun onOnZeroMediaVolumeAudioDeviceBehaviorClick(
+        behavior: OnZeroMediaVolumeAudioDeviceBehavior
+    ) {
+        scope.launch {
+            dataStore.edit {
+                it[onZeroMediaVolumeAudioDeviceBehaviorKey] = behavior.ordinal
+            }
+        }
+    }
 }
 
 enum class AppTheme { UseSystem, Light, Dark;
+    companion object {
+        /** Return an Array<String> containing strings that describe the enum values. */
+        @Composable fun valueStrings() =
+            with(LocalContext.current) {
+                remember { arrayOf(
+                    getString(R.string.use_system_theme),
+                    getString(R.string.light_theme),
+                    getString(R.string.dark_theme)
+                )}
+            }
+    }
+}
+
+/** An enum describing the behavior of the application when the current
+ * audio device is changed to one with a media audio stream volume of
+ * zero. The described behaviors will only be used when the zero media
+ * volume is the result of a audio device change. If the zero media
+ * volume is a result of the user manually changing it to zero on the
+ * current audio device, playback will not be affected. */
+enum class OnZeroMediaVolumeAudioDeviceBehavior {
+    /** PlayerService will be automatically stopped to conserve battery. */
+    AutoStop,
+    /** Playback will be automatically paused, and then resumed when another
+     * audio device change brings the media volume back up above zero. */
+    AutoPause,
+    /** Playback will not be affected.*/
+    DoNothing;
 
     companion object {
-        @Composable fun stringValues() = with(LocalContext.current) {
-            remember { arrayOf(getString(R.string.use_system_theme),
-                               getString(R.string.light_theme),
-                               getString(R.string.dark_theme)) }
-        }
+        /** Return an Array<String> containing strings that describe the enum values. */
+        @Composable fun valueStrings() =
+            with(LocalContext.current) {
+                remember { arrayOf(
+                    getString(R.string.stop_playback_on_zero_volume_title),
+                    getString(R.string.pause_playback_on_zero_volume_title),
+                    getString(R.string.do_nothing_on_zero_volume_title)
+                )}
+            }
+
+        /** Return an Array<String?> containing strings that further describe the enum values. */
+        @Composable fun valueDescriptions() =
+            with(LocalContext.current) {
+                remember { arrayOf(
+                    getString(R.string.stop_playback_on_zero_volume_description),
+                    getString(R.string.pause_playback_on_zero_volume_description),
+                    getString(R.string.do_nothing_on_zero_volume_description)
+                )}
+            }
     }
 }

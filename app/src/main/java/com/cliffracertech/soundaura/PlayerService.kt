@@ -114,21 +114,6 @@ class PlayerService: LifecycleService() {
             autoPauseIf(!hasFocus, autoPauseAudioFocusLossKey)
         }
 
-    /** An enum describing the behavior of the PlayerService when the
-     * current audio device is changed to one with a media audio stream
-     * volume of zero. The described behaviors will only be used when the
-     * zero media volume is the result of a audio device change. If the
-     * zero media volume is a result of the user manually changing it to
-     * zero on the current audio device, playback will not be affected. */
-    enum class OnZeroMediaVolumeAudioDeviceBehavior {
-        /** PlayerService will be automatically stopped to conserve battery. */
-        AutoStop,
-        /** Playback will be automatically paused, and then resumed when another
-         * audio device change brings the media volume back up above zero. */
-        AutoPause,
-        /** Playback will not be affected.*/
-        DoNothing
-    }
     private var onZeroMediaVolumeAudioDeviceBehavior =
             OnZeroMediaVolumeAudioDeviceBehavior.AutoStop
         set(value) {
