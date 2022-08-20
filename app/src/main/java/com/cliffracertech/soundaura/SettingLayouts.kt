@@ -19,14 +19,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 
-/** A settings category displayed on a large surface background.
+/**
+ * A settings category displayed on a large surface background.
+ *
  * @param title The title of the category
- * @param content A composable lambda that contains the category's content. */
+ * @param content A composable lambda that contains the category's content.
+ */
 @Composable fun SettingCategory(
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) = Surface(shape = MaterialTheme.shapes.large) {
-    Column(Modifier.padding(20.dp, 16.dp, 20.dp, 6.dp)) {
+    Column(Modifier.padding(20.dp, 10.dp, 20.dp, 6.dp)) {
         Text(text = title,
             modifier = Modifier.align(Alignment.CenterHorizontally),
             style = MaterialTheme.typography.h5)
@@ -39,22 +42,22 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 @Preview @Composable
 fun LightSettingCategoryPreview() = SoundAuraTheme(false) {
     SettingCategory("Setting Category A") {
-        Setting("Setting 1") { Checkbox(false, { }) }
+        Setting("Checkbox setting") { Checkbox(false, { }) }
         Divider()
-        Setting("Setting 2") { Switch(true, { }) }
+        Setting("Switch setting") { Switch(true, { }) }
         Divider()
-        DialogSetting("Setting 3") { }
+        DialogSetting("Dialog setting", description = "Current value") {}
     }
 }
 
 @Preview(showBackground = true) @Composable
 fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
-    SettingCategory("Setting Category B6") {
-        Setting("Setting 1") { Checkbox(false, { }) }
+    SettingCategory("Setting Category B") {
+        Setting("Checkbox setting") { Checkbox(false, { }) }
         Divider()
-        Setting("Setting 2") { Switch(true, { }) }
+        Setting("Switch setting") { Switch(true, { }) }
         Divider()
-        DialogSetting("Setting 3") { }
+        DialogSetting("Dialog setting", description = "Current value") {}
     }
 }
 
@@ -64,6 +67,10 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
  * @param modifier The modifier to apply to the entire radio button group.
  * @param values An array of all possible enum values.
  * @param valueNames An array containing names for each of the enum values.
+ * @param valueDescriptions An optional array of strings, the individual
+ *     values of which will be displayed beneath each enum value to
+ *     describe it. A blank string will not be displayed at all in case
+ *     a description is desired for only certain items.
  * @param currentValue The enum value that should be marked as checked.
  * @param onValueClick The callback that will be invoked when an enum
  *                     value is clicked.
@@ -72,18 +79,33 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
     modifier: Modifier = Modifier,
     values: Array<T>,
     valueNames: Array<String>,
+    valueDescriptions: Array<String>? = null,
     currentValue: T,
     onValueClick: (T) -> Unit,
 ) = Column(modifier) {
     values.forEachIndexed { index, value ->
-        Row(Modifier.height(48.dp).clickable { onValueClick(value) },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        TextButton(
+            onClick = { onValueClick(value) },
+            colors = ButtonDefaults.textButtonColors(
+                contentColor = MaterialTheme.colors.onSurface)
         ) {
-            RadioButton(checked = value == currentValue,
-                        Modifier.size(36.dp).padding(8.dp))
-            val name = valueNames.getOrNull(index) ?: "Error"
-            Text(text = name, style = MaterialTheme.typography.body1)
+            // The RadioButton's padding is slightly asymmetrical so
+            // that it appears more inline with the title next to it.
+            RadioButton(
+                checked = value == currentValue,
+                Modifier.size(36.dp).padding(top = 7.dp, bottom = 5.dp))
+            Spacer(Modifier.width(6.dp))
+
+            Column {
+                val name = valueNames.getOrNull(index) ?: "Error"
+                Text(name, style = MaterialTheme.typography.body1)
+
+                val description = valueDescriptions?.getOrNull(index)
+                if (!description.isNullOrEmpty()) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(description, style = MaterialTheme.typography.subtitle2)
+                }
+            }
         }
     }
 }
@@ -122,7 +144,7 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
         Text(title, style = MaterialTheme.typography.h6)
 
         if (subtitle != null)
-            Text(subtitle, style = MaterialTheme.typography.body2)
+            Text(subtitle, style = MaterialTheme.typography.subtitle2)
     }
 
     content()
@@ -158,4 +180,72 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
     }
     if (showingDialog)
         content { showingDialog = false }
+}
+
+/**
+ * Compose a DialogSetting that displays the name of a setting that has
+ * several discrete values described by the enum type T. The current value
+ * of the setting will be displayed beneath the title. When clicked, a
+ * dialog displaying all of the values of the enum will be displayed to
+ * allow the user to change the value.
+ *
+ * @param title The title of the setting. This will be displayed in the
+ *     setting layout, and will also be used as the title of the dialog
+ *     window.
+ * @param description An optional description of the setting. This will
+ *     only be displayed in the dialog window, below the title but before
+ *     the enum value's radio buttons.
+ * @param values An array containing all possible values for the enum
+ *     setting, usually obtained with an enumValues<T>() call.
+ * @param valueNames An array the same length as values that contains
+ *     string titles for each of the enum values.
+ * @param valueDescriptions An optional array containing further
+ *     descriptions for each enum value. These descriptions will
+ *     not be displayed if valueDescriptions is null.
+ * @param currentValue The current enum value of the setting.
+ * @param onValueClick The callback that will be invoked when an option
+ *     is clicked.
+ */
+@Composable fun <T: Enum<T>> EnumDialogSetting(
+    title: String,
+    description: String? = null,
+    values: Array<T>,
+    valueNames: Array<String>,
+    valueDescriptions: Array<String>? = null,
+    currentValue: T,
+    onValueClick: (T) -> Unit
+) = DialogSetting(
+    title = title,
+    icon = null,
+    description = valueNames[currentValue.ordinal]
+) { onDismissRequest ->
+    SoundAuraDialog(
+        // To prevent the EnumRadioButtonGroup's intrinsic start padding from
+        // stacking with the dialog window's start padding, the horizontal
+        // padding for the entire dialog window is set to zero, and then set to
+        // the default 16.dp for just the title and description below the title.
+        horizontalPadding = 0.dp,
+        title = title,
+        titleLayout = {
+            Text(text = it, style = MaterialTheme.typography.h6,
+                 modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp))
+        }, contentButtonSpacing = 4.dp, // reduced because the EnumRadioButtonGroup already has spacing
+        onDismissRequest = onDismissRequest,
+        showCancelButton = false,
+    ) {
+        Column {
+            if (description != null) {
+                Text(text = description, style = MaterialTheme.typography.subtitle1,
+                     modifier = Modifier.padding(horizontal = 16.dp))
+                Spacer(Modifier.height(6.dp))
+            }
+            EnumRadioButtonGroup(
+                modifier = Modifier.padding(end = 12.dp),
+                values = values,
+                valueNames = valueNames,
+                valueDescriptions = valueDescriptions,
+                currentValue = currentValue,
+                onValueClick = onValueClick)
+        }
+    }
 }

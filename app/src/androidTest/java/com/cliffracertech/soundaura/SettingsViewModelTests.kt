@@ -49,6 +49,8 @@ class SettingsViewModelTests {
         context.getString(R.string.pref_play_in_background_key))
     private val autoPauseDuringCallKey = booleanPreferencesKey(
         context.getString(R.string.pref_auto_pause_during_calls_key))
+    private val onZeroVolumeAudioDeviceBehaviorKey = intPreferencesKey(
+        context.getString(R.string.on_zero_volume_behavior_key))
 
     private lateinit var instance: SettingsViewModel
 
@@ -77,7 +79,8 @@ class SettingsViewModelTests {
         assertThat(instance.autoPauseDuringCallSettingVisible).isFalse()
         assertThat(instance.autoPauseDuringCall).isFalse()
         assertThat(instance.showingPhoneStatePermissionDialog).isFalse()
-
+        assertThat(instance.onZeroVolumeAudioDeviceBehavior).isEqualTo(
+            OnZeroVolumeAudioDeviceBehavior.values()[0])
     }
 
     @Test fun onAppThemeClick() = runBlockingTest {
@@ -187,5 +190,20 @@ class SettingsViewModelTests {
 
         instance.onPlayInBackgroundSwitchClick()
         assertThat(instance.autoPauseDuringCall).isEqualTo(hasReadPhoneStatePermission)
+    }
+
+    @Test fun onZeroAudioVolumeAudioDeviceBehaviorClick() = runBlockingTest {
+        defaultValues()
+        instance.onOnZeroVolumeAudioDeviceBehaviorClick(OnZeroVolumeAudioDeviceBehavior.DoNothing)
+        assertThat(updatedPreferences()[onZeroVolumeAudioDeviceBehaviorKey])
+            .isEqualTo(OnZeroVolumeAudioDeviceBehavior.DoNothing.ordinal)
+        assertThat(instance.onZeroVolumeAudioDeviceBehavior)
+            .isEqualTo(OnZeroVolumeAudioDeviceBehavior.DoNothing)
+
+        instance.onOnZeroVolumeAudioDeviceBehaviorClick(OnZeroVolumeAudioDeviceBehavior.AutoPause)
+        assertThat(updatedPreferences()[onZeroVolumeAudioDeviceBehaviorKey])
+            .isEqualTo(OnZeroVolumeAudioDeviceBehavior.AutoPause.ordinal)
+        assertThat(instance.onZeroVolumeAudioDeviceBehavior)
+            .isEqualTo(OnZeroVolumeAudioDeviceBehavior.AutoPause)
     }
 }

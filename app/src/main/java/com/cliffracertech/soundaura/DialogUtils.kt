@@ -53,14 +53,9 @@ import androidx.compose.ui.window.DialogProperties
     horizontalPadding: Dp = 16.dp,
     title: String? = null,
     titleLayout: @Composable (String) -> Unit = @Composable {
-        Box(Modifier.padding(
-            top = 16.dp,
-            start = horizontalPadding,
-            end = horizontalPadding)
-        ) {
-            val textStyle = MaterialTheme.typography.h6
-            ProvideTextStyle(textStyle) { Text(it) }
-        }
+        Text(text = it, style = MaterialTheme.typography.h6,
+             modifier = Modifier.padding(start = horizontalPadding, top = 16.dp,
+                                         end = horizontalPadding, bottom = 0.dp))
     }, text: String? = null,
     titleContentSpacing: Dp = 12.dp,
     contentButtonSpacing: Dp = 12.dp,

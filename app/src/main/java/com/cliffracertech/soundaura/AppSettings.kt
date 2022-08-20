@@ -39,14 +39,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable private fun DisplaySettingsCategory() =
     SettingCategory(stringResource(R.string.display)) {
         val viewModel: SettingsViewModel = viewModel()
-        Setting(title = stringResource(R.string.app_theme)) {
-            EnumRadioButtonGroup(
-                modifier = Modifier.padding(end = 16.dp),
-                values = AppTheme.values(),
-                valueNames = AppTheme.stringValues(),
-                currentValue = viewModel.appTheme,
-                onValueClick = viewModel::onAppThemeClick)
-        }
+
+        EnumDialogSetting(
+            title = stringResource(R.string.app_theme),
+            values = AppTheme.values(),
+            valueNames = AppTheme.valueStrings(),
+            currentValue = viewModel.appTheme,
+            onValueClick = viewModel::onAppThemeClick)
     }
 
 @Composable private fun PlaybackSettingsCategory() =
@@ -99,6 +98,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
                 }
             }
         }
+
+        Divider()
+        EnumDialogSetting(
+            title = stringResource(R.string.on_zero_volume_behavior_setting_title),
+            description = stringResource(R.string.on_zero_volume_behavior_setting_description),
+            values = enumValues<OnZeroVolumeAudioDeviceBehavior>(),
+            valueNames = OnZeroVolumeAudioDeviceBehavior.valueStrings(),
+            valueDescriptions = OnZeroVolumeAudioDeviceBehavior.valueDescriptions(),
+            currentValue = viewModel.onZeroVolumeAudioDeviceBehavior,
+            onValueClick = viewModel::onOnZeroVolumeAudioDeviceBehaviorClick)
 
         Divider()
         DialogSetting(stringResource(R.string.control_playback_using_tile_setting_title)) {

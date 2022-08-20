@@ -31,13 +31,17 @@ import androidx.compose.ui.unit.dp
 fun Modifier.minTouchTargetSize() =
     sizeIn(minWidth = 48.dp, minHeight = 48.dp)
 
-/** Return a radio button icon with its checked state set according to the value of @param checked. */
-@Composable fun RadioButton(checked: Boolean, modifier: Modifier) {
+/** Compose a radio button icon. */
+@Composable fun RadioButton(
+    checked: Boolean,
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colors.primary
+) {
     val vector = if (checked) Icons.Default.RadioButtonChecked
                  else         Icons.Default.RadioButtonUnchecked
     val desc = stringResource(if (checked) R.string.checked
                               else         R.string.unchecked)
-    Icon(vector, desc, modifier)
+    Icon(vector, desc, modifier, tint)
 }
 
 /**
