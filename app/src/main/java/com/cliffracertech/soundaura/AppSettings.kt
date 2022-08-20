@@ -39,14 +39,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable private fun DisplaySettingsCategory() =
     SettingCategory(stringResource(R.string.display)) {
         val viewModel: SettingsViewModel = viewModel()
-        Setting(title = stringResource(R.string.app_theme)) {
-            EnumRadioButtonGroup(
-                modifier = Modifier.padding(end = 16.dp),
-                values = AppTheme.values(),
-                valueNames = AppTheme.valueStrings(),
-                currentValue = viewModel.appTheme,
-                onValueClick = viewModel::onAppThemeClick)
-        }
+
+        EnumDialogSetting(
+            title = stringResource(R.string.app_theme),
+            values = AppTheme.values(),
+            valueNames = AppTheme.valueStrings(),
+            currentValue = viewModel.appTheme,
+            onValueClick = viewModel::onAppThemeClick)
     }
 
 @Composable private fun PlaybackSettingsCategory() =
