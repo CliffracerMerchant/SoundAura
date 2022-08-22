@@ -16,6 +16,10 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cliffracertech.soundaura.SoundAura.pref_key_appTheme
+import com.cliffracertech.soundaura.SoundAura.pref_key_autoPauseDuringCalls
+import com.cliffracertech.soundaura.SoundAura.pref_key_onZeroVolumeAudioDeviceBehavior
+import com.cliffracertech.soundaura.SoundAura.pref_key_playInBackground
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -37,6 +41,101 @@ class PreferencesModule {
         app.dataStore
 }
 
+object SoundAura {
+    /** An int value that represents the ordinal of the desired Track.Sort
+     * enum value to use for sorting tracks in the main activity. */
+    const val pref_key_trackSort = "track_sort"
+
+    /** An int value that represents the ordinal of the desired AppTheme
+     * enum value to use as the application's light/dark theme. */
+    const val pref_key_appTheme = "app_theme"
+
+    /**
+     * A boolean value that indicates whether playback should occur in the
+     * background. Expected behavior when playInBackground == false is:
+     * - The app will respect normal audio focus behavior
+     * - The app's playback will respond to hardware media keys even in the background
+     * - The app's foreground service notification will appear as a media session
+     *
+     * Expected behavior when playInBackground == true is:
+     * - The app will not request audio focus, and will consequently be allowed
+     *   to play alongside other apps
+     * - The app's playback will not respond to hardware media keys unless they
+     *   are pressed while the app is in the foreground.
+     * - The app's foreground service notification will appear as a regular notification
+     * - Playback will not automatically pause during phone calls unless the
+     *   read phone state permission is granted and the preference autoPauseDuringCalls
+     *   is true (due to the app having no other way to determine if a phone call
+     *   is ongoing
+     */
+    const val pref_key_playInBackground = "play_in_background"
+
+    /** A boolean value that indicates whether playback should automatically
+     * pause when a phone call is ongoing. This setting will have no effect if
+     * the playInBackground setting is true because the app will automatically
+     * pause playback during calls due to losing audio focus. This setting also
+     * has no effect is the app has not been granted the read phone state
+     * permission, and should be prevented from being true in that case. */
+    const val pref_key_autoPauseDuringCalls = "auto_pause_during_calls"
+
+    /** An int value that represents the ordinal of the desired OnZeroVolumeAudioDeviceBehavior
+     * enum value to use as the application's response to an audio device change
+     * leading to a media volume of zero. See OnZeroVolumeAudioDeviceBehavior's
+     * documentation for descriptions of each value. */
+    const val pref_key_onZeroVolumeAudioDeviceBehavior = "on_zero_volume_audio_device_behavior"
+}
+enum class AppTheme { UseSystem, Light, Dark;
+    companion object {
+        /** Return an Array<String> containing strings that describe the enum values. */
+        @Composable fun valueStrings() =
+            with(LocalContext.current) {
+                remember { arrayOf(
+                    getString(R.string.use_system_theme),
+                    getString(R.string.light_theme),
+                    getString(R.string.dark_theme)
+                )}
+            }
+    }
+}
+
+/** An enum describing the behavior of the application when the current
+ * audio device is changed to one with a media audio stream volume of
+ * zero. The described behaviors will only be used when the zero media
+ * volume is the result of a audio device change. If the zero media
+ * volume is a result of the user manually changing it to zero on the
+ * current audio device, playback will not be affected. */
+enum class OnZeroVolumeAudioDeviceBehavior {
+    /** PlayerService will be automatically stopped to conserve battery. */
+    AutoStop,
+    /** Playback will be automatically paused, and then resumed when another
+     * audio device change brings the media volume back up above zero. */
+    AutoPause,
+    /** Playback will not be affected.*/
+    DoNothing;
+
+    companion object {
+        /** Return an Array<String> containing strings that describe the enum values. */
+        @Composable fun valueStrings() =
+            with(LocalContext.current) {
+                remember { arrayOf(
+                    getString(R.string.stop_playback_on_zero_volume_title),
+                    getString(R.string.pause_playback_on_zero_volume_title),
+                    getString(R.string.do_nothing_on_zero_volume_title)
+                )}
+            }
+
+        /** Return an Array<String?> containing strings that further describe the enum values. */
+        @Composable fun valueDescriptions() =
+            with(LocalContext.current) {
+                remember { arrayOf(
+                    getString(R.string.stop_playback_on_zero_volume_description),
+                    getString(R.string.pause_playback_on_zero_volume_description),
+                    getString(R.string.do_nothing_on_zero_volume_description)
+                )}
+            }
+    }
+}
+
 @HiltViewModel
 class SettingsViewModel(
     context: Context,
@@ -50,14 +149,11 @@ class SettingsViewModel(
     ) : this(context, dataStore, null)
 
     private val scope = coroutineScope ?: viewModelScope
-    private val appThemeKey = intPreferencesKey(
-        context.getString(R.string.pref_app_theme_key))
-    private val playInBackgroundKey = booleanPreferencesKey(
-        context.getString(R.string.pref_play_in_background_key))
-    private val autoPauseDuringCallKey = booleanPreferencesKey(
-        context.getString(R.string.pref_auto_pause_during_calls_key))
+    private val appThemeKey = intPreferencesKey(pref_key_appTheme)
+    private val playInBackgroundKey = booleanPreferencesKey(pref_key_playInBackground)
+    private val autoPauseDuringCallKey = booleanPreferencesKey(pref_key_autoPauseDuringCalls)
     private val onZeroVolumeAudioDeviceBehaviorKey = intPreferencesKey(
-        context.getString(R.string.on_zero_volume_behavior_key))
+        pref_key_onZeroVolumeAudioDeviceBehavior)
 
     // The thread must be blocked when reading the first value
     // of the app theme from the DataStore or else the screen
@@ -158,57 +254,5 @@ class SettingsViewModel(
                 it[onZeroVolumeAudioDeviceBehaviorKey] = behavior.ordinal
             }
         }
-    }
-}
-
-enum class AppTheme { UseSystem, Light, Dark;
-    companion object {
-        /** Return an Array<String> containing strings that describe the enum values. */
-        @Composable fun valueStrings() =
-            with(LocalContext.current) {
-                remember { arrayOf(
-                    getString(R.string.use_system_theme),
-                    getString(R.string.light_theme),
-                    getString(R.string.dark_theme)
-                )}
-            }
-    }
-}
-
-/** An enum describing the behavior of the application when the current
- * audio device is changed to one with a media audio stream volume of
- * zero. The described behaviors will only be used when the zero media
- * volume is the result of a audio device change. If the zero media
- * volume is a result of the user manually changing it to zero on the
- * current audio device, playback will not be affected. */
-enum class OnZeroVolumeAudioDeviceBehavior {
-    /** PlayerService will be automatically stopped to conserve battery. */
-    AutoStop,
-    /** Playback will be automatically paused, and then resumed when another
-     * audio device change brings the media volume back up above zero. */
-    AutoPause,
-    /** Playback will not be affected.*/
-    DoNothing;
-
-    companion object {
-        /** Return an Array<String> containing strings that describe the enum values. */
-        @Composable fun valueStrings() =
-            with(LocalContext.current) {
-                remember { arrayOf(
-                    getString(R.string.stop_playback_on_zero_volume_title),
-                    getString(R.string.pause_playback_on_zero_volume_title),
-                    getString(R.string.do_nothing_on_zero_volume_title)
-                )}
-            }
-
-        /** Return an Array<String?> containing strings that further describe the enum values. */
-        @Composable fun valueDescriptions() =
-            with(LocalContext.current) {
-                remember { arrayOf(
-                    getString(R.string.stop_playback_on_zero_volume_description),
-                    getString(R.string.pause_playback_on_zero_volume_description),
-                    getString(R.string.do_nothing_on_zero_volume_description)
-                )}
-            }
     }
 }

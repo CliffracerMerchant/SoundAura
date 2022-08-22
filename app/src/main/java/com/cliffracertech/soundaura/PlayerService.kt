@@ -31,6 +31,9 @@ import androidx.media.AudioAttributesCompat.USAGE_MEDIA
 import androidx.media.AudioFocusRequestCompat
 import androidx.media.AudioManagerCompat
 import androidx.media.AudioManagerCompat.AUDIOFOCUS_GAIN
+import com.cliffracertech.soundaura.SoundAura.pref_key_autoPauseDuringCalls
+import com.cliffracertech.soundaura.SoundAura.pref_key_onZeroVolumeAudioDeviceBehavior
+import com.cliffracertech.soundaura.SoundAura.pref_key_playInBackground
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -49,10 +52,7 @@ import javax.inject.Inject
  * its current play/pause state in string form, along with actions to toggle
  * the play/pause state and to close the service. The play/pause action will
  * always be visible, but the close action is hidden when the service is bound
- * to any clients. This notification will either appear as a media session if
- * the value of the datastore preference pointed to by the string value
- * R.string.pref_play_in_background_key is false, or will appear as a regular
- * notification if the play in background preference is true.
+ * to any clients.
  *
  * Changes in the playback state can be listened to by calling the static
  * function addPlaybackChangeListener with a PlaybackChangeListener.
@@ -65,10 +65,7 @@ import javax.inject.Inject
  * pause itself to preserve battery life. If another device change brings the
  * media volume back up to above zero and isPlaying has not been called
  * manually since PlayerService was auto-paused, it will also automatically
- * unpause itself. This auto-pause also works for ongoing calls if the
- * READ_PHONE_STATE permission has been granted to the app, and the boolean
- * value in the app's datastore pointed to by the string value
- * R.string.pref_auto_pause_during_calls_key is true.
+ * unpause itself.
  *
  * To ensure that the volume for already playing tracks is changed without
  * perceptible lag, PlayerService will not respond to track volume changes made
@@ -77,6 +74,12 @@ import javax.inject.Inject
  * the new volume. If a bound activity presents the user with, e.g, a slider to
  * change a track's volume, the slider's onSlide callback should therefore call
  * setTrackVolume.
+ *
+ * PlayerService reads the values of and changes its behavior depending on the
+ * app preferences pointed to by the keys pref_key_playInBackground,
+ * pref_key_autoPauseDuringCalls, and pref_key_onZeroVolumeAudioDeviceBehavior.
+ * Read the documentation for these keys for more information about how
+ * PlayerService responds to each value of these settings.
  */
 @AndroidEntryPoint
 class PlayerService: LifecycleService() {
@@ -263,12 +266,10 @@ class PlayerService: LifecycleService() {
                 onAudioDeviceChange()
         }, null)
 
-        val playInBackgroundKey = booleanPreferencesKey(
-            getString(R.string.pref_play_in_background_key))
-        val playInBackgroundFlow =
-            dataStore.preferenceFlow(playInBackgroundKey, false)
-
+        val playInBackgroundKey = booleanPreferencesKey(pref_key_playInBackground)
+        val playInBackgroundFlow = dataStore.preferenceFlow(playInBackgroundKey, false)
         val playInBackgroundFirstValue = runBlocking { playInBackgroundFlow.first() }
+
         notificationManager = PlayerNotification(
             service = this,
             playIntent = playIntent(this),
@@ -281,8 +282,7 @@ class PlayerService: LifecycleService() {
                 .onEach { playInBackground = it }
                 .launchIn(this)
 
-            val autoPauseDuringCallsKey = booleanPreferencesKey(
-                getString(R.string.pref_auto_pause_during_calls_key))
+            val autoPauseDuringCallsKey = booleanPreferencesKey(pref_key_autoPauseDuringCalls)
             // We want setAutoPauseDuringCallEnabled(true) to be called only
             // if the preference is true AND playInBackground is true. If
             // playInBackground is false, the phone will be paused anyways
@@ -294,8 +294,7 @@ class PlayerService: LifecycleService() {
                 .onEach(::setAutoPauseDuringCallEnabled)
                 .launchIn(this)
 
-            val onZeroVolumeAudioDeviceBehaviorKey = intPreferencesKey(
-                getString(R.string.on_zero_volume_behavior_key))
+            val onZeroVolumeAudioDeviceBehaviorKey = intPreferencesKey(pref_key_onZeroVolumeAudioDeviceBehavior)
             dataStore.enumPreferenceFlow<OnZeroVolumeAudioDeviceBehavior>(onZeroVolumeAudioDeviceBehaviorKey)
                 .onEach { onZeroVolumeAudioDeviceBehavior = it }
                 .launchIn(this)
