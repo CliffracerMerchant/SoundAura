@@ -36,7 +36,7 @@ class TrackListViewModelTests {
         db = Room.inMemoryDatabaseBuilder(context, SoundAuraDatabase::class.java).build()
         dao = db.trackDao()
         searchQueryState = SearchQueryState()
-        instance = TrackListViewModel(context, context.dataStore, dao,
+        instance = TrackListViewModel(context.dataStore, dao,
                                       searchQueryState, coroutineScope)
         Dispatchers.setMain(coroutineDispatcher)
     }

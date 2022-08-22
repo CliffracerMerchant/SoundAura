@@ -22,8 +22,7 @@ class ActionBarViewModelTests {
         val context = ApplicationProvider.getApplicationContext<Context>()
         navigationState = MainActivityNavigationState()
         searchQueryState = SearchQueryState()
-        instance = ActionBarViewModel(context, context.dataStore,
-                                      navigationState, searchQueryState)
+        instance = ActionBarViewModel(context.dataStore, navigationState, searchQueryState)
     }
 
     @Test fun title() {

@@ -5,7 +5,6 @@ package com.cliffracertech.soundaura
 import android.Manifest.permission.READ_PHONE_STATE
 import android.content.Context
 import android.content.pm.PackageManager.PERMISSION_GRANTED
-import android.util.Log
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -13,6 +12,10 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.cliffracertech.soundaura.SoundAura.pref_key_appTheme
+import com.cliffracertech.soundaura.SoundAura.pref_key_autoPauseDuringCalls
+import com.cliffracertech.soundaura.SoundAura.pref_key_onZeroVolumeAudioDeviceBehavior
+import com.cliffracertech.soundaura.SoundAura.pref_key_playInBackground
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -43,14 +46,10 @@ class SettingsViewModelTests {
         context.preferencesDataStoreFile("testDatastore")
     }
 
-    private val appThemeKey = intPreferencesKey(
-        context.getString(R.string.pref_app_theme_key))
-    private val ignoreAudioFocusKey = booleanPreferencesKey(
-        context.getString(R.string.pref_play_in_background_key))
-    private val autoPauseDuringCallKey = booleanPreferencesKey(
-        context.getString(R.string.pref_auto_pause_during_calls_key))
-    private val onZeroVolumeAudioDeviceBehaviorKey = intPreferencesKey(
-        context.getString(R.string.on_zero_volume_behavior_key))
+    private val appThemeKey = intPreferencesKey(pref_key_appTheme)
+    private val playInBackgroundKey = booleanPreferencesKey(pref_key_playInBackground)
+    private val autoPauseDuringCallKey = booleanPreferencesKey(pref_key_autoPauseDuringCalls)
+    private val onZeroVolumeAudioDeviceBehaviorKey = intPreferencesKey(pref_key_onZeroVolumeAudioDeviceBehavior)
 
     private lateinit var instance: SettingsViewModel
 
@@ -108,12 +107,12 @@ class SettingsViewModelTests {
     @Test fun onPlayInBackgroundSwitchClick() = runBlockingTest {
         defaultValues()
         instance.onPlayInBackgroundSwitchClick()
-        assertThat(updatedPreferences()[ignoreAudioFocusKey]).isTrue()
+        assertThat(updatedPreferences()[playInBackgroundKey]).isTrue()
         assertThat(instance.playInBackground).isTrue()
         assertThat(instance.autoPauseDuringCallSettingVisible).isTrue()
 
         instance.onPlayInBackgroundSwitchClick()
-        assertThat(updatedPreferences()[ignoreAudioFocusKey]).isFalse()
+        assertThat(updatedPreferences()[playInBackgroundKey]).isFalse()
         assertThat(instance.playInBackground).isFalse()
         assertThat(instance.autoPauseDuringCallSettingVisible).isFalse()
 
