@@ -119,4 +119,5 @@ dependencies {
     androidTestImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.1'
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:1.2.1"
     androidTestImplementation 'androidx.room:room-testing:2.4.3'
+    androidTestImplementation 'androidx.test:rules:1.4.0'
 }
