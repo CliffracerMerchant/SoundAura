@@ -144,7 +144,7 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
         Text(title, style = MaterialTheme.typography.h6)
 
         if (subtitle != null)
-            Text(subtitle, style = MaterialTheme.typography.subtitle2)
+            Text(subtitle, style = MaterialTheme.typography.body2)
     }
 
     content()
