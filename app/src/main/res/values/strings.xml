@@ -76,7 +76,7 @@
 
     <string name="display">Display</string>
     <string name="app_theme">App Theme</string>
-    <string name="use_system_theme">System</string>
+    <string name="match_system_theme">Match system</string>
     <string name="light_theme">Light</string>
     <string name="dark_theme">Dark</string>
 

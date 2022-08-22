@@ -90,7 +90,7 @@ enum class AppTheme { UseSystem, Light, Dark;
         @Composable fun valueStrings() =
             with(LocalContext.current) {
                 remember { arrayOf(
-                    getString(R.string.use_system_theme),
+                    getString(R.string.match_system_theme),
                     getString(R.string.light_theme),
                     getString(R.string.dark_theme)
                 )}
