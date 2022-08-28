@@ -252,28 +252,12 @@ class PlayerService: LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+        audioManager.registerAudioDeviceCallback(audioDeviceChangeCallback, null)
         telephonyManager = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
 
         playbackState = STATE_PAUSED
         val intent = Intent(this, PlayerService::class.java)
         ContextCompat.startForegroundService(this, intent)
-
-        val onAudioDeviceChange = {
-            val volumeIsZero = audioManager.getStreamVolume(STREAM_MUSIC) == 0
-            when (onZeroVolumeAudioDeviceBehavior) {
-                OnZeroVolumeAudioDeviceBehavior.AutoStop -> {
-                    if (volumeIsZero) setPlaybackState(STATE_STOPPED)
-                } OnZeroVolumeAudioDeviceBehavior.AutoPause -> {
-                    autoPauseIf(volumeIsZero, key = autoPauseAudioDeviceChangeKey)
-                } OnZeroVolumeAudioDeviceBehavior.DoNothing -> {}
-            }
-        }
-        audioManager.registerAudioDeviceCallback(object: AudioDeviceCallback() {
-            override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) =
-                onAudioDeviceChange()
-            override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) =
-                onAudioDeviceChange()
-        }, null)
 
         val playInBackgroundKey = booleanPreferencesKey(pref_key_playInBackground)
         val playInBackgroundFlow = dataStore.preferenceFlow(playInBackgroundKey, false)
@@ -408,6 +392,35 @@ class PlayerService: LifecycleService() {
                 setPlaybackState(STATE_PAUSED, clearUnpauseLocks = false)
         } else if (unpauseLocks.remove(key) && unpauseLocks.isEmpty())
             setPlaybackState(STATE_PLAYING)
+    }
+
+    private val audioDeviceChangeCallback = object: AudioDeviceCallback() {
+        private var firstAudioDeviceChangeDetected = false
+
+        private fun onAudioDeviceChange() {
+            // If the service is moved directly from stopped to playing (e.g. from
+            // a tile press), then onAudioDeviceChange will be called for the first
+            // time after playback has already started and result in the playback
+            // being paused immediately if the volume is zero, even though it was
+            // the result of a direct user action. We ignore the first audio device
+            // change here to prevent this.
+            if (!firstAudioDeviceChangeDetected) {
+                firstAudioDeviceChangeDetected = true
+            } else {
+                val volumeIsZero = audioManager.getStreamVolume(STREAM_MUSIC) == 0
+                when (onZeroVolumeAudioDeviceBehavior) {
+                    OnZeroVolumeAudioDeviceBehavior.AutoStop -> {
+                        if (volumeIsZero) setPlaybackState(STATE_STOPPED)
+                    } OnZeroVolumeAudioDeviceBehavior.AutoPause -> {
+                        autoPauseIf(volumeIsZero, key = autoPauseAudioDeviceChangeKey)
+                    } OnZeroVolumeAudioDeviceBehavior.DoNothing -> {}
+                }
+            }
+        }
+        override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) =
+            onAudioDeviceChange()
+        override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) =
+            onAudioDeviceChange()
     }
 
     @Suppress("DEPRECATION")
