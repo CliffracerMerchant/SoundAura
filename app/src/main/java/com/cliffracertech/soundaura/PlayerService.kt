@@ -89,7 +89,7 @@ class PlayerService: LifecycleService() {
     @Inject lateinit var messageHandler: MessageHandler
     private lateinit var audioManager: AudioManager
     private lateinit var telephonyManager: TelephonyManager
-    private lateinit var notificationManager: PlayerNotification
+    private var notificationManager: PlayerNotification? = null
 
     private var boundToActivity = false
         set(value) {
@@ -102,7 +102,17 @@ class PlayerService: LifecycleService() {
         set(value) {
             if (field == value) return
             field = value
-            notificationManager.useMediaSession = !value
+
+            if (notificationManager == null)
+                notificationManager = PlayerNotification(
+                    service = this,
+                    playIntent = playIntent(this),
+                    pauseIntent = pauseIntent(this),
+                    stopIntent = stopIntent(this),
+                    playbackState = playbackState,
+                    showStopAction = !boundToActivity,
+                    useMediaSession = !value)
+            else notificationManager?.useMediaSession = !value
 
             if (value) {
                 abandonAudioFocus()
@@ -198,7 +208,6 @@ class PlayerService: LifecycleService() {
         else {
             if (!playInBackground && hasAudioFocus)
                 abandonAudioFocus()
-            notificationManager.stopForeground()
             stopSelf()
         }
     }
@@ -268,14 +277,10 @@ class PlayerService: LifecycleService() {
 
         val playInBackgroundKey = booleanPreferencesKey(pref_key_playInBackground)
         val playInBackgroundFlow = dataStore.preferenceFlow(playInBackgroundKey, false)
-        val playInBackgroundFirstValue = runBlocking { playInBackgroundFlow.first() }
-
-        notificationManager = PlayerNotification(
-            service = this,
-            playIntent = playIntent(this),
-            pauseIntent = pauseIntent(this),
-            stopIntent = stopIntent(this),
-            useMediaSession = !playInBackgroundFirstValue)
+        // playInBackground needs to be set before playback starts so that
+        // PlayerService knows whether it needs to request audio focus or not.
+        // As such, there is no alternative but to wait here for the first value.
+        playInBackground = runBlocking { playInBackgroundFlow.first() }
 
         repeatWhenStarted {
             playInBackgroundFlow
@@ -307,7 +312,7 @@ class PlayerService: LifecycleService() {
 
     override fun onDestroy() {
         playbackState = STATE_STOPPED
-        notificationManager.stopForeground()
+        notificationManager?.remove()
         playerSet.releaseAll()
         super.onDestroy()
     }
@@ -317,9 +322,6 @@ class PlayerService: LifecycleService() {
             val targetState = intent.extras?.getInt(setPlaybackAction)
             targetState?.let(::setPlaybackState)
         }
-        notificationManager.startForeground(
-            playbackState = playbackState,
-            showStopAction = !boundToActivity)
         return super.onStartCommand(intent, flags, startId)
     }
 
@@ -454,7 +456,7 @@ class PlayerService: LifecycleService() {
     }
 
     private fun updateNotification() =
-        notificationManager.update(playbackState, showStopAction = !boundToActivity)
+        notificationManager?.update(playbackState, showStopAction = !boundToActivity)
 
     private val audioFocusRequest =
         AudioFocusRequestCompat.Builder(AUDIOFOCUS_GAIN)
