@@ -116,6 +116,7 @@ class PlayerService: LifecycleService() {
 
             if (value) {
                 abandonAudioFocus()
+                unpauseLocks.remove(autoPauseAudioFocusLossKey)
                 hasAudioFocus = true
             } else if (isPlaying)
                 hasAudioFocus = requestAudioFocus()
