@@ -6,15 +6,12 @@ package com.cliffracertech.soundaura
 import android.content.Context
 import android.content.Intent
 import android.support.v4.media.session.PlaybackStateCompat
-import android.util.Log
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.ServiceTestRule
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -76,7 +73,7 @@ class PlayerServiceTests {
     }
 
     @Test @Throws(TimeoutException::class)
-    fun binderExposedIsPlayingStateWorks() {
+    fun binderIsPlayingState() {
         val intent = Intent(context, PlayerService::class.java)
         val binder = serviceRule.bindService(intent)
         val service = binder as PlayerService.Binder
@@ -96,7 +93,7 @@ class PlayerServiceTests {
     }
 
     @Test @Throws(TimeoutException::class)
-    fun binderIsPlayingControlsWorks() {
+    fun binderToggleIsPlaying() {
         val intent = Intent(context, PlayerService::class.java)
         val binder = serviceRule.bindService(intent)
         val service = binder as PlayerService.Binder

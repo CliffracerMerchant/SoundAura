@@ -297,6 +297,7 @@ class PlayerService: LifecycleService() {
     override fun onDestroy() {
         playbackState = STATE_STOPPED
         notificationManager?.remove()
+        audioManager.unregisterAudioDeviceCallback(audioDeviceChangeCallback)
         playerSet.releaseAll()
         super.onDestroy()
     }
