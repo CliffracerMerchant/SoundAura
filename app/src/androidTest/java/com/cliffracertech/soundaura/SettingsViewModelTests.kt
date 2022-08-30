@@ -35,7 +35,7 @@ import org.junit.runner.RunWith
  * the read phone state permission to ensure that all functionality is working
  * properly. Unfortunately there doesn't seem to be a way to easily revoke
  * permissions during testing, and no way to grant them within the app without
- * using UI coordinator.7
+ * using UI coordinator.
  */
 class SettingsViewModelTests {
     private val context = ApplicationProvider.getApplicationContext<Context>()
