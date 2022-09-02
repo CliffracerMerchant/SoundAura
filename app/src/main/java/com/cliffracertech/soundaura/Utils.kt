@@ -2,6 +2,7 @@
  * License 2.0. See license.md in the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
+import android.support.v4.media.session.PlaybackStateCompat
 import androidx.compose.runtime.*
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -127,4 +128,11 @@ fun withClearCallingIdentity(block: () -> Unit) {
     val id = android.os.Binder.clearCallingIdentity()
     block()
     android.os.Binder.restoreCallingIdentity(id)
+}
+
+fun Int.toPlaybackStateString() = when (this) {
+    PlaybackStateCompat.STATE_STOPPED -> "stopped"
+    PlaybackStateCompat.STATE_PLAYING -> "playing"
+    PlaybackStateCompat.STATE_PAUSED -> "paused"
+    else -> "unsupported state (int value = $this)"
 }

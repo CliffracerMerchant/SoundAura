@@ -1,25 +1,32 @@
-/* This file is part of SoundAura, which is released under the terms of the Apache
- * License 2.0. See license.md in the project's root directory to see the full license. */
+/* This file is part of SoundAura, which is released under
+ * the terms of the Apache License 2.0. See license.md in
+ * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
 import android.content.Context
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.cliffracertech.soundaura.SoundAura.pref_key_trackSort
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.*
+import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.TestCoroutineScope
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
-@Config(sdk=[30])
-@RunWith(RobolectricTestRunner::class)
+@RunWith(AndroidJUnit4::class)
 class TrackListViewModelTests {
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private val coroutineDispatcher = TestCoroutineDispatcher()
@@ -36,7 +43,7 @@ class TrackListViewModelTests {
         db = Room.inMemoryDatabaseBuilder(context, SoundAuraDatabase::class.java).build()
         dao = db.trackDao()
         searchQueryState = SearchQueryState()
-        instance = TrackListViewModel(context, context.dataStore, dao,
+        instance = TrackListViewModel(context.dataStore, dao,
                                       searchQueryState, coroutineScope)
         Dispatchers.setMain(coroutineDispatcher)
     }
@@ -63,7 +70,8 @@ class TrackListViewModelTests {
     }
 
     @Test fun deleteTrackDialogConfirm() {
-        tracksPropertyReflectsAddedTracks()
+        runBlocking { dao.insert(testTracks) }
+        Thread.sleep(50L)
         val track3 = testTracks[2]
         instance.onDeleteTrackDialogConfirm(context, track3.uriString)
         Thread.sleep(50L)
@@ -72,7 +80,8 @@ class TrackListViewModelTests {
     }
 
     @Test fun trackAddRemoveClick() {
-        tracksPropertyReflectsAddedTracks()
+        runBlocking { dao.insert(testTracks) }
+        Thread.sleep(50L)
         assertThat(instance.tracks.map { it.isActive }).doesNotContain(true)
         instance.onTrackAddRemoveButtonClick(testTracks[3].uriString)
         Thread.sleep(50L)
@@ -88,7 +97,8 @@ class TrackListViewModelTests {
     }
 
     @Test fun trackVolumeChangeRequest() {
-        tracksPropertyReflectsAddedTracks()
+        runBlocking { dao.insert(testTracks) }
+        Thread.sleep(50L)
         val expectedVolumes = mutableListOf(1f, 1f, 1f, 1f, 1f)
         assertThat(instance.tracks.map { it.volume })
             .containsExactlyElementsIn(expectedVolumes).inOrder()
@@ -109,7 +119,8 @@ class TrackListViewModelTests {
     }
 
     @Test fun trackRenameDialogConfirm() {
-        tracksPropertyReflectsAddedTracks()
+        runBlocking { dao.insert(testTracks) }
+        Thread.sleep(50L)
         assertThat(instance.tracks[3].name).isEqualTo(testTracks[3].name)
         val newTrack3Name = "new ${testTracks[3].name}"
         instance.onTrackRenameDialogConfirm(testTracks[3].uriString, newTrack3Name)

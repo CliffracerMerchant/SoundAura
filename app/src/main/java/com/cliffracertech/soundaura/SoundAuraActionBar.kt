@@ -12,6 +12,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.cliffracertech.soundaura.SoundAura.pref_key_trackSort
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -20,7 +21,6 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ActionBarViewModel(
-    context: Context,
     private val dataStore: DataStore<Preferences>,
     private val navigationState: MainActivityNavigationState,
     searchQueryState: SearchQueryState,
@@ -28,11 +28,10 @@ class ActionBarViewModel(
 ) : ViewModel() {
 
     @Inject constructor(
-        @ApplicationContext context: Context,
         dataStore: DataStore<Preferences>,
         navigationState: MainActivityNavigationState,
         searchQueryState: SearchQueryState
-    ) : this(context, dataStore, navigationState, searchQueryState, null)
+    ) : this(dataStore, navigationState, searchQueryState, null)
 
     private val scope = coroutineScope ?: viewModelScope
     val showingAppSettings get() = navigationState.showingAppSettings
@@ -45,7 +44,7 @@ class ActionBarViewModel(
             else R.string.app_name)
     }
 
-    private val trackSortKey = intPreferencesKey(context.getString(R.string.pref_sort_key))
+    private val trackSortKey = intPreferencesKey(pref_key_trackSort)
     val trackSort by dataStore.enumPreferenceState<Track.Sort>(trackSortKey, scope)
 
     fun onTrackSortOptionClick(newValue: Track.Sort) {

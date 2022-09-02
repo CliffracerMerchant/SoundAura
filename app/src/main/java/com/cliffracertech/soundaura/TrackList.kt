@@ -28,6 +28,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.cliffracertech.soundaura.SoundAura.pref_key_trackSort
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -67,7 +68,6 @@ import javax.inject.Inject
 
 @HiltViewModel
 class TrackListViewModel(
-    context: Context,
     dataStore: DataStore<Preferences>,
     private val trackDao: TrackDao,
     searchQueryState: SearchQueryState,
@@ -75,15 +75,13 @@ class TrackListViewModel(
 ) : ViewModel() {
 
     @Inject constructor(
-        @ApplicationContext
-        context: Context,
         dataStore: DataStore<Preferences>,
         trackDao: TrackDao,
         searchQueryState: SearchQueryState,
-    ) : this(context, dataStore, trackDao, searchQueryState, null)
+    ) : this(dataStore, trackDao, searchQueryState, null)
 
     private val scope = coroutineScope ?: viewModelScope
-    private val trackSortKey = intPreferencesKey(context.getString(R.string.pref_sort_key))
+    private val trackSortKey = intPreferencesKey(pref_key_trackSort)
     private val trackSort = dataStore.enumPreferenceFlow<Track.Sort>(trackSortKey)
 
     var tracks by mutableStateOf<List<Track>>(emptyList())

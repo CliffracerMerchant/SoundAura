@@ -5,7 +5,7 @@
 <resources
     xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">SoundAura</string>
-    <string name="app_version">v1.1.0</string>
+    <string name="app_version">v1.2.0</string>
 
     <string name="app_player_service_description">A service to play the user\'s sound mix.</string>
     <string name="player_notification_channel_name">Player controls</string>
@@ -76,7 +76,7 @@
 
     <string name="display">Display</string>
     <string name="app_theme">App Theme</string>
-    <string name="use_system_theme">System</string>
+    <string name="match_system_theme">Match system</string>
     <string name="light_theme">Light</string>
     <string name="dark_theme">Dark</string>
 
@@ -186,15 +186,6 @@
 
     <string name="player_notification_channel_id" translatable="false">
         player_controls</string>
-
-    <string name="pref_sort_key" translatable ="false">track_sort</string>
-    <string name="pref_app_theme_key" translatable="false">app_theme</string>
-    <string name="pref_play_in_background_key" translatable="false">play_in_background</string>
-    <string name="pref_auto_pause_during_calls_key" translatable="false">
-        auto_pause_during_calls</string>
-    <string name="on_zero_volume_behavior_key" translatable="false">
-        on_zero_volume_audio_device_behavior
-    </string>
 </resources>
 
 

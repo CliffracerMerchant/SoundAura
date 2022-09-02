@@ -17,16 +17,16 @@ import androidx.core.app.NotificationCompat
 /**
  * A manager for a notification for a foreground media playing service.
  *
- * PlayerNotification can post a notification that contains a string describing
- * a playback state (e.g. playing, paused), a toggle play/pause action, and an
- * optional stop action. This can be accomplished by calling the methods update
- * or startForeground with values for the current playback state in the form of
- * a PlaybackStateCompat value, and whether or not the stop action should be
- * shown. Generally startForeground should be called once in the onCreate of
- * the client service, and update should be called thereafter whenever the
- * playback state or the visibility of the stop action changes. The notification
- * can be cleared when the service is stopping with the function stopForeground.
- *
+ * PlayerNotification can post a notification for a foreground media playing
+ * service that contains a string describing a playback state (e.g. playing,
+ * paused), a toggle play/pause action, and an optional stop action. Using the
+ * values of playbackState and showStopAction that are passed in its
+ * constructor, PlayerNotification will automatically call startForeground for
+ * the client service during creation. PlayerNotification should be notified of
+ * changes to the playback state or the visibility of the stop action
+ * afterwards via the function update. The notification can be cleared when the
+ * service is stopping with the function remove.
+
  * @param service The foreground media playing service that PlayerNotification
  *     is serving. Note that this reference to the service is held onto for
  *     PlayerNotification's lifetime; PlayerNotification should therefore never
@@ -37,6 +37,12 @@ import androidx.core.app.NotificationCompat
  *     PlayerNotification is serving to pause its playback.
  * @param stopIntent The intent that, when fired, will cause the service that
  *     PlayerNotification is serving to stop its playback.
+ * @param playbackState The initial playback state that will be displayed
+ *     in the notification. playbackState can be changed after creation by
+ *     passing the new value to the method update.
+ * @param showStopAction Whether or not the stop action will be shown in the
+ *     notification. showStopAction can be changed after creation by passing
+ *     the new value to method update.
  * @param useMediaSession Whether or not a MediaSessionCompat instance should
  *     be tied to the notification. If true, the notification will appear in
  *     the media session section of the status bar. If false, the notification
@@ -48,6 +54,8 @@ class PlayerNotification(
     private val playIntent: Intent,
     private val pauseIntent: Intent,
     private val stopIntent: Intent,
+    private var playbackState: Int,
+    private var showStopAction: Boolean,
     useMediaSession: Boolean
 ) {
     private val playActionRequestCode = 1
@@ -56,41 +64,18 @@ class PlayerNotification(
     private val notificationId get() = if (useMediaSession) 1 else 2
     private val notificationManager =
         service.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-
-    private var playbackState = STATE_STOPPED
-    private var showStopAction = false
+    private val playbackStateBuilder = PlaybackStateCompat.Builder()
     private lateinit var notificationStyle: androidx.media.app.NotificationCompat.MediaStyle
 
-    private fun updateNotificationStyle() {
-        notificationStyle = androidx.media.app.NotificationCompat.MediaStyle()
-        mediaSession?.let { notificationStyle.setMediaSession(it.sessionToken) }
-        notificationBuilder.setStyle(notificationStyle)
-    }
-
     private var mediaSession: MediaSessionCompat? = null
-    var useMediaSession: Boolean = false
+    var useMediaSession: Boolean = useMediaSession
         set(value) {
-            // Because the notification is being used for a foreground service,
-            // Service.stopForeground and Service.startForeground must be used
-            // instead of NotificationManager.cancel to get the notification to
-            // reappear in the correct location.
-            service.stopForeground(true)
+            if (field == value) return
             field = value
-            val newMediaSession = if (!value) null else
-                MediaSessionCompat(service, PlayerNotification::class.toString())
-            mediaSession?.isActive = false
-            newMediaSession?.isActive = true
-            newMediaSession?.setCallback(object: MediaSessionCompat.Callback() {
-                override fun onPlay() { service.startService(playIntent) }
-                override fun onPause() { service.startService(pauseIntent) }
-                override fun onStop() { service.startService(stopIntent) }
-            })
-            mediaSession = newMediaSession
-            updateNotificationStyle()
-            service.startForeground(notificationId, updatedNotification())
+            rebuildMediaStyleAndNotificationBuilder()
         }
 
-    private val channelId = run {
+    private val channelId: String = run {
         val channelId = service.getString(R.string.player_notification_channel_id)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
             notificationManager.getNotificationChannel(channelId) == null
@@ -106,7 +91,7 @@ class PlayerNotification(
         channelId
     }
 
-    private val notificationBuilder =
+    private val notificationBuilder: NotificationCompat.Builder =
         NotificationCompat.Builder(service, channelId)
             .setOngoing(true)
             .setSmallIcon(R.drawable.tile_and_notification_icon)
@@ -118,42 +103,6 @@ class PlayerNotification(
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }, FLAG_IMMUTABLE))
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-
-    init {
-        // useMediaSession is set again here so that the custom setter will run
-        this.useMediaSession = useMediaSession
-        updateNotificationStyle()
-    }
-
-    fun startForeground(
-        playbackState: Int,
-        showStopAction: Boolean
-    ) {
-        val notification = updatedNotification(playbackState, showStopAction)
-        service.startForeground(notificationId, notification)
-        mediaSession?.setPlaybackState(
-            updatedPlaybackState(playbackState, showStopAction))
-        this.playbackState = playbackState
-        this.showStopAction = showStopAction
-    }
-
-    fun stopForeground() {
-        service.stopForeground(true)
-        mediaSession?.isActive = false
-        mediaSession?.release()
-    }
-
-    fun update(
-        playbackState: Int,
-        showStopAction: Boolean
-    ) {
-        val notification = updatedNotification(playbackState, showStopAction)
-        notificationManager.notify(notificationId, notification)
-        mediaSession?.setPlaybackState(
-            updatedPlaybackState(playbackState, showStopAction))
-        this.playbackState = playbackState
-        this.showStopAction = showStopAction
-    }
 
     /** A notification action that will fire a PendingIntent.getService call
      * when triggered. The started service will be provided the provided playIntent. */
@@ -188,6 +137,57 @@ class PlayerNotification(
             service, stopActionRequestCode,
             stopIntent, FLAG_IMMUTABLE or FLAG_UPDATE_CURRENT))
 
+    init {
+        rebuildMediaStyleAndNotificationBuilder()
+    }
+
+    private fun rebuildMediaStyleAndNotificationBuilder() {
+        // Because the notification is being used for a foreground service,
+        // Service.stopForeground and Service.startForeground must be used
+        // instead of NotificationManager.cancel to get the notification to
+        // reappear in the correct location.
+        service.stopForeground(true)
+        mediaSession?.isActive = false
+
+        notificationStyle = androidx.media.app.NotificationCompat.MediaStyle()
+        mediaSession = if (!useMediaSession) null else
+            MediaSessionCompat(service, PlayerNotification::class.toString()).apply {
+                isActive = true
+                notificationStyle.setMediaSession(sessionToken)
+                setCallback(object: MediaSessionCompat.Callback() {
+                    override fun onPlay() { service.startService(playIntent) }
+                    override fun onPause() { service.startService(pauseIntent) }
+                    override fun onStop() { service.startService(stopIntent) }
+                })
+            }
+        notificationBuilder.setStyle(notificationStyle)
+        service.startForeground(notificationId, updatedNotification())
+    }
+
+    private fun startForeground(playbackState: Int, showStopAction: Boolean) {
+        val notification = updatedNotification(playbackState, showStopAction)
+        service.startForeground(notificationId, notification)
+        mediaSession?.setPlaybackState(
+            updatedPlaybackState(playbackState, showStopAction))
+        this.playbackState = playbackState
+        this.showStopAction = showStopAction
+    }
+
+    fun remove() {
+        service.stopForeground(true)
+        mediaSession?.isActive = false
+        mediaSession?.release()
+    }
+
+    fun update(playbackState: Int, showStopAction: Boolean) {
+        val notification = updatedNotification(playbackState, showStopAction)
+        notificationManager.notify(notificationId, notification)
+        mediaSession?.setPlaybackState(
+            updatedPlaybackState(playbackState, showStopAction))
+        this.playbackState = playbackState
+        this.showStopAction = showStopAction
+    }
+
     private fun updatedNotification(
         playbackState: Int = this.playbackState,
         showStopAction: Boolean = this.showStopAction
@@ -211,8 +211,6 @@ class PlayerNotification(
 
         return builder.build()
     }
-
-    private val playbackStateBuilder = PlaybackStateCompat.Builder()
 
     private fun updatedPlaybackState(
         playbackState: Int,

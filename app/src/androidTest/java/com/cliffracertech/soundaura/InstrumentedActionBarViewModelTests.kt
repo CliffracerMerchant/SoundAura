@@ -10,9 +10,9 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.cliffracertech.soundaura.SoundAura.pref_key_trackSort
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.*
@@ -24,48 +24,47 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class InstrumentedActionBarViewModelTests {
     private val context = ApplicationProvider.getApplicationContext<Context>()
-    private val coroutineDispatcher = TestCoroutineDispatcher()
-    private val coroutineScope = TestCoroutineScope(coroutineDispatcher + Job())
+    private val coroutineDispatcher = StandardTestDispatcher()
+    private val coroutineScope = TestCoroutineScope()
     private val dataStore = PreferenceDataStoreFactory.create(scope = coroutineScope) {
         context.preferencesDataStoreFile("testDatastore")
     }
-    private val trackSortKey = intPreferencesKey(context.getString(R.string.pref_sort_key))
+    private val trackSortKey = intPreferencesKey(pref_key_trackSort)
     private lateinit var instance: ActionBarViewModel
 
     private suspend fun updatedPreferences() = dataStore.data.first().toPreferences()
 
     @Before fun init() {
-        instance = ActionBarViewModel(
-            context, dataStore,
-            MainActivityNavigationState(),
-            SearchQueryState(), coroutineScope)
+        instance = ActionBarViewModel(dataStore, MainActivityNavigationState(),
+                                      SearchQueryState(), coroutineScope)
         Dispatchers.setMain(coroutineDispatcher)
     }
 
     @After fun cleanUp() {
-        coroutineScope.runBlockingTest {
-            dataStore.edit { it.clear() }
-        }
+        runTest { dataStore.edit { it.clear() } }
         coroutineScope.cancel()
         Dispatchers.resetMain()
     }
 
-    @Test fun trackSort() = runBlockingTest {
+    @Test fun trackSort() {
         assertThat(instance.trackSort).isEqualTo(Track.Sort.values().first())
-        dataStore.edit { it[trackSortKey] = Track.Sort.NameDesc.ordinal }
+        runTest { dataStore.edit { it[trackSortKey] = Track.Sort.NameDesc.ordinal } }
         assertThat(instance.trackSort).isEqualTo(Track.Sort.NameDesc)
-        dataStore.edit { it[trackSortKey] = Track.Sort.NameAsc.ordinal }
+        runTest { dataStore.edit { it[trackSortKey] = Track.Sort.NameAsc.ordinal } }
         assertThat(instance.trackSort).isEqualTo(Track.Sort.NameAsc)
     }
 
-    @Test fun onTrackSortOptionClick() = runBlockingTest {
+    @Test fun onTrackSortOptionClick() {
         assertThat(instance.trackSort).isEqualTo(Track.Sort.values().first())
         instance.onTrackSortOptionClick(Track.Sort.NameDesc)
         assertThat(instance.trackSort).isEqualTo(Track.Sort.NameDesc)
-        assertThat(updatedPreferences()[trackSortKey]).isEqualTo(Track.Sort.NameDesc.ordinal)
-
+        runTest {
+            assertThat(updatedPreferences()[trackSortKey]).isEqualTo(Track.Sort.NameDesc.ordinal)
+        }
         instance.onTrackSortOptionClick(Track.Sort.NameAsc)
         assertThat(instance.trackSort).isEqualTo(Track.Sort.NameAsc)
-        assertThat(updatedPreferences()[trackSortKey]).isEqualTo(Track.Sort.NameAsc.ordinal)
+        runTest {
+            assertThat(updatedPreferences()[trackSortKey]).isEqualTo(Track.Sort.NameAsc.ordinal)
+        }
     }
 }

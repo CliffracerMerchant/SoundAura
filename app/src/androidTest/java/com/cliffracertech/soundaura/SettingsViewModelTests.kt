@@ -5,7 +5,6 @@ package com.cliffracertech.soundaura
 import android.Manifest.permission.READ_PHONE_STATE
 import android.content.Context
 import android.content.pm.PackageManager.PERMISSION_GRANTED
-import android.util.Log
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -13,9 +12,12 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.cliffracertech.soundaura.SoundAura.pref_key_appTheme
+import com.cliffracertech.soundaura.SoundAura.pref_key_autoPauseDuringCalls
+import com.cliffracertech.soundaura.SoundAura.pref_key_onZeroVolumeAudioDeviceBehavior
+import com.cliffracertech.soundaura.SoundAura.pref_key_playInBackground
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.*
@@ -33,24 +35,20 @@ import org.junit.runner.RunWith
  * the read phone state permission to ensure that all functionality is working
  * properly. Unfortunately there doesn't seem to be a way to easily revoke
  * permissions during testing, and no way to grant them within the app without
- * using UI coordinator.7
+ * using UI coordinator.
  */
 class SettingsViewModelTests {
     private val context = ApplicationProvider.getApplicationContext<Context>()
-    private val coroutineDispatcher = TestCoroutineDispatcher()
-    private val coroutineScope = TestCoroutineScope(coroutineDispatcher + Job())
+    private val coroutineDispatcher = StandardTestDispatcher()
+    private val coroutineScope = TestCoroutineScope()
     private val dataStore = PreferenceDataStoreFactory.create(scope = coroutineScope) {
         context.preferencesDataStoreFile("testDatastore")
     }
 
-    private val appThemeKey = intPreferencesKey(
-        context.getString(R.string.pref_app_theme_key))
-    private val ignoreAudioFocusKey = booleanPreferencesKey(
-        context.getString(R.string.pref_play_in_background_key))
-    private val autoPauseDuringCallKey = booleanPreferencesKey(
-        context.getString(R.string.pref_auto_pause_during_calls_key))
-    private val onZeroVolumeAudioDeviceBehaviorKey = intPreferencesKey(
-        context.getString(R.string.on_zero_volume_behavior_key))
+    private val appThemeKey = intPreferencesKey(pref_key_appTheme)
+    private val playInBackgroundKey = booleanPreferencesKey(pref_key_playInBackground)
+    private val autoPauseDuringCallKey = booleanPreferencesKey(pref_key_autoPauseDuringCalls)
+    private val onZeroVolumeAudioDeviceBehaviorKey = intPreferencesKey(pref_key_onZeroVolumeAudioDeviceBehavior)
 
     private lateinit var instance: SettingsViewModel
 
@@ -65,8 +63,7 @@ class SettingsViewModelTests {
 
     @After fun cleanUp() {
         Dispatchers.resetMain()
-        coroutineDispatcher.cleanupTestCoroutines()
-        coroutineScope.runBlockingTest {
+        coroutineScope.runTest {
             dataStore.edit { it.clear() }
         }
         coroutineScope.cancel()
@@ -83,7 +80,7 @@ class SettingsViewModelTests {
             OnZeroVolumeAudioDeviceBehavior.values()[0])
     }
 
-    @Test fun onAppThemeClick() = runBlockingTest {
+    @Test fun onAppThemeClick() = runTest {
         defaultValues()
         instance.onAppThemeClick(AppTheme.Dark)
         assertThat(updatedPreferences()[appThemeKey]).isEqualTo(AppTheme.Dark.ordinal)
@@ -99,21 +96,21 @@ class SettingsViewModelTests {
         assertThat(instance.showingPlayInBackgroundExplanation).isTrue()
     }
 
-    @Test fun onPlayInBackgroundExplanationDialogDismiss() = runBlockingTest {
+    @Test fun onPlayInBackgroundExplanationDialogDismiss() = runTest {
         onPlayInBackgroundTitleClick()
         instance.onPlayInBackgroundExplanationDismiss()
         assertThat(instance.showingPlayInBackgroundExplanation).isFalse()
     }
 
-    @Test fun onPlayInBackgroundSwitchClick() = runBlockingTest {
+    @Test fun onPlayInBackgroundSwitchClick() = runTest {
         defaultValues()
         instance.onPlayInBackgroundSwitchClick()
-        assertThat(updatedPreferences()[ignoreAudioFocusKey]).isTrue()
+        assertThat(updatedPreferences()[playInBackgroundKey]).isTrue()
         assertThat(instance.playInBackground).isTrue()
         assertThat(instance.autoPauseDuringCallSettingVisible).isTrue()
 
         instance.onPlayInBackgroundSwitchClick()
-        assertThat(updatedPreferences()[ignoreAudioFocusKey]).isFalse()
+        assertThat(updatedPreferences()[playInBackgroundKey]).isFalse()
         assertThat(instance.playInBackground).isFalse()
         assertThat(instance.autoPauseDuringCallSettingVisible).isFalse()
 
@@ -121,9 +118,9 @@ class SettingsViewModelTests {
         assertThat(instance.showingPhoneStatePermissionDialog).isFalse()
     }
 
-    @Test fun onAutoPauseDuringCallClickWithPermission() = runBlockingTest {
+    @Test fun onAutoPauseDuringCallClickWithPermission() = runTest {
         if (!hasReadPhoneStatePermission)
-            return@runBlockingTest
+            return@runTest
         defaultValues()
 
         instance.onPlayInBackgroundSwitchClick()
@@ -138,9 +135,9 @@ class SettingsViewModelTests {
         assertThat(instance.autoPauseDuringCall).isFalse()
     }
 
-    @Test fun onAutoPauseDuringCallClickWithoutPermission() = runBlockingTest {
+    @Test fun onAutoPauseDuringCallClickWithoutPermission() = runTest {
         if (hasReadPhoneStatePermission)
-            return@runBlockingTest
+            return@runTest
         defaultValues()
         instance.onPlayInBackgroundSwitchClick()
         instance.onAutoPauseDuringCallClick()
@@ -156,9 +153,9 @@ class SettingsViewModelTests {
         assertThat(instance.showingPhoneStatePermissionDialog).isFalse()
     }
 
-    @Test fun onPhoneStatePermissionDialogConfirm() = runBlockingTest {
+    @Test fun onPhoneStatePermissionDialogConfirm() = runTest {
         if (hasReadPhoneStatePermission)
-            return@runBlockingTest
+            return@runTest
         instance.onPlayInBackgroundSwitchClick()
         assertThat(instance.autoPauseDuringCall).isFalse()
         assertThat(instance.showingPhoneStatePermissionDialog).isFalse()
@@ -180,7 +177,7 @@ class SettingsViewModelTests {
         assertThat(instance.autoPauseDuringCall).isTrue()
     }
 
-    @Test fun autoPauseDuringCallAlwaysFalseWithoutPermissionAndIgnoreAudioFocus() = runBlockingTest {
+    @Test fun autoPauseDuringCallAlwaysFalseWithoutPermissionAndIgnoreAudioFocus() = runTest {
         defaultValues()
         dataStore.edit {
             it[autoPauseDuringCallKey] = true
@@ -192,7 +189,7 @@ class SettingsViewModelTests {
         assertThat(instance.autoPauseDuringCall).isEqualTo(hasReadPhoneStatePermission)
     }
 
-    @Test fun onZeroAudioVolumeAudioDeviceBehaviorClick() = runBlockingTest {
+    @Test fun onZeroAudioVolumeAudioDeviceBehaviorClick() = runTest {
         defaultValues()
         instance.onOnZeroVolumeAudioDeviceBehaviorClick(OnZeroVolumeAudioDeviceBehavior.DoNothing)
         assertThat(updatedPreferences()[onZeroVolumeAudioDeviceBehaviorKey])

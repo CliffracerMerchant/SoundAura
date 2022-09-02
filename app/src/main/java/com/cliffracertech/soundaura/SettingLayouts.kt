@@ -103,7 +103,7 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
                 val description = valueDescriptions?.getOrNull(index)
                 if (!description.isNullOrEmpty()) {
                     Spacer(Modifier.height(2.dp))
-                    Text(description, style = MaterialTheme.typography.subtitle2)
+                    Text(description, style = MaterialTheme.typography.body2)
                 }
             }
         }
@@ -144,7 +144,7 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
         Text(title, style = MaterialTheme.typography.h6)
 
         if (subtitle != null)
-            Text(subtitle, style = MaterialTheme.typography.subtitle2)
+            Text(subtitle, style = MaterialTheme.typography.body2)
     }
 
     content()
@@ -235,7 +235,7 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
     ) {
         Column {
             if (description != null) {
-                Text(text = description, style = MaterialTheme.typography.subtitle1,
+                Text(text = description, style = MaterialTheme.typography.body1,
                      modifier = Modifier.padding(horizontal = 16.dp))
                 Spacer(Modifier.height(6.dp))
             }
