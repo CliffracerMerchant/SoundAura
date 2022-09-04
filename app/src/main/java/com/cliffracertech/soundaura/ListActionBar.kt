@@ -127,21 +127,23 @@ import com.google.accompanist.insets.statusBarsPadding
         targetState = searchQuery != null,
         modifier = Modifier.weight(1f)
     ) { searchQueryIsNotNull ->
-        // lastSearchQuery is used so that when the search query changes from a
-        // non-null non-blank value to null, the search query will be recomposed
-        // with the value of lastSearchQuery instead of null during the search
-        // query's fade out animation. This allows the last non-null search
-        // query text to fade out with the rest of the search query (i.e. the
-        // underline) instead of abruptly disappearing.
-        var lastSearchQuery by rememberSaveable { mutableStateOf("") }
-        if (searchQueryIsNotNull) {
-            val text = searchQuery ?: lastSearchQuery
-            AutoFocusSearchQuery(text, onSearchQueryChanged)
-            @Suppress("UNUSED_VALUE")
-            if (searchQuery != null)
-                lastSearchQuery = searchQuery
-        } else Crossfade(title) { // This inner crossfade is for when the title changes.
-            Text(it, style = MaterialTheme.typography.h5, maxLines = 1)
+        Row(Modifier.fillMaxHeight(), verticalAlignment = Alignment.CenterVertically) {
+            // lastSearchQuery is used so that when the search query changes from a
+            // non-null non-blank value to null, the search query will be recomposed
+            // with the value of lastSearchQuery instead of null during the search
+            // query's fade out animation. This allows the last non-null search
+            // query text to fade out with the rest of the search query (i.e. the
+            // underline) instead of abruptly disappearing.
+            var lastSearchQuery by rememberSaveable { mutableStateOf("") }
+            if (searchQueryIsNotNull) {
+                val text = searchQuery ?: lastSearchQuery
+                AutoFocusSearchQuery(text, onSearchQueryChanged)
+                @Suppress("UNUSED_VALUE")
+                if (searchQuery != null)
+                    lastSearchQuery = searchQuery
+            } else Crossfade(title) { // This inner crossfade is for when the title changes.
+                Text(it, style = MaterialTheme.typography.h5, maxLines = 1)
+            }
         }
     }
 
