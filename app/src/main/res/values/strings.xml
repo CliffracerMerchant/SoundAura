@@ -182,7 +182,7 @@
     <string name="view_source_code">View source code</string>
 
     <string name="github_link" translatable="false">
-        https://github.com/NicholasHochstetler/SoundAura</string>
+        https://github.com/CliffracerMerchant/SoundAura</string>
 
     <string name="player_notification_channel_id" translatable="false">
         player_controls</string>
