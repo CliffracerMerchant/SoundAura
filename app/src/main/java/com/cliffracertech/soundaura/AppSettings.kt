@@ -48,56 +48,67 @@ import androidx.lifecycle.viewmodel.compose.viewModel
             onValueClick = viewModel::onAppThemeClick)
     }
 
+@Composable private fun PlayInBackgroundSetting() {
+    val viewModel: SettingsViewModel = viewModel()
+
+    Setting(
+        title = stringResource(R.string.play_in_background_setting_title),
+        subtitle = stringResource(R.string.play_in_background_setting_description),
+        onClick = viewModel::onPlayInBackgroundTitleClick
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Vertical Divider
+            Box(Modifier.width((1.5).dp).height(40.dp)
+                .background(MaterialTheme.colors.onSurface.copy(alpha = 0.12f)))
+
+            Spacer(Modifier.width(6.dp))
+            Switch(checked = viewModel.playInBackground,
+                onCheckedChange = { viewModel.onPlayInBackgroundSwitchClick() })
+        }
+        if (viewModel.showingPlayInBackgroundExplanation)
+            PlayInBackgroundExplanationDialog(
+                viewModel::onPlayInBackgroundExplanationDismiss)
+    }
+}
+
+@Composable private fun AutoPauseDuringCallSetting() {
+    val viewModel: SettingsViewModel = viewModel()
+
+    AnimatedVisibility(
+        visible = viewModel.autoPauseDuringCallSettingVisible,
+        enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
+        exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top)
+    ) {
+        Column {
+            Divider()
+            Setting(
+                title = stringResource(R.string.auto_pause_during_calls_setting_title),
+                subtitle = stringResource(R.string.auto_pause_during_calls_setting_subtitle),
+                onClick = viewModel::onAutoPauseDuringCallClick
+            ) {
+                Switch(checked = viewModel.autoPauseDuringCall,
+                    onCheckedChange = { viewModel.onAutoPauseDuringCallClick() })
+            }
+            if (viewModel.showingPhoneStatePermissionDialog) {
+                val context = LocalContext.current
+                val showExplanation = ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.READ_PHONE_STATE
+                ) == PackageManager.PERMISSION_DENIED
+                PhoneStatePermissionDialog(
+                    showExplanationFirst = showExplanation,
+                    onDismissRequest = viewModel::onPhoneStatePermissionDialogDismiss,
+                    onPermissionResult = viewModel::onPhoneStatePermissionDialogConfirm)
+            }
+        }
+    }
+}
+
 @Composable private fun PlaybackSettingsCategory() =
     SettingCategory(stringResource(R.string.playback)) {
         val viewModel: SettingsViewModel = viewModel()
 
-        Setting(
-            title = stringResource(R.string.play_in_background_setting_title),
-            subtitle = stringResource(R.string.play_in_background_setting_description),
-            onClick = viewModel::onPlayInBackgroundTitleClick
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Vertical Divider
-                Box(Modifier.width((1.5).dp).height(40.dp)
-                    .background(MaterialTheme.colors.onSurface.copy(alpha = 0.12f)))
-
-                Spacer(Modifier.width(6.dp))
-                Switch(checked = viewModel.playInBackground,
-                    onCheckedChange = { viewModel.onPlayInBackgroundSwitchClick() })
-            }
-            if (viewModel.showingPlayInBackgroundExplanation)
-                PlayInBackgroundExplanationDialog(
-                    viewModel::onPlayInBackgroundExplanationDismiss)
-        }
-
-        AnimatedVisibility(
-            visible = viewModel.autoPauseDuringCallSettingVisible,
-            enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
-            exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top)
-        ) {
-            Column {
-                Divider()
-                Setting(
-                    title = stringResource(R.string.auto_pause_during_calls_setting_title),
-                    subtitle = stringResource(R.string.auto_pause_during_calls_setting_subtitle),
-                    onClick = viewModel::onAutoPauseDuringCallClick
-                ) {
-                    Switch(checked = viewModel.autoPauseDuringCall,
-                           onCheckedChange = { viewModel.onAutoPauseDuringCallClick() })
-                }
-                if (viewModel.showingPhoneStatePermissionDialog) {
-                    val context = LocalContext.current
-                    val showExplanation = ContextCompat.checkSelfPermission(
-                            context, Manifest.permission.READ_PHONE_STATE
-                        ) == PackageManager.PERMISSION_DENIED
-                    PhoneStatePermissionDialog(
-                        showExplanationFirst = showExplanation,
-                        onDismissRequest = viewModel::onPhoneStatePermissionDialogDismiss,
-                        onPermissionResult = viewModel::onPhoneStatePermissionDialogConfirm)
-                }
-            }
-        }
+        PlayInBackgroundSetting()
+        AutoPauseDuringCallSetting()
 
         Divider()
         EnumDialogSetting(

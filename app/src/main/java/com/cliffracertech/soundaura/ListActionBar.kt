@@ -37,16 +37,22 @@ import com.google.accompanist.insets.statusBarsPadding
  * LocalContentColor. The default height of 56.dp can be overridden
  * via the parameter height. */
 @Composable fun GradientToolBar(
+    modifier: Modifier = Modifier,
     content: @Composable RowScope.() -> Unit
-) = Column(Modifier
-    .fillMaxWidth()
-    .background(Brush.horizontalGradient(listOf(
-        MaterialTheme.colors.primaryVariant,
-        MaterialTheme.colors.secondaryVariant)))
-    .statusBarsPadding()
 ) {
-    Row(Modifier.height(56.dp), verticalAlignment = Alignment.CenterVertically) {
-        CompositionLocalProvider(LocalContentColor provides MaterialTheme.colors.onPrimary) {
+    val gradStart = MaterialTheme.colors.primaryVariant
+    val gradEnd = MaterialTheme.colors.secondaryVariant
+    val gradient = remember {
+        Brush.horizontalGradient(listOf(gradStart, gradEnd))
+    }
+    Row(modifier.fillMaxWidth()
+            .background(gradient)
+            .statusBarsPadding()
+            .height(56.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val color = MaterialTheme.colors.onPrimary
+        CompositionLocalProvider(LocalContentColor provides color) {
             content()
         }
     }
@@ -115,11 +121,11 @@ import com.google.accompanist.insets.statusBarsPadding
     ) { backButtonIsVisible ->
         if (!backButtonIsVisible)
             Spacer(Modifier.width(24.dp))
-        else BackButton(onClick = {
+        else BackButton { // onClick = {
             if (searchQuery == null)
                 onBackButtonClick()
             else onSearchQueryChanged(null)
-        })
+        }
     }
 
     // Title / search query
@@ -230,7 +236,8 @@ import com.google.accompanist.insets.statusBarsPadding
     val keyboardController = LocalSoftwareKeyboardController.current
 
     BasicTextField(
-        value = query, onValueChange = onQueryChanged,
+        value = query,
+        onValueChange = onQueryChanged,
         textStyle = MaterialTheme.typography.h6
             .copy(color = MaterialTheme.colors.onPrimary),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search, ),

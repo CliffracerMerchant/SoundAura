@@ -2,8 +2,10 @@
  * License 2.0. See license.md in the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import android.content.Context
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -14,7 +16,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundaura.SoundAura.pref_key_trackSort
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -69,10 +70,12 @@ class ActionBarViewModel(
         } else false
 }
 
-/** Compose a ListActionBar that switches between a normal state with all
- * buttons enabled, and an alternative state with most buttons disabled.
- * @param onUnhandledBackButtonClick The callback that will be invoked if
- *                                   a back button click is not handled. */
+/**
+ * Compose a ListActionBar with state provided by an instance of ActionBarViewModel.
+ *
+ * @param onUnhandledBackButtonClick The callback that will
+ *     be invoked if a back button click is not handled.
+ */
 @Composable fun SoundAuraActionBar(onUnhandledBackButtonClick: () -> Unit) {
     val viewModel: ActionBarViewModel = viewModel()
 

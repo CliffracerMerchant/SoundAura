@@ -29,9 +29,8 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlin.math.roundToInt
 
 /**
- * A pseudo-interface that contains callbacks for TrackView interactions. The
- * first parameter for each of the callbacks is the uri of the track in String
- * form.
+ * A collection of callbacks for TrackView interactions. The first parameter
+ * for each of the callbacks is the uri of the track in String form.
  *
  * @param onAddRemoveButtonClick The callback that will be invoked when the add/remove button is clicked.
  * @param onVolumeChange The callback that will be invoked when the volume slider's value is changing.

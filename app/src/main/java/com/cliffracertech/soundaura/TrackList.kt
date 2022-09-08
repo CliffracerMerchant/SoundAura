@@ -37,9 +37,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * A LazyColumn to display all of the Tracks provided in @param tracks
- * with instances of TrackView. The created TrackViews will use the
- * provided @param trackViewCallback for callbacks.
+ * A LazyColumn to display all of the provided Tracks with instances of TrackView.
  *
  * @param modifier The modifier that will be used for the TrackList.
  * @param state The LazyListState used for the TrackList's scrolling state.
@@ -54,7 +52,7 @@ import javax.inject.Inject
     state: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues,
     tracks: List<Track>,
-    trackViewCallback: TrackViewCallback = TrackViewCallback()
+    trackViewCallback: TrackViewCallback
 ) = LazyColumn(
     modifier = modifier,
     state = state,

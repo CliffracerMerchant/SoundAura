@@ -96,7 +96,7 @@ class MainActivity : ComponentActivity() {
         setContentWithTheme {
             val scaffoldState = rememberScaffoldState()
 
-            MessageDisplayer(scaffoldState)
+            MessageDisplayer(scaffoldState.snackbarHostState)
 
             Scaffold(
                 scaffoldState = scaffoldState,
@@ -150,7 +150,9 @@ class MainActivity : ComponentActivity() {
 
     /** Compose a message handler that will read messages emitted from a
      * MainActivityViewModel's messages member and display them using snack bars.*/
-    @Composable private fun MessageDisplayer(scaffoldState: ScaffoldState) {
+    @Composable private fun MessageDisplayer(
+        snackbarHostState: SnackbarHostState
+    ) {
         val dismissLabel = stringResource(R.string.dismiss)
 
         LaunchedEffect(Unit) {
@@ -159,7 +161,7 @@ class MainActivity : ComponentActivity() {
                 val messageText = message.stringResource.resolve(context)
                 val actionLabel = message.actionStringResource?.resolve(context)
                                                     ?: dismissLabel.uppercase()
-                scaffoldState.snackbarHostState.showSnackbar(
+                snackbarHostState.showSnackbar(
                     message = messageText,
                     actionLabel = actionLabel,
                     duration = SnackbarDuration.Short)
@@ -199,8 +201,8 @@ class MainActivity : ComponentActivity() {
                 }
                 AppSettings(Modifier.fillMaxSize(), appSettingsPadding)
             } else {
-                // The track list is given an additional 64dp padding
-                // to account for the size of the FABs themselves.
+                // The track list is given an additional 64dp
+                // bottom padding to account for the FABs.
                 val trackListPadding = remember(padding) {
                     PaddingValues(
                         start = 8.dp + padding.calculateStartPadding(ld),
@@ -226,7 +228,7 @@ class MainActivity : ComponentActivity() {
         visible: Boolean,
         bottomPadding: Dp
     ) {
-        AnimatedVisibility(
+        AnimatedVisibility( // Play / pause button
             visible = visible,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -251,7 +253,7 @@ class MainActivity : ComponentActivity() {
                     tint = MaterialTheme.colors.onPrimary)
             }
         }
-        AnimatedVisibility(
+        AnimatedVisibility( // add track button
             visible = visible,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
