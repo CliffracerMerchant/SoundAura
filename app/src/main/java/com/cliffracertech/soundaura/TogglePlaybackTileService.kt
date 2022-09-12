@@ -12,7 +12,7 @@ import android.service.quicksettings.TileService
 import android.support.v4.media.session.PlaybackStateCompat
 
 /**
- * A TileService to control control the app's audio playback.
+ * A TileService to control the app's audio playback.
  *
  * In order to update the tile's visual state, TogglePlaybackTileService must
  * be informed of changes to the app's playback state by calling the function

@@ -5,7 +5,7 @@
 <resources
     xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">SoundAura</string>
-    <string name="app_version">v1.2.0</string>
+    <string name="app_version">v1.2.1</string>
 
     <string name="app_player_service_description">A service to play the user\'s sound mix.</string>
     <string name="player_notification_channel_name">Player controls</string>
@@ -182,7 +182,7 @@
     <string name="view_source_code">View source code</string>
 
     <string name="github_link" translatable="false">
-        https://github.com/NicholasHochstetler/SoundAura</string>
+        https://github.com/CliffracerMerchant/SoundAura</string>
 
     <string name="player_notification_channel_id" translatable="false">
         player_controls</string>

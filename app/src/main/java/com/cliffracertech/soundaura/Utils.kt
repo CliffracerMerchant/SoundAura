@@ -78,7 +78,7 @@ inline fun <reified T: Enum<T>> DataStore<Preferences>.enumPreferenceState(
     val indexState = preferenceState(key, initialValue.ordinal, scope)
     val values = enumValues<T>()
     return derivedStateOf {
-        values.getOrNull(indexState.value) ?: initialValue
+        values.getOrElse(indexState.value) { initialValue }
     }
 }
 
@@ -98,7 +98,7 @@ suspend inline fun <reified T: Enum<T>> DataStore<Preferences>.awaitEnumPreferen
     val indexState = awaitPreferenceState(key, defaultValue.ordinal, scope)
     val values = enumValues<T>()
     return derivedStateOf {
-        values.getOrNull(indexState.value) ?: defaultValue
+        values.getOrElse(indexState.value) { defaultValue }
     }
 }
 
@@ -119,7 +119,7 @@ inline fun <reified T: Enum<T>> DataStore<Preferences>.enumPreferenceFlow(
     defaultValue: T = enumValues<T>()[0],
 ) = data.map { prefs ->
     val index = prefs[key] ?: defaultValue.ordinal
-    enumValues<T>().getOrNull(index) ?: defaultValue
+    enumValues<T>().getOrElse(index) { defaultValue }
 }
 
 /** Run the provided block after a clearCallingIdentity

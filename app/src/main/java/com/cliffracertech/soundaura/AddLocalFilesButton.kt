@@ -186,7 +186,7 @@ class AddLocalFilesButtonViewModel(
 }
 
 /** Return a suitable display name for a file uri (i.e. the file name minus
- * the file type extension, and with underscores replaced with spaces. */
+ * the file type extension, and with underscores replaced with spaces). */
 fun Uri.getDisplayName(context: Context) =
     DocumentFile.fromSingleUri(context, this)?.name
         ?.substringBeforeLast('.')

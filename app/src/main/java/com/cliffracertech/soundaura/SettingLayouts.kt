@@ -89,21 +89,24 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
             colors = ButtonDefaults.textButtonColors(
                 contentColor = MaterialTheme.colors.onSurface)
         ) {
-            // The RadioButton's padding is slightly asymmetrical so
-            // that it appears more inline with the title next to it.
-            RadioButton(
-                checked = value == currentValue,
-                Modifier.size(36.dp).padding(top = 7.dp, bottom = 5.dp))
-            Spacer(Modifier.width(6.dp))
+            Row(modifier = Modifier.fillMaxWidth().padding(end = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // The RadioButton's padding is slightly asymmetrical so
+                // that it appears more inline with the title next to it.
+                RadioButton(
+                    checked = value == currentValue,
+                    Modifier.size(36.dp).padding(top = 7.dp, bottom = 5.dp))
+                Column {
+                    val name = valueNames.getOrNull(index) ?: "Error"
+                    Text(name, style = MaterialTheme.typography.body1)
 
-            Column {
-                val name = valueNames.getOrNull(index) ?: "Error"
-                Text(name, style = MaterialTheme.typography.body1)
-
-                val description = valueDescriptions?.getOrNull(index)
-                if (!description.isNullOrEmpty()) {
-                    Spacer(Modifier.height(2.dp))
-                    Text(description, style = MaterialTheme.typography.body2)
+                    val description = valueDescriptions?.getOrNull(index)
+                    if (!description.isNullOrEmpty()) {
+                        Spacer(Modifier.height(2.dp))
+                        Text(description, style = MaterialTheme.typography.body2)
+                    }
                 }
             }
         }
@@ -240,7 +243,6 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
                 Spacer(Modifier.height(6.dp))
             }
             EnumRadioButtonGroup(
-                modifier = Modifier.padding(end = 12.dp),
                 values = values,
                 valueNames = valueNames,
                 valueDescriptions = valueDescriptions,

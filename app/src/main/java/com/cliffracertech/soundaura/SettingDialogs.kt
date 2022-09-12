@@ -249,7 +249,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
                 val gitHubLink = stringResource(R.string.github_link)
                 TextButton(
                     onClick = { uriHandler.openUri(gitHubLink) },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxSize(),
                     shape = MaterialTheme.shapes.medium.bottomStartShape()
                 ) {
                     Icon(painterResource(R.drawable.github_logo), null,

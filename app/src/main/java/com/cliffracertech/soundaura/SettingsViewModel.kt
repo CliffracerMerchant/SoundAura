@@ -61,20 +61,20 @@ object SoundAura {
      * - The app will not request audio focus, and will consequently be allowed
      *   to play alongside other apps
      * - The app's playback will not respond to hardware media keys unless they
-     *   are pressed while the app is in the foreground.
+     *   are pressed while the app is in the foreground
      * - The app's foreground service notification will appear as a regular notification
      * - Playback will not automatically pause during phone calls unless the
      *   read phone state permission is granted and the preference autoPauseDuringCalls
      *   is true (due to the app having no other way to determine if a phone call
-     *   is ongoing
+     *   is ongoing)
      */
     const val pref_key_playInBackground = "play_in_background"
 
     /** A boolean value that indicates whether playback should automatically
      * pause when a phone call is ongoing. This setting will have no effect if
-     * the playInBackground setting is true because the app will automatically
+     * the playInBackground setting is false because the app will automatically
      * pause playback during calls due to losing audio focus. This setting also
-     * has no effect is the app has not been granted the read phone state
+     * has no effect if the app has not been granted the read phone state
      * permission, and should be prevented from being true in that case. */
     const val pref_key_autoPauseDuringCalls = "auto_pause_during_calls"
 
@@ -84,6 +84,7 @@ object SoundAura {
      * documentation for descriptions of each value. */
     const val pref_key_onZeroVolumeAudioDeviceBehavior = "on_zero_volume_audio_device_behavior"
 }
+
 enum class AppTheme { UseSystem, Light, Dark;
     companion object {
         /** Return an Array<String> containing strings that describe the enum values. */
@@ -185,11 +186,14 @@ class SettingsViewModel(
     }
 
     fun onPlayInBackgroundSwitchClick() {
-        scope.launch { dataStore.edit {
-            val newValue = !playInBackground
-            if (!newValue) it[autoPauseDuringCallKey] = false
-            it[playInBackgroundKey] = newValue
-        }}
+        scope.launch {
+            dataStore.edit {
+                val newValue = !playInBackground
+                if (!newValue)
+                    it[autoPauseDuringCallKey] = false
+                it[playInBackgroundKey] = newValue
+            }
+        }
     }
 
     val autoPauseDuringCallSettingVisible by derivedStateOf { playInBackground }
