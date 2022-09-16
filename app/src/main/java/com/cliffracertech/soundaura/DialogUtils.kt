@@ -3,6 +3,7 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
@@ -134,10 +135,17 @@ import androidx.compose.ui.window.DialogProperties
  * @param onFinish The callback that will be invoked when the user taps the
  *     finish button. The finish button will replace the next button when
  *     the last page of content is being displayed.
- * @param pages The list of composable lambdas that will be used as the
- *     content for each page of the dialog. The provided modifier should be
- *     used for the root layout of each page of content so that the pages'
- *     margins will match those of the dialog's title.
+ * @param numPages The total number of pages.
+ * @param currentPageIndex The index of the page that should be displayed.
+ * @param onCurrentPageIndexChange The callback that will be invoked when the
+ *     currentPageIndex should be changed. If currentPageIndex is not changed
+ *     to the provided Int value when this is called, the current page
+ *     indicator will be incorrect.
+ * @param pages The composable lambda that composes the correct content given
+ *     the value of currentPageIndex. The provided Modifier parameter should
+ *     be used for the content to ensure a consistent look. Like AnimatedVisiblilty's
+ *     content parameter, the value of the provided Int should always be
+ *     taken into account when determining each page's contents.
  */
 @Composable fun MultiStepDialog(
     title: String,
@@ -145,14 +153,16 @@ import androidx.compose.ui.window.DialogProperties
     contentButtonSpacing: Dp = 12.dp,
     onDismissRequest: () -> Unit,
     onFinish: () -> Unit = onDismissRequest,
-    pages: List<@Composable (Modifier) -> Unit>
+    numPages: Int,
+    currentPageIndex: Int,
+    onCurrentPageIndexChange: (Int) -> Unit,
+    pages: @Composable AnimatedVisibilityScope.(Modifier, Int) -> Unit
 ) = Dialog(onDismissRequest, DialogProperties(usePlatformDefaultWidth = false)) {
-    require(pages.isNotEmpty())
+    require(currentPageIndex in 0 until numPages)
 
     Surface(Modifier.padding(24.dp), MaterialTheme.shapes.medium) {
         Column(Modifier.padding(top = 16.dp)) {
-            var previousPage by rememberSaveable { mutableStateOf(0) }
-            var currentPage by rememberSaveable { mutableStateOf(0) }
+            var previousPageIndex by rememberSaveable { mutableStateOf(currentPageIndex) }
 
             Column {
                 // The horizontal padding is applied to each item here instead of to
@@ -165,7 +175,7 @@ import androidx.compose.ui.window.DialogProperties
                     Spacer(Modifier.weight(1f))
                     Text(title, style = MaterialTheme.typography.h6)
                     Spacer(Modifier.weight(1f))
-                    Text(stringResource(R.string.multi_step_dialog_indicator, currentPage + 1, pages.size),
+                    Text(stringResource(R.string.multi_step_dialog_indicator, currentPageIndex + 1, numPages),
                          style = MaterialTheme.typography.subtitle1)
                 }
                 Spacer(Modifier.height(titleContentSpacing))
@@ -174,9 +184,9 @@ import androidx.compose.ui.window.DialogProperties
                                            .then(horizontalPaddingModifier)
                 ProvideTextStyle(MaterialTheme.typography.subtitle1) {
                     SlideAnimatedContent(
-                        targetState = currentPage,
-                        leftToRight = currentPage >= previousPage
-                    ) { pages[it](pageModifier) }
+                        targetState = currentPageIndex,
+                        leftToRight = currentPageIndex >= previousPageIndex,
+                        content = { pages(pageModifier, it) })
                 }
             }
 
@@ -186,29 +196,34 @@ import androidx.compose.ui.window.DialogProperties
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
                 TextButton(
                     onClick = {
-                        if (currentPage == 0)
+                        if (currentPageIndex == 0)
                             onDismissRequest()
-                        else previousPage = currentPage--
+                        else {
+                            previousPageIndex = currentPageIndex
+                            onCurrentPageIndexChange(currentPageIndex - 1)
+                        }
                     }, modifier = Modifier.minTouchTargetSize().weight(1f),
                     shape = MaterialTheme.shapes.medium.bottomStartShape()
                 ) {
-                    Text(stringResource(if (currentPage == 0)
-                                            R.string.cancel
-                                        else R.string.previous))
+                    Text(stringResource(
+                        if (currentPageIndex == 0) R.string.cancel
+                        else                       R.string.previous))
                 }
                 VerticalDivider()
                 TextButton(
                     onClick = {
-                        if (currentPage == pages.lastIndex)
+                        if (currentPageIndex == numPages - 1)
                             onFinish()
-                        else previousPage = currentPage++
+                        else {
+                            previousPageIndex = currentPageIndex
+                            onCurrentPageIndexChange(currentPageIndex + 1)
+                        }
                     }, modifier = Modifier.minTouchTargetSize().weight(1f),
                     shape = MaterialTheme.shapes.medium.bottomEndShape()
                 ) {
                     Text(stringResource(
-                        if (currentPage == pages.lastIndex)
-                            R.string.finish
-                        else R.string.next))
+                        if (currentPageIndex == numPages - 1) R.string.finish
+                        else                                  R.string.next))
                 }
             }
         }

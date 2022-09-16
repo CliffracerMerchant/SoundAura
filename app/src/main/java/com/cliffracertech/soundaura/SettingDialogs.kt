@@ -4,12 +4,15 @@
 package com.cliffracertech.soundaura
 
 import android.Manifest
+import android.app.StatusBarManager
+import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,9 +21,7 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
+import java.util.concurrent.Executor
 
 /**
  * Launch a dialog to explain the consequences of the 'Play in background' setting.
@@ -95,56 +97,97 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
     }
 }
 
+/** Compose a button that will prompt the user to add the app's quick settings
+ * tile to their status bar when clicked. RequestAddTileServiceButton is non-
+ * functional if called when Build.VERSION.SDK_INT < 33. */
+@Composable private fun RequestAddTileServiceButton(
+    modifier: Modifier = Modifier,
+    onSuccess: () -> Unit
+) {
+    if (Build.VERSION.SDK_INT < 33) return
+
+    val context = LocalContext.current
+    val onAddTileButtonClick = {
+        val statusBarManager = context.getSystemService(
+            StatusBarManager::class.java) as StatusBarManager
+        statusBarManager.requestAddTileService(
+            ComponentName(context, TogglePlaybackTileService::class.java),
+            context.getString(R.string.app_name),
+            android.graphics.drawable.Icon.createWithResource(
+                context, R.drawable.tile_and_notification_icon),
+            { it.run() }
+        ) {
+            if (it == StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED)
+                onSuccess()
+        }
+    }
+    Button(
+        onClick = onAddTileButtonClick,
+        modifier = modifier,
+        elevation = ButtonDefaults.elevation(
+            defaultElevation = 8.dp,
+            pressedElevation = 4.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = ButtonDefaults.buttonColors(MaterialTheme.colors.primaryVariant),
+        contentPadding = PaddingValues(vertical = 16.dp, horizontal = 24.dp),
+    ) {
+        Text(stringResource(R.string.tile_tutorial_add_tile_button_text))
+    }
+}
+
+/** Compose an explanation for the user about how to add the app's quick
+ * settings tile to their status bar. */
+@Composable private fun PreApi33TileTutorial() {
+    Spacer(Modifier.size(16.dp))
+    Text(stringResource(R.string.tile_tutorial_add_tile_text))
+    Column {
+        var showingAddTileHelp by rememberSaveable { mutableStateOf(false) }
+        Row(modifier = Modifier
+            .minTouchTargetSize()
+            .clickable { showingAddTileHelp = !showingAddTileHelp },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(stringResource(R.string.tile_tutorial_add_tile_help_button_text),
+                style = LocalTextStyle.current.copy(fontWeight = FontWeight.Bold))
+            val iconRotation by animateFloatAsState(
+                if (showingAddTileHelp) 180f else 0f)
+            Spacer(Modifier.weight(1f))
+            Icon(imageVector = Icons.Default.ExpandMore,
+                contentDescription = stringResource(
+                    if (showingAddTileHelp)
+                        R.string.tile_tutorial_add_tile_help_button_hide_description
+                    else R.string.tile_tutorial_add_tile_help_button_show_description),
+                modifier = Modifier.rotate(iconRotation))
+        }
+        AnimatedVisibility(showingAddTileHelp) {
+            Text(stringResource(R.string.tile_tutorial_add_tile_help_text))
+        }
+    }
+}
+
 @Composable fun TileTutorialDialog(
     onDismissRequest: () -> Unit
-) = MultiStepDialog(
-    title = stringResource(R.string.tile_tutorial_title),
-    onDismissRequest = onDismissRequest,
-    pages = listOf(@Composable { pageModifier ->
-        Column(pageModifier) {
-            Text(stringResource(R.string.tile_tutorial_intro_text))
-
-//            if (Build.VERSION.SDK_INT >= 33) {
-//                val onButtonClick = { StatusBarManager.requestAddTileService(
-//                    ComponentName(context, TogglePlaybackTileService::class.java),
-//                    stringResource(R.string.app_name),
-//                    icon =,
-//                    resultExecutor =,
-//                    resultCallback =,)
-//                }
-//                TextButton(onClick = onButtonClick) {
-//                    Text(stringResource(R.string.tile_tutorial_add_tile_button_text))
-//                }
-//            } else {
-            Spacer(Modifier.size(16.dp))
-            Text(stringResource(R.string.tile_tutorial_add_tile_text))
-            Column {
-                var showingAddTileHelp by rememberSaveable { mutableStateOf(false) }
-                Row(modifier = Modifier
-                    .minTouchTargetSize()
-                    .clickable { showingAddTileHelp = !showingAddTileHelp },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(stringResource(R.string.tile_tutorial_add_tile_help_button_text),
-                         style = LocalTextStyle.current.copy(fontWeight = FontWeight.Bold))
-                    val iconRotation by animateFloatAsState(
-                        if (showingAddTileHelp) 180f else 0f)
-                    Spacer(Modifier.weight(1f))
-                    Icon(imageVector = Icons.Default.ExpandMore,
-                         contentDescription = stringResource(
-                             if (showingAddTileHelp)
-                                 R.string.tile_tutorial_add_tile_help_button_hide_description
-                             else R.string.tile_tutorial_add_tile_help_button_show_description),
-                         modifier = Modifier.rotate(iconRotation))
-                }
-                AnimatedContent(showingAddTileHelp) {
-                    if (it) Text(stringResource(R.string.tile_tutorial_add_tile_help_text))
-                }
+) {
+    var currentPageIndex by rememberSaveable { mutableStateOf(0) }
+    MultiStepDialog(
+        title = stringResource(R.string.tile_tutorial_title),
+        onDismissRequest = onDismissRequest,
+        numPages = 2,
+        currentPageIndex = currentPageIndex,
+        onCurrentPageIndexChange = { currentPageIndex = it },
+    ) { pageModifier, currentIndex ->
+        if (currentIndex == 0)
+            Column(pageModifier) {
+                Text(stringResource(R.string.tile_tutorial_intro_text))
+                if (Build.VERSION.SDK_INT >= 33)
+                    RequestAddTileServiceButton(
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .padding(top = 12.dp, bottom = 6.dp),
+                        onSuccess = { currentPageIndex++ })
+                else PreApi33TileTutorial()
             }
-        }
-//        }
-    }, @Composable { pageModifier ->
-        Column(pageModifier, Arrangement.spacedBy(16.dp)) {
+        else Column(pageModifier, Arrangement.spacedBy(16.dp)) {
             Text(stringResource(R.string.tile_tutorial_tile_usage_text))
             val context = LocalContext.current
             val hideNotificationLinkText = stringResource(
@@ -157,9 +200,8 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 
             val linkifiedText = buildAnnotatedString {
                 // ClickableText seems to not follow the local text style by default
-                pushStyle(
-                    SpanStyle(color = LocalContentColor.current,
-                    fontSize = LocalTextStyle.current.fontSize))
+                pushStyle(SpanStyle(color = LocalContentColor.current,
+                                    fontSize = LocalTextStyle.current.fontSize))
                 append(hideNotificationText)
                 val urlStyle = SpanStyle(color = MaterialTheme.colors.primary,
                                          textDecoration = TextDecoration.Underline)
@@ -178,7 +220,8 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
                 }
             }
         }
-    }))
+    }
+}
 
 /** Show a dialog displaying the app's privacy policy to the user. */
 @Composable fun PrivacyPolicyDialog(
