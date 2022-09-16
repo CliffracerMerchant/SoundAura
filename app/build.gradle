@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    compileSdk 32
+    compileSdk 33
 
     sourceSets {
         androidTest.assets.srcDirs += files("$projectDir/schemas".toString())
@@ -15,9 +15,9 @@ android {
     defaultConfig {
         applicationId "com.cliffracertech.soundaura"
         minSdk 24
-        targetSdk 32
-        versionCode 4
-        versionName "1.2.1"
+        targetSdk 33
+        versionCode 5
+        versionName "1.2.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         javaCompileOptions {
             annotationProcessorOptions {
@@ -76,13 +76,13 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
 }
 
 dependencies {
-    implementation 'androidx.core:core-ktx:1.8.0'
+    implementation 'androidx.core:core-ktx:1.9.0'
     implementation "androidx.compose.ui:ui:1.2.1"
     implementation "androidx.compose.material:material:1.2.1"
     implementation "androidx.compose.ui:ui-tooling-preview:1.2.1"
     implementation 'androidx.compose.animation:animation:1.2.1'
     implementation 'androidx.compose.animation:animation-graphics:1.2.1'
-    implementation 'androidx.appcompat:appcompat:1.5.0'
+    implementation 'androidx.appcompat:appcompat:1.5.1'
     implementation 'com.google.android.material:material:1.6.1'
     implementation 'androidx.activity:activity-compose:1.5.1'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.5.1'
