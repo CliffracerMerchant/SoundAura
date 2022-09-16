@@ -89,7 +89,7 @@ class PlayerService: LifecycleService() {
     @Inject lateinit var messageHandler: MessageHandler
     private lateinit var audioManager: AudioManager
     private lateinit var telephonyManager: TelephonyManager
-    private var notificationManager: PlayerNotification? = null
+    private lateinit var notificationManager: PlayerNotification
 
     private var boundToActivity = false
         set(value) {
@@ -100,20 +100,8 @@ class PlayerService: LifecycleService() {
 
     private var playInBackground = false
         set(value) {
-            if (field == value) return
             field = value
-
-            if (notificationManager == null)
-                notificationManager = PlayerNotification(
-                    service = this,
-                    playIntent = playIntent(this),
-                    pauseIntent = pauseIntent(this),
-                    stopIntent = stopIntent(this),
-                    playbackState = playbackState,
-                    showStopAction = !boundToActivity,
-                    useMediaSession = !value)
-            else notificationManager?.useMediaSession = !value
-
+            notificationManager.useMediaSession = !value
             if (value) {
                 abandonAudioFocus()
                 unpauseLocks.remove(autoPauseAudioFocusLossKey)
@@ -265,7 +253,16 @@ class PlayerService: LifecycleService() {
         // playInBackground needs to be set before playback starts so that
         // PlayerService knows whether it needs to request audio focus or not.
         // As such, there is no alternative but to wait here for the first value.
-        playInBackground = runBlocking { playInBackgroundFlow.first() }
+        val playInBackgroundFirstValue = runBlocking { playInBackgroundFlow.first() }
+        notificationManager = PlayerNotification(
+            service = this,
+            playIntent = playIntent(this),
+            pauseIntent = pauseIntent(this),
+            stopIntent = stopIntent(this),
+            playbackState = playbackState,
+            showStopAction = !boundToActivity,
+            useMediaSession = !playInBackgroundFirstValue)
+        playInBackground = playInBackgroundFirstValue
 
         repeatWhenStarted {
             playInBackgroundFlow
@@ -297,7 +294,7 @@ class PlayerService: LifecycleService() {
 
     override fun onDestroy() {
         playbackState = STATE_STOPPED
-        notificationManager?.remove()
+        notificationManager.remove()
         audioManager.unregisterAudioDeviceCallback(audioDeviceChangeCallback)
         playerSet.releaseAll()
         super.onDestroy()
@@ -471,7 +468,7 @@ class PlayerService: LifecycleService() {
     }
 
     private fun updateNotification() =
-        notificationManager?.update(playbackState, showStopAction = !boundToActivity)
+        notificationManager.update(playbackState, showStopAction = !boundToActivity)
 
     private val audioFocusRequest =
         AudioFocusRequestCompat.Builder(AUDIOFOCUS_GAIN)
