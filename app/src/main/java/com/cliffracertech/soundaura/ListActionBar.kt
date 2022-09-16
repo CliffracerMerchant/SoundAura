@@ -42,7 +42,7 @@ import com.google.accompanist.insets.statusBarsPadding
 ) {
     val gradStart = MaterialTheme.colors.primaryVariant
     val gradEnd = MaterialTheme.colors.secondaryVariant
-    val gradient = remember {
+    val gradient = remember(gradStart, gradEnd) {
         Brush.horizontalGradient(listOf(gradStart, gradEnd))
     }
     Row(modifier.fillMaxWidth()
