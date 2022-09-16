@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -53,9 +54,15 @@ import androidx.compose.ui.window.DialogProperties
     horizontalPadding: Dp = 16.dp,
     title: String? = null,
     titleLayout: @Composable (String) -> Unit = @Composable {
-        Text(text = it, style = MaterialTheme.typography.h6,
-             modifier = Modifier.padding(start = horizontalPadding, top = 16.dp,
-                                         end = horizontalPadding, bottom = 0.dp))
+        Row(Modifier.fillMaxWidth(), Arrangement.Center) {
+            Text(text = it,
+                modifier = Modifier.padding(
+                    start = horizontalPadding, top = 16.dp,
+                    end = horizontalPadding, bottom = 0.dp),
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 1,
+                style = MaterialTheme.typography.h6)
+        }
     }, text: String? = null,
     titleContentSpacing: Dp = 12.dp,
     contentButtonSpacing: Dp = 12.dp,
@@ -155,6 +162,7 @@ import androidx.compose.ui.window.DialogProperties
                 val horizontalPaddingModifier = Modifier.padding(horizontal = 16.dp)
 
                 Row(horizontalPaddingModifier) {
+                    Spacer(Modifier.weight(1f))
                     Text(title, style = MaterialTheme.typography.h6)
                     Spacer(Modifier.weight(1f))
                     Text(stringResource(R.string.multi_step_dialog_indicator, currentPage + 1, pages.size),
@@ -197,9 +205,10 @@ import androidx.compose.ui.window.DialogProperties
                     }, modifier = Modifier.minTouchTargetSize().weight(1f),
                     shape = MaterialTheme.shapes.medium.bottomEndShape()
                 ) {
-                    Text(stringResource(if (currentPage == pages.lastIndex)
-                                            R.string.finish
-                                        else R.string.next))
+                    Text(stringResource(
+                        if (currentPage == pages.lastIndex)
+                            R.string.finish
+                        else R.string.next))
                 }
             }
         }

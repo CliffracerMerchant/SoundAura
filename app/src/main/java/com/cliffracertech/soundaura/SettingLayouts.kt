@@ -225,14 +225,11 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
     SoundAuraDialog(
         // To prevent the EnumRadioButtonGroup's intrinsic start padding from
         // stacking with the dialog window's start padding, the horizontal
-        // padding for the entire dialog window is set to zero, and then set to
-        // the default 16.dp for just the title and description below the title.
+        // padding for the entire dialog window is set to zero, and then set
+        // to the default 16.dp for just the description below the title.
         horizontalPadding = 0.dp,
         title = title,
-        titleLayout = {
-            Text(text = it, style = MaterialTheme.typography.h6,
-                 modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp))
-        }, contentButtonSpacing = 4.dp, // reduced because the EnumRadioButtonGroup already has spacing
+        contentButtonSpacing = 4.dp, // reduced because the EnumRadioButtonGroup already has spacing
         onDismissRequest = onDismissRequest,
         showCancelButton = false,
     ) {

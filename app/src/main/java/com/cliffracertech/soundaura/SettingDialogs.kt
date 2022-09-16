@@ -217,20 +217,21 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
         Column(Modifier.padding(top = 16.dp)) {
             Column(Modifier.padding(horizontal = 16.dp)) {
                 // Title
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(horizontalArrangement = Arrangement.Center) {
+                    Spacer(Modifier.weight(1f))
                     Icon(painter = painterResource(R.drawable.tile_and_notification_icon),
                          contentDescription = null,
-                         modifier = Modifier.size(24.dp),
+                         modifier = Modifier.size(22.dp),
                          tint = MaterialTheme.colors.primary)
                     Spacer(Modifier.width(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(text = stringResource(R.string.app_name),
-                             modifier = Modifier.alignByBaseline(),
-                             style = MaterialTheme.typography.h6)
-                        Text(text = stringResource(R.string.app_version),
-                             modifier = Modifier.alignByBaseline(),
-                             style = MaterialTheme.typography.subtitle1)
-                    }
+                    Text(text = stringResource(R.string.app_name),
+                         modifier = Modifier.alignByBaseline(),
+                         style = MaterialTheme.typography.h6)
+                    Spacer(Modifier.width(6.dp))
+                    Text(text = stringResource(R.string.app_version),
+                         modifier = Modifier.alignByBaseline(),
+                         style = MaterialTheme.typography.subtitle1)
+                    Spacer(Modifier.weight(1f))
                 }
 
                 // Content
