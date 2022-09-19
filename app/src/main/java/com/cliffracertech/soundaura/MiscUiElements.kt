@@ -12,6 +12,7 @@ import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -22,10 +23,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 
 fun Modifier.minTouchTargetSize() =
@@ -186,5 +191,41 @@ fun Modifier.minTouchTargetSize() =
             Spacer(Modifier.width(12.dp))
             Text(item)
         }
+    }
+}
+
+/**
+ * Compose a [Text] containing a clickable link.
+ *
+ * @param modifier The Modifier to use for the entire text.
+ * @param linkText The text that will be clickable.
+ * @param completeText The entire text that will be displayed. This must
+ *     contain the linkText, or else the link will not work properly.
+ * @param onLinkClick The callback that will be invoked when the link is clicked.
+ */
+@Composable fun TextWithClickableLink(
+    modifier: Modifier = Modifier,
+    linkText: String,
+    completeText: String,
+    onLinkClick: () -> Unit
+) {
+    val linkTextStartIndex = completeText.indexOf(linkText)
+    val linkTextLastIndex = linkTextStartIndex + linkText.length
+    val linkifiedText = buildAnnotatedString {
+        // ClickableText seems to not follow the local text style by default
+        pushStyle(SpanStyle(color = LocalContentColor.current,
+                            fontSize = LocalTextStyle.current.fontSize))
+        append(completeText)
+        val urlStyle = SpanStyle(color = MaterialTheme.colors.primary,
+                                 textDecoration = TextDecoration.Underline)
+        addStyle(urlStyle, linkTextStartIndex, linkTextLastIndex)
+    }
+    ClickableText(
+        text = linkifiedText,
+        modifier = modifier.alpha(LocalContentAlpha.current),
+        style = MaterialTheme.typography.body1
+    ) {
+        if (it in linkTextStartIndex..linkTextLastIndex)
+            onLinkClick()
     }
 }

@@ -74,8 +74,7 @@ import androidx.compose.ui.window.DialogProperties
     onConfirm: () -> Unit = onDismissRequest,
     content: @Composable () -> Unit = @Composable {
         CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.high) {
-            val textStyle = MaterialTheme.typography.subtitle1
-            ProvideTextStyle(textStyle) { Text(text ?: "") }
+            Text(text ?: "", style = MaterialTheme.typography.body1)
         }
     }
 ) = Dialog(
