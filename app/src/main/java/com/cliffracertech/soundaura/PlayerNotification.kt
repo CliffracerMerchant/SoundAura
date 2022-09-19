@@ -6,6 +6,7 @@ package com.cliffracertech.soundaura
 import android.app.*
 import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.app.PendingIntent.FLAG_UPDATE_CURRENT
+import android.app.Service.STOP_FOREGROUND_REMOVE
 import android.content.Context.NOTIFICATION_SERVICE
 import android.content.Intent
 import android.os.Build
@@ -146,7 +147,7 @@ class PlayerNotification(
         // Service.stopForeground and Service.startForeground must be used
         // instead of NotificationManager.cancel to get the notification to
         // reappear in the correct location.
-        service.stopForeground(true)
+        service.stopForeground(STOP_FOREGROUND_REMOVE)
         mediaSession?.isActive = false
 
         notificationStyle = androidx.media.app.NotificationCompat.MediaStyle()
@@ -174,7 +175,7 @@ class PlayerNotification(
     }
 
     fun remove() {
-        service.stopForeground(true)
+        service.stopForeground(STOP_FOREGROUND_REMOVE)
         mediaSession?.isActive = false
         mediaSession?.release()
     }
