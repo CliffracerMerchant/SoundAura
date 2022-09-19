@@ -31,6 +31,7 @@ import androidx.media.AudioAttributesCompat.USAGE_MEDIA
 import androidx.media.AudioFocusRequestCompat
 import androidx.media.AudioManagerCompat
 import androidx.media.AudioManagerCompat.AUDIOFOCUS_GAIN
+import com.cliffracertech.soundaura.PlayerService.Companion.playbackState
 import com.cliffracertech.soundaura.SoundAura.pref_key_autoPauseDuringCalls
 import com.cliffracertech.soundaura.SoundAura.pref_key_onZeroVolumeAudioDeviceBehavior
 import com.cliffracertech.soundaura.SoundAura.pref_key_playInBackground
@@ -281,9 +282,11 @@ class PlayerService: LifecycleService() {
                 .onEach(::setAutoPauseDuringCallEnabled)
                 .launchIn(this)
 
-            val onZeroVolumeAudioDeviceBehaviorKey = intPreferencesKey(pref_key_onZeroVolumeAudioDeviceBehavior)
-            dataStore.enumPreferenceFlow<OnZeroVolumeAudioDeviceBehavior>(onZeroVolumeAudioDeviceBehaviorKey)
-                .onEach { onZeroVolumeAudioDeviceBehavior = it }
+            val onZeroVolumeAudioDeviceBehaviorKey =
+                intPreferencesKey(pref_key_onZeroVolumeAudioDeviceBehavior)
+            dataStore.enumPreferenceFlow<OnZeroVolumeAudioDeviceBehavior>(
+                    onZeroVolumeAudioDeviceBehaviorKey
+                ).onEach { onZeroVolumeAudioDeviceBehavior = it }
                 .launchIn(this)
 
             trackDao.getAllActiveTracks()
@@ -390,11 +393,12 @@ class PlayerService: LifecycleService() {
             if (unpauseLocks.add(key))
                 setPlaybackState(STATE_PAUSED, clearUnpauseLocks = false)
         } else if (unpauseLocks.remove(key) && unpauseLocks.isEmpty())
-            setPlaybackState(STATE_PLAYING)
+            setPlaybackState(STATE_PLAYING, clearUnpauseLocks = false)
     }
 
     private val audioDeviceChangeCallback = object: AudioDeviceCallback() {
         private var firstAudioDeviceChangeDetected = false
+        private var mediaVolumeIsZero = false
 
         private fun onAudioDeviceChange() {
             // If the service is moved directly from stopped to playing (e.g. from
@@ -405,17 +409,31 @@ class PlayerService: LifecycleService() {
             // change here to prevent this.
             if (!firstAudioDeviceChangeDetected) {
                 firstAudioDeviceChangeDetected = true
-            } else {
-                val volumeIsZero = audioManager.getStreamVolume(STREAM_MUSIC) == 0
-                when (onZeroVolumeAudioDeviceBehavior) {
-                    OnZeroVolumeAudioDeviceBehavior.AutoStop -> {
-                        if (volumeIsZero) setPlaybackState(STATE_STOPPED)
-                    } OnZeroVolumeAudioDeviceBehavior.AutoPause -> {
-                        autoPauseIf(volumeIsZero, key = autoPauseAudioDeviceChangeKey)
-                    } OnZeroVolumeAudioDeviceBehavior.DoNothing -> {}
-                }
+                mediaVolumeIsZero = audioManager.getStreamVolume(STREAM_MUSIC) == 0
+                return
+            }
+
+            val newMediaVolumeIsZero = audioManager.getStreamVolume(STREAM_MUSIC) == 0
+            // Connecting true wireless bluetooth headsets can sometimes result in
+            // multiple onAudioDevicesAdded calls. In this case the first call can
+            // occur before the media volume is moved to its new state. Returning
+            // early if the new media volume is zero when the last recorded media
+            // volume was already zero prevents playback from being affected when
+            // it shouldn't be.
+            if (mediaVolumeIsZero == newMediaVolumeIsZero)
+                return
+            else mediaVolumeIsZero = newMediaVolumeIsZero
+
+            when (onZeroVolumeAudioDeviceBehavior) {
+                OnZeroVolumeAudioDeviceBehavior.AutoStop -> {
+                    if (mediaVolumeIsZero)
+                        setPlaybackState(STATE_STOPPED)
+                } OnZeroVolumeAudioDeviceBehavior.AutoPause -> {
+                    autoPauseIf(mediaVolumeIsZero, key = autoPauseAudioDeviceChangeKey)
+                } OnZeroVolumeAudioDeviceBehavior.DoNothing -> {}
             }
         }
+
         override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) =
             onAudioDeviceChange()
         override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) =
