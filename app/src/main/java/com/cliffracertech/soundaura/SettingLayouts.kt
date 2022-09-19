@@ -160,6 +160,43 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
  * @param icon The icon to represent the setting. Will not be displayed if null.
  * @param title The string title for the setting.
  * @param description A longer description of the setting. Will not be displayed if null.
+ * @param dialogVisible Whether or not the dialog will be displayed.
+ * @param onShowRequest The callback that will be invoked when the user requests
+ * @param content The composable lambda containing the dialog that will be shown
+ *     when the title is clicked. The provided () -> Unit lambda argument should
+ *     be used as the onDismissRequest for the inner dialog.
+ */
+@Composable fun DialogSetting(
+    title: String,
+    icon: (@Composable () -> Unit)? = null,
+    description: String? = null,
+    dialogVisible: Boolean,
+    onShowRequest: () -> Unit,
+    onDismissRequest: () -> Unit,
+    content: @Composable (onDismissRequest: () -> Unit) -> Unit,
+) {
+    Setting(
+        title = title,
+        icon = icon,
+        subtitle = description,
+        onClick = onShowRequest,
+    ) {
+        Icon(imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = LocalContentColor.current.copy(ContentAlpha.medium))
+    }
+    if (dialogVisible)
+        content(onDismissRequest)
+}
+
+/**
+ * Compose a [DialogSetting] that contains its dialogVisible visible state
+ * internally. If state hoisting the dialogVisible state is necessary, use
+ * the overload of [DialogSetting] that accepts the dialogVisible parameter.
+ *
+ * @param icon The icon to represent the setting. Will not be displayed if null.
+ * @param title The string title for the setting.
+ * @param description A longer description of the setting. Will not be displayed if null.
  * @param content The composable lambda containing the dialog that will be shown
  *     when the title is clicked. The provided () -> Unit lambda argument should
  *     be used as the onDismissRequest for the inner dialog.
@@ -171,18 +208,14 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
     content: @Composable (onDismissRequest: () -> Unit) -> Unit,
 ) {
     var showingDialog by rememberSaveable { mutableStateOf(false) }
-    Setting(
+    DialogSetting(
         title = title,
         icon = icon,
-        subtitle = description,
-        onClick = { showingDialog = true },
-    ) {
-        Icon(imageVector = Icons.Default.ChevronRight,
-            contentDescription = null,
-            tint = LocalContentColor.current.copy(ContentAlpha.medium))
-    }
-    if (showingDialog)
-        content { showingDialog = false }
+        description = description,
+        dialogVisible = showingDialog,
+        onShowRequest = { showingDialog = true },
+        onDismissRequest = { showingDialog = false },
+        content = content)
 }
 
 /**

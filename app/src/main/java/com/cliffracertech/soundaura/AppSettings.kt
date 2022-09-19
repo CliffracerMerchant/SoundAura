@@ -5,6 +5,7 @@ package com.cliffracertech.soundaura
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -14,6 +15,10 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Switch
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -48,7 +53,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
             onValueClick = viewModel::onAppThemeClick)
     }
 
-@Composable private fun PlayInBackgroundSetting() {
+@Composable private fun PlayInBackgroundSetting(
+    onTileTutorialShowRequest: () -> Unit
+) {
     val viewModel: SettingsViewModel = viewModel()
 
     Setting(
@@ -68,6 +75,21 @@ import androidx.lifecycle.viewmodel.compose.viewModel
         if (viewModel.showingPlayInBackgroundExplanation)
             PlayInBackgroundExplanationDialog(
                 viewModel::onPlayInBackgroundExplanationDismiss)
+        if (viewModel.showingNotificationPermissionDialog) {
+            val context = LocalContext.current
+            val showExplanation =
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
+                    false
+                else ContextCompat.checkSelfPermission(
+                        context, Manifest.permission.POST_NOTIFICATIONS
+                    ) == PackageManager.PERMISSION_DENIED
+            NotificationPermissionDialog(
+                showExplanationFirst = showExplanation,
+                onShowTileTutorialClick = onTileTutorialShowRequest,
+                onDismissRequest = viewModel::onNotificationPermissionDialogDismiss,
+                onPermissionResult = viewModel::onNotificationPermissionDialogConfirm)
+        }
+
     }
 }
 
@@ -92,8 +114,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
             if (viewModel.showingPhoneStatePermissionDialog) {
                 val context = LocalContext.current
                 val showExplanation = ContextCompat.checkSelfPermission(
-                    context, Manifest.permission.READ_PHONE_STATE
-                ) == PackageManager.PERMISSION_DENIED
+                        context, Manifest.permission.READ_PHONE_STATE
+                    ) == PackageManager.PERMISSION_DENIED
                 PhoneStatePermissionDialog(
                     showExplanationFirst = showExplanation,
                     onDismissRequest = viewModel::onPhoneStatePermissionDialogDismiss,
@@ -106,8 +128,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable private fun PlaybackSettingsCategory() =
     SettingCategory(stringResource(R.string.playback)) {
         val viewModel: SettingsViewModel = viewModel()
+        var showingTileTutorialDialog by rememberSaveable { mutableStateOf(false) }
 
-        PlayInBackgroundSetting()
+        PlayInBackgroundSetting(
+            onTileTutorialShowRequest = { showingTileTutorialDialog = true })
         AutoPauseDuringCallSetting()
 
         Divider()
@@ -121,7 +145,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
             onValueClick = viewModel::onOnZeroVolumeAudioDeviceBehaviorClick)
 
         Divider()
-        DialogSetting(stringResource(R.string.control_playback_using_tile_setting_title)) {
+
+        DialogSetting(
+            title = stringResource(R.string.control_playback_using_tile_setting_title),
+            dialogVisible = showingTileTutorialDialog,
+            onShowRequest = { showingTileTutorialDialog = true },
+            onDismissRequest = { showingTileTutorialDialog = false }
+        ) {
             TileTutorialDialog(it)
         }
     }

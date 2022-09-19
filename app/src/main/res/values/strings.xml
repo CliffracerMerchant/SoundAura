@@ -98,6 +98,19 @@
         calls\' setting is enabled and the read phone state permission is granted
     </string>
 
+    <string name="request_notification_permission_title">Notification permission required</string>
+    <string name="request_notification_permission_explanation_p1">
+        When play in background is turned on, SoundAura must use a regular
+        notification to display the player controls (as opposed to a media session
+        card). In order to do this, it must have permission to post notifications.
+        This is optional, but without permission SoundAura will be unable to display
+        a notification containing player controls when play in background is turned
+        on.</string>
+    <string name="request_notification_permission_explanation_p2">
+        If you would rather not give permission, or if you would like to save
+        the notification space, you can alternatively %1$s.</string>
+    <string name="tile_tutorial_link_text">control SoundAura through its quick settings tile</string>
+
     <string name="auto_pause_during_calls_setting_title">Auto-pause during calls</string>
     <string name="auto_pause_during_calls_setting_subtitle">
         Requires read phone state permission\nOnly needed when playing in background</string>

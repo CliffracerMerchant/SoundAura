@@ -16,7 +16,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
@@ -24,21 +23,17 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
-import java.util.concurrent.Executor
 
 /**
  * Launch a dialog to explain the consequences of the 'Play in background' setting.
@@ -66,6 +61,61 @@ import java.util.concurrent.Executor
 }
 
 /**
+ * Compose a dialog that requests notification permission and, if necessary, explains
+ * why it is needed.
+ *
+ * @param showExplanationFirst Whether or not a dialog box explaining
+ *     why the permission is needed will be shown.
+ * @param onShowTileTutorialClick The callback that will be invoked
+ *     if the user clicks on the displayed link to the tile tutorial.
+ * @param onDismissRequest The callback that will be invoked if the
+ *     explanatory dialog is dismissed.
+ * @param onPermissionResult The callback that will be invoked when
+ *     the user grants or rejects the permission. The Boolean parameter
+ *     will be true if the permission was granted, or false otherwise.
+ */
+@Composable fun NotificationPermissionDialog(
+    showExplanationFirst: Boolean,
+    onShowTileTutorialClick: () -> Unit,
+    onDismissRequest: () -> Unit,
+    onPermissionResult: (Boolean) -> Unit,
+) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+        onPermissionResult(true)
+        return
+    }
+
+    var explanationDismissed by rememberSaveable { mutableStateOf(false) }
+    if (showExplanationFirst && !explanationDismissed)
+        SoundAuraDialog(
+            title = stringResource(R.string.request_notification_permission_title),
+            onDismissRequest = onDismissRequest,
+            showCancelButton = false,
+            onConfirm = { explanationDismissed = true }
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(stringResource(R.string.request_notification_permission_explanation_p1),
+                     style = MaterialTheme.typography.body1)
+
+                val linkText = stringResource(R.string.tile_tutorial_link_text)
+                TextWithClickableLink(
+                    linkText = linkText,
+                    completeText = stringResource(
+                        R.string.request_notification_permission_explanation_p2, linkText),
+                    onLinkClick = onShowTileTutorialClick)
+            }
+        }
+    if (!showExplanationFirst || explanationDismissed) {
+        val launcher = rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission(),
+            onResult = onPermissionResult)
+        LaunchedEffect(Unit) {
+            launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+}
+
+/**
  * Launch a dialog to request the READ_PHONE_STATE permission.
  * @param showExplanationFirst Whether or not a dialog box explaining
  *     why the permission is needed will be shown.
@@ -83,9 +133,9 @@ import java.util.concurrent.Executor
     var explanationDismissed by rememberSaveable { mutableStateOf(false) }
     if (showExplanationFirst && !explanationDismissed)
         SoundAuraDialog(
-            onDismissRequest = onDismissRequest,
             title = stringResource(R.string.auto_pause_during_calls_setting_title),
             text = stringResource(R.string.request_phone_state_permission_explanation),
+            onDismissRequest = onDismissRequest,
             onConfirm = { explanationDismissed = true })
     if (!showExplanationFirst || explanationDismissed) {
         val launcher = rememberLauncherForActivityResult(
@@ -104,7 +154,7 @@ import java.util.concurrent.Executor
     modifier: Modifier = Modifier,
     onSuccess: () -> Unit
 ) {
-    if (Build.VERSION.SDK_INT < 33) return
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
 
     val context = LocalContext.current
     val onAddTileButtonClick = {
@@ -190,34 +240,17 @@ import java.util.concurrent.Executor
         else Column(pageModifier, Arrangement.spacedBy(16.dp)) {
             Text(stringResource(R.string.tile_tutorial_tile_usage_text))
             val context = LocalContext.current
-            val hideNotificationLinkText = stringResource(
-                R.string.tile_tutorial_hide_notification_link_text)
-            val hideNotificationText = stringResource(
-                R.string.tile_tutorial_hide_notification_text,
-                hideNotificationLinkText)
-            val linkTextStartIndex = hideNotificationText.indexOf(hideNotificationLinkText)
-            val linkTextLastIndex = linkTextStartIndex + hideNotificationLinkText.length
 
-            val linkifiedText = buildAnnotatedString {
-                // ClickableText seems to not follow the local text style by default
-                pushStyle(SpanStyle(color = LocalContentColor.current,
-                                    fontSize = LocalTextStyle.current.fontSize))
-                append(hideNotificationText)
-                val urlStyle = SpanStyle(color = MaterialTheme.colors.primary,
-                                         textDecoration = TextDecoration.Underline)
-                addStyle(urlStyle, linkTextStartIndex, linkTextLastIndex)
-            }
-
-            ClickableText(
-                text = linkifiedText,
-                modifier = Modifier.alpha(LocalContentAlpha.current),
-                style = MaterialTheme.typography.subtitle1
+            val linkText = stringResource(R.string.tile_tutorial_hide_notification_link_text)
+            TextWithClickableLink(
+                linkText = linkText,
+                completeText = stringResource(
+                    R.string.tile_tutorial_hide_notification_text, linkText),
             ) {
-                if (it in linkTextStartIndex..linkTextLastIndex) {
-                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                    intent.data = Uri.fromParts("package", context.packageName, null)
-                    context.startActivity(intent)
-                }
+                onDismissRequest()
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                intent.data = Uri.fromParts("package", context.packageName, null)
+                context.startActivity(intent)
             }
         }
     }
