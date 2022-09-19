@@ -281,7 +281,7 @@ enum class TrackViewEndContent {
                 showingDeleteDialog = true
                 showingOptionsMenu = false
             }) {
-                Text(stringResource(R.string.remove), style = MaterialTheme.typography.button)
+                Text(stringResource(R.string.remove))
             }
         }
 
