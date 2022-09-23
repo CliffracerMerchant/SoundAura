@@ -122,14 +122,6 @@ inline fun <reified T: Enum<T>> DataStore<Preferences>.enumPreferenceFlow(
     enumValues<T>().getOrElse(index) { defaultValue }
 }
 
-/** Run the provided block after a clearCallingIdentity
- * call and before a restoreCallingIdentity call. */
-fun withClearCallingIdentity(block: () -> Unit) {
-    val id = android.os.Binder.clearCallingIdentity()
-    block()
-    android.os.Binder.restoreCallingIdentity(id)
-}
-
 fun Int.toPlaybackStateString() = when (this) {
     PlaybackStateCompat.STATE_STOPPED -> "stopped"
     PlaybackStateCompat.STATE_PLAYING -> "playing"
