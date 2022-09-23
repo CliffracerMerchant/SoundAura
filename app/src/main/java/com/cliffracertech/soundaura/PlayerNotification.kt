@@ -21,12 +21,12 @@ import androidx.core.app.NotificationCompat
  * PlayerNotification can post a notification for a foreground media playing
  * service that contains a string describing a playback state (e.g. playing,
  * paused), a toggle play/pause action, and an optional stop action. Using the
- * values of playbackState and showStopAction that are passed in its
- * constructor, PlayerNotification will automatically call startForeground for
- * the client service during creation. PlayerNotification should be notified of
- * changes to the playback state or the visibility of the stop action
- * afterwards via the function update. The notification can be cleared when the
- * service is stopping with the function remove.
+ * values of [playbackState] and [showStopAction] that are passed in its
+ * constructor, PlayerNotification will automatically call [Service.startForeground]
+ * for the client service during creation. PlayerNotification should be notified
+ * of changes to the playback state or the visibility of the stop action
+ * afterwards via the function [update]. The notification can be cleared when the
+ * service is stopping with the function [remove].
 
  * @param service The foreground media playing service that PlayerNotification
  *     is serving. Note that this reference to the service is held onto for
@@ -44,7 +44,7 @@ import androidx.core.app.NotificationCompat
  * @param showStopAction Whether or not the stop action will be shown in the
  *     notification. showStopAction can be changed after creation by passing
  *     the new value to method update.
- * @param useMediaSession Whether or not a MediaSessionCompat instance should
+ * @param useMediaSession Whether or not a [MediaSessionCompat] instance should
  *     be tied to the notification. If true, the notification will appear in
  *     the media session section of the status bar. If false, the notification
  *     will appear as a regular notification instead. PlayerNotification's
@@ -105,7 +105,7 @@ class PlayerNotification(
                 }, FLAG_IMMUTABLE))
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
-    /** A notification action that will fire a PendingIntent.getService call
+    /** A notification action that will fire a [PendingIntent.getService] call
      * when triggered. The started service will be provided the provided playIntent. */
     private val playAction = NotificationCompat.Action(
         R.drawable.ic_baseline_play_24,
@@ -114,7 +114,7 @@ class PlayerNotification(
             service, playActionRequestCode,
             playIntent, FLAG_IMMUTABLE or FLAG_UPDATE_CURRENT))
 
-    /** A notification action that will fire a PendingIntent.getService call
+    /** A notification action that will fire a [PendingIntent.getService] call
      * when triggered. The started service will be provided the provided pauseIntent. */
     private val pauseAction = NotificationCompat.Action(
         R.drawable.ic_baseline_pause_24,
@@ -123,13 +123,12 @@ class PlayerNotification(
             service, pauseActionRequestCode,
             pauseIntent, FLAG_IMMUTABLE or FLAG_UPDATE_CURRENT))
 
-    /** Return the playAction or pauseAction depending on the value of the
-     * parameter isPlaying. */
+    /** Return the [playAction] or [pauseAction] depending on the value of the parameter [isPlaying]. */
     private fun togglePlayPauseAction(isPlaying: Boolean) =
         if (isPlaying) pauseAction
         else           playAction
 
-    /** A notification action that will fire a PendingIntent.getService call
+    /** A notification action that will fire a [PendingIntent.getService] call
      * when triggered. The started service will be provided the provided stopIntent. */
     private val stopAction = NotificationCompat.Action(
         R.drawable.ic_baseline_close_24,

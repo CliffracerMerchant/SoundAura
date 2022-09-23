@@ -44,11 +44,11 @@ class PreferencesModule {
 }
 
 object SoundAura {
-    /** An int value that represents the ordinal of the desired Track.Sort
+    /** An int value that represents the ordinal of the desired [Track.Sort]
      * enum value to use for sorting tracks in the main activity. */
     const val pref_key_trackSort = "track_sort"
 
-    /** An int value that represents the ordinal of the desired AppTheme
+    /** An int value that represents the ordinal of the desired [AppTheme]
      * enum value to use as the application's light/dark theme. */
     const val pref_key_appTheme = "app_theme"
 
@@ -84,7 +84,7 @@ object SoundAura {
      * permission, and should be prevented from being true in that case. */
     const val pref_key_autoPauseDuringCalls = "auto_pause_during_calls"
 
-    /** An int value that represents the ordinal of the desired OnZeroVolumeAudioDeviceBehavior
+    /** An int value that represents the ordinal of the desired [OnZeroVolumeAudioDeviceBehavior]
      * enum value to use as the application's response to an audio device change
      * leading to a media volume of zero. See OnZeroVolumeAudioDeviceBehavior's
      * documentation for descriptions of each value. */
@@ -106,13 +106,13 @@ enum class AppTheme { UseSystem, Light, Dark;
 }
 
 /** An enum describing the behavior of the application when the current
- * audio device is changed to one with a media audio stream volume of
- * zero. The described behaviors will only be used when the zero media
- * volume is the result of a audio device change. If the zero media
- * volume is a result of the user manually changing it to zero on the
- * current audio device, playback will not be affected. */
+ * audio device is changed to one with a media stream volume of zero. The
+ * described behaviors will only be used when the zero media volume is the
+ * result of a audio device change. If the zero media volume is a result
+ * of the user manually changing it to zero on the current audio device,
+ * playback will not be affected. */
 enum class OnZeroVolumeAudioDeviceBehavior {
-    /** PlayerService will be automatically stopped to conserve battery. */
+    /** [PlayerService] will be automatically stopped to conserve battery. */
     AutoStop,
     /** Playback will be automatically paused, and then resumed when another
      * audio device change brings the media volume back up above zero. */
@@ -121,7 +121,7 @@ enum class OnZeroVolumeAudioDeviceBehavior {
     DoNothing;
 
     companion object {
-        /** Return an Array<String> containing strings that describe the enum values. */
+        /** Return an [Array] containing [String]s that describe the enum values. */
         @Composable fun valueStrings() =
             with(LocalContext.current) {
                 remember { arrayOf(
@@ -131,7 +131,7 @@ enum class OnZeroVolumeAudioDeviceBehavior {
                 )}
             }
 
-        /** Return an Array<String?> containing strings that further describe the enum values. */
+        /** Return an [Array] containing nullable strings that further describe the enum values if necessary. */
         @Composable fun valueDescriptions() =
             with(LocalContext.current) {
                 remember { arrayOf(

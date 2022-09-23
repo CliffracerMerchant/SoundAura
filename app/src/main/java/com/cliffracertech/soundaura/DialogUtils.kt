@@ -25,20 +25,20 @@ import androidx.compose.ui.window.DialogProperties
 /**
  * Compose an alert dialog.
  *
- * @param windowPadding The PaddingValues instance to use for the dialog's window.
+ * @param windowPadding The [PaddingValues] instance to use for the dialog's window.
  *     If null, the platform default dialog window padding will be used instead.
  * @param horizontalPadding The horizontal padding for the content. The value
  *     is also used as the horizontal padding for the default title layout.
  * @param title The string representing the dialog's title. Can be null, in
  *     which case the title will not be displayed.
  * @param titleLayout The layout that will be used for the dialog's title.
- *     Will default to a composable Text using the value of the title parameter.
+ *     Will default to a composable [Text] using the value of the title parameter.
  *     Will not be displayed if title == null
  * @param text The string representing the dialog's message. Will only be used
  *     if the content parameter is not overridden, in which case it will default
- *     to a composable Text containing the value of this parameter.
- * @param titleContentSpacing The spacing, in Dp, in between the title and the content.
- * @param contentButtonSpacing The spacing, in Dp, in between the content and the buttons.
+ *     to a composable [Text] containing the value of this parameter.
+ * @param titleContentSpacing The spacing, in [Dp], in between the title and the content.
+ * @param contentButtonSpacing The spacing, in [Dp], in between the content and the buttons.
  * @param onDismissRequest The callback that will be invoked when the user taps
  *     the cancel button, if shown, or when they tap outside the dialog, or when
  *     the back button is pressed.
@@ -124,9 +124,9 @@ import androidx.compose.ui.window.DialogProperties
  * through the pages of content. A progress indicator (e.g. 2 of 4) will
  * be displayed at the top-end corner of the dialog.
  *
- * @param title The string representing the dialog's title.
- * @param titleContentSpacing The spacing, in Dp, in between the title and the content.
- * @param contentButtonSpacing The spacing, in Dp, in between the content and the buttons.
+ * @param title The [String] representing the dialog's title.
+ * @param titleContentSpacing The spacing, in [Dp], in between the title and the content.
+ * @param contentButtonSpacing The spacing, in [Dp], in between the content and the buttons.
  * @param onDismissRequest The callback that will be invoked when the user
  *     taps the cancel button (which will replace the previous button if on
  *     the first page of content), or when they tap outside the dialog, or
@@ -137,12 +137,12 @@ import androidx.compose.ui.window.DialogProperties
  * @param numPages The total number of pages.
  * @param currentPageIndex The index of the page that should be displayed.
  * @param onCurrentPageIndexChange The callback that will be invoked when the
- *     currentPageIndex should be changed. If currentPageIndex is not changed
+ *     [currentPageIndex] should be changed. If [currentPageIndex] is not changed
  *     to the provided Int value when this is called, the current page
  *     indicator will be incorrect.
  * @param pages The composable lambda that composes the correct content given
- *     the value of currentPageIndex. The provided Modifier parameter should
- *     be used for the content to ensure a consistent look. Like AnimatedVisiblilty's
+ *     the value of [currentPageIndex]. The provided [Modifier] parameter should
+ *     be used for the content to ensure a consistent look. Like [AnimatedVisibility]'s
  *     content parameter, the value of the provided Int should always be
  *     taken into account when determining each page's contents.
  */

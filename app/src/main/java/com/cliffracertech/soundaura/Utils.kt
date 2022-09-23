@@ -20,23 +20,22 @@ operator fun <T> MutableStateFlow<T>.setValue(receiver: Any, property: KProperty
     this.value = value
 }
 
-/** Produce a State<T> instance from the receiver T? instance. When the
- * receiver is null, the State<T> value will be equal to @param defaultValue. */
+/** Produce a [State]`<T>` instance from the receiver T? instance. When the
+ * receiver is null, the [State]`<T>` value will be equal to [defaultValue]. */
 @Composable fun <T> T?.mapToNonNullState(defaultValue: T) =
     produceState(initialValue = defaultValue, key1 = this) {
         value = this@mapToNonNullState ?: defaultValue
     }
 
-/** Repeat @param onStarted each time the LifecycleOwner's state moves to Lifecycle.State.STARTED. */
+/** Repeat [onStarted] each time the [LifecycleOwner]'s state moves to [Lifecycle.State.STARTED]. */
 fun LifecycleOwner.repeatWhenStarted(onStarted: suspend CoroutineScope.() -> Unit) {
     lifecycleScope.launch {
         repeatOnLifecycle(Lifecycle.State.STARTED, onStarted)
     }
 }
 
-/** Return a State<T> that contains the most recent value for the DataStore
- * preference pointed to by @param key, with an initial value of @param
- * initialValue. */
+/** Return a [State]`<T>` that contains the most recent value for the [DataStore]
+ * preference pointed to by [key], with an initial value of [initialValue]. */
 fun <T> DataStore<Preferences>.preferenceState(
     key: Preferences.Key<T>,
     initialValue: T,
@@ -49,11 +48,11 @@ fun <T> DataStore<Preferences>.preferenceState(
     return state
 }
 
-/** Return a State<T> that contains the most recent value for the DataStore
- * preference pointed to by @param key, with a default value of @param
- * defaultValue. awaitPreferenceState will suspend until the first value
+/** Return a [State]`<T>` that contains the most recent value for the
+ * [DataStore] preference pointed to by [key], with a default value of
+ * [defaultValue]. awaitPreferenceState will suspend until the first value
  * of the preference is returned. The provided default value will only be
- * used if the receiver DataStore does not have a value associated with
+ * used if the receiver [DataStore] does not have a value associated with
  * the provided key. */
 suspend fun <T> DataStore<Preferences>.awaitPreferenceState(
     key: Preferences.Key<T>,
@@ -66,10 +65,10 @@ suspend fun <T> DataStore<Preferences>.awaitPreferenceState(
     return state
 }
 
-/** Return a State<T> that contains the most recent enum value for the
- * DataStore preference pointed to by the parameter key, with an initial value
- * of parameter initialValue. The parameter key is a Preferences.Key<Int>
- * instance whose value indicates the ordinal of the current enum value. */
+/** Return a [State]`<T>` that contains the most recent enum value for the
+ * [DataStore] preference pointed to by [key], with an initial value
+ * of [initialValue]. [key] is a [Preferences.Key]`<Int>` instance whose
+ * value indicates the ordinal of the current enum value. */
 inline fun <reified T: Enum<T>> DataStore<Preferences>.enumPreferenceState(
     key: Preferences.Key<Int>,
     scope: CoroutineScope,
@@ -82,14 +81,14 @@ inline fun <reified T: Enum<T>> DataStore<Preferences>.enumPreferenceState(
     }
 }
 
-/** Return a State<T> that contains the most recent enum value for the
- * DataStore preference pointed to by the parameter key, with a default value
- * of parameter defaultValue. The parameter key is a Preferences.Key<Int>
- * instance whose value indicates the ordinal of the current enum value.
+/** Return a [State]`<T>` that contains the most recent enum value for the
+ * [DataStore] preference pointed to by the parameter [key], with a default
+ * value of [defaultValue]. [key] is a [Preferences.Key]`<Int>` instance
+ * whose value indicates the ordinal of the current enum value.
  * awaitEnumPreferenceState will suspend until the first value of the enum
- * is read from the receiver DataStore object. The provided default value will
- * only be used if the receiver DataStore does not have a value associated with
- * the provided key. */
+ * is read from the receiver [DataStore] object. The provided default value
+ * will only be used if the receiver [DataStore] does not have a value
+ * associated with the provided key. */
 suspend inline fun <reified T: Enum<T>> DataStore<Preferences>.awaitEnumPreferenceState(
     key: Preferences.Key<Int>,
     scope: CoroutineScope,
@@ -102,18 +101,17 @@ suspend inline fun <reified T: Enum<T>> DataStore<Preferences>.awaitEnumPreferen
     }
 }
 
-/** Return a Flow<T> that contains the most recent value for the DataStore
- * preference pointed to by @param key, with a default value of @param
- * defaultValue. */
+/** Return a [Flow]`<T>` that contains the most recent value for the [DataStore]
+ * preference pointed to by [key], with a default value of [defaultValue]. */
 fun <T> DataStore<Preferences>.preferenceFlow(
     key: Preferences.Key<T>,
     defaultValue: T,
 ) = data.map { it[key] ?: defaultValue }
 
-/** Return a Flow<T> that contains the most recent enum value for the DataStore
- * preference pointed to by @param key, with a default value of @param
- * defaultValue. @param key should be an Preferences.Key<Int> instance whose
- * value indicates the ordinal of the current enum value. */
+/** Return a [Flow]`<T>` that contains the most recent enum value for the [DataStore]
+ * preference pointed to by [key], with a default value of [defaultValue]. [key]
+ * should be an [Preferences.Key]`<Int>` instance whose value indicates the ordinal
+ * of the current enum value. */
 inline fun <reified T: Enum<T>> DataStore<Preferences>.enumPreferenceFlow(
     key: Preferences.Key<Int>,
     defaultValue: T = enumValues<T>()[0],

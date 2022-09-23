@@ -149,7 +149,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 
 /** Compose a button that will prompt the user to add the app's quick settings
  * tile to their status bar when clicked. RequestAddTileServiceButton is non-
- * functional if called when Build.VERSION.SDK_INT < 33. */
+ * functional if called when [Build.VERSION.SDK_INT] < 33. */
 @Composable private fun RequestAddTileServiceButton(
     modifier: Modifier = Modifier,
     onSuccess: () -> Unit
@@ -215,6 +215,8 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
     }
 }
 
+/** Compose a [MultiStepDialog] that contains a tutorial explaining
+ * to the user how to add and use the app's quick settings tile. */
 @Composable fun TileTutorialDialog(
     onDismissRequest: () -> Unit
 ) {

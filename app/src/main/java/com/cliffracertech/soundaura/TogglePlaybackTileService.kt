@@ -12,22 +12,23 @@ import android.service.quicksettings.TileService
 import android.support.v4.media.session.PlaybackStateCompat
 
 /**
- * A TileService to control the app's audio playback.
+ * A [TileService] to control the app's audio playback.
  *
  * In order to update the tile's visual state, TogglePlaybackTileService must
- * be informed of changes to the app's playback state by calling the function
- * TogglePlaybackTileService.updateState with a context instance and a
- * PlaybackStateCompat value. The tile will appear in its active state if the
- * app's playback state is equal to PlaybackStateCompat.STATE_PLAYING, and will
- * appear inactive otherwise.
+ * be informed of changes to the app's playback state by calling the static
+ * function [updateState] with a [Context] instance and a [PlaybackStateCompat]
+ * value. The tile will appear in its active state if the app's playback state
+ * is equal to [PlaybackStateCompat.STATE_PLAYING], and will appear inactive
+ * otherwise.
  *
  * As TogglePlaybackTileService itself does not control the app's playback
  * state, clicking the tile will request a playback state change. These
- * requests to change the playback state can be listened to by registering a
- * PlaybackStateRequestListener using the function addPlaybackStateRequestListener.
- * The requested state will be PlaybackStateCompat.STATE_PLAYING if the tile is
- * clicked when in its inactive state, and PlaybackStateCompat.STATE_STOPPED if
- * the tile is clicked in its active state.
+ * requests to change the playback state can be listened to by registering
+ * a [PlaybackStateRequestListener] using the static function
+ * [addPlaybackStateRequestListener]. The requested state will be
+ * [PlaybackStateCompat.STATE_PLAYING] if the tile is clicked when in its
+ * inactive state, and [PlaybackStateCompat.STATE_STOPPED] if the tile is
+ * clicked in its active state.
  */
 class TogglePlaybackTileService: TileService() {
 
@@ -36,10 +37,10 @@ class TogglePlaybackTileService: TileService() {
     }
 
     companion object {
-        private var newestPlaybackState = PlaybackStateCompat.STATE_STOPPED
+        private var playbackState = PlaybackStateCompat.STATE_STOPPED
 
         fun updateState(context: Context, @PlaybackStateCompat.State state: Int) {
-            newestPlaybackState = state
+            playbackState = state
             val tileService = ComponentName(
                 context, TogglePlaybackTileService::class.java)
             requestListeningState(context, tileService)
@@ -64,7 +65,7 @@ class TogglePlaybackTileService: TileService() {
 
     override fun onStartListening() {
         qsTile.label = getString(R.string.app_name)
-        if (newestPlaybackState == PlaybackStateCompat.STATE_PLAYING) {
+        if (playbackState == PlaybackStateCompat.STATE_PLAYING) {
             qsTile.state = STATE_ACTIVE
             qsTile.contentDescription = getString(R.string.tile_active_description)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
@@ -74,7 +75,7 @@ class TogglePlaybackTileService: TileService() {
             qsTile.contentDescription = getString(R.string.tile_inactive_description)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
                 qsTile.subtitle = getString(
-                    if (newestPlaybackState == PlaybackStateCompat.STATE_PAUSED)
+                    if (playbackState == PlaybackStateCompat.STATE_PAUSED)
                         R.string.paused
                     else R.string.stopped)
         }
@@ -82,7 +83,7 @@ class TogglePlaybackTileService: TileService() {
     }
 
     override fun onClick() {
-        if (newestPlaybackState == PlaybackStateCompat.STATE_PLAYING)
+        if (playbackState == PlaybackStateCompat.STATE_PLAYING)
             requestState(PlaybackStateCompat.STATE_STOPPED)
         else requestState(PlaybackStateCompat.STATE_PLAYING)
     }

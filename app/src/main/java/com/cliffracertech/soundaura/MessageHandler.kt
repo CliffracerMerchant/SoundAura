@@ -4,9 +4,11 @@
 package com.cliffracertech.soundaura
 
 import androidx.compose.runtime.mutableStateOf
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.scopes.ActivityRetainedScoped
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,21 +20,21 @@ class SearchQueryState @Inject constructor() {
 }
 
 /**
- * A manager of messages to be displayed to the user, e.g. through a SnackBar.
+ * A manager of messages to be displayed to the user, e.g. through a [Snackbar].
  *
- * New messages can be posted using the postMessage function. MessageHandler
- * users can collect the SharedFlow member messages for new messages.
+ * New messages can be posted using the [postMessage] function. MessageHandler
+ * users can collect the [SharedFlow] member [messages] for new messages.
  */
 @Singleton
 class MessageHandler @Inject constructor() {
     /**
      * A message to be displayed to the user.
-     * @param stringResource A StringResource that, when resolved, will be the text of the message.
-     * @param actionStringResource A nullable StringResource that, when resolved, will be the text
-     * of the message action, if any.
+     * @param stringResource A [StringResource] that, when resolved, will be the text of the message.
+     * @param actionStringResource A nullable [StringResource] that, when resolved, will
+     *     be the text of the message action, if any.
      * @param onActionClick The callback that will be invoked if the message action is clicked.
      * @param onDismiss The callback that will be invoked when the message is dismissed. The
-     * int parameter will be equal to a value of BaseTransientBottomBar.BaseCallback.DismissEvent.
+     *     int parameter will be equal to a value of [BaseTransientBottomBar.BaseCallback.DismissEvent].
      */
     data class Message(
         val stringResource: StringResource,

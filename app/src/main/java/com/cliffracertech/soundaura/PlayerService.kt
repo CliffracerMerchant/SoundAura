@@ -36,7 +36,7 @@ import javax.inject.Inject
  *
  * PlayerService can either be started independently of an activity with a
  * [startService] call, or can be started bound to an activity if the activity
- * calls [bindService]. In the latter case, PlayerService will call startService
+ * calls [bindService]. In the latter case, PlayerService will call [startService]
  * on itself so that it outlives the binding activity. In either case,
  * PlayerService presents a foreground notification to the user that displays
  * its current play/pause state in string form, along with actions to toggle
@@ -50,14 +50,14 @@ import javax.inject.Inject
  * To ensure that the volume for already playing tracks is changed without
  * perceptible lag, PlayerService will not respond to track volume changes made
  * at the database level for already playing tracks. Instead, the method
- * [Binder.setTrackVolume] must be called with the Uri (in string form) of the track and
- * the new volume. If a bound activity presents the user with, e.g, a slider to
- * change a track's volume, the slider's onSlide callback should therefore call
- * Binder.setTrackVolume.
+ * [Binder.setTrackVolume] must be called with the Uri (in [String] form) of the
+ * track and the new volume. If a bound activity presents the user with, e.g, a
+ * slider to change a track's volume, the slider's onSlide callback should
+ * therefore call [Binder.setTrackVolume].
  *
  * PlayerService reads the values of and changes its behavior depending on the
  * app preference pointed to by the key [pref_key_playInBackground].
- * Read the documentation for pref_key_playInBackground for more information
+ * Read the documentation for [pref_key_playInBackground] for more information
  * about how PlayerService responds to each value of these settings.
  */
 @AndroidEntryPoint
@@ -174,7 +174,7 @@ class PlayerService: LifecycleService() {
      * that mismatched state does not occur.
      *
      * @param state The desired [PlaybackStateCompat] value. The supported
-     *     values are STATE_PLAYING, STATE_PAUSED, and STATE_STOPPED. Other
+     *     values are [STATE_PLAYING], [STATE_PAUSED], and [STATE_STOPPED]. Other
      *     values will be ignored.
      * @param clearUnpauseLocks Whether or not to reset all unpause locks.
      *     This should only be false when the playback state is being set

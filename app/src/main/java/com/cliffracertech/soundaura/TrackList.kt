@@ -37,14 +37,14 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * A LazyColumn to display all of the provided Tracks with instances of TrackView.
+ * A [LazyColumn] to display all of the provided [Track]s with instances of [TrackView].
  *
- * @param modifier The modifier that will be used for the TrackList.
- * @param state The LazyListState used for the TrackList's scrolling state.
- * @param contentPadding The PaddingValues instance that will be used as
+ * @param modifier The [Modifier] that will be used for the TrackList.
+ * @param state The [LazyListState] used for the TrackList's scrolling state.
+ * @param contentPadding The [PaddingValues] instance that will be used as
  *     the content padding for the TrackList's items.
  * @param tracks The list of Tracks that will be displayed by the TrackList.
- * @param trackViewCallback The instance of TrackViewCallback that will
+ * @param trackViewCallback The instance of [TrackViewCallback] that will
  *     be used for responses to individual TrackView interactions.
  */
 @Composable fun TrackList(
@@ -118,15 +118,15 @@ class TrackListViewModel(
 }
 
 /**
- * Compose a TrackList, using an instance of TrackListViewModel to
+ * Compose a [TrackList], using an instance of [TrackListViewModel] to
  * obtain the list of tracks and to respond to item related callbacks.
  *
- * @param modifier The Modifier that will be used for the TrackList.
- * @param padding A PaddingValues instance whose values will be
+ * @param modifier The [Modifier] that will be used for the TrackList.
+ * @param padding A [PaddingValues] instance whose values will be
  *     as the contentPadding for the TrackList
-*  @param state The LazyListState used for the TrackList. state
+*  @param state The [LazyListState] used for the TrackList. state
  *     defaults to an instance of LazyListState returned from a
- *     rememberLazyListState call, but can be overridden here in
+ *     [rememberLazyListState] call, but can be overridden here in
  *     case, e.g., the scrolling position needs to be remembered
  *     even when the StatefulTrackList leaves the composition.
  * @param onVolumeChange The callback that will be invoked when

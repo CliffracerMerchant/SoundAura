@@ -50,17 +50,17 @@ fun Modifier.minTouchTargetSize() =
 }
 
 /**
- * A button that alternates between an empty circle with a plus icon, and
- * a filled circle with a minus icon depending on the parameter checked.
+ * An [IconButton] that alternates between an empty circle with a plus icon,
+ * and a filled circle with a minus icon depending on the parameter checked.
  *
  * @param added The added/removed state of the item the button is
  *     representing. If added == true, the button will display a minus
  *     icon. If added == false, a plus icon will be displayed instead.
  * @param contentDescription The content description of the button.
- * @param backgroundColor The color of the background that the button
+ * @param backgroundColor The [Color] of the background that the button
  *     is being displayed on. This is used for the inner plus icon
- *     when added == true and the background of the button is filled.
- * @param tint The tint that will be used for the button.
+ *     when [added] == true and the background of the button is filled.
+ * @param tint The [Color] that will be used for the button.
  * @param onClick The callback that will be invoked when the button is clicked.
  */
 @Composable fun AddRemoveButton(
@@ -120,12 +120,12 @@ fun Modifier.minTouchTargetSize() =
          tint = tint)
 }
 
-/** A simple back arrow IconButton for when only the onClick needs changed. */
+/** A simple back arrow [IconButton] for when only the onClick needs changed. */
 @Composable fun BackButton(onClick: () -> Unit) = IconButton(onClick) {
     Icon(Icons.Default.ArrowBack, stringResource(R.string.back))
 }
 
-/** A simple settings IconButton for when only the onClick needs changed. */
+/** A simple settings [IconButton] for when only the onClick needs changed. */
 @Composable fun SettingsButton(onClick: () -> Unit) = IconButton(onClick) {
     Icon(Icons.Default.Settings, stringResource(R.string.settings))
 }
@@ -146,15 +146,15 @@ fun Modifier.minTouchTargetSize() =
 }
 
 /**
- * An AnimatedContent with predefined slide left/right transitions.
+ * An [AnimatedContent] with predefined slide left/right transitions.
  * @param targetState The key that will cause a change in the SlideAnimatedContent's
  *     content when its value changes.
- * @param modifier The modifier that will be applied to the content.
+ * @param modifier The [Modifier] that will be applied to the content.
  * @param leftToRight Whether the existing content should slide off screen
  *     to the left with the new content sliding in from the right, or the
  *     other way around.
  * @param content The composable that itself composes the contents depending
- *     on the value of targetState, e.g. if (targetState) A() else B().
+ *     on the value of [targetState], e.g. if (targetState) A() else B().
  */
 @Composable fun<S> SlideAnimatedContent(
     targetState: S,
@@ -176,10 +176,10 @@ fun Modifier.minTouchTargetSize() =
         .background(MaterialTheme.colors.onSurface.copy(alpha = 0.12f)))
 
 /**
- * Compose a bulleted list of strings.
+ * Compose a bulleted list of [String]s.
  *
- * @param items The list of strings to display in bulleted form.
- * @param modifier The modifier to use for the entire list.
+ * @param items The list of [String]s to display in bulleted form.
+ * @param modifier The [Modifier] to use for the entire list.
  */
 @Composable fun BulletedList(
     items: List<String>,
@@ -197,7 +197,7 @@ fun Modifier.minTouchTargetSize() =
 /**
  * Compose a [Text] containing a clickable link.
  *
- * @param modifier The Modifier to use for the entire text.
+ * @param modifier The [Modifier] to use for the entire text.
  * @param linkText The text that will be clickable.
  * @param completeText The entire text that will be displayed. This must
  *     contain the linkText, or else the link will not work properly.
