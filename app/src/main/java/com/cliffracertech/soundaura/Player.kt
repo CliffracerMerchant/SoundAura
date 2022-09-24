@@ -8,20 +8,21 @@ import android.media.MediaPlayer
 import android.net.Uri
 
 /**
- * A MediaPlayer wrapper that allows for seamless looping of the provided uri.
+ * A [MediaPlayer] wrapper that allows for seamless looping of the provided uri.
  * If there is a problem with the provided uri, then the inner MediaPlayer
- * instance creation can fail. In this case, isPlaying will always return false
+ * instance creation can fail. In this case, [isPlaying] will always return false
  * and setting isPlaying will have no effect. The current volume for both audio
- * channels can also be retrieved or set via the property volume.
+ * channels can also be retrieved or set via the property [volume].
  *
- * @param context A context instance. Note that the provided context instance
+ * @param context A [Context] instance. Note that the provided context instance
  *     is held onto for the lifetime of the Player instance, and so should not
  *     be a component that the Player might outlive.
  * @param uriString A string describing the uri that the Player will play.
  * @param startPlaying The initial isPlaying state of the Player. If true, the
  *     player will have start called on it after a successful creation.
- * @param initialVolume The initial volume of the player. This volume will call
- *     setMonoVolume for the player, and so will apply to both audio channels.
+ * @param initialVolume The initial volume of the player. This value will be
+ *     used to set the volume property for the Player, and so will apply to
+ *     both audio channels.
  * @param onFail A callback that will be invoked if the MediaPlayer creation
  *     fails. The parameter is the uri, in string form, of the file being
  *     read. This callback is used instead of, e.g., a factory method that
@@ -97,27 +98,27 @@ class Player(
 }
 
 /**
- * A collection of Player instances.
+ * A collection of [Player] instances.
  *
  * TrackPlayerSet manages a collection of Player instances for a list of
- * Tracks. The collection of players is updated by calling the function update
+ * [Track]s. The collection of players is updated by calling the function [update]
  * with the new List<Track> instance and a boolean value indicating whether
  * newly added tracks should start playing immediately.
  *
  * Whether or not the collection of players is empty can be queried with the
- * property isEmpty. The property isInitialized, which will start as false but
+ * property isEmpty. The property [isInitialized], which will start as false but
  * will be set to true after the first call to update, is also provided so that
  * the TrackPlayerSet being empty because the provided List<Track> is empty can
  * be differentiated from the TrackPlayerSet being empty because update hasn't
  * been called yet (this might happen for instance if update is called in
- * response to a asynchronous database get method).
+ * response to a asynchronous database access method).
  *
  * The isPlaying state can be set for all players at once with the method
- * setIsPlaying, while the volume for individual tracks can be set with the
- * method setPlayerVolume. The function releaseAll should be called before the
- * TrackPlayerSet is destroyed so that all Player instances are released first.
+ * [setIsPlaying], while the volume for individual tracks can be set with the
+ * method [setPlayerVolume]. The function [releaseAll] should be called before the
+ * TrackPlayerSet is destroyed so that all Player instances can be released first.
  *
- * @param context A context instance. Note that the context instance will be
+ * @param context A [Context] instance. Note that the context instance will be
  *     held onto for the lifetime of the TrackPlayerSet.
  * @param onCreatePlayerFailure The callback that will be invoked when the
  *     Player creation for a particular Track fails. The single string

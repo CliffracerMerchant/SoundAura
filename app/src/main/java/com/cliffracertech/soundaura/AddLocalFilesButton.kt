@@ -113,7 +113,7 @@ class AddLocalFilesButtonViewModel(
 
 /**
  * Compose a button to add local files with state provided by an
- * instance of AddTrackButtonViewModelAddTrackButtonViewModel.
+ * instance of [AddLocalFilesButtonViewModel].
  *
  * @param backgroundColor The color to use for the button's background.
  */
@@ -144,7 +144,7 @@ class AddLocalFilesButtonViewModel(
  *     clicks outside the dialog or taps the cancel button.
  * @param onConfirmRequest The callback that will be invoked when the user
  *     taps the dialog's confirm button after having selected one or more files.
- *     The first parameter is the list of Uris representing the files to add,
+ *     The first parameter is the list of [Uri]s representing the files to add,
  *     while the second parameter is the list of names for each of these uris.
  */
 @Composable fun AddTracksFromLocalFilesDialog(
@@ -185,14 +185,14 @@ class AddLocalFilesButtonViewModel(
         })
 }
 
-/** Return a suitable display name for a file uri (i.e. the file name minus
+/** Return a suitable display name for a file [Uri] (i.e. the file name minus
  * the file type extension, and with underscores replaced with spaces). */
 fun Uri.getDisplayName(context: Context) =
     DocumentFile.fromSingleUri(context, this)?.name
         ?.substringBeforeLast('.')
         ?.replace('_', ' ')
 
-/** Return whether the List<String> contains any strings that are blank
+/** Return whether the list contains any strings that are blank
  * (i.e. are either empty or consist of only whitespace characters). */
 val List<String>.containsBlanks get() =
     find { it.isBlank() } != null

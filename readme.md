@@ -46,13 +46,13 @@ SoundAura is built using:
 
 ## Screenshots
 
-https://user-images.githubusercontent.com/42116365/171025181-05d4769b-f0aa-4a43-86c8-e8e9da5c2866.mp4
+https://user-images.githubusercontent.com/42116365/192111969-21b03711-e844-47c2-a637-54f3917c5f9d.mp4
 
 <p float="left">
-  <img src="media/screenshot1.png" width="200" height="434">
-  <img src="media/screenshot2.png" width="200" height="434">
-  <img src="media/screenshot3.png" width="200" height="434">
-  <img src="media/screenshot4.png" width="200" height="434">
+  <img src="metadata/en-US/images/phoneScreenshots/1.png" width="200" height="434">
+  <img src="metadata/en-US/images/phoneScreenshots/2.png" width="200" height="434">
+  <img src="metadata/en-US/images/phoneScreenshots/3.png" width="200" height="434">
+  <img src="metadata/en-US/images/phoneScreenshots/4.png" width="200" height="434">
 </p>
 
 ## Privacy Policy

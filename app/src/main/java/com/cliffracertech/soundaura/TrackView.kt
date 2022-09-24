@@ -29,8 +29,8 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlin.math.roundToInt
 
 /**
- * A collection of callbacks for TrackView interactions. The first parameter
- * for each of the callbacks is the uri of the track in String form.
+ * A collection of callbacks for [TrackView] interactions. The first parameter
+ * for each of the callbacks is the uri of the track in [String] form.
  *
  * @param onAddRemoveButtonClick The callback that will be invoked when the add/remove button is clicked.
  * @param onVolumeChange The callback that will be invoked when the volume slider's value is changing.
@@ -48,15 +48,15 @@ class TrackViewCallback(
 
 /**
  * A view that displays an add/remove button, a title, a volume slider, and a
- * more options button for the provided Track Instance. If the track's hasError
+ * more options button for the provided [Track] Instance. If the track's hasError
  * field is true, then an error icon will be displayed instead of the add/remove
  * button, an error message will be displayed in place of the volume slider, and
  * the more options menu button will be replaced by a delete icon. The more
  * options button will also be replaced by a numerical display of the track's
  * volume when the volume slider is being dragged.
  *
- * @param track The Track instance that is being represented.
- * @param callback The TrackViewCallback that describes how to respond to user interactions.
+ * @param track The [Track] instance that is being represented.
+ * @param callback The [TrackViewCallback] that describes how to respond to user interactions.
  */
 @Composable fun TrackView(
     track: Track,
@@ -127,9 +127,9 @@ class TrackViewCallback(
  * @param contentDescription The content description that will be used for the
  *     error icon or add/remove button.
  * @param backgroundColor The color that is being displayed behind the
- *     AddRemoveButtonOrErrorIcon. This is used so that the button can appear
+ *     [AddRemoveButtonOrErrorIcon]. This is used so that the button can appear
  *     empty when isAdded is false.
- * @param onAddRemoveClick The callback that will be invoked when showError is
+ * @param onAddRemoveClick The callback that will be invoked when [showError] is
  *     false and the add/remove button is clicked.
  */
 @Composable fun AddRemoveButtonOrErrorIcon(
@@ -215,7 +215,7 @@ class TrackViewCallback(
     }
 }
 
-/** An enum detailing the possible content for the end of a TrackView's layout. */
+/** An enum detailing the possible content for the end of a [TrackView]'s layout. */
 enum class TrackViewEndContent {
     /** The TrackView will display a more options
      * button that opens a popup menu when clicked. */
@@ -281,7 +281,7 @@ enum class TrackViewEndContent {
                 showingDeleteDialog = true
                 showingOptionsMenu = false
             }) {
-                Text(stringResource(R.string.remove), style = MaterialTheme.typography.button)
+                Text(stringResource(R.string.remove))
             }
         }
 

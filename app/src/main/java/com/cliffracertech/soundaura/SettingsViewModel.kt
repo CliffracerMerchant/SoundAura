@@ -5,6 +5,7 @@ package com.cliffracertech.soundaura
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
@@ -18,6 +19,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cliffracertech.soundaura.SoundAura.pref_key_appTheme
 import com.cliffracertech.soundaura.SoundAura.pref_key_autoPauseDuringCalls
+import com.cliffracertech.soundaura.SoundAura.pref_key_notificationPermissionRequested
 import com.cliffracertech.soundaura.SoundAura.pref_key_onZeroVolumeAudioDeviceBehavior
 import com.cliffracertech.soundaura.SoundAura.pref_key_playInBackground
 import dagger.Module
@@ -42,11 +44,11 @@ class PreferencesModule {
 }
 
 object SoundAura {
-    /** An int value that represents the ordinal of the desired Track.Sort
+    /** An int value that represents the ordinal of the desired [Track.Sort]
      * enum value to use for sorting tracks in the main activity. */
     const val pref_key_trackSort = "track_sort"
 
-    /** An int value that represents the ordinal of the desired AppTheme
+    /** An int value that represents the ordinal of the desired [AppTheme]
      * enum value to use as the application's light/dark theme. */
     const val pref_key_appTheme = "app_theme"
 
@@ -70,6 +72,10 @@ object SoundAura {
      */
     const val pref_key_playInBackground = "play_in_background"
 
+    /** A boolean value that indicates whether the user has been asked for notification
+     * permission. Permission should only be asked once, to prevent annoying the user. */
+    const val pref_key_notificationPermissionRequested = "notification_permission_requested"
+
     /** A boolean value that indicates whether playback should automatically
      * pause when a phone call is ongoing. This setting will have no effect if
      * the playInBackground setting is false because the app will automatically
@@ -78,7 +84,7 @@ object SoundAura {
      * permission, and should be prevented from being true in that case. */
     const val pref_key_autoPauseDuringCalls = "auto_pause_during_calls"
 
-    /** An int value that represents the ordinal of the desired OnZeroVolumeAudioDeviceBehavior
+    /** An int value that represents the ordinal of the desired [OnZeroVolumeAudioDeviceBehavior]
      * enum value to use as the application's response to an audio device change
      * leading to a media volume of zero. See OnZeroVolumeAudioDeviceBehavior's
      * documentation for descriptions of each value. */
@@ -100,13 +106,13 @@ enum class AppTheme { UseSystem, Light, Dark;
 }
 
 /** An enum describing the behavior of the application when the current
- * audio device is changed to one with a media audio stream volume of
- * zero. The described behaviors will only be used when the zero media
- * volume is the result of a audio device change. If the zero media
- * volume is a result of the user manually changing it to zero on the
- * current audio device, playback will not be affected. */
+ * audio device is changed to one with a media stream volume of zero. The
+ * described behaviors will only be used when the zero media volume is the
+ * result of a audio device change. If the zero media volume is a result
+ * of the user manually changing it to zero on the current audio device,
+ * playback will not be affected. */
 enum class OnZeroVolumeAudioDeviceBehavior {
-    /** PlayerService will be automatically stopped to conserve battery. */
+    /** [PlayerService] will be automatically stopped to conserve battery. */
     AutoStop,
     /** Playback will be automatically paused, and then resumed when another
      * audio device change brings the media volume back up above zero. */
@@ -115,7 +121,7 @@ enum class OnZeroVolumeAudioDeviceBehavior {
     DoNothing;
 
     companion object {
-        /** Return an Array<String> containing strings that describe the enum values. */
+        /** Return an [Array] containing [String]s that describe the enum values. */
         @Composable fun valueStrings() =
             with(LocalContext.current) {
                 remember { arrayOf(
@@ -125,7 +131,7 @@ enum class OnZeroVolumeAudioDeviceBehavior {
                 )}
             }
 
-        /** Return an Array<String?> containing strings that further describe the enum values. */
+        /** Return an [Array] containing nullable strings that further describe the enum values if necessary. */
         @Composable fun valueDescriptions() =
             with(LocalContext.current) {
                 remember { arrayOf(
@@ -152,9 +158,11 @@ class SettingsViewModel(
     private val scope = coroutineScope ?: viewModelScope
     private val appThemeKey = intPreferencesKey(pref_key_appTheme)
     private val playInBackgroundKey = booleanPreferencesKey(pref_key_playInBackground)
+    private val notificationPermissionRequestedKey =
+        booleanPreferencesKey(pref_key_notificationPermissionRequested)
     private val autoPauseDuringCallKey = booleanPreferencesKey(pref_key_autoPauseDuringCalls)
-    private val onZeroVolumeAudioDeviceBehaviorKey = intPreferencesKey(
-        pref_key_onZeroVolumeAudioDeviceBehavior)
+    private val onZeroVolumeAudioDeviceBehaviorKey =
+        intPreferencesKey(pref_key_onZeroVolumeAudioDeviceBehavior)
 
     // The thread must be blocked when reading the first value
     // of the app theme from the DataStore or else the screen
@@ -177,15 +185,56 @@ class SettingsViewModel(
     var showingPlayInBackgroundExplanation by mutableStateOf(false)
         private set
 
-    fun onPlayInBackgroundExplanationDismiss() {
-        showingPlayInBackgroundExplanation = false
-    }
+    // This value should always be up to date due to granting or revoking
+    // permissions outside of the app causing an app restart. If the user
+    // approves the notification permission inside the app, the value
+    // must be changed to true manually.
+    private var hasNotificationPermission by mutableStateOf(
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
+            true
+        else ContextCompat.checkSelfPermission(
+            context, Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED)
+
+    private val notificationPermissionRequested by
+        dataStore.preferenceState(notificationPermissionRequestedKey, false, scope)
+
+    var showingNotificationPermissionDialog by mutableStateOf(false)
+        private set
 
     fun onPlayInBackgroundTitleClick() {
         showingPlayInBackgroundExplanation = true
     }
 
+    fun onPlayInBackgroundExplanationDismiss() {
+        showingPlayInBackgroundExplanation = false
+    }
+
+    fun onNotificationPermissionDialogDismiss() {
+        showingNotificationPermissionDialog = false
+    }
+
+    fun onNotificationPermissionDialogConfirm(permissionGranted: Boolean) {
+        onNotificationPermissionDialogDismiss()
+        if (permissionGranted)
+            hasNotificationPermission = true
+        togglePlayInBackground()
+    }
+
     fun onPlayInBackgroundSwitchClick() {
+        if (!playInBackground &&
+            !notificationPermissionRequested &&
+            !hasNotificationPermission
+        ) {
+            scope.launch {
+                dataStore.edit{ it[notificationPermissionRequestedKey] = true }
+            }
+            showingNotificationPermissionDialog = true
+        }
+        else togglePlayInBackground()
+    }
+
+    private fun togglePlayInBackground() {
         scope.launch {
             dataStore.edit {
                 val newValue = !playInBackground

@@ -3,6 +3,7 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
@@ -10,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -23,20 +25,20 @@ import androidx.compose.ui.window.DialogProperties
 /**
  * Compose an alert dialog.
  *
- * @param windowPadding The PaddingValues instance to use for the dialog's window.
+ * @param windowPadding The [PaddingValues] instance to use for the dialog's window.
  *     If null, the platform default dialog window padding will be used instead.
  * @param horizontalPadding The horizontal padding for the content. The value
  *     is also used as the horizontal padding for the default title layout.
  * @param title The string representing the dialog's title. Can be null, in
  *     which case the title will not be displayed.
  * @param titleLayout The layout that will be used for the dialog's title.
- *     Will default to a composable Text using the value of the title parameter.
+ *     Will default to a composable [Text] using the value of the title parameter.
  *     Will not be displayed if title == null
  * @param text The string representing the dialog's message. Will only be used
  *     if the content parameter is not overridden, in which case it will default
- *     to a composable Text containing the value of this parameter.
- * @param titleContentSpacing The spacing, in Dp, in between the title and the content.
- * @param contentButtonSpacing The spacing, in Dp, in between the content and the buttons.
+ *     to a composable [Text] containing the value of this parameter.
+ * @param titleContentSpacing The spacing, in [Dp], in between the title and the content.
+ * @param contentButtonSpacing The spacing, in [Dp], in between the content and the buttons.
  * @param onDismissRequest The callback that will be invoked when the user taps
  *     the cancel button, if shown, or when they tap outside the dialog, or when
  *     the back button is pressed.
@@ -53,9 +55,15 @@ import androidx.compose.ui.window.DialogProperties
     horizontalPadding: Dp = 16.dp,
     title: String? = null,
     titleLayout: @Composable (String) -> Unit = @Composable {
-        Text(text = it, style = MaterialTheme.typography.h6,
-             modifier = Modifier.padding(start = horizontalPadding, top = 16.dp,
-                                         end = horizontalPadding, bottom = 0.dp))
+        Row(Modifier.fillMaxWidth(), Arrangement.Center) {
+            Text(text = it,
+                modifier = Modifier.padding(
+                    start = horizontalPadding, top = 16.dp,
+                    end = horizontalPadding, bottom = 0.dp),
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 1,
+                style = MaterialTheme.typography.h6)
+        }
     }, text: String? = null,
     titleContentSpacing: Dp = 12.dp,
     contentButtonSpacing: Dp = 12.dp,
@@ -66,8 +74,7 @@ import androidx.compose.ui.window.DialogProperties
     onConfirm: () -> Unit = onDismissRequest,
     content: @Composable () -> Unit = @Composable {
         CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.high) {
-            val textStyle = MaterialTheme.typography.subtitle1
-            ProvideTextStyle(textStyle) { Text(text ?: "") }
+            Text(text ?: "", style = MaterialTheme.typography.body1)
         }
     }
 ) = Dialog(
@@ -117,9 +124,9 @@ import androidx.compose.ui.window.DialogProperties
  * through the pages of content. A progress indicator (e.g. 2 of 4) will
  * be displayed at the top-end corner of the dialog.
  *
- * @param title The string representing the dialog's title.
- * @param titleContentSpacing The spacing, in Dp, in between the title and the content.
- * @param contentButtonSpacing The spacing, in Dp, in between the content and the buttons.
+ * @param title The [String] representing the dialog's title.
+ * @param titleContentSpacing The spacing, in [Dp], in between the title and the content.
+ * @param contentButtonSpacing The spacing, in [Dp], in between the content and the buttons.
  * @param onDismissRequest The callback that will be invoked when the user
  *     taps the cancel button (which will replace the previous button if on
  *     the first page of content), or when they tap outside the dialog, or
@@ -127,10 +134,17 @@ import androidx.compose.ui.window.DialogProperties
  * @param onFinish The callback that will be invoked when the user taps the
  *     finish button. The finish button will replace the next button when
  *     the last page of content is being displayed.
- * @param pages The list of composable lambdas that will be used as the
- *     content for each page of the dialog. The provided modifier should be
- *     used for the root layout of each page of content so that the pages'
- *     margins will match those of the dialog's title.
+ * @param numPages The total number of pages.
+ * @param currentPageIndex The index of the page that should be displayed.
+ * @param onCurrentPageIndexChange The callback that will be invoked when the
+ *     [currentPageIndex] should be changed. If [currentPageIndex] is not changed
+ *     to the provided Int value when this is called, the current page
+ *     indicator will be incorrect.
+ * @param pages The composable lambda that composes the correct content given
+ *     the value of [currentPageIndex]. The provided [Modifier] parameter should
+ *     be used for the content to ensure a consistent look. Like [AnimatedVisibility]'s
+ *     content parameter, the value of the provided Int should always be
+ *     taken into account when determining each page's contents.
  */
 @Composable fun MultiStepDialog(
     title: String,
@@ -138,14 +152,16 @@ import androidx.compose.ui.window.DialogProperties
     contentButtonSpacing: Dp = 12.dp,
     onDismissRequest: () -> Unit,
     onFinish: () -> Unit = onDismissRequest,
-    pages: List<@Composable (Modifier) -> Unit>
+    numPages: Int,
+    currentPageIndex: Int,
+    onCurrentPageIndexChange: (Int) -> Unit,
+    pages: @Composable AnimatedVisibilityScope.(Modifier, Int) -> Unit
 ) = Dialog(onDismissRequest, DialogProperties(usePlatformDefaultWidth = false)) {
-    require(pages.isNotEmpty())
+    require(currentPageIndex in 0 until numPages)
 
     Surface(Modifier.padding(24.dp), MaterialTheme.shapes.medium) {
         Column(Modifier.padding(top = 16.dp)) {
-            var previousPage by rememberSaveable { mutableStateOf(0) }
-            var currentPage by rememberSaveable { mutableStateOf(0) }
+            var previousPageIndex by rememberSaveable { mutableStateOf(currentPageIndex) }
 
             Column {
                 // The horizontal padding is applied to each item here instead of to
@@ -155,9 +171,10 @@ import androidx.compose.ui.window.DialogProperties
                 val horizontalPaddingModifier = Modifier.padding(horizontal = 16.dp)
 
                 Row(horizontalPaddingModifier) {
+                    Spacer(Modifier.weight(1f))
                     Text(title, style = MaterialTheme.typography.h6)
                     Spacer(Modifier.weight(1f))
-                    Text(stringResource(R.string.multi_step_dialog_indicator, currentPage + 1, pages.size),
+                    Text(stringResource(R.string.multi_step_dialog_indicator, currentPageIndex + 1, numPages),
                          style = MaterialTheme.typography.subtitle1)
                 }
                 Spacer(Modifier.height(titleContentSpacing))
@@ -166,9 +183,9 @@ import androidx.compose.ui.window.DialogProperties
                                            .then(horizontalPaddingModifier)
                 ProvideTextStyle(MaterialTheme.typography.subtitle1) {
                     SlideAnimatedContent(
-                        targetState = currentPage,
-                        leftToRight = currentPage >= previousPage
-                    ) { pages[it](pageModifier) }
+                        targetState = currentPageIndex,
+                        leftToRight = currentPageIndex >= previousPageIndex,
+                        content = { pages(pageModifier, it) })
                 }
             }
 
@@ -178,28 +195,34 @@ import androidx.compose.ui.window.DialogProperties
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
                 TextButton(
                     onClick = {
-                        if (currentPage == 0)
+                        if (currentPageIndex == 0)
                             onDismissRequest()
-                        else previousPage = currentPage--
+                        else {
+                            previousPageIndex = currentPageIndex
+                            onCurrentPageIndexChange(currentPageIndex - 1)
+                        }
                     }, modifier = Modifier.minTouchTargetSize().weight(1f),
                     shape = MaterialTheme.shapes.medium.bottomStartShape()
                 ) {
-                    Text(stringResource(if (currentPage == 0)
-                                            R.string.cancel
-                                        else R.string.previous))
+                    Text(stringResource(
+                        if (currentPageIndex == 0) R.string.cancel
+                        else                       R.string.previous))
                 }
                 VerticalDivider()
                 TextButton(
                     onClick = {
-                        if (currentPage == pages.lastIndex)
+                        if (currentPageIndex == numPages - 1)
                             onFinish()
-                        else previousPage = currentPage++
+                        else {
+                            previousPageIndex = currentPageIndex
+                            onCurrentPageIndexChange(currentPageIndex + 1)
+                        }
                     }, modifier = Modifier.minTouchTargetSize().weight(1f),
                     shape = MaterialTheme.shapes.medium.bottomEndShape()
                 ) {
-                    Text(stringResource(if (currentPage == pages.lastIndex)
-                                            R.string.finish
-                                        else R.string.next))
+                    Text(stringResource(
+                        if (currentPageIndex == numPages - 1) R.string.finish
+                        else                                  R.string.next))
                 }
             }
         }

@@ -1,0 +1,2 @@
+Made the app obey audio focus rules by default.
+Added the play in background option, which makes the app ignore audio focus.

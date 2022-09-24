@@ -32,9 +32,9 @@ import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import com.google.accompanist.insets.statusBarsPadding
 
-/** Compose a Row with a gradient background and vertically centered
+/** Compose a [Row] with a gradient background and vertically centered
  * content, while providing the current theme's onPrimary color as the
- * LocalContentColor. The default height of 56.dp can be overridden
+ * [LocalContentColor]. The default height of 56.dp can be overridden
  * via the parameter height. */
 @Composable fun GradientToolBar(
     modifier: Modifier = Modifier,
@@ -42,7 +42,7 @@ import com.google.accompanist.insets.statusBarsPadding
 ) {
     val gradStart = MaterialTheme.colors.primaryVariant
     val gradEnd = MaterialTheme.colors.secondaryVariant
-    val gradient = remember {
+    val gradient = remember(gradStart, gradEnd) {
         Brush.horizontalGradient(listOf(gradStart, gradEnd))
     }
     Row(modifier.fillMaxWidth()
@@ -63,18 +63,18 @@ import com.google.accompanist.insets.statusBarsPadding
  * displaying a list of items. The bar integrates an optional back button, a
  * navigation title / search query, an optional search button and a button to
  * open a list of sorting options, and any other content passed in through the
- * parameter otherContent. The bar will always display a back button if there
- * is an active search query (i.e. searchQuery is not null), but will otherwise
- * only display it if backButtonShouldBeVisible is true. The title will be
+ * parameter [otherContent]. The bar will always display a back button if there
+ * is an active search query (i.e. [searchQuery] is not null), but will otherwise
+ * only display it if [showBackButtonForNavigation] is true. The title will be
  * replaced by the search query if it is not null.
  *
  * @param showBackButtonForNavigation Whether or not the back button should be
- *     visible due to other state held outside the action bar. If searchQuery
+ *     visible due to other state held outside the action bar. If [searchQuery]
  *     is not null, the back button will be shown regardless.
  * @param onBackButtonClick The callback that will be invoked when the back
- *     button is clicked while showBackButtonForNavigation is true. If the
+ *     button is clicked while [showBackButtonForNavigation] is true. If the
  *     back button is shown due to a non-null search query, the back button
- *     will close the search query and onBackButtonClick will not be called.
+ *     will close the search query and [onBackButtonClick] will not be called.
  * @param title The title that will be displayed when there is no search query.
  * @param searchQuery The current search query that will be displayed if not null.
  * @param onSearchQueryChanged The callback that will be invoked when the
@@ -89,8 +89,8 @@ import com.google.accompanist.insets.statusBarsPadding
  *     query entry will appear, or set it to null if it is not null so that
  *     the search query entry will be closed.
  * @param sortOptions An array of all possible sorting enum values,
- *     usually accessed with enumValues<>()
- * @param sortOptionNames An array containing the string values that
+ *     usually accessed with [enumValues]<T>()
+ * @param sortOptionNames An array containing the [String] values that
  *     should represent each sorting option.
  * @param currentSortOption A value of the type parameter that indicates
  *     the currently selected sort option.
@@ -185,16 +185,16 @@ import com.google.accompanist.insets.statusBarsPadding
 }
 
 /**
- * A DropdownMenu that displays an option for each value of the enum type
+ * A [DropdownMenu] that displays an option for each value of the enum type
  * parameter, and a checked or unchecked radio button besides each to show
  * the currently selected value.
  *
- * @param expanded Whether the dropdown menu is displayed
+ * @param expanded Whether the dropdown menu is displayed.
  * @param values An array of all possible values for the enum type,
- *               usually accessed with enumValues<T>()
- * @param valueNames A string array containing string values to use to
- *                   represent each value of the parameter enum type T.
- * @param currentValue The currently selected enum value
+ *               usually accessed with [enumValues]<T>().
+ * @param valueNames An Array<String> containing [String] values to use
+ *                   to represent each value of the parameter enum type T.
+ * @param currentValue The currently selected enum value.
  * @param onValueChanged The callback that will be invoked when the user taps an item.
  * @param onDismissRequest The callback that will be invoked when the menu should
  *                         be dismissed.

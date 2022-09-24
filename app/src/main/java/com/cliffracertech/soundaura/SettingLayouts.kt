@@ -64,12 +64,12 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
 /**
  * A radio button group to select a particular value of an enum.
  *
- * @param modifier The modifier to apply to the entire radio button group.
- * @param values An array of all possible enum values.
- * @param valueNames An array containing names for each of the enum values.
- * @param valueDescriptions An optional array of strings, the individual
+ * @param modifier The [Modifier] to apply to the entire radio button group.
+ * @param values An [Array] of all possible enum values.
+ * @param valueNames An [Array] containing names for each of the enum values.
+ * @param valueDescriptions An optional array of [String]s, the individual
  *     values of which will be displayed beneath each enum value to
- *     describe it. A blank string will not be displayed at all in case
+ *     describe it. A blank [String] will not be displayed at all in case
  *     a description is desired for only certain items.
  * @param currentValue The enum value that should be marked as checked.
  * @param onValueClick The callback that will be invoked when an enum
@@ -114,11 +114,12 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
 }
 
 /**
- * A setting layout, with room for an icon, title, subtitle, and
+ * A setting layout with room for an icon, title, subtitle, and
  * setting content (e.g. a switch to turn the setting on and off.
  *
- * @param icon The icon to represent the setting. Will not be displayed if null.
- * @param title The string title for the setting.
+ * @param icon An optional composable lambda that will be used as the
+ *     icon to represent the setting. Will not be displayed if null.
+ * @param title The [String] title for the setting.
  * @param subtitle Additional text to be displayed below the title with
  *                 a lower emphasis. Will not be displayed if null.
  * @param onClick The callback, if any, that will be invoked when
@@ -154,8 +155,46 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
 }
 
 /**
- * Compose a Setting instance with empty content, whose title will open
+ * Compose a [Setting] instance with empty content, whose title will open
  * a dialog when clicked.
+ *
+ * @param icon An optional composable lambda that will be used as the
+ *     icon to represent the setting. Will not be displayed if null.
+ * @param title The [String] title for the setting.
+ * @param description A longer description of the setting. Will not be displayed if null.
+ * @param dialogVisible Whether or not the dialog will be displayed.
+ * @param onShowRequest The callback that will be invoked when the user requests
+ * @param content The composable lambda containing the dialog that will be shown
+ *     when the title is clicked. The provided () -> Unit lambda argument should
+ *     be used as the onDismissRequest for the inner dialog.
+ */
+@Composable fun DialogSetting(
+    title: String,
+    icon: (@Composable () -> Unit)? = null,
+    description: String? = null,
+    dialogVisible: Boolean,
+    onShowRequest: () -> Unit,
+    onDismissRequest: () -> Unit,
+    content: @Composable (onDismissRequest: () -> Unit) -> Unit,
+) {
+    Setting(
+        title = title,
+        icon = icon,
+        subtitle = description,
+        onClick = onShowRequest,
+    ) {
+        Icon(imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = LocalContentColor.current.copy(ContentAlpha.medium))
+    }
+    if (dialogVisible)
+        content(onDismissRequest)
+}
+
+/**
+ * Compose a [DialogSetting] that contains its dialogVisible visible state
+ * internally. If state hoisting the dialogVisible state is necessary, use
+ * the overload of [DialogSetting] that accepts the dialogVisible parameter.
  *
  * @param icon The icon to represent the setting. Will not be displayed if null.
  * @param title The string title for the setting.
@@ -171,22 +210,18 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
     content: @Composable (onDismissRequest: () -> Unit) -> Unit,
 ) {
     var showingDialog by rememberSaveable { mutableStateOf(false) }
-    Setting(
+    DialogSetting(
         title = title,
         icon = icon,
-        subtitle = description,
-        onClick = { showingDialog = true },
-    ) {
-        Icon(imageVector = Icons.Default.ChevronRight,
-            contentDescription = null,
-            tint = LocalContentColor.current.copy(ContentAlpha.medium))
-    }
-    if (showingDialog)
-        content { showingDialog = false }
+        description = description,
+        dialogVisible = showingDialog,
+        onShowRequest = { showingDialog = true },
+        onDismissRequest = { showingDialog = false },
+        content = content)
 }
 
 /**
- * Compose a DialogSetting that displays the name of a setting that has
+ * Compose a [DialogSetting] that displays the name of a setting that has
  * several discrete values described by the enum type T. The current value
  * of the setting will be displayed beneath the title. When clicked, a
  * dialog displaying all of the values of the enum will be displayed to
@@ -199,15 +234,15 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
  *     only be displayed in the dialog window, below the title but before
  *     the enum value's radio buttons.
  * @param values An array containing all possible values for the enum
- *     setting, usually obtained with an enumValues<T>() call.
- * @param valueNames An array the same length as values that contains
- *     string titles for each of the enum values.
- * @param valueDescriptions An optional array containing further
+ *     setting, usually obtained with an [enumValues]<T>() call.
+ * @param valueNames An [Array] the same length as values that
+ *     contains string titles for each of the enum values.
+ * @param valueDescriptions An optional [Array] containing further
  *     descriptions for each enum value. These descriptions will
  *     not be displayed if valueDescriptions is null.
  * @param currentValue The current enum value of the setting.
- * @param onValueClick The callback that will be invoked when an option
- *     is clicked.
+ * @param onValueClick The callback that will be invoked when an
+ *     option is clicked.
  */
 @Composable fun <T: Enum<T>> EnumDialogSetting(
     title: String,
@@ -225,14 +260,11 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
     SoundAuraDialog(
         // To prevent the EnumRadioButtonGroup's intrinsic start padding from
         // stacking with the dialog window's start padding, the horizontal
-        // padding for the entire dialog window is set to zero, and then set to
-        // the default 16.dp for just the title and description below the title.
+        // padding for the entire dialog window is set to zero, and then set
+        // to the default 16.dp for just the description below the title.
         horizontalPadding = 0.dp,
         title = title,
-        titleLayout = {
-            Text(text = it, style = MaterialTheme.typography.h6,
-                 modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp))
-        }, contentButtonSpacing = 4.dp, // reduced because the EnumRadioButtonGroup already has spacing
+        contentButtonSpacing = 4.dp, // reduced because the EnumRadioButtonGroup already has spacing
         onDismissRequest = onDismissRequest,
         showCancelButton = false,
     ) {

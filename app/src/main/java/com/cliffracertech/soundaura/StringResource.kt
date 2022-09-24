@@ -6,7 +6,7 @@ import android.content.Context
 import androidx.annotation.StringRes
 
 /** A holder of a string resource, which can be resolved to a
- * string by calling the method resolve with a Context instance. */
+ * [String] by calling the method [resolve] with a [Context]. */
 class StringResource(
     private val string: String?,
     @StringRes val stringResId: Int = 0,

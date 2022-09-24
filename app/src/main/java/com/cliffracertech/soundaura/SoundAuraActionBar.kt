@@ -71,7 +71,7 @@ class ActionBarViewModel(
 }
 
 /**
- * Compose a ListActionBar with state provided by an instance of ActionBarViewModel.
+ * Compose a [ListActionBar] with state provided by an instance of [ActionBarViewModel].
  *
  * @param onUnhandledBackButtonClick The callback that will
  *     be invoked if a back button click is not handled.

@@ -18,8 +18,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 
-/** Return a shape that matches just the topStart corner
- * of the receiver shape, with otherwise sharp corners.*/
+/** Return a [CornerBasedShape] that matches just the topStart
+ * corner of the receiver shape, with otherwise sharp corners.*/
 @Composable fun CornerBasedShape.topStartShape() =
     RoundedCornerShape(
         topStart = topStart,
@@ -27,8 +27,8 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
         bottomEnd = ZeroCornerSize,
         bottomStart = ZeroCornerSize)
 
-/** Return a shape that matches the top edge of
- * the receiver shape, with sharp bottom corners.*/
+/** Return a [CornerBasedShape] that matches the top edge
+ * of the receiver shape, with sharp bottom corners.*/
 @Composable fun CornerBasedShape.topShape() =
     RoundedCornerShape(
         topStart = topStart,
@@ -36,7 +36,7 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
         bottomStart = ZeroCornerSize,
         bottomEnd = ZeroCornerSize)
 
-/** Return a shape that matches just the topEnd corner
+/** Return a [CornerBasedShape] that matches just the topEnd corner
  * of the receiver shape, with otherwise sharp corners.*/
 @Composable fun CornerBasedShape.topEndShape() =
     RoundedCornerShape(
@@ -45,7 +45,7 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
         bottomStart = ZeroCornerSize,
         bottomEnd = ZeroCornerSize)
 
-/** Return a shape that matches just the starting edge
+/** Return a [CornerBasedShape] that matches just the starting edge
  * of the receiver shape, with otherwise sharp corners.*/
 @Composable fun CornerBasedShape.startShape() =
     RoundedCornerShape(
@@ -54,8 +54,8 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
         bottomStart = bottomStart,
         bottomEnd = ZeroCornerSize)
 
-/** Return a shape that matches just the ending edge
- * of the receiver shape, with otherwise sharp corners.*/
+/** Return a [CornerBasedShape] that matches just the ending
+ * edge of the receiver shape, with otherwise sharp corners.*/
 @Composable fun CornerBasedShape.endShape() =
     RoundedCornerShape(
         topStart = ZeroCornerSize,
@@ -63,8 +63,8 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
         bottomStart = ZeroCornerSize,
         bottomEnd = bottomEnd)
 
-/** Return a shape that matches just the bottomStart corner
- * of the receiver shape, with otherwise sharp corners.*/
+/** Return a [CornerBasedShape] that matches just the bottomStart
+ * corner of the receiver shape, with otherwise sharp corners.*/
 @Composable fun CornerBasedShape.bottomStartShape() =
     RoundedCornerShape(
         topStart = ZeroCornerSize,
@@ -72,8 +72,8 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
         bottomEnd = ZeroCornerSize,
         bottomStart = bottomStart)
 
-/** Return a shape that matches just the bottomEnd corner
- * of the receiver shape, with otherwise sharp corners.*/
+/** Return a [CornerBasedShape] that matches just the bottomEnd
+ * corner of the receiver shape, with otherwise sharp corners.*/
 @Composable fun CornerBasedShape.bottomEndShape() =
     RoundedCornerShape(
         topStart = ZeroCornerSize,
@@ -81,8 +81,8 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
         bottomStart = ZeroCornerSize,
         bottomEnd = bottomEnd)
 
-/** Return a shape that matches the bottom edge
- * of the receiver shape, with sharp top corners.*/
+/** Return a [CornerBasedShape] that matches the bottom
+ * edge of the receiver shape, with sharp top corners.*/
 @Composable fun CornerBasedShape.bottomShape() =
     RoundedCornerShape(
         topStart = ZeroCornerSize,
