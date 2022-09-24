@@ -1,0 +1,6 @@
+Centered dialog titles.
+Replaced the explanation on how to add the app's quick settings tile with a button to accomplish the same on API levels > 33.
+Updated the app's notification handling to comply with Android 13 changes.
+Fixed action bar color not updating when the app theme changes.
+Fixed track remove button using wrong font size.
+Fixed onAudioDeviceChange sometimes affecting playback when it shouldn't.

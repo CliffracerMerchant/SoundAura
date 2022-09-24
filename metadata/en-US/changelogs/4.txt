@@ -1,0 +1,3 @@
+Updated GitHub link.
+Fixed dialog options' (e.g. when picking the app theme) tappable areas not stretching across the whole dialog window.
+Fixed a small animation flicker when starting or ending a search query.

@@ -1,0 +1,2 @@
+Added a numerical volume indicator that appears in place of the more options button when a track's volume slider is being dragged.
+Added more options for how the app responds to a change in audio devices that results in a zero volume (auto-pause, auto-stop, do nothing).
