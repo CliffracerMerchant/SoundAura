@@ -16,6 +16,10 @@ SoundAura is built using:
 - Hilt for dependency injection
 - Junit and Robolectric for testing
 
+[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
+     alt="Get it on F-Droid"
+     height="80">](https://f-droid.org/packages/com.cliffracertech.soundaura/)
+
 ## Features
 - A library of user-added tracks based on the device's local files.
 - Individual track volume control
