@@ -264,9 +264,8 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
         // to the default 16.dp for just the description below the title.
         horizontalPadding = 0.dp,
         title = title,
-        contentButtonSpacing = 4.dp, // reduced because the EnumRadioButtonGroup already has spacing
         onDismissRequest = onDismissRequest,
-        showCancelButton = false,
+        buttons = {}
     ) {
         Column {
             if (description != null) {
@@ -279,7 +278,10 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
                 valueNames = valueNames,
                 valueDescriptions = valueDescriptions,
                 currentValue = currentValue,
-                onValueClick = onValueClick)
+                onValueClick = {
+                    onValueClick(it)
+                    onDismissRequest()
+                })
         }
     }
 }

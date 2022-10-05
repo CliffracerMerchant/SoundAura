@@ -17,6 +17,52 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
+/**
+ * A row of buttons for an alert dialog.
+ *
+ * @param onCancelClick The callback that will be invoked when the optional
+ *     cancel button is clicked. The cancel button will not be displayed if
+ *     onCancelClick is null, or if the [content] parameter is overridden.
+ * @param confirmButtonEnabled Whether or not the confirm button will be
+ *     enabled. This parameter will only take effect if the [content] parameter
+ *     is not overridden.
+ * @param confirmText The text used for the confirm button. This parameter will
+ *     only take effect if the [content] parameter is not overridden.
+ * @param onConfirm The callback that will be invoked when the confirm button
+ *     is clicked. This parameter will only take effect if the [content]
+ *     parameter is not overridden.
+ * @param content The content of the button row. content defaults to a row with
+ *     a cancel button if [onCancelCLick] is not null, and a confirm button
+ *     that is enabled according to the value of [confirmButtonEnabled], with a
+ *     text matching [confirmText], and a callback equal to [onConfirm].
+ */
+@Composable fun DialogButtonRow(
+    onCancelClick: (() -> Unit)? = null,
+    confirmButtonEnabled: Boolean = true,
+    confirmText: String = stringResource(R.string.ok),
+    onConfirm: () -> Unit,
+    content: @Composable () -> Unit = {
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
+            if (onCancelClick != null)
+                TextButton(
+                    onClick = onCancelClick,
+                    modifier = Modifier.minTouchTargetSize().weight(1f),
+                    shape = MaterialTheme.shapes.medium.bottomStartShape(),
+                    content = { Text(stringResource(R.string.cancel)) })
+            VerticalDivider()
+            TextButton(
+                onClick = onConfirm,
+                modifier = Modifier.minTouchTargetSize().weight(1f),
+                enabled = confirmButtonEnabled,
+                shape = if (onCancelClick != null)
+                    MaterialTheme.shapes.medium.bottomEndShape()
+                else MaterialTheme.shapes.medium.bottomShape(),
+                content = { Text(confirmText) })
+        }
+}) {
+    content()
+}
+
 // SoundAuraDialog was created to have more control over the layout of the dialog
 // than the stock Compose AlertDialog allows, and due to the fact that the standard
 // AlertDialog was not adding space in between the title and the content TextField
@@ -46,6 +92,10 @@ import androidx.compose.ui.window.DialogProperties
  * @param confirmButtonEnabled Whether the confirm button is enabled.
  * @param confirmText The string used for the confirm button.
  * @param onConfirm The callback that will be invoked when the confirm button is tapped.
+ * @param buttons The composable lambda whose contents will be used as the
+ *     bottom row of buttons. The default value composes an ok button and an
+ *     optional cancel button according to the values of [showCancelButton],
+ *     [confirmButtonEnabled], [confirmText], and [onConfirm].
  * @param content The composable lambda used for the dialog's content area.
  *     content will default to a composable Text object that contains the text
  *     described by the text parameter.
@@ -72,6 +122,13 @@ import androidx.compose.ui.window.DialogProperties
     confirmButtonEnabled: Boolean = true,
     confirmText: String = stringResource(R.string.ok),
     onConfirm: () -> Unit = onDismissRequest,
+    buttons: @Composable () -> Unit = { DialogButtonRow(
+        onCancelClick = if (showCancelButton) onDismissRequest
+                        else                  null,
+        confirmButtonEnabled = confirmButtonEnabled,
+        confirmText = confirmText,
+        onConfirm = onConfirm,
+    )},
     content: @Composable () -> Unit = @Composable {
         CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.high) {
             Text(text ?: "", style = MaterialTheme.typography.body1)
@@ -92,27 +149,9 @@ import androidx.compose.ui.window.DialogProperties
             Box(Modifier.padding(horizontal = horizontalPadding)) {
                 content()
             }
-
             Spacer(Modifier.height(contentButtonSpacing))
-
             Divider()
-            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
-                if (showCancelButton)
-                    TextButton(
-                        onClick = onDismissRequest,
-                        modifier = Modifier.minTouchTargetSize().weight(1f),
-                        shape = MaterialTheme.shapes.medium.bottomStartShape(),
-                        content = { Text(stringResource(R.string.cancel)) })
-                VerticalDivider()
-                TextButton(
-                    onClick = onConfirm,
-                    modifier = Modifier.minTouchTargetSize().weight(1f),
-                    enabled = confirmButtonEnabled,
-                    shape = if (showCancelButton)
-                                MaterialTheme.shapes.medium.bottomEndShape()
-                            else MaterialTheme.shapes.medium.bottomShape(),
-                    content = { Text(confirmText) })
-            }
+            buttons()
         }
     }
 }
