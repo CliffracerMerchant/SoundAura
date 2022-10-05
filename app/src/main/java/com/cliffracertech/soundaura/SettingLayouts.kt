@@ -3,18 +3,17 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
+import android.content.res.Configuration.ORIENTATION_LANDSCAPE
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
@@ -28,14 +27,27 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 @Composable fun SettingCategory(
     title: String,
     content: @Composable ColumnScope.() -> Unit
-) = Surface(shape = MaterialTheme.shapes.large) {
-    Column(Modifier.padding(20.dp, 10.dp, 20.dp, 6.dp)) {
-        Text(text = title,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            style = MaterialTheme.typography.h5)
-        Spacer(Modifier.height(8.dp))
-        Divider()
-        content()
+) {
+    val config = LocalConfiguration.current
+    val maxWidth = remember(config) {
+        var screenWidth = config.screenWidthDp
+        if (config.orientation == ORIENTATION_LANDSCAPE)
+            screenWidth = (screenWidth * 2f / 3f).toInt()
+        screenWidth.dp
+    }
+    Surface(shape = MaterialTheme.shapes.large) {
+        Column(Modifier
+            .widthIn(max = maxWidth)
+            .padding(20.dp, 10.dp, 20.dp, 6.dp)
+        ) {
+            Text(text = title,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+                style = MaterialTheme.typography.h5
+            )
+            Spacer(Modifier.height(8.dp))
+            Divider()
+            content()
+        }
     }
 }
 

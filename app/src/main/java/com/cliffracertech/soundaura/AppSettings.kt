@@ -33,7 +33,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 ) = Surface(modifier, color = MaterialTheme.colors.background) {
     LazyColumn(
         contentPadding = contentPadding,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         item { DisplaySettingsCategory() }
         item { PlaybackSettingsCategory() }
