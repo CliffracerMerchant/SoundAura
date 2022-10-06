@@ -258,6 +258,7 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
  */
 @Composable fun <T: Enum<T>> EnumDialogSetting(
     title: String,
+    modifier: Modifier = Modifier,
     description: String? = null,
     values: Array<T>,
     valueNames: Array<String>,
@@ -270,11 +271,7 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
     description = valueNames[currentValue.ordinal]
 ) { onDismissRequest ->
     SoundAuraDialog(
-        // To prevent the EnumRadioButtonGroup's intrinsic start padding from
-        // stacking with the dialog window's start padding, the horizontal
-        // padding for the entire dialog window is set to zero, and then set
-        // to the default 16.dp for just the description below the title.
-        horizontalPadding = 0.dp,
+        modifier = modifier,
         title = title,
         onDismissRequest = onDismissRequest,
         buttons = {}
@@ -286,6 +283,7 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
                 Spacer(Modifier.height(6.dp))
             }
             EnumRadioButtonGroup(
+                modifier = Modifier.padding(bottom = 12.dp),
                 values = values,
                 valueNames = valueNames,
                 valueDescriptions = valueDescriptions,

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -20,9 +21,9 @@ import androidx.compose.ui.window.DialogProperties
 /**
  * A row of buttons for an alert dialog.
  *
- * @param onCancelClick The callback that will be invoked when the optional
- *     cancel button is clicked. The cancel button will not be displayed if
- *     onCancelClick is null, or if the [content] parameter is overridden.
+ * @param onCancel The callback that will be invoked when the optional
+ *     cancel button is clicked. The cancel button will not be displayed
+ *     if onCancel is null, or if the [content] parameter is overridden.
  * @param confirmButtonEnabled Whether or not the confirm button will be
  *     enabled. This parameter will only take effect if the [content] parameter
  *     is not overridden.
@@ -32,29 +33,30 @@ import androidx.compose.ui.window.DialogProperties
  *     is clicked. This parameter will only take effect if the [content]
  *     parameter is not overridden.
  * @param content The content of the button row. content defaults to a row with
- *     a cancel button if [onCancelCLick] is not null, and a confirm button
- *     that is enabled according to the value of [confirmButtonEnabled], with a
- *     text matching [confirmText], and a callback equal to [onConfirm].
+ *     a cancel button if [onCancel] is not null, and a confirm button that is
+ *     enabled according to the value of [confirmButtonEnabled], with a text
+ *     matching [confirmText], and a callback equal to [onConfirm].
  */
 @Composable fun DialogButtonRow(
-    onCancelClick: (() -> Unit)? = null,
+    onCancel: (() -> Unit)? = null,
     confirmButtonEnabled: Boolean = true,
     confirmText: String = stringResource(R.string.ok),
     onConfirm: () -> Unit,
     content: @Composable () -> Unit = {
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
-            if (onCancelClick != null)
+            if (onCancel != null) {
                 TextButton(
-                    onClick = onCancelClick,
+                    onClick = onCancel,
                     modifier = Modifier.minTouchTargetSize().weight(1f),
                     shape = MaterialTheme.shapes.medium.bottomStartShape(),
                     content = { Text(stringResource(R.string.cancel)) })
-            VerticalDivider()
+                VerticalDivider()
+            }
             TextButton(
                 onClick = onConfirm,
                 modifier = Modifier.minTouchTargetSize().weight(1f),
                 enabled = confirmButtonEnabled,
-                shape = if (onCancelClick != null)
+                shape = if (onCancel != null)
                     MaterialTheme.shapes.medium.bottomEndShape()
                 else MaterialTheme.shapes.medium.bottomShape(),
                 content = { Text(confirmText) })
@@ -71,20 +73,18 @@ import androidx.compose.ui.window.DialogProperties
 /**
  * Compose an alert dialog.
  *
- * @param windowPadding The [PaddingValues] instance to use for the dialog's window.
- *     If null, the platform default dialog window padding will be used instead.
- * @param horizontalPadding The horizontal padding for the content. The value
- *     is also used as the horizontal padding for the default title layout.
+ * @param modifier The [Modifier] to use for the dialog window.
+ * @param useDefaultWidth The value to use for the [DialogProperties]
+ *     usePlatformDefaultWidth value. If false, the size of the dialog
+ *     can be set through [modifier] argument instead.
  * @param title The string representing the dialog's title. Can be null, in
  *     which case the title will not be displayed.
  * @param titleLayout The layout that will be used for the dialog's title.
  *     Will default to a composable [Text] using the value of the title parameter.
- *     Will not be displayed if title == null
+ *     Will not be displayed if title == null.
  * @param text The string representing the dialog's message. Will only be used
- *     if the content parameter is not overridden, in which case it will default
+ *     if the [content] parameter is not overridden, in which case it will default
  *     to a composable [Text] containing the value of this parameter.
- * @param titleContentSpacing The spacing, in [Dp], in between the title and the content.
- * @param contentButtonSpacing The spacing, in [Dp], in between the content and the buttons.
  * @param onDismissRequest The callback that will be invoked when the user taps
  *     the cancel button, if shown, or when they tap outside the dialog, or when
  *     the back button is pressed.
@@ -101,56 +101,47 @@ import androidx.compose.ui.window.DialogProperties
  *     described by the text parameter.
  */
 @Composable fun SoundAuraDialog(
-    windowPadding: PaddingValues? = null,
-    horizontalPadding: Dp = 16.dp,
+    modifier: Modifier = Modifier,
+    useDefaultWidth: Boolean = true,
     title: String? = null,
-    titleLayout: @Composable (String) -> Unit = @Composable {
-        Row(Modifier.fillMaxWidth(), Arrangement.Center) {
-            Text(text = it,
-                modifier = Modifier.padding(
-                    start = horizontalPadding, top = 16.dp,
-                    end = horizontalPadding, bottom = 0.dp),
-                overflow = TextOverflow.Ellipsis,
-                maxLines = 1,
-                style = MaterialTheme.typography.h6)
-        }
+    titleLayout: @Composable ColumnScope.(String) -> Unit = {
+        Text(text = it,
+            modifier = Modifier.padding(top = 16.dp, bottom = 12.dp)
+                               .align(Alignment.CenterHorizontally),
+            overflow = TextOverflow.Ellipsis,
+            maxLines = 1,
+            style = MaterialTheme.typography.h6)
     }, text: String? = null,
-    titleContentSpacing: Dp = 12.dp,
-    contentButtonSpacing: Dp = 12.dp,
     onDismissRequest: () -> Unit,
     showCancelButton: Boolean = true,
     confirmButtonEnabled: Boolean = true,
     confirmText: String = stringResource(R.string.ok),
     onConfirm: () -> Unit = onDismissRequest,
-    buttons: @Composable () -> Unit = { DialogButtonRow(
-        onCancelClick = if (showCancelButton) onDismissRequest
-                        else                  null,
-        confirmButtonEnabled = confirmButtonEnabled,
-        confirmText = confirmText,
-        onConfirm = onConfirm,
-    )},
-    content: @Composable () -> Unit = @Composable {
+    buttons: @Composable ColumnScope.() -> Unit = {
+        Divider(Modifier.padding(top = 12.dp))
+        DialogButtonRow(
+            onCancel = if (showCancelButton) onDismissRequest
+                       else                  null,
+            confirmButtonEnabled = confirmButtonEnabled,
+            confirmText = confirmText,
+            onConfirm = onConfirm)
+    },
+    content: @Composable ColumnScope.() -> Unit = @Composable {
         CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.high) {
-            Text(text ?: "", style = MaterialTheme.typography.body1)
+            Text(text = text ?: "",
+                modifier = Modifier.padding(horizontal = 16.dp),
+                style = MaterialTheme.typography.body1)
         }
     }
 ) = Dialog(
     onDismissRequest = onDismissRequest,
-    properties = DialogProperties(usePlatformDefaultWidth = windowPadding == null)
+    properties = DialogProperties(usePlatformDefaultWidth = useDefaultWidth)
 ) {
-    val surfaceModifier = if (windowPadding == null) Modifier
-                          else Modifier.padding(windowPadding)
-    Surface(surfaceModifier, MaterialTheme.shapes.medium) {
+    Surface(modifier, MaterialTheme.shapes.medium) {
         Column {
-            if (title != null) {
+            if (title != null)
                 titleLayout(title)
-                Spacer(Modifier.height(titleContentSpacing))
-            }
-            Box(Modifier.padding(horizontal = horizontalPadding)) {
-                content()
-            }
-            Spacer(Modifier.height(contentButtonSpacing))
-            Divider()
+            content()
             buttons()
         }
     }
@@ -163,6 +154,10 @@ import androidx.compose.ui.window.DialogProperties
  * through the pages of content. A progress indicator (e.g. 2 of 4) will
  * be displayed at the top-end corner of the dialog.
  *
+ * @param modifier The [Modifier] to use for the dialog window.
+ * @param useDefaultWidth The value to use for the [DialogProperties]
+ *     usePlatformDefaultWidth value. If false, the size of the dialog
+ *     can be set through [modifier] argument instead.
  * @param title The [String] representing the dialog's title.
  * @param titleContentSpacing The spacing, in [Dp], in between the title and the content.
  * @param contentButtonSpacing The spacing, in [Dp], in between the content and the buttons.
@@ -186,6 +181,8 @@ import androidx.compose.ui.window.DialogProperties
  *     taken into account when determining each page's contents.
  */
 @Composable fun MultiStepDialog(
+    modifier: Modifier = Modifier,
+    useDefaultWidth: Boolean = true,
     title: String,
     titleContentSpacing: Dp = 12.dp,
     contentButtonSpacing: Dp = 12.dp,
@@ -195,10 +192,10 @@ import androidx.compose.ui.window.DialogProperties
     currentPageIndex: Int,
     onCurrentPageIndexChange: (Int) -> Unit,
     pages: @Composable AnimatedVisibilityScope.(Modifier, Int) -> Unit
-) = Dialog(onDismissRequest, DialogProperties(usePlatformDefaultWidth = false)) {
+) = Dialog(onDismissRequest, DialogProperties(usePlatformDefaultWidth = useDefaultWidth)) {
     require(currentPageIndex in 0 until numPages)
 
-    Surface(Modifier.padding(24.dp), MaterialTheme.shapes.medium) {
+    Surface(modifier, MaterialTheme.shapes.medium) {
         Column(Modifier.padding(top = 16.dp)) {
             var previousPageIndex by rememberSaveable { mutableStateOf(currentPageIndex) }
 

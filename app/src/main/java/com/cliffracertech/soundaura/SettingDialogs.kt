@@ -38,12 +38,15 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 /**
  * Launch a dialog to explain the consequences of the 'Play in background' setting.
  *
+ * @param modifier The [Modifier] to use for the dialog window.
  * @param onDismissRequest The callback that will be invoked if the dialog is dismissed.
  */
 @Composable fun PlayInBackgroundExplanationDialog(
+    modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
 ) = SoundAuraDialog(
-    windowPadding = PaddingValues(20.dp),
+    modifier = modifier,
+    useDefaultWidth = false,
     title = stringResource(R.string.play_in_background_setting_title),
     onDismissRequest = onDismissRequest,
     showCancelButton = false,
@@ -73,12 +76,14 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
  * @param onPermissionResult The callback that will be invoked when
  *     the user grants or rejects the permission. The Boolean parameter
  *     will be true if the permission was granted, or false otherwise.
+ * @param modifier The [Modifier] to use for the dialog window.
  */
 @Composable fun NotificationPermissionDialog(
     showExplanationFirst: Boolean,
     onShowTileTutorialClick: () -> Unit,
     onDismissRequest: () -> Unit,
     onPermissionResult: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         onPermissionResult(true)
@@ -88,6 +93,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
     var explanationDismissed by rememberSaveable { mutableStateOf(false) }
     if (showExplanationFirst && !explanationDismissed)
         SoundAuraDialog(
+            modifier = modifier,
             title = stringResource(R.string.request_notification_permission_title),
             onDismissRequest = onDismissRequest,
             showCancelButton = false,
@@ -117,6 +123,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 
 /**
  * Launch a dialog to request the READ_PHONE_STATE permission.
+ * @param modifier The [Modifier] to use for the dialog window.
  * @param showExplanationFirst Whether or not a dialog box explaining
  *     why the permission is needed will be shown.
  * @param onDismissRequest The callback that will be invoked if the
@@ -126,6 +133,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
  *     will be true if the permission was granted, or false otherwise.
  */
 @Composable fun PhoneStatePermissionDialog(
+    modifier: Modifier = Modifier,
     showExplanationFirst: Boolean,
     onDismissRequest: () -> Unit,
     onPermissionResult: (Boolean) -> Unit
@@ -133,6 +141,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
     var explanationDismissed by rememberSaveable { mutableStateOf(false) }
     if (showExplanationFirst && !explanationDismissed)
         SoundAuraDialog(
+            modifier = modifier,
             title = stringResource(R.string.auto_pause_during_calls_setting_title),
             text = stringResource(R.string.request_phone_state_permission_explanation),
             onDismissRequest = onDismissRequest,
@@ -193,12 +202,16 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
     Column {
         var showingAddTileHelp by rememberSaveable { mutableStateOf(false) }
         Row(modifier = Modifier
-            .minTouchTargetSize()
-            .clickable { showingAddTileHelp = !showingAddTileHelp },
+                .minTouchTargetSize()
+                .clickable { showingAddTileHelp = !showingAddTileHelp },
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val localTextStyle = LocalTextStyle.current
+            val style = remember(localTextStyle) {
+                localTextStyle.copy(fontWeight = FontWeight.Bold)
+            }
             Text(stringResource(R.string.tile_tutorial_add_tile_help_button_text),
-                style = LocalTextStyle.current.copy(fontWeight = FontWeight.Bold))
+                 style = style)
             val iconRotation by animateFloatAsState(
                 if (showingAddTileHelp) 180f else 0f)
             Spacer(Modifier.weight(1f))
@@ -218,10 +231,13 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 /** Compose a [MultiStepDialog] that contains a tutorial explaining
  * to the user how to add and use the app's quick settings tile. */
 @Composable fun TileTutorialDialog(
+    modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit
 ) {
     var currentPageIndex by rememberSaveable { mutableStateOf(0) }
     MultiStepDialog(
+        modifier = modifier.restrictWidthAccordingToSizeClass(),
+        useDefaultWidth = false,
         title = stringResource(R.string.tile_tutorial_title),
         onDismissRequest = onDismissRequest,
         numPages = 2,
@@ -270,22 +286,29 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 
 /** Show a dialog to display all of the open source libraries used
  * in the app, as well as their licenses. */
-@Composable fun OpenSourceLibrariesUsedDialog(onDismissRequest: () -> Unit) =
-    SoundAuraDialog(
-        windowPadding = PaddingValues(16.dp),
-        title = stringResource(R.string.open_source_licenses),
-        onDismissRequest = onDismissRequest,
-        showCancelButton = false,
-    ) {
-        // For some reason the LibrariesContainer prevents the ok button from
-        // being shown if it isn't height constrained. 32 (2 * 16 for the top
-        // and bottom window margins) and 120 (2 * 60 for the title and ok
-        // button) is subtracted from the screen height to figure out the max
-        // container height.
-        val screenHeight = LocalConfiguration.current.screenHeightDp
-        val containerHeight = screenHeight - 32 - 120
-        LibrariesContainer(Modifier.height(containerHeight.dp))
+@Composable fun OpenSourceLibrariesUsedDialog(
+    modifier: Modifier = Modifier,
+    onDismissRequest: () -> Unit
+) = SoundAuraDialog(
+    modifier = modifier,
+    useDefaultWidth = false,
+    title = stringResource(R.string.open_source_licenses),
+    onDismissRequest = onDismissRequest,
+    showCancelButton = false,
+) {
+    val config = LocalConfiguration.current
+    // The LibrariesContainer prevents the ok button from
+    // being shown if it isn't height constrained. 32 (2 * 16 for the top
+    // and bottom window margins) and 120 (2 * 60 for the title and ok
+    // button) is subtracted from the screen height to figure out the max
+    // container height.
+    val containerHeight = remember(config) {
+        (config.screenHeightDp - 32 - 120).dp
     }
+    LibrariesContainer(Modifier
+        .padding(horizontal = 16.dp)
+        .heightIn(max = containerHeight))
+}
 
 /** Show a dialog displaying information about the app to the user. */
 @Composable fun AboutAppDialog(
