@@ -13,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -159,8 +158,6 @@ import androidx.compose.ui.window.DialogProperties
  *     usePlatformDefaultWidth value. If false, the size of the dialog
  *     can be set through [modifier] argument instead.
  * @param title The [String] representing the dialog's title.
- * @param titleContentSpacing The spacing, in [Dp], in between the title and the content.
- * @param contentButtonSpacing The spacing, in [Dp], in between the content and the buttons.
  * @param onDismissRequest The callback that will be invoked when the user
  *     taps the cancel button (which will replace the previous button if on
  *     the first page of content), or when they tap outside the dialog, or
@@ -184,50 +181,32 @@ import androidx.compose.ui.window.DialogProperties
     modifier: Modifier = Modifier,
     useDefaultWidth: Boolean = true,
     title: String,
-    titleContentSpacing: Dp = 12.dp,
-    contentButtonSpacing: Dp = 12.dp,
     onDismissRequest: () -> Unit,
     onFinish: () -> Unit = onDismissRequest,
     numPages: Int,
     currentPageIndex: Int,
     onCurrentPageIndexChange: (Int) -> Unit,
     pages: @Composable AnimatedVisibilityScope.(Modifier, Int) -> Unit
-) = Dialog(onDismissRequest, DialogProperties(usePlatformDefaultWidth = useDefaultWidth)) {
+) {
     require(currentPageIndex in 0 until numPages)
+    var previousPageIndex by rememberSaveable { mutableStateOf(currentPageIndex) }
 
-    Surface(modifier, MaterialTheme.shapes.medium) {
-        Column(Modifier.padding(top = 16.dp)) {
-            var previousPageIndex by rememberSaveable { mutableStateOf(currentPageIndex) }
-
-            Column {
-                // The horizontal padding is applied to each item here instead of to
-                // the parent column so that the pages can have their background set
-                // before the padding is applied. This improves the look of the page
-                // slide animations.
-                val horizontalPaddingModifier = Modifier.padding(horizontal = 16.dp)
-
-                Row(horizontalPaddingModifier) {
-                    Spacer(Modifier.weight(1f))
-                    Text(title, style = MaterialTheme.typography.h6)
-                    Spacer(Modifier.weight(1f))
-                    Text(stringResource(R.string.multi_step_dialog_indicator, currentPageIndex + 1, numPages),
-                         style = MaterialTheme.typography.subtitle1)
-                }
-                Spacer(Modifier.height(titleContentSpacing))
-
-                val pageModifier = Modifier.background(MaterialTheme.colors.surface)
-                                           .then(horizontalPaddingModifier)
-                ProvideTextStyle(MaterialTheme.typography.subtitle1) {
-                    SlideAnimatedContent(
-                        targetState = currentPageIndex,
-                        leftToRight = currentPageIndex >= previousPageIndex,
-                        content = { pages(pageModifier, it) })
-                }
+    SoundAuraDialog(
+        modifier = modifier,
+        useDefaultWidth = useDefaultWidth,
+        title = title,
+        titleLayout = {
+            Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp)) {
+                Spacer(Modifier.weight(1f))
+                Text(it, style = MaterialTheme.typography.h6)
+                Spacer(Modifier.weight(1f))
+                Text(stringResource(R.string.multi_step_dialog_indicator,
+                                    currentPageIndex + 1, numPages),
+                     style = MaterialTheme.typography.subtitle1)
             }
-
-            Spacer(Modifier.height(contentButtonSpacing))
-
-            Divider()
+        }, onDismissRequest = onDismissRequest,
+        buttons = {
+            Divider(Modifier.padding(top = 12.dp))
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
                 TextButton(
                     onClick = {
@@ -261,6 +240,21 @@ import androidx.compose.ui.window.DialogProperties
                         else                                  R.string.next))
                 }
             }
+        }
+    ) {
+        // The horizontal padding is applied to each item here instead of to
+        // the parent column so that the pages can have their background set
+        // before the padding is applied. This improves the look of the page
+        // slide animations.
+        val pageModifier = Modifier
+            .background(MaterialTheme.colors.surface)
+            .padding(horizontal = 16.dp)
+
+        ProvideTextStyle(MaterialTheme.typography.subtitle1) {
+            SlideAnimatedContent(
+                targetState = currentPageIndex,
+                leftToRight = currentPageIndex >= previousPageIndex,
+                content = { pages(pageModifier, it) })
         }
     }
 }
