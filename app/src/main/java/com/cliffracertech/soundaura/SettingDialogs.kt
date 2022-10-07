@@ -32,7 +32,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 
 /**
@@ -312,65 +311,55 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 
 /** Show a dialog displaying information about the app to the user. */
 @Composable fun AboutAppDialog(
+    modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit
-) = Dialog(onDismissRequest) {
-    Surface(shape = MaterialTheme.shapes.medium) {
-        Column(Modifier.padding(top = 16.dp)) {
-            Column(Modifier.padding(horizontal = 16.dp)) {
-                // Title
-                Row(horizontalArrangement = Arrangement.Center) {
-                    Spacer(Modifier.weight(1f))
-                    Icon(painter = painterResource(R.drawable.tile_and_notification_icon),
-                         contentDescription = null,
-                         modifier = Modifier.size(22.dp),
-                         tint = MaterialTheme.colors.primary)
-                    Spacer(Modifier.width(8.dp))
-                    Text(text = stringResource(R.string.app_name),
-                         modifier = Modifier.alignByBaseline(),
-                         style = MaterialTheme.typography.h6)
-                    Spacer(Modifier.width(6.dp))
-                    Text(text = stringResource(R.string.app_version),
-                         modifier = Modifier.alignByBaseline(),
-                         style = MaterialTheme.typography.subtitle1)
-                    Spacer(Modifier.weight(1f))
-                }
-
-                // Content
-                Spacer(Modifier.height(12.dp))
-                Text(text = stringResource(R.string.about_app_setting_body),
-                     style = MaterialTheme.typography.subtitle1)
-            }
-            Spacer(Modifier.height(12.dp))
-
-            // Bottom buttons
-            Divider()
-            Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
-                verticalAlignment = Alignment.CenterVertically
+) = SoundAuraDialog(
+    modifier = modifier,
+    titleLayout = {
+        Row(modifier = Modifier.padding(top = 16.dp, bottom = 12.dp)
+                               .align(Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(painter = painterResource(R.drawable.tile_and_notification_icon),
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colors.primary)
+            Spacer(Modifier.width(8.dp))
+            Text(text = stringResource(R.string.app_name),
+                modifier = Modifier.alignByBaseline(),
+                style = MaterialTheme.typography.h6)
+            Spacer(Modifier.width(6.dp))
+            Text(text = stringResource(R.string.app_version),
+                modifier = Modifier.alignByBaseline(),
+                style = MaterialTheme.typography.subtitle1)
+        }
+    }, text = stringResource(R.string.about_app_setting_body),
+    onDismissRequest = onDismissRequest,
+    buttons = {
+        Divider(Modifier.padding(top = 12.dp))
+        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
+            val uriHandler = LocalUriHandler.current
+            val gitHubLink = stringResource(R.string.github_link)
+            TextButton(
+                onClick = { uriHandler.openUri(gitHubLink) },
+                modifier = Modifier.weight(1f).fillMaxSize(),
+                shape = MaterialTheme.shapes.medium.bottomStartShape()
             ) {
-                val uriHandler = LocalUriHandler.current
-                val gitHubLink = stringResource(R.string.github_link)
-                TextButton(
-                    onClick = { uriHandler.openUri(gitHubLink) },
-                    modifier = Modifier.weight(1f).fillMaxSize(),
-                    shape = MaterialTheme.shapes.medium.bottomStartShape()
-                ) {
-                    Icon(painterResource(R.drawable.github_logo), null,
-                         Modifier.size(20.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Text(text = stringResource(R.string.view_source_code),
-                         textDecoration = TextDecoration.Underline,
-                         color = MaterialTheme.colors.primary)
-                }
-                VerticalDivider()
-                TextButton(
-                    onClick = onDismissRequest,
-                    modifier = Modifier.minTouchTargetSize().weight(0.5f),
-                    shape = MaterialTheme.shapes.medium.bottomEndShape(),
-                ) {
-                    Text(text = stringResource(R.string.ok),
-                         color = MaterialTheme.colors.primary)
-                }
+                Icon(painterResource(R.drawable.github_logo), null,
+                    Modifier.size(20.dp))
+                Spacer(Modifier.width(10.dp))
+                Text(text = stringResource(R.string.view_source_code),
+                    textDecoration = TextDecoration.Underline,
+                    color = MaterialTheme.colors.primary)
+            }
+            VerticalDivider()
+            TextButton(
+                onClick = onDismissRequest,
+                modifier = Modifier.minTouchTargetSize().weight(0.5f),
+                shape = MaterialTheme.shapes.medium.bottomEndShape(),
+            ) {
+                Text(text = stringResource(R.string.ok),
+                    color = MaterialTheme.colors.primary)
             }
         }
-    }
-}
+    })
