@@ -75,7 +75,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
         }
         if (viewModel.showingPlayInBackgroundExplanation)
             PlayInBackgroundExplanationDialog(
-                viewModel::onPlayInBackgroundExplanationDismiss)
+                onDismissRequest = viewModel::onPlayInBackgroundExplanationDismiss)
         if (viewModel.showingNotificationPermissionDialog) {
             val context = LocalContext.current
             val showExplanation =

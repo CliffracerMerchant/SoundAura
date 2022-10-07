@@ -6,9 +6,14 @@ package com.cliffracertech.soundaura
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -37,12 +42,13 @@ import androidx.compose.ui.window.DialogProperties
  *     matching [confirmText], and a callback equal to [onConfirm].
  */
 @Composable fun DialogButtonRow(
+    modifier: Modifier = Modifier,
     onCancel: (() -> Unit)? = null,
     confirmButtonEnabled: Boolean = true,
     confirmText: String = stringResource(R.string.ok),
     onConfirm: () -> Unit,
     content: @Composable () -> Unit = {
-        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
+        Row(modifier.fillMaxWidth()) {
             if (onCancel != null) {
                 TextButton(
                     onClick = onCancel,
@@ -127,20 +133,16 @@ import androidx.compose.ui.window.DialogProperties
             onConfirm = onConfirm)
     },
     content: @Composable ColumnScope.() -> Unit = @Composable {
-        CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.high) {
-            Text(text = text ?: "",
-                modifier = Modifier.padding(horizontal = 16.dp),
-                style = MaterialTheme.typography.body1)
-        }
+        Text(text = text ?: "",
+            modifier = Modifier.padding(horizontal = 16.dp),
+            style = MaterialTheme.typography.body1)
     }
-) = Dialog(
-    onDismissRequest = onDismissRequest,
-    properties = DialogProperties(usePlatformDefaultWidth = useDefaultWidth)
-) {
+) = Dialog(onDismissRequest, DialogProperties(usePlatformDefaultWidth = useDefaultWidth)) {
     Surface(modifier, MaterialTheme.shapes.medium) {
         Column {
             titleLayout()
-            content()
+            Column(Modifier.weight(1f, false).verticalScroll(rememberScrollState()),
+                   content = content)
             buttons()
         }
     }
