@@ -138,23 +138,21 @@ import androidx.lifecycle.viewmodel.compose.viewModel
         Divider()
         EnumDialogSetting(
             title = stringResource(R.string.on_zero_volume_behavior_setting_title),
+            modifier = Modifier.restrictWidthAccordingToSizeClass(),
+            useDefaultWidth = false,
             description = stringResource(R.string.on_zero_volume_behavior_setting_description),
             values = enumValues<OnZeroVolumeAudioDeviceBehavior>(),
             valueNames = OnZeroVolumeAudioDeviceBehavior.valueStrings(),
             valueDescriptions = OnZeroVolumeAudioDeviceBehavior.valueDescriptions(),
             currentValue = viewModel.onZeroVolumeAudioDeviceBehavior,
             onValueClick = viewModel::onOnZeroVolumeAudioDeviceBehaviorClick)
-
         Divider()
-
         DialogSetting(
             title = stringResource(R.string.control_playback_using_tile_setting_title),
             dialogVisible = showingTileTutorialDialog,
             onShowRequest = { showingTileTutorialDialog = true },
-            onDismissRequest = { showingTileTutorialDialog = false }
-        ) {
-            TileTutorialDialog(it)
-        }
+            onDismissRequest = { showingTileTutorialDialog = false },
+            content = { TileTutorialDialog(onDismissRequest = it) })
     }
 
 @Composable private fun AboutSettingsCategory() =

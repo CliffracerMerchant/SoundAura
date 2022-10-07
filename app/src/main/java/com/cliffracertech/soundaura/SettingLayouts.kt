@@ -16,39 +16,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
-import java.lang.Float.max
 
 /**
- * Add horizontal padding according the [LocalWindowSizeClass] value. When the
- * [WindowWidthSizeClass] is equal to [WindowWidthSizeClass.Compact], no extra
- * padding will be applied; with [WindowWidthSizeClass.Medium] padding equal to
- * 20% of the screen width will be applied; with [WindowWidthSizeClass.Expanded]
- * the padding will be 40% of the screen width. This modifier can be used to
- * prevent UI elements that don't need to be very wide from becoming too
- * stretched out in situations with a large [WindowWidthSizeClass].
- *
- * @param min A minimum horizontal that will be applied even when the
- *     [WindowWidthSizeClass] is [WindowWidthSizeClass.Compact], or when the
- *     additional horizontal padding from a larger [WindowWidthSizeClass] is
- *     still less than this value.
+ * Restrict the horizontal width as a percentage of the screen width according
+ * to the [LocalWindowSizeClass] value. When the [WindowWidthSizeClass] is
+ * equal to [WindowWidthSizeClass.Compact], the width restriction will be equal
+ * to 95% of the screen width; with [WindowWidthSizeClass.Medium] the width
+ * restriction is equal to 85% of the screen width; with [WindowWidthSizeClass.Expanded]
+ * the width restriction is equal to 70% of the screen width. This modifier can
+ * be used to prevent top level UI elements that don't need to be very wide
+ * from becoming too stretched out in situations with a large [WindowWidthSizeClass].
  */
-fun Modifier.horizontalPaddingAccordingToSizeClass(min: Dp = 0.dp) = composed {
+fun Modifier.restrictWidthAccordingToSizeClass() = composed {
     val config = LocalConfiguration.current
     val widthSizeClass = LocalWindowSizeClass.current.widthSizeClass
     val modifier = remember(config, widthSizeClass) {
         val screenWidth = config.screenWidthDp
-        val paddingFromSizeClass = when (widthSizeClass) {
+        val maxWidth = when (widthSizeClass) {
+            WindowWidthSizeClass.Compact ->
+                (screenWidth * 19f / 20f).toInt().dp
             WindowWidthSizeClass.Medium ->
-                (screenWidth / 10f)
+                (screenWidth * 17f / 20f).toInt().dp
             WindowWidthSizeClass.Expanded ->
-                (screenWidth * 1f / 5f)
-            else -> 0f
+                (screenWidth * 14f / 20f).toInt().dp
+            else -> screenWidth.dp
         }
-        val padding = max(paddingFromSizeClass, min.value)
-        Modifier.padding(horizontal = padding.dp)
+        Modifier.widthIn(max = maxWidth)
     }
     this.then(modifier)
 }
@@ -61,28 +56,19 @@ fun Modifier.horizontalPaddingAccordingToSizeClass(min: Dp = 0.dp) = composed {
  */
 @Composable fun SettingCategory(
     title: String,
+    modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
+) = Surface(
+    modifier = modifier.restrictWidthAccordingToSizeClass(),
+    shape = MaterialTheme.shapes.large
 ) {
-    val config = LocalConfiguration.current
-    val maxWidth = remember(config) {
-        var screenWidth = config.screenWidthDp
-        if (config.orientation == ORIENTATION_LANDSCAPE)
-            screenWidth = (screenWidth * 2f / 3f).toInt()
-        screenWidth.dp
-    }
-    Surface(shape = MaterialTheme.shapes.large) {
-        Column(Modifier
-            .widthIn(max = maxWidth)
-            .padding(20.dp, 10.dp, 20.dp, 6.dp)
-        ) {
-            Text(text = title,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-                style = MaterialTheme.typography.h5
-            )
-            Spacer(Modifier.height(8.dp))
-            Divider()
-            content()
-        }
+    Column(Modifier.padding(20.dp, 10.dp, 20.dp, 6.dp)) {
+        Text(text = title,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            style = MaterialTheme.typography.h5)
+        Spacer(Modifier.height(8.dp))
+        Divider()
+        content()
     }
 }
 
@@ -277,6 +263,9 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
  * @param title The title of the setting. This will be displayed in the
  *     setting layout, and will also be used as the title of the dialog
  *     window.
+ * @param modifier The [Modifier] to use for the layout.
+ * @param useDefaultWidth Whether or not to use the platform default
+ *     size for the width of the popup dialog window.
  * @param description An optional description of the setting. This will
  *     only be displayed in the dialog window, below the title but before
  *     the enum value's radio buttons.
@@ -294,6 +283,7 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
 @Composable fun <T: Enum<T>> EnumDialogSetting(
     title: String,
     modifier: Modifier = Modifier,
+    useDefaultWidth: Boolean = true,
     description: String? = null,
     values: Array<T>,
     valueNames: Array<String>,
@@ -307,26 +297,25 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
 ) { onDismissRequest ->
     SoundAuraDialog(
         modifier = modifier,
+        useDefaultWidth = useDefaultWidth,
         title = title,
         onDismissRequest = onDismissRequest,
         buttons = {}
     ) {
-        Column {
-            if (description != null) {
-                Text(text = description, style = MaterialTheme.typography.body1,
-                     modifier = Modifier.padding(horizontal = 16.dp))
-                Spacer(Modifier.height(6.dp))
-            }
-            EnumRadioButtonGroup(
-                modifier = Modifier.padding(bottom = 12.dp),
-                values = values,
-                valueNames = valueNames,
-                valueDescriptions = valueDescriptions,
-                currentValue = currentValue,
-                onValueClick = {
-                    onValueClick(it)
-                    onDismissRequest()
-                })
+        if (description != null) {
+            Text(text = description, style = MaterialTheme.typography.body1,
+                 modifier = Modifier.padding(horizontal = 16.dp))
+            Spacer(Modifier.height(6.dp))
         }
+        EnumRadioButtonGroup(
+            modifier = Modifier.padding(bottom = 12.dp),
+            values = values,
+            valueNames = valueNames,
+            valueDescriptions = valueDescriptions,
+            currentValue = currentValue,
+            onValueClick = {
+                onValueClick(it)
+                onDismissRequest()
+            })
     }
 }

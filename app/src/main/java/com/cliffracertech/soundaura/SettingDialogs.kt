@@ -44,13 +44,13 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
     modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
 ) = SoundAuraDialog(
-    modifier = modifier,
+    modifier = modifier.restrictWidthAccordingToSizeClass(),
     useDefaultWidth = false,
     title = stringResource(R.string.play_in_background_setting_title),
     onDismissRequest = onDismissRequest,
     showCancelButton = false,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.padding(horizontal = 16.dp), Arrangement.spacedBy(8.dp)) {
         ProvideTextStyle(MaterialTheme.typography.subtitle1) {
             Text(stringResource(R.string.play_in_background_explanation))
             BulletedList(listOf(
@@ -98,7 +98,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
             showCancelButton = false,
             onConfirm = { explanationDismissed = true }
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.padding(horizontal = 16.dp), Arrangement.spacedBy(6.dp)) {
                 Text(stringResource(R.string.request_notification_permission_explanation_p1),
                      style = MaterialTheme.typography.body1)
 
@@ -289,7 +289,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
     modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit
 ) = SoundAuraDialog(
-    modifier = modifier,
+    modifier = modifier.restrictWidthAccordingToSizeClass(),
     useDefaultWidth = false,
     title = stringResource(R.string.open_source_licenses),
     onDismissRequest = onDismissRequest,
