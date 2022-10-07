@@ -103,8 +103,9 @@ import androidx.compose.ui.window.DialogProperties
     modifier: Modifier = Modifier,
     useDefaultWidth: Boolean = true,
     title: String? = null,
-    titleLayout: @Composable ColumnScope.(String) -> Unit = {
-        Text(text = it,
+    titleLayout: @Composable ColumnScope.() -> Unit = {
+        if (title != null) Text(
+            text = title,
             modifier = Modifier.padding(top = 16.dp, bottom = 12.dp)
                                .align(Alignment.CenterHorizontally),
             overflow = TextOverflow.Ellipsis,
@@ -138,8 +139,7 @@ import androidx.compose.ui.window.DialogProperties
 ) {
     Surface(modifier, MaterialTheme.shapes.medium) {
         Column {
-            if (title != null)
-                titleLayout(title)
+            titleLayout()
             content()
             buttons()
         }
@@ -194,11 +194,10 @@ import androidx.compose.ui.window.DialogProperties
     SoundAuraDialog(
         modifier = modifier,
         useDefaultWidth = useDefaultWidth,
-        title = title,
         titleLayout = {
             Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp)) {
                 Spacer(Modifier.weight(1f))
-                Text(it, style = MaterialTheme.typography.h6)
+                Text(title, style = MaterialTheme.typography.h6)
                 Spacer(Modifier.weight(1f))
                 Text(stringResource(R.string.multi_step_dialog_indicator,
                                     currentPageIndex + 1, numPages),
