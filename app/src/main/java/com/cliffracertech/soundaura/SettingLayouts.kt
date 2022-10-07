@@ -8,45 +8,16 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
-
-/**
- * Restrict the horizontal width as a percentage of the screen width according
- * to the [LocalWindowSizeClass] value. When the [WindowWidthSizeClass] is
- * equal to [WindowWidthSizeClass.Compact], the width restriction will be equal
- * to 95% of the screen width; with [WindowWidthSizeClass.Medium] the width
- * restriction is equal to 85% of the screen width; with [WindowWidthSizeClass.Expanded]
- * the width restriction is equal to 70% of the screen width. This modifier can
- * be used to prevent top level UI elements that don't need to be very wide
- * from becoming too stretched out in situations with a large [WindowWidthSizeClass].
- */
-fun Modifier.restrictWidthAccordingToSizeClass() = composed {
-    val config = LocalConfiguration.current
-    val widthSizeClass = LocalWindowSizeClass.current.widthSizeClass
-    val modifier = remember(config, widthSizeClass) {
-        val screenWidth = config.screenWidthDp
-        val maxWidth = when (widthSizeClass) {
-            WindowWidthSizeClass.Compact ->
-                (screenWidth * 19f / 20f).toInt().dp
-            WindowWidthSizeClass.Medium ->
-                (screenWidth * 17f / 20f).toInt().dp
-            WindowWidthSizeClass.Expanded ->
-                (screenWidth * 14f / 20f).toInt().dp
-            else -> screenWidth.dp
-        }
-        Modifier.widthIn(max = maxWidth)
-    }
-    this.then(modifier)
-}
 
 /**
  * A settings category displayed on a large surface background.
@@ -173,7 +144,6 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
 ) {
     if (icon != null)
         Box(Modifier.size(48.dp)) { icon() }
-
     Column(
         modifier = Modifier.weight(1f).padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -183,7 +153,6 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
         if (subtitle != null)
             Text(subtitle, style = MaterialTheme.typography.body2)
     }
-
     content()
 }
 

@@ -3,7 +3,13 @@
 package com.cliffracertech.soundaura
 
 import android.support.v4.media.session.PlaybackStateCompat
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.Lifecycle
@@ -118,6 +124,35 @@ inline fun <reified T: Enum<T>> DataStore<Preferences>.enumPreferenceFlow(
 ) = data.map { prefs ->
     val index = prefs[key] ?: defaultValue.ordinal
     enumValues<T>().getOrElse(index) { defaultValue }
+}
+
+/**
+ * Restrict the horizontal width as a percentage of the screen width according
+ * to the [LocalWindowSizeClass] value. When the [WindowWidthSizeClass] is
+ * equal to [WindowWidthSizeClass.Compact], the width restriction will be equal
+ * to 95% of the screen width; with [WindowWidthSizeClass.Medium] the width
+ * restriction is equal to 80% of the screen width; with [WindowWidthSizeClass.Expanded]
+ * the width restriction is equal to 60% of the screen width. This modifier can
+ * be used to prevent top level UI elements that don't need to be very wide
+ * from becoming too stretched out in situations with a large [WindowWidthSizeClass].
+ */
+fun Modifier.restrictWidthAccordingToSizeClass() = composed {
+    val config = LocalConfiguration.current
+    val widthSizeClass = LocalWindowSizeClass.current.widthSizeClass
+    val modifier = remember(config, widthSizeClass) {
+        val screenWidth = config.screenWidthDp
+        val maxWidth = when (widthSizeClass) {
+            WindowWidthSizeClass.Compact ->
+                (screenWidth * 19f / 20f).toInt().dp
+            WindowWidthSizeClass.Medium ->
+                (screenWidth * 4f / 5f).toInt().dp
+            WindowWidthSizeClass.Expanded ->
+                (screenWidth * 3f / 5f).toInt().dp
+            else -> screenWidth.dp
+        }
+        Modifier.widthIn(max = maxWidth)
+    }
+    this.then(modifier)
 }
 
 fun Int.toPlaybackStateString() = when (this) {

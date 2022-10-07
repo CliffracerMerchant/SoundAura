@@ -92,7 +92,8 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
     var explanationDismissed by rememberSaveable { mutableStateOf(false) }
     if (showExplanationFirst && !explanationDismissed)
         SoundAuraDialog(
-            modifier = modifier,
+            modifier = modifier.restrictWidthAccordingToSizeClass(),
+            useDefaultWidth = false,
             title = stringResource(R.string.request_notification_permission_title),
             onDismissRequest = onDismissRequest,
             showCancelButton = false,

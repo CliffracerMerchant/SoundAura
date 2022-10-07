@@ -48,7 +48,9 @@ import androidx.compose.ui.window.DialogProperties
     confirmText: String = stringResource(R.string.ok),
     onConfirm: () -> Unit,
     content: @Composable () -> Unit = {
-        Row(modifier.fillMaxWidth()) {
+        // The height(IntrinsicSize.Max) is needed to prevent the buttons from taking
+        // up the dialog window's max height in the PhoneStatePermission dialog.
+        Row(modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
             if (onCancel != null) {
                 TextButton(
                     onClick = onCancel,
