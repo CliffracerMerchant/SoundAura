@@ -3,20 +3,55 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import android.content.res.Configuration.ORIENTATION_LANDSCAPE
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
+import java.lang.Float.max
+
+/**
+ * Add horizontal padding according the [LocalWindowSizeClass] value. When the
+ * [WindowWidthSizeClass] is equal to [WindowWidthSizeClass.Compact], no extra
+ * padding will be applied; with [WindowWidthSizeClass.Medium] padding equal to
+ * 20% of the screen width will be applied; with [WindowWidthSizeClass.Expanded]
+ * the padding will be 40% of the screen width. This modifier can be used to
+ * prevent UI elements that don't need to be very wide from becoming too
+ * stretched out in situations with a large [WindowWidthSizeClass].
+ *
+ * @param min A minimum horizontal that will be applied even when the
+ *     [WindowWidthSizeClass] is [WindowWidthSizeClass.Compact], or when the
+ *     additional horizontal padding from a larger [WindowWidthSizeClass] is
+ *     still less than this value.
+ */
+fun Modifier.horizontalPaddingAccordingToSizeClass(min: Dp = 0.dp) = composed {
+    val config = LocalConfiguration.current
+    val widthSizeClass = LocalWindowSizeClass.current.widthSizeClass
+    val modifier = remember(config, widthSizeClass) {
+        val screenWidth = config.screenWidthDp
+        val paddingFromSizeClass = when (widthSizeClass) {
+            WindowWidthSizeClass.Medium ->
+                (screenWidth / 10f)
+            WindowWidthSizeClass.Expanded ->
+                (screenWidth * 1f / 5f)
+            else -> 0f
+        }
+        val padding = max(paddingFromSizeClass, min.value)
+        Modifier.padding(horizontal = padding.dp)
+    }
+    this.then(modifier)
+}
 
 /**
  * A settings category displayed on a large surface background.
