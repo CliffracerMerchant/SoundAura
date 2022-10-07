@@ -19,6 +19,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.*
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,6 +29,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModel
@@ -58,6 +61,10 @@ class MainActivityViewModel @Inject constructor(
             navigationState.showingAppSettings = false
             true
         } else false
+}
+
+val LocalWindowSizeClass = compositionLocalOf {
+    WindowSizeClass.calculateFromSize(DpSize(0.dp, 0.dp))
 }
 
 @AndroidEntryPoint
@@ -127,11 +134,11 @@ class MainActivity : ComponentActivity() {
         val settingsViewModel: SettingsViewModel = viewModel()
         val themePreference = settingsViewModel.appTheme
         val systemIsUsingDarkTheme = isSystemInDarkTheme()
-        val useDarkTheme by derivedStateOf {
-            if (themePreference == AppTheme.Dark)
-                true
-            else themePreference == AppTheme.UseSystem
-                    && systemIsUsingDarkTheme
+        val useDarkTheme by remember(themePreference, systemIsUsingDarkTheme) {
+            derivedStateOf {
+                themePreference == AppTheme.Dark ||
+                (themePreference == AppTheme.UseSystem && systemIsUsingDarkTheme)
+            }
         }
 
         val uiController = rememberSystemUiController()
@@ -144,7 +151,10 @@ class MainActivity : ComponentActivity() {
             uiController.setNavigationBarColor(Color.Transparent, true)
         }
         SoundAuraTheme(useDarkTheme) {
-            ProvideWindowInsets { content() }
+            val windowSizeClass = calculateWindowSizeClass(this)
+            CompositionLocalProvider(LocalWindowSizeClass provides windowSizeClass) {
+                ProvideWindowInsets { content() }
+            }
         }
     }
 
