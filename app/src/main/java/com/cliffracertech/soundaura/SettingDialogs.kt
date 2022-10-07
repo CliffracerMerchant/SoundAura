@@ -296,17 +296,13 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
     showCancelButton = false,
 ) {
     val config = LocalConfiguration.current
-    // The LibrariesContainer prevents the ok button from
-    // being shown if it isn't height constrained. 32 (2 * 16 for the top
-    // and bottom window margins) and 120 (2 * 60 for the title and ok
-    // button) is subtracted from the screen height to figure out the max
-    // container height.
-    val containerHeight = remember(config) {
-        (config.screenHeightDp - 32 - 120).dp
-    }
+    // Because SoundAuraDialog places its content inside a scrollable container,
+    // and LibrariesContainer apparently uses a LazyColumn, restricting the max
+    // height prevents a java.lang.IllegalStateException: Vertically scrollable
+    // component was measured with an infinity maximum height constraints crash.
     LibrariesContainer(Modifier
         .padding(horizontal = 16.dp)
-        .heightIn(max = containerHeight))
+        .heightIn(max = config.screenHeightDp.dp))
 }
 
 /** Show a dialog displaying information about the app to the user. */
