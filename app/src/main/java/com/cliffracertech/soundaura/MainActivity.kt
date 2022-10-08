@@ -268,8 +268,9 @@ class MainActivity : ComponentActivity() {
             val isPlaying by boundPlayerService?.isPlaying.mapToNonNullState(false)
             FloatingActionButton(
                 onClick = { boundPlayerService?.toggleIsPlaying() },
-                backgroundColor = lerp(MaterialTheme.colors.primaryVariant,
-                                       MaterialTheme.colors.secondaryVariant, 0.5f),
+                backgroundColor = if (alignToEnd) MaterialTheme.colors.secondaryVariant
+                                  else lerp(MaterialTheme.colors.primaryVariant,
+                                            MaterialTheme.colors.secondaryVariant, 0.5f),
 //                elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp)
                 elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
             ) {
