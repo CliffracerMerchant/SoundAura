@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.*
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -91,6 +92,7 @@ class MainActivity : ComponentActivity() {
         boundPlayerService = null
     }
 
+    @Deprecated("Replace with OnBackPressedDispatcher")
     override fun onBackPressed() {
         if (!viewModel.onBackButtonClick())
             super.onBackPressed()
@@ -184,6 +186,8 @@ class MainActivity : ComponentActivity() {
     ) = Box(Modifier.fillMaxSize()) {
         val showingAppSettings = viewModel.showingAppSettings
         val ld = LocalLayoutDirection.current
+        val windowSizeClass = LocalWindowSizeClass.current
+        val windowIsConstrainedWidth = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact
 
         // The padding parameter only accounts for the system bars.
         // The buttons are given an extra 8dp so that they don't
@@ -211,14 +215,15 @@ class MainActivity : ComponentActivity() {
                 }
                 AppSettings(Modifier.fillMaxSize(), appSettingsPadding)
             } else {
-                // The track list is given an additional 64dp
-                // bottom padding to account for the FABs.
-                val trackListPadding = remember(padding) {
+                // The track list's padding must be adjusted depending on the placement of the FABs.
+                val trackListPadding = remember(padding, windowSizeClass) {
                     PaddingValues(
                         start = 8.dp + padding.calculateStartPadding(ld),
                         top = 8.dp + padding.calculateTopPadding(),
-                        end = 8.dp + padding.calculateEndPadding(ld),
-                        bottom = 64.dp + buttonBottomPadding)
+                        end = 8.dp + padding.calculateEndPadding(ld) +
+                              if (windowIsConstrainedWidth) 0.dp else 64.dp,
+                        bottom = 8.dp + buttonBottomPadding +
+                                 if (windowIsConstrainedWidth) 56.dp else 0.dp)
                 }
                 StatefulTrackList(
                     modifier = Modifier.fillMaxSize(),
@@ -231,18 +236,32 @@ class MainActivity : ComponentActivity() {
         }
         FloatingActionButtons(
             visible = !showingAppSettings,
+            alignToEnd = !windowIsConstrainedWidth,
             bottomPadding = buttonBottomPadding)
     }
 
+    /**
+     * Compose play and add track buttons along the edge of the screen
+     *
+     * @param visible Whether or not the buttons will be visible.
+     * @param alignToEnd Whether to align the buttons to the screen's end edge. If
+     *     false, the buttons will be aligned to the screen's bottom edge instead.
+     * @param bottomPadding The minimum bottom padding that should be used for the button placement.
+     */
     @Composable private fun BoxScope.FloatingActionButtons(
         visible: Boolean,
+        alignToEnd: Boolean,
         bottomPadding: Dp
     ) {
+        val playButtonModifier = remember (alignToEnd, bottomPadding) {
+            Modifier.align(if (alignToEnd) Alignment.CenterEnd
+                           else            Alignment.BottomCenter)
+                    .padding(bottom = if (alignToEnd) 0.dp else bottomPadding,
+                             end =    if (alignToEnd) 8.dp else 0.dp)
+        }
         AnimatedVisibility( // Play / pause button
             visible = visible,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = bottomPadding),
+            modifier = playButtonModifier,
             enter = fadeIn(tween(delayMillis = 75)) + scaleIn(overshootTweenSpec(delay = 75)),
             exit = fadeOut(tween(delayMillis = 125)) + scaleOut(anticipateTweenSpec(delay = 75))
         ) {
@@ -267,7 +286,8 @@ class MainActivity : ComponentActivity() {
             visible = visible,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = bottomPadding),
+                .padding(bottom = bottomPadding,
+                         end = if (alignToEnd) 8.dp else 16.dp),
             enter = fadeIn(tween()) + scaleIn(overshootTweenSpec()),
             exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTweenSpec()),
         ) {
