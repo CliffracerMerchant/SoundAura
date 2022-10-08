@@ -112,13 +112,17 @@ import androidx.compose.ui.window.DialogProperties
     useDefaultWidth: Boolean = true,
     title: String? = null,
     titleLayout: @Composable ColumnScope.() -> Unit = {
-        if (title != null) Text(
-            text = title,
-            modifier = Modifier.padding(top = 16.dp, bottom = 12.dp)
-                               .align(Alignment.CenterHorizontally),
-            overflow = TextOverflow.Ellipsis,
-            maxLines = 1,
-            style = MaterialTheme.typography.h6)
+        if (title != null)
+            Row(modifier = Modifier
+                    .padding(start = 16.dp, top = 16.dp,
+                             end = 16.dp, bottom = 12.dp)
+                    .align(Alignment.CenterHorizontally),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(text = title, maxLines = 1,
+                     overflow = TextOverflow.Ellipsis,
+                     style = MaterialTheme.typography.h6)
+            }
     }, text: String? = null,
     onDismissRequest: () -> Unit,
     showCancelButton: Boolean = true,
