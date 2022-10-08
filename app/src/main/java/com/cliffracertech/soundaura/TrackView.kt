@@ -315,6 +315,8 @@ enum class TrackViewEndContent {
 ) {
     var currentName by rememberSaveable { mutableStateOf(itemName) }
     SoundAuraDialog(
+        modifier = Modifier.restrictWidthAccordingToSizeClass(),
+        useDefaultWidth = false,
         title = stringResource(R.string.rename_dialog_title, itemName),
         confirmButtonEnabled = currentName.isNotBlank(),
         confirmText = stringResource(R.string.rename),
@@ -325,6 +327,7 @@ enum class TrackViewEndContent {
         content = { TextField(
             value = currentName,
             onValueChange = { currentName = it },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             singleLine = true,
             textStyle = MaterialTheme.typography.body1)
         })
