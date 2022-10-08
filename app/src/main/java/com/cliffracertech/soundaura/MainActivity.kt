@@ -107,6 +107,9 @@ class MainActivity : ComponentActivity() {
 
             MessageDisplayer(scaffoldState.snackbarHostState)
 
+            val windowWidthSizeClass = LocalWindowSizeClass.current.widthSizeClass
+            val widthIsConstrained = windowWidthSizeClass == WindowWidthSizeClass.Compact
+
             Scaffold(
                 scaffoldState = scaffoldState,
                 topBar = {
@@ -120,9 +123,10 @@ class MainActivity : ComponentActivity() {
                     // above the floating action buttons. 48dp was arrived at
                     // by starting from the FAB size of 56dp and adjusting
                     // downward by 8dp due to the inherent snack bar padding.
-                    Spacer(Modifier.height(48.dp).fillMaxWidth())
-                }, content = {
-                    MainContent(padding = it)
+                    val height = if (widthIsConstrained) 48.dp else 0.dp
+                    Spacer(Modifier.height(height).fillMaxWidth())
+                }, content = { padding ->
+                    MainContent(padding, widthIsConstrained)
                 })
         }
     }
@@ -183,6 +187,7 @@ class MainActivity : ComponentActivity() {
 
     @Composable private fun MainContent(
         padding: PaddingValues,
+        widthIsConstrained: Boolean
     ) = Box(Modifier.fillMaxSize()) {
         val showingAppSettings = viewModel.showingAppSettings
         val ld = LocalLayoutDirection.current
@@ -216,14 +221,14 @@ class MainActivity : ComponentActivity() {
                 AppSettings(Modifier.fillMaxSize(), appSettingsPadding)
             } else {
                 // The track list's padding must be adjusted depending on the placement of the FABs.
-                val trackListPadding = remember(padding, windowSizeClass) {
+                val trackListPadding = remember(padding, widthIsConstrained) {
                     PaddingValues(
                         start = 8.dp + padding.calculateStartPadding(ld),
                         top = 8.dp + padding.calculateTopPadding(),
                         end = 8.dp + padding.calculateEndPadding(ld) +
-                              if (windowIsConstrainedWidth) 0.dp else 64.dp,
+                              if (widthIsConstrained) 0.dp else 64.dp,
                         bottom = 8.dp + buttonBottomPadding +
-                                 if (windowIsConstrainedWidth) 56.dp else 0.dp)
+                                 if (widthIsConstrained) 56.dp else 0.dp)
                 }
                 StatefulTrackList(
                     modifier = Modifier.fillMaxSize(),
@@ -236,7 +241,7 @@ class MainActivity : ComponentActivity() {
         }
         FloatingActionButtons(
             visible = !showingAppSettings,
-            alignToEnd = !windowIsConstrainedWidth,
+            alignToEnd = !widthIsConstrained,
             bottomPadding = buttonBottomPadding)
     }
 
