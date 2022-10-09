@@ -95,6 +95,7 @@ class MainActivity : ComponentActivity() {
 
     @Deprecated("Replace with OnBackPressedDispatcher")
     override fun onBackPressed() {
+        @Suppress("DEPRECATION")
         if (!viewModel.onBackButtonClick())
             super.onBackPressed()
     }
@@ -116,7 +117,10 @@ class MainActivity : ComponentActivity() {
                 scaffoldState = scaffoldState,
                 topBar = {
                     val padding = rememberInsetsPaddingValues(
-                        insets = insets.systemBars, applyTop = false)
+                        // The top bar's top padding is set internally using
+                        // statusBarsPadding, so we have to use applyTop = false
+                        // here to prevent the top padding from being doubled.
+                        insets = insets.systemBars, applyTop = false, applyBottom = false)
                     SoundAuraActionBar(
                         onUnhandledBackButtonClick = ::onBackPressed,
                         modifier = Modifier.padding(padding))
