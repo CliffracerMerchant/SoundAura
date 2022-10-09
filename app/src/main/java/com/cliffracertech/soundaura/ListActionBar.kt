@@ -34,8 +34,7 @@ import com.google.accompanist.insets.statusBarsPadding
 
 /** Compose a [Row] with a gradient background and vertically centered
  * content, while providing the current theme's onPrimary color as the
- * [LocalContentColor]. The default height of 56.dp can be overridden
- * via the parameter height. */
+ * [LocalContentColor]. */
 @Composable fun GradientToolBar(
     modifier: Modifier = Modifier,
     content: @Composable RowScope.() -> Unit
@@ -68,6 +67,7 @@ import com.google.accompanist.insets.statusBarsPadding
  * only display it if [showBackButtonForNavigation] is true. The title will be
  * replaced by the search query if it is not null.
  *
+ * @param modifier The [Modifier] to use for the bar.
  * @param showBackButtonForNavigation Whether or not the back button should be
  *     visible due to other state held outside the action bar. If [searchQuery]
  *     is not null, the back button will be shown regardless.
@@ -98,6 +98,7 @@ import com.google.accompanist.insets.statusBarsPadding
  *     be placed at the end of the action bar.
  */
 @Composable fun <T> ListActionBar(
+    modifier: Modifier = Modifier,
     showBackButtonForNavigation: Boolean = false,
     onBackButtonClick: () -> Unit,
     title: String,
@@ -110,13 +111,13 @@ import com.google.accompanist.insets.statusBarsPadding
     currentSortOption: T,
     onSortOptionClick: (T) -> Unit,
     otherContent: @Composable () -> Unit = { },
-) = GradientToolBar {
+) = GradientToolBar(modifier) {
     // Back button
     AnimatedContent(
         targetState = showBackButtonForNavigation || searchQuery != null,
         contentAlignment = Alignment.Center,
-        transitionSpec = { slideInHorizontally { -it } with
-                           slideOutHorizontally { -it } using
+        transitionSpec = { slideInHorizontally { -it } + fadeIn() with
+                           slideOutHorizontally { -it } + fadeOut() using
                            SizeTransform(clip = false) }
     ) { backButtonIsVisible ->
         if (!backButtonIsVisible)
@@ -156,8 +157,8 @@ import com.google.accompanist.insets.statusBarsPadding
     // Right aligned content
     AnimatedVisibility(
         visible = showRightAlignedContent,
-        enter = slideInHorizontally { it },
-        exit = slideOutHorizontally { it },
+        enter = slideInHorizontally { it } + fadeIn(),
+        exit = slideOutHorizontally { it } + fadeOut(),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             // Search button
@@ -240,7 +241,7 @@ import com.google.accompanist.insets.statusBarsPadding
         onValueChange = onQueryChanged,
         textStyle = MaterialTheme.typography.h6
             .copy(color = MaterialTheme.colors.onPrimary),
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search, ),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
         modifier = Modifier
             .focusRequester(focusRequester)
