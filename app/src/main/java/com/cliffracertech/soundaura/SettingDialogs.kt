@@ -32,23 +32,25 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 
 /**
  * Launch a dialog to explain the consequences of the 'Play in background' setting.
  *
+ * @param modifier The [Modifier] to use for the dialog window.
  * @param onDismissRequest The callback that will be invoked if the dialog is dismissed.
  */
 @Composable fun PlayInBackgroundExplanationDialog(
+    modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
 ) = SoundAuraDialog(
-    windowPadding = PaddingValues(20.dp),
+    modifier = modifier.restrictWidthAccordingToSizeClass(),
+    useDefaultWidth = false,
     title = stringResource(R.string.play_in_background_setting_title),
     onDismissRequest = onDismissRequest,
     showCancelButton = false,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.padding(horizontal = 16.dp), Arrangement.spacedBy(8.dp)) {
         ProvideTextStyle(MaterialTheme.typography.subtitle1) {
             Text(stringResource(R.string.play_in_background_explanation))
             BulletedList(listOf(
@@ -73,12 +75,14 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
  * @param onPermissionResult The callback that will be invoked when
  *     the user grants or rejects the permission. The Boolean parameter
  *     will be true if the permission was granted, or false otherwise.
+ * @param modifier The [Modifier] to use for the dialog window.
  */
 @Composable fun NotificationPermissionDialog(
     showExplanationFirst: Boolean,
     onShowTileTutorialClick: () -> Unit,
     onDismissRequest: () -> Unit,
     onPermissionResult: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         onPermissionResult(true)
@@ -88,12 +92,14 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
     var explanationDismissed by rememberSaveable { mutableStateOf(false) }
     if (showExplanationFirst && !explanationDismissed)
         SoundAuraDialog(
+            modifier = modifier.restrictWidthAccordingToSizeClass(),
+            useDefaultWidth = false,
             title = stringResource(R.string.request_notification_permission_title),
             onDismissRequest = onDismissRequest,
             showCancelButton = false,
             onConfirm = { explanationDismissed = true }
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.padding(horizontal = 16.dp), Arrangement.spacedBy(6.dp)) {
                 Text(stringResource(R.string.request_notification_permission_explanation_p1),
                      style = MaterialTheme.typography.body1)
 
@@ -117,6 +123,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 
 /**
  * Launch a dialog to request the READ_PHONE_STATE permission.
+ * @param modifier The [Modifier] to use for the dialog window.
  * @param showExplanationFirst Whether or not a dialog box explaining
  *     why the permission is needed will be shown.
  * @param onDismissRequest The callback that will be invoked if the
@@ -126,6 +133,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
  *     will be true if the permission was granted, or false otherwise.
  */
 @Composable fun PhoneStatePermissionDialog(
+    modifier: Modifier = Modifier,
     showExplanationFirst: Boolean,
     onDismissRequest: () -> Unit,
     onPermissionResult: (Boolean) -> Unit
@@ -133,6 +141,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
     var explanationDismissed by rememberSaveable { mutableStateOf(false) }
     if (showExplanationFirst && !explanationDismissed)
         SoundAuraDialog(
+            modifier = modifier,
             title = stringResource(R.string.auto_pause_during_calls_setting_title),
             text = stringResource(R.string.request_phone_state_permission_explanation),
             onDismissRequest = onDismissRequest,
@@ -193,12 +202,16 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
     Column {
         var showingAddTileHelp by rememberSaveable { mutableStateOf(false) }
         Row(modifier = Modifier
-            .minTouchTargetSize()
-            .clickable { showingAddTileHelp = !showingAddTileHelp },
+                .minTouchTargetSize()
+                .clickable { showingAddTileHelp = !showingAddTileHelp },
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val localTextStyle = LocalTextStyle.current
+            val style = remember(localTextStyle) {
+                localTextStyle.copy(fontWeight = FontWeight.Bold)
+            }
             Text(stringResource(R.string.tile_tutorial_add_tile_help_button_text),
-                style = LocalTextStyle.current.copy(fontWeight = FontWeight.Bold))
+                 style = style)
             val iconRotation by animateFloatAsState(
                 if (showingAddTileHelp) 180f else 0f)
             Spacer(Modifier.weight(1f))
@@ -218,10 +231,13 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 /** Compose a [MultiStepDialog] that contains a tutorial explaining
  * to the user how to add and use the app's quick settings tile. */
 @Composable fun TileTutorialDialog(
+    modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit
 ) {
     var currentPageIndex by rememberSaveable { mutableStateOf(0) }
     MultiStepDialog(
+        modifier = modifier.restrictWidthAccordingToSizeClass(),
+        useDefaultWidth = false,
         title = stringResource(R.string.tile_tutorial_title),
         onDismissRequest = onDismissRequest,
         numPages = 2,
@@ -270,84 +286,77 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 
 /** Show a dialog to display all of the open source libraries used
  * in the app, as well as their licenses. */
-@Composable fun OpenSourceLibrariesUsedDialog(onDismissRequest: () -> Unit) =
-    SoundAuraDialog(
-        windowPadding = PaddingValues(16.dp),
-        title = stringResource(R.string.open_source_licenses),
-        onDismissRequest = onDismissRequest,
-        showCancelButton = false,
-    ) {
-        // For some reason the LibrariesContainer prevents the ok button from
-        // being shown if it isn't height constrained. 32 (2 * 16 for the top
-        // and bottom window margins) and 120 (2 * 60 for the title and ok
-        // button) is subtracted from the screen height to figure out the max
-        // container height.
-        val screenHeight = LocalConfiguration.current.screenHeightDp
-        val containerHeight = screenHeight - 32 - 120
-        LibrariesContainer(Modifier.height(containerHeight.dp))
-    }
+@Composable fun OpenSourceLibrariesUsedDialog(
+    modifier: Modifier = Modifier,
+    onDismissRequest: () -> Unit
+) = SoundAuraDialog(
+    modifier = modifier.restrictWidthAccordingToSizeClass(),
+    useDefaultWidth = false,
+    title = stringResource(R.string.open_source_licenses),
+    onDismissRequest = onDismissRequest,
+    showCancelButton = false,
+) {
+    val config = LocalConfiguration.current
+    // Because SoundAuraDialog places its content inside a scrollable container,
+    // and LibrariesContainer apparently uses a LazyColumn, restricting the max
+    // height prevents a java.lang.IllegalStateException: Vertically scrollable
+    // component was measured with an infinity maximum height constraints crash.
+    LibrariesContainer(Modifier
+        .padding(horizontal = 16.dp)
+        .heightIn(max = config.screenHeightDp.dp))
+}
 
 /** Show a dialog displaying information about the app to the user. */
 @Composable fun AboutAppDialog(
+    modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit
-) = Dialog(onDismissRequest) {
-    Surface(shape = MaterialTheme.shapes.medium) {
-        Column(Modifier.padding(top = 16.dp)) {
-            Column(Modifier.padding(horizontal = 16.dp)) {
-                // Title
-                Row(horizontalArrangement = Arrangement.Center) {
-                    Spacer(Modifier.weight(1f))
-                    Icon(painter = painterResource(R.drawable.tile_and_notification_icon),
-                         contentDescription = null,
-                         modifier = Modifier.size(22.dp),
-                         tint = MaterialTheme.colors.primary)
-                    Spacer(Modifier.width(8.dp))
-                    Text(text = stringResource(R.string.app_name),
-                         modifier = Modifier.alignByBaseline(),
-                         style = MaterialTheme.typography.h6)
-                    Spacer(Modifier.width(6.dp))
-                    Text(text = stringResource(R.string.app_version),
-                         modifier = Modifier.alignByBaseline(),
-                         style = MaterialTheme.typography.subtitle1)
-                    Spacer(Modifier.weight(1f))
-                }
-
-                // Content
-                Spacer(Modifier.height(12.dp))
-                Text(text = stringResource(R.string.about_app_setting_body),
-                     style = MaterialTheme.typography.subtitle1)
-            }
-            Spacer(Modifier.height(12.dp))
-
-            // Bottom buttons
-            Divider()
-            Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
-                verticalAlignment = Alignment.CenterVertically
+) = SoundAuraDialog(
+    modifier = modifier,
+    titleLayout = {
+        Row(modifier = Modifier.padding(top = 16.dp, bottom = 12.dp)
+                               .align(Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(painter = painterResource(R.drawable.tile_and_notification_icon),
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colors.primary)
+            Spacer(Modifier.width(8.dp))
+            Text(text = stringResource(R.string.app_name),
+                modifier = Modifier.alignByBaseline(),
+                style = MaterialTheme.typography.h6)
+            Spacer(Modifier.width(6.dp))
+            Text(text = stringResource(R.string.app_version),
+                modifier = Modifier.alignByBaseline(),
+                style = MaterialTheme.typography.subtitle1)
+        }
+    }, text = stringResource(R.string.about_app_setting_body),
+    onDismissRequest = onDismissRequest,
+    buttons = {
+        Divider(Modifier.padding(top = 12.dp))
+        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
+            val uriHandler = LocalUriHandler.current
+            val gitHubLink = stringResource(R.string.github_link)
+            TextButton(
+                onClick = { uriHandler.openUri(gitHubLink) },
+                modifier = Modifier.weight(1f).fillMaxSize(),
+                shape = MaterialTheme.shapes.medium.bottomStartShape()
             ) {
-                val uriHandler = LocalUriHandler.current
-                val gitHubLink = stringResource(R.string.github_link)
-                TextButton(
-                    onClick = { uriHandler.openUri(gitHubLink) },
-                    modifier = Modifier.weight(1f).fillMaxSize(),
-                    shape = MaterialTheme.shapes.medium.bottomStartShape()
-                ) {
-                    Icon(painterResource(R.drawable.github_logo), null,
-                         Modifier.size(20.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Text(text = stringResource(R.string.view_source_code),
-                         textDecoration = TextDecoration.Underline,
-                         color = MaterialTheme.colors.primary)
-                }
-                VerticalDivider()
-                TextButton(
-                    onClick = onDismissRequest,
-                    modifier = Modifier.minTouchTargetSize().weight(0.5f),
-                    shape = MaterialTheme.shapes.medium.bottomEndShape(),
-                ) {
-                    Text(text = stringResource(R.string.ok),
-                         color = MaterialTheme.colors.primary)
-                }
+                Icon(painterResource(R.drawable.github_logo), null,
+                    Modifier.size(20.dp))
+                Spacer(Modifier.width(10.dp))
+                Text(text = stringResource(R.string.view_source_code),
+                    textDecoration = TextDecoration.Underline,
+                    color = MaterialTheme.colors.primary)
+            }
+            VerticalDivider()
+            TextButton(
+                onClick = onDismissRequest,
+                modifier = Modifier.minTouchTargetSize().weight(0.5f),
+                shape = MaterialTheme.shapes.medium.bottomEndShape(),
+            ) {
+                Text(text = stringResource(R.string.ok),
+                    color = MaterialTheme.colors.primary)
             }
         }
-    }
-}
+    })

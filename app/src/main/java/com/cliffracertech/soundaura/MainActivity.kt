@@ -19,6 +19,9 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.*
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,14 +29,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
+import com.google.accompanist.insets.LocalWindowInsets
 import com.google.accompanist.insets.ProvideWindowInsets
 import com.google.accompanist.insets.navigationBarsHeight
+import com.google.accompanist.insets.rememberInsetsPaddingValues
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -60,6 +65,10 @@ class MainActivityViewModel @Inject constructor(
         } else false
 }
 
+val LocalWindowSizeClass = compositionLocalOf {
+    WindowSizeClass.calculateFromSize(DpSize(0.dp, 0.dp))
+}
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private var boundPlayerService by mutableStateOf<PlayerService.Binder?>(null)
@@ -84,7 +93,9 @@ class MainActivity : ComponentActivity() {
         boundPlayerService = null
     }
 
+    @Deprecated("Replace with OnBackPressedDispatcher")
     override fun onBackPressed() {
+        @Suppress("DEPRECATION")
         if (!viewModel.onBackButtonClick())
             super.onBackPressed()
     }
@@ -98,10 +109,21 @@ class MainActivity : ComponentActivity() {
 
             MessageDisplayer(scaffoldState.snackbarHostState)
 
-            Scaffold(
+            val windowWidthSizeClass = LocalWindowSizeClass.current.widthSizeClass
+            val widthIsConstrained = windowWidthSizeClass == WindowWidthSizeClass.Compact
+            val insets = LocalWindowInsets.current
+
+            com.google.accompanist.insets.ui.Scaffold(
                 scaffoldState = scaffoldState,
                 topBar = {
-                    SoundAuraActionBar(::onBackPressed)
+                    val padding = rememberInsetsPaddingValues(
+                        // The top bar's top padding is set internally using
+                        // statusBarsPadding, so we have to use applyTop = false
+                        // here to prevent the top padding from being doubled.
+                        insets = insets.systemBars, applyTop = false, applyBottom = false)
+                    SoundAuraActionBar(
+                        onUnhandledBackButtonClick = ::onBackPressed,
+                        modifier = Modifier.padding(padding))
                 }, bottomBar = {
                     Spacer(Modifier.navigationBarsHeight().fillMaxWidth())
                 }, floatingActionButton = {
@@ -111,9 +133,17 @@ class MainActivity : ComponentActivity() {
                     // above the floating action buttons. 48dp was arrived at
                     // by starting from the FAB size of 56dp and adjusting
                     // downward by 8dp due to the inherent snack bar padding.
-                    Spacer(Modifier.height(48.dp).fillMaxWidth())
+                    if (widthIsConstrained)
+                        Spacer(Modifier.height(48.dp).fillMaxWidth())
                 }, content = {
-                    MainContent(padding = it)
+                    val padding = rememberInsetsPaddingValues(
+                        insets = insets.systemBars,
+                        additionalStart = 8.dp,
+                        // The 56dp is added here manually for the action bar's height.
+                        additionalTop = 8.dp + 56.dp,
+                        additionalEnd = 8.dp,
+                        additionalBottom = 8.dp)
+                    MainContent(widthIsConstrained, padding)
                 })
         }
     }
@@ -127,11 +157,11 @@ class MainActivity : ComponentActivity() {
         val settingsViewModel: SettingsViewModel = viewModel()
         val themePreference = settingsViewModel.appTheme
         val systemIsUsingDarkTheme = isSystemInDarkTheme()
-        val useDarkTheme by derivedStateOf {
-            if (themePreference == AppTheme.Dark)
-                true
-            else themePreference == AppTheme.UseSystem
-                    && systemIsUsingDarkTheme
+        val useDarkTheme by remember(themePreference, systemIsUsingDarkTheme) {
+            derivedStateOf {
+                themePreference == AppTheme.Dark ||
+                (themePreference == AppTheme.UseSystem && systemIsUsingDarkTheme)
+            }
         }
 
         val uiController = rememberSystemUiController()
@@ -144,7 +174,10 @@ class MainActivity : ComponentActivity() {
             uiController.setNavigationBarColor(Color.Transparent, true)
         }
         SoundAuraTheme(useDarkTheme) {
-            ProvideWindowInsets { content() }
+            val windowSizeClass = calculateWindowSizeClass(this)
+            CompositionLocalProvider(LocalWindowSizeClass provides windowSizeClass) {
+                ProvideWindowInsets { content() }
+            }
         }
     }
 
@@ -170,18 +203,11 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable private fun MainContent(
+        widthIsConstrained: Boolean,
         padding: PaddingValues,
     ) = Box(Modifier.fillMaxSize()) {
         val showingAppSettings = viewModel.showingAppSettings
         val ld = LocalLayoutDirection.current
-
-        // The padding parameter only accounts for the system bars.
-        // The buttons are given an extra 8dp so that they don't
-        // appear right along the bottom edge.
-        val buttonBottomPadding = remember(padding) {
-            8.dp + padding.calculateBottomPadding()
-        }
-
         // The track list state is remembered here so that the
         // scrolling position will not be lost if the user
         // navigates to the app settings screen and back.
@@ -191,27 +217,20 @@ class MainActivity : ComponentActivity() {
             targetState = showingAppSettings,
             leftToRight = !showingAppSettings
         ) { showingAppSettingsScreen ->
-            if (showingAppSettingsScreen) {
-                val appSettingsPadding = remember(padding) {
+            if (showingAppSettingsScreen)
+                AppSettings(Modifier.fillMaxSize(), padding)
+            else {
+                // The track list's padding must be adjusted depending on the placement of the FABs.
+                val trackListPadding = remember(padding, widthIsConstrained) {
                     PaddingValues(
-                        start = 8.dp + padding.calculateStartPadding(ld),
-                        top = 8.dp + padding.calculateTopPadding(),
-                        end = 8.dp + padding.calculateEndPadding(ld),
-                        bottom = buttonBottomPadding)
-                }
-                AppSettings(Modifier.fillMaxSize(), appSettingsPadding)
-            } else {
-                // The track list is given an additional 64dp
-                // bottom padding to account for the FABs.
-                val trackListPadding = remember(padding) {
-                    PaddingValues(
-                        start = 8.dp + padding.calculateStartPadding(ld),
-                        top = 8.dp + padding.calculateTopPadding(),
-                        end = 8.dp + padding.calculateEndPadding(ld),
-                        bottom = 64.dp + buttonBottomPadding)
+                        start = padding.calculateStartPadding(ld),
+                        top = padding.calculateTopPadding(),
+                        end = padding.calculateEndPadding(ld) +
+                              if (widthIsConstrained) 0.dp else 64.dp,
+                        bottom = padding.calculateBottomPadding() +
+                                 if (widthIsConstrained) 64.dp else 0.dp)
                 }
                 StatefulTrackList(
-                    modifier = Modifier.fillMaxSize(),
                     padding = trackListPadding,
                     state = trackListState,
                     onVolumeChange = { uri, volume ->
@@ -221,26 +240,37 @@ class MainActivity : ComponentActivity() {
         }
         FloatingActionButtons(
             visible = !showingAppSettings,
-            bottomPadding = buttonBottomPadding)
+            alignToEnd = !widthIsConstrained,
+            padding = padding)
     }
 
+    /**
+     * Compose play and add track buttons along the edge of the screen
+     *
+     * @param visible Whether or not the buttons will be visible.
+     * @param alignToEnd Whether to align the buttons to the screen's end edge. If
+     *     false, the buttons will be aligned to the screen's bottom edge instead.
+     * @param padding The padding that should be used for the button placement.
+     */
     @Composable private fun BoxScope.FloatingActionButtons(
         visible: Boolean,
-        bottomPadding: Dp
+        alignToEnd: Boolean,
+        padding: PaddingValues,
     ) {
+        val playButtonAlignment = if (alignToEnd) Alignment.CenterEnd
+                                  else            Alignment.BottomCenter
         AnimatedVisibility( // Play / pause button
             visible = visible,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = bottomPadding),
+            modifier = Modifier.padding(padding).align(playButtonAlignment),
             enter = fadeIn(tween(delayMillis = 75)) + scaleIn(overshootTweenSpec(delay = 75)),
             exit = fadeOut(tween(delayMillis = 125)) + scaleOut(anticipateTweenSpec(delay = 75))
         ) {
-            val isPlaying by boundPlayerService?.isPlaying.mapToNonNullState(false)
+            val isPlaying = boundPlayerService?.isPlaying ?: false
             FloatingActionButton(
                 onClick = { boundPlayerService?.toggleIsPlaying() },
-                backgroundColor = lerp(MaterialTheme.colors.primaryVariant,
-                                       MaterialTheme.colors.secondaryVariant, 0.5f),
+                backgroundColor = if (alignToEnd) MaterialTheme.colors.secondaryVariant
+                                  else lerp(MaterialTheme.colors.primaryVariant,
+                                            MaterialTheme.colors.secondaryVariant, 0.5f),
 //                elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp)
                 elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
             ) {
@@ -253,11 +283,10 @@ class MainActivity : ComponentActivity() {
                     tint = MaterialTheme.colors.onPrimary)
             }
         }
+
         AnimatedVisibility( // add track button
             visible = visible,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = bottomPadding),
+            modifier = Modifier.align(Alignment.BottomEnd).padding(padding),
             enter = fadeIn(tween()) + scaleIn(overshootTweenSpec()),
             exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTweenSpec()),
         ) {

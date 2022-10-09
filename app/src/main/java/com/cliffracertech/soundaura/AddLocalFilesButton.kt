@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -23,6 +24,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -173,6 +175,8 @@ class AddLocalFilesButtonViewModel(
     if (chosenUris == null)
         LaunchedEffect(Unit) { launcher.launch(arrayOf("audio/*", "application/ogg")) }
     else SoundAuraDialog(
+        modifier = Modifier.restrictWidthAccordingToSizeClass(),
+        useDefaultWidth = false,
         title = stringResource(R.string.add_local_files_dialog_title),
         onDismissRequest = onDismissRequest,
         confirmButtonEnabled = chosenUris != null &&
@@ -181,7 +185,11 @@ class AddLocalFilesButtonViewModel(
             val uris = chosenUris ?: return@SoundAuraDialog
             onConfirmRequest(uris, trackNames)
         }, content = {
-            trackNames.Editor(Modifier.heightIn(max = 400.dp))
+            // Editor uses a LazyColumn internally. To prevent a crash
+            // due to nested LazyColumn we have to restrict its height.
+            trackNames.Editor(Modifier
+                .padding(horizontal = 16.dp)
+                .heightIn(max = LocalConfiguration.current.screenHeightDp.dp))
         })
 }
 

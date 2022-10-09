@@ -27,8 +27,12 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
  */
 @Composable fun SettingCategory(
     title: String,
+    modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
-) = Surface(shape = MaterialTheme.shapes.large) {
+) = Surface(
+    modifier = modifier.restrictWidthAccordingToSizeClass(),
+    shape = MaterialTheme.shapes.large
+) {
     Column(Modifier.padding(20.dp, 10.dp, 20.dp, 6.dp)) {
         Text(text = title,
             modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -140,7 +144,6 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
 ) {
     if (icon != null)
         Box(Modifier.size(48.dp)) { icon() }
-
     Column(
         modifier = Modifier.weight(1f).padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -150,7 +153,6 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
         if (subtitle != null)
             Text(subtitle, style = MaterialTheme.typography.body2)
     }
-
     content()
 }
 
@@ -230,6 +232,9 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
  * @param title The title of the setting. This will be displayed in the
  *     setting layout, and will also be used as the title of the dialog
  *     window.
+ * @param modifier The [Modifier] to use for the layout.
+ * @param useDefaultWidth Whether or not to use the platform default
+ *     size for the width of the popup dialog window.
  * @param description An optional description of the setting. This will
  *     only be displayed in the dialog window, below the title but before
  *     the enum value's radio buttons.
@@ -246,6 +251,8 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
  */
 @Composable fun <T: Enum<T>> EnumDialogSetting(
     title: String,
+    modifier: Modifier = Modifier,
+    useDefaultWidth: Boolean = true,
     description: String? = null,
     values: Array<T>,
     valueNames: Array<String>,
@@ -258,28 +265,26 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
     description = valueNames[currentValue.ordinal]
 ) { onDismissRequest ->
     SoundAuraDialog(
-        // To prevent the EnumRadioButtonGroup's intrinsic start padding from
-        // stacking with the dialog window's start padding, the horizontal
-        // padding for the entire dialog window is set to zero, and then set
-        // to the default 16.dp for just the description below the title.
-        horizontalPadding = 0.dp,
+        modifier = modifier,
+        useDefaultWidth = useDefaultWidth,
         title = title,
-        contentButtonSpacing = 4.dp, // reduced because the EnumRadioButtonGroup already has spacing
         onDismissRequest = onDismissRequest,
-        showCancelButton = false,
+        buttons = {}
     ) {
-        Column {
-            if (description != null) {
-                Text(text = description, style = MaterialTheme.typography.body1,
-                     modifier = Modifier.padding(horizontal = 16.dp))
-                Spacer(Modifier.height(6.dp))
-            }
-            EnumRadioButtonGroup(
-                values = values,
-                valueNames = valueNames,
-                valueDescriptions = valueDescriptions,
-                currentValue = currentValue,
-                onValueClick = onValueClick)
+        if (description != null) {
+            Text(text = description, style = MaterialTheme.typography.body1,
+                 modifier = Modifier.padding(horizontal = 16.dp))
+            Spacer(Modifier.height(6.dp))
         }
+        EnumRadioButtonGroup(
+            modifier = Modifier.padding(bottom = 12.dp),
+            values = values,
+            valueNames = valueNames,
+            valueDescriptions = valueDescriptions,
+            currentValue = currentValue,
+            onValueClick = {
+                onValueClick(it)
+                onDismissRequest()
+            })
     }
 }

@@ -14,11 +14,8 @@ import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Switch
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -33,7 +30,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 ) = Surface(modifier, color = MaterialTheme.colors.background) {
     LazyColumn(
         contentPadding = contentPadding,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         item { DisplaySettingsCategory() }
         item { PlaybackSettingsCategory() }
@@ -74,7 +72,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
         }
         if (viewModel.showingPlayInBackgroundExplanation)
             PlayInBackgroundExplanationDialog(
-                viewModel::onPlayInBackgroundExplanationDismiss)
+                onDismissRequest = viewModel::onPlayInBackgroundExplanationDismiss)
         if (viewModel.showingNotificationPermissionDialog) {
             val context = LocalContext.current
             val showExplanation =
@@ -89,7 +87,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
                 onDismissRequest = viewModel::onNotificationPermissionDialogDismiss,
                 onPermissionResult = viewModel::onNotificationPermissionDialogConfirm)
         }
-
     }
 }
 
@@ -137,23 +134,21 @@ import androidx.lifecycle.viewmodel.compose.viewModel
         Divider()
         EnumDialogSetting(
             title = stringResource(R.string.on_zero_volume_behavior_setting_title),
+            modifier = Modifier.restrictWidthAccordingToSizeClass(),
+            useDefaultWidth = false,
             description = stringResource(R.string.on_zero_volume_behavior_setting_description),
             values = enumValues<OnZeroVolumeAudioDeviceBehavior>(),
             valueNames = OnZeroVolumeAudioDeviceBehavior.valueStrings(),
             valueDescriptions = OnZeroVolumeAudioDeviceBehavior.valueDescriptions(),
             currentValue = viewModel.onZeroVolumeAudioDeviceBehavior,
             onValueClick = viewModel::onOnZeroVolumeAudioDeviceBehaviorClick)
-
         Divider()
-
         DialogSetting(
             title = stringResource(R.string.control_playback_using_tile_setting_title),
             dialogVisible = showingTileTutorialDialog,
             onShowRequest = { showingTileTutorialDialog = true },
-            onDismissRequest = { showingTileTutorialDialog = false }
-        ) {
-            TileTutorialDialog(it)
-        }
+            onDismissRequest = { showingTileTutorialDialog = false },
+            content = { TileTutorialDialog(onDismissRequest = it) })
     }
 
 @Composable private fun AboutSettingsCategory() =
