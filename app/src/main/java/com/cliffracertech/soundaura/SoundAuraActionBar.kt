@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -75,11 +76,16 @@ class ActionBarViewModel(
  *
  * @param onUnhandledBackButtonClick The callback that will
  *     be invoked if a back button click is not handled.
+ * @param modifier The [Modifier] that will be used for the action bar.
  */
-@Composable fun SoundAuraActionBar(onUnhandledBackButtonClick: () -> Unit) {
+@Composable fun SoundAuraActionBar(
+    onUnhandledBackButtonClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val viewModel: ActionBarViewModel = viewModel()
 
     ListActionBar(
+        modifier = modifier,
         showBackButtonForNavigation = viewModel.showingAppSettings,
         onBackButtonClick = {
             if (!viewModel.onBackButtonClick())

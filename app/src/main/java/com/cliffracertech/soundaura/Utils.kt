@@ -26,13 +26,6 @@ operator fun <T> MutableStateFlow<T>.setValue(receiver: Any, property: KProperty
     this.value = value
 }
 
-/** Produce a [State]`<T>` instance from the receiver T? instance. When the
- * receiver is null, the [State]`<T>` value will be equal to [defaultValue]. */
-@Composable fun <T> T?.mapToNonNullState(defaultValue: T) =
-    produceState(initialValue = defaultValue, key1 = this) {
-        value = this@mapToNonNullState ?: defaultValue
-    }
-
 /** Repeat [onStarted] each time the [LifecycleOwner]'s state moves to [Lifecycle.State.STARTED]. */
 fun LifecycleOwner.repeatWhenStarted(onStarted: suspend CoroutineScope.() -> Unit) {
     lifecycleScope.launch {
