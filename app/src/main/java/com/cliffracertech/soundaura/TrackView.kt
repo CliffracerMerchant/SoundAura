@@ -85,10 +85,10 @@ class TrackViewCallback(
         }
 
         Box(Modifier.weight(1f)) {
-            // 0.5dp start padding is required to make the text align with the volume icon
+            // 1dp start padding is required to make the text align with the volume icon
             Text(text = track.name, style = MaterialTheme.typography.h5,
                  maxLines = 1, overflow = TextOverflow.Ellipsis,
-                 modifier = Modifier.padding(start = (0.5).dp, top = 6.dp)
+                 modifier = Modifier.padding(start = 1.dp, top = 6.dp)
                                     .paddingFromBaseline(bottom = 48.dp))
             VolumeSliderOrErrorMessage(
                 volume = volumeSliderValue,
