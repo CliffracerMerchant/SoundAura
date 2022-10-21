@@ -92,6 +92,83 @@ data class Track(
     abstract suspend fun setName(uri: String, name: String)
 }
 
+@Entity(tableName = "preset")
+data class Preset(
+    @ColumnInfo(name = "name") @PrimaryKey
+    val name: String)
+
+@Entity(tableName = "presetTrack", foreignKeys = [
+    ForeignKey(entity = Track::class,
+               parentColumns=["uriString"],
+               childColumns=["trackUri"],
+               onDelete=ForeignKey.NO_ACTION),
+    ForeignKey(entity = Preset::class,
+               parentColumns=["name"],
+               childColumns=["presetName"],
+               onDelete=ForeignKey.NO_ACTION)])
+data class PresetTrack(
+    @ColumnInfo(name = "presetName")
+    val presetName: String,
+
+    @ColumnInfo(name = "trackUriString")
+    val trackUriString: String,
+
+    @FloatRange(from = 0.0, to = 1.0)
+    @ColumnInfo(name="trackVolume")
+    val trackVolume: Float = 1f
+)
+
+/** A data class containing information required to display a preset in a list
+ * of presets. Because this will only be used by the user to differentiate
+ * presets, the tracks contained in each preset are not necessary here. */
+data class PresetListEntry(
+    val name: String,
+    val trackCount: Int)
+
+private const val trackCountSelection = "(SELECT count(*) FROM presetTrackAssociation " +
+                                        "WHERE presetTrackAssociation.name)"
+
+@Dao abstract class PresetDao {
+    @Query("SELECT name, (SELECT count(*) FROM presetTrack " +
+           "WHERE presetName = preset.name) FROM preset")
+    protected abstract suspend fun getPresetListing() : Flow<List<PresetListEntry>>
+
+    @Query("WITH presetUriStrings AS " +
+                "(SELECT trackUriString FROM presetTrack WHERE presetName = :presetName) " +
+           "UPDATE track SET " +
+               "isActive = CASE WHEN uriString IN presetUriStrings THEN 1 ELSE 0 END, " +
+               "volume = CASE WHEN uriString NOT IN presetUriStrings THEN volume ELSE " +
+                   "(SELECT trackVolume FROM presetTrack " +
+                    "WHERE presetName = :presetName AND trackUriString = uriString LIMIT 1) END")
+    abstract suspend fun loadPreset(presetName: String)
+
+    @Query("DELETE FROM preset WHERE name = :presetName")
+    protected abstract suspend fun deletePresetName(presetName: String)
+
+    @Query("DELETE FROM presetTrack WHERE presetName = :presetName")
+    protected abstract suspend fun deletePresetContents(presetName: String)
+
+    @Transaction
+    suspend fun deletePreset(presetName: String) {
+        deletePresetContents(presetName)
+        deletePresetName(presetName)
+    }
+
+    @Query("INSERT INTO preset (name) VALUES (:presetName)")
+    protected abstract suspend fun addPresetName(presetName: String)
+
+    @Query("INSERT INTO presetTrack " +
+           "SELECT :presetName, uriString, volume FROM track WHERE isActive")
+    protected abstract suspend fun addPresetContents(presetName: String)
+
+    @Transaction
+    suspend fun savePreset(presetName: String) {
+        addPresetName(presetName)
+        deletePresetContents(presetName)
+        addPresetContents(presetName)
+    }
+}
+
 @Database(entities = [Track::class], version = 3, exportSchema = true)
 abstract class SoundAuraDatabase : RoomDatabase() {
     abstract fun trackDao(): TrackDao
