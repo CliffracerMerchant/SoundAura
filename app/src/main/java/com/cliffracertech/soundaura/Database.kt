@@ -49,7 +49,7 @@ data class Track(
 @Dao abstract class TrackDao {
     @Insert abstract suspend fun insert(track: Track): Long
 
-    @Insert(onConflict  = OnConflictStrategy.IGNORE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     abstract suspend fun insert(track: List<Track>): List<Long>
 
     @Query("DELETE FROM track WHERE uriString = :uriString")
@@ -97,15 +97,16 @@ data class Preset(
     @ColumnInfo(name = "name") @PrimaryKey
     val name: String)
 
-@Entity(tableName = "presetTrack", foreignKeys = [
-    ForeignKey(entity = Track::class,
-               parentColumns=["uriString"],
-               childColumns=["trackUri"],
-               onDelete=ForeignKey.NO_ACTION),
-    ForeignKey(entity = Preset::class,
-               parentColumns=["name"],
-               childColumns=["presetName"],
-               onDelete=ForeignKey.NO_ACTION)])
+@Entity(tableName = "presetTrack",
+        primaryKeys = ["presetName", "trackUriString"],
+        foreignKeys = [ ForeignKey(entity = Track::class,
+                                   parentColumns=["uriString"],
+                                   childColumns=["trackUriString"],
+                                   onDelete=ForeignKey.NO_ACTION),
+                        ForeignKey(entity = Preset::class,
+                                   parentColumns=["name"],
+                                   childColumns=["presetName"],
+                                   onDelete=ForeignKey.NO_ACTION)])
 data class PresetTrack(
     @ColumnInfo(name = "presetName")
     val presetName: String,
@@ -125,13 +126,11 @@ data class PresetListEntry(
     val name: String,
     val trackCount: Int)
 
-private const val trackCountSelection = "(SELECT count(*) FROM presetTrackAssociation " +
-                                        "WHERE presetTrackAssociation.name)"
-
 @Dao abstract class PresetDao {
     @Query("SELECT name, (SELECT count(*) FROM presetTrack " +
-           "WHERE presetName = preset.name) FROM preset")
-    protected abstract suspend fun getPresetListing() : Flow<List<PresetListEntry>>
+                         "WHERE presetName = preset.name) AS trackCount " +
+           "FROM preset")
+    protected abstract fun getPresetList() : Flow<List<PresetListEntry>>
 
     @Query("WITH presetUriStrings AS " +
                 "(SELECT trackUriString FROM presetTrack WHERE presetName = :presetName) " +
@@ -149,7 +148,7 @@ private const val trackCountSelection = "(SELECT count(*) FROM presetTrackAssoci
     protected abstract suspend fun deletePresetContents(presetName: String)
 
     @Transaction
-    suspend fun deletePreset(presetName: String) {
+    open suspend fun deletePreset(presetName: String) {
         deletePresetContents(presetName)
         deletePresetName(presetName)
     }
@@ -162,7 +161,7 @@ private const val trackCountSelection = "(SELECT count(*) FROM presetTrackAssoci
     protected abstract suspend fun addPresetContents(presetName: String)
 
     @Transaction
-    suspend fun savePreset(presetName: String) {
+    open suspend fun savePreset(presetName: String) {
         addPresetName(presetName)
         deletePresetContents(presetName)
         addPresetContents(presetName)
@@ -186,7 +185,7 @@ abstract class SoundAuraDatabase : RoomDatabase() {
                 `uriString` TEXT NOT NULL PRIMARY KEY,
                 `name` TEXT NOT NULL,
                 `isActive` INTEGER NOT NULL DEFAULT 0,
-                `volume` FLOAT NOT NULL DEFAULT 1.0)""")
+                `volume` REAL NOT NULL DEFAULT 1.0)""")
             db.execSQL("""INSERT INTO temp_table (uriString, name, isActive, volume)
                           SELECT uriString, name, playing, volume FROM track;""")
             db.execSQL("DROP TABLE track;")
