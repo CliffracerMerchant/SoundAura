@@ -169,13 +169,15 @@ private const val trackCountSelection = "(SELECT count(*) FROM presetTrackAssoci
     }
 }
 
-@Database(entities = [Track::class], version = 3, exportSchema = true)
+@Database(version = 4, exportSchema = true,
+          entities = [Track::class, Preset::class, PresetTrack::class])
 abstract class SoundAuraDatabase : RoomDatabase() {
     abstract fun trackDao(): TrackDao
+    abstract fun presetDao(): PresetDao
 
     companion object {
         fun addAllMigrations(builder: Builder<SoundAuraDatabase>) =
-            builder.addMigrations(migration1to2, migration2to3)
+            builder.addMigrations(migration1to2, migration2to3, migration3to4)
 
         private val migration1to2 = Migration(1,2) { db ->
             db.execSQL("PRAGMA foreign_keys=off")
@@ -197,6 +199,16 @@ abstract class SoundAuraDatabase : RoomDatabase() {
             db.execSQL("ALTER TABLE track ADD COLUMN `hasError` INTEGER NOT NULL DEFAULT 0")
         }
 
+        private val migration3to4 = Migration(3,4) { db ->
+            db.execSQL("CREATE TABLE preset (`name` TEXT NOT NULL PRIMARY KEY)")
+            db.execSQL("""CREATE TABLE presetTrack (
+                    `presetName` TEXT NOT NULL,
+                    `trackUriString` TEXT NOT NULL,
+                    `trackVolume` REAL NOT NULL,
+                PRIMARY KEY (presetName, trackUriString),
+                FOREIGN KEY(`presetName`) REFERENCES `preset`(`name`) ON UPDATE NO ACTION ON DELETE NO ACTION,
+                FOREIGN KEY(`trackUriString`) REFERENCES `track`(`uriString`) ON UPDATE NO ACTION ON DELETE NO ACTION)""")
+        }
     }
 }
 
@@ -216,4 +228,5 @@ class DatabaseModule {
             .also(::addAllMigrations).build()
 
     @Provides fun provideTrackDao(db: SoundAuraDatabase) = db.trackDao()
+    @Provides fun providePresetDao(db: SoundAuraDatabase) = db.presetDao()
 }
