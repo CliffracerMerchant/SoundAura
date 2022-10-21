@@ -49,7 +49,7 @@ data class Track(
 @Dao abstract class TrackDao {
     @Insert abstract suspend fun insert(track: Track): Long
 
-    @Insert(onConflict  = OnConflictStrategy.IGNORE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     abstract suspend fun insert(track: List<Track>): List<Long>
 
     @Query("DELETE FROM track WHERE uriString = :uriString")
@@ -92,13 +92,91 @@ data class Track(
     abstract suspend fun setName(uri: String, name: String)
 }
 
-@Database(entities = [Track::class], version = 3, exportSchema = true)
+@Entity(tableName = "preset")
+data class Preset(
+    @ColumnInfo(name = "name") @PrimaryKey
+    val name: String)
+
+@Entity(tableName = "presetTrack",
+        primaryKeys = ["presetName", "trackUriString"],
+        foreignKeys = [ ForeignKey(entity = Track::class,
+                                   parentColumns=["uriString"],
+                                   childColumns=["trackUriString"],
+                                   onDelete=ForeignKey.NO_ACTION),
+                        ForeignKey(entity = Preset::class,
+                                   parentColumns=["name"],
+                                   childColumns=["presetName"],
+                                   onDelete=ForeignKey.NO_ACTION)])
+data class PresetTrack(
+    @ColumnInfo(name = "presetName")
+    val presetName: String,
+
+    @ColumnInfo(name = "trackUriString")
+    val trackUriString: String,
+
+    @FloatRange(from = 0.0, to = 1.0)
+    @ColumnInfo(name="trackVolume")
+    val trackVolume: Float = 1f
+)
+
+/** A data class containing information required to display a preset in a list
+ * of presets. Because this will only be used by the user to differentiate
+ * presets, the tracks contained in each preset are not necessary here. */
+data class PresetListEntry(
+    val name: String,
+    val trackCount: Int)
+
+@Dao abstract class PresetDao {
+    @Query("SELECT name, (SELECT count(*) FROM presetTrack " +
+                         "WHERE presetName = preset.name) AS trackCount " +
+           "FROM preset")
+    protected abstract fun getPresetList() : Flow<List<PresetListEntry>>
+
+    @Query("WITH presetUriStrings AS " +
+                "(SELECT trackUriString FROM presetTrack WHERE presetName = :presetName) " +
+           "UPDATE track SET " +
+               "isActive = CASE WHEN uriString IN presetUriStrings THEN 1 ELSE 0 END, " +
+               "volume = CASE WHEN uriString NOT IN presetUriStrings THEN volume ELSE " +
+                   "(SELECT trackVolume FROM presetTrack " +
+                    "WHERE presetName = :presetName AND trackUriString = uriString LIMIT 1) END")
+    abstract suspend fun loadPreset(presetName: String)
+
+    @Query("DELETE FROM preset WHERE name = :presetName")
+    protected abstract suspend fun deletePresetName(presetName: String)
+
+    @Query("DELETE FROM presetTrack WHERE presetName = :presetName")
+    protected abstract suspend fun deletePresetContents(presetName: String)
+
+    @Transaction
+    open suspend fun deletePreset(presetName: String) {
+        deletePresetContents(presetName)
+        deletePresetName(presetName)
+    }
+
+    @Query("INSERT INTO preset (name) VALUES (:presetName)")
+    protected abstract suspend fun addPresetName(presetName: String)
+
+    @Query("INSERT INTO presetTrack " +
+           "SELECT :presetName, uriString, volume FROM track WHERE isActive")
+    protected abstract suspend fun addPresetContents(presetName: String)
+
+    @Transaction
+    open suspend fun savePreset(presetName: String) {
+        addPresetName(presetName)
+        deletePresetContents(presetName)
+        addPresetContents(presetName)
+    }
+}
+
+@Database(version = 4, exportSchema = true,
+          entities = [Track::class, Preset::class, PresetTrack::class])
 abstract class SoundAuraDatabase : RoomDatabase() {
     abstract fun trackDao(): TrackDao
+    abstract fun presetDao(): PresetDao
 
     companion object {
         fun addAllMigrations(builder: Builder<SoundAuraDatabase>) =
-            builder.addMigrations(migration1to2, migration2to3)
+            builder.addMigrations(migration1to2, migration2to3, migration3to4)
 
         private val migration1to2 = Migration(1,2) { db ->
             db.execSQL("PRAGMA foreign_keys=off")
@@ -107,7 +185,7 @@ abstract class SoundAuraDatabase : RoomDatabase() {
                 `uriString` TEXT NOT NULL PRIMARY KEY,
                 `name` TEXT NOT NULL,
                 `isActive` INTEGER NOT NULL DEFAULT 0,
-                `volume` FLOAT NOT NULL DEFAULT 1.0)""")
+                `volume` REAL NOT NULL DEFAULT 1.0)""")
             db.execSQL("""INSERT INTO temp_table (uriString, name, isActive, volume)
                           SELECT uriString, name, playing, volume FROM track;""")
             db.execSQL("DROP TABLE track;")
@@ -120,6 +198,16 @@ abstract class SoundAuraDatabase : RoomDatabase() {
             db.execSQL("ALTER TABLE track ADD COLUMN `hasError` INTEGER NOT NULL DEFAULT 0")
         }
 
+        private val migration3to4 = Migration(3,4) { db ->
+            db.execSQL("CREATE TABLE preset (`name` TEXT NOT NULL PRIMARY KEY)")
+            db.execSQL("""CREATE TABLE presetTrack (
+                    `presetName` TEXT NOT NULL,
+                    `trackUriString` TEXT NOT NULL,
+                    `trackVolume` REAL NOT NULL,
+                PRIMARY KEY (presetName, trackUriString),
+                FOREIGN KEY(`presetName`) REFERENCES `preset`(`name`) ON UPDATE NO ACTION ON DELETE NO ACTION,
+                FOREIGN KEY(`trackUriString`) REFERENCES `track`(`uriString`) ON UPDATE NO ACTION ON DELETE NO ACTION)""")
+        }
     }
 }
 
@@ -139,4 +227,5 @@ class DatabaseModule {
             .also(::addAllMigrations).build()
 
     @Provides fun provideTrackDao(db: SoundAuraDatabase) = db.trackDao()
+    @Provides fun providePresetDao(db: SoundAuraDatabase) = db.presetDao()
 }
