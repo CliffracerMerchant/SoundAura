@@ -53,6 +53,12 @@
         remove some tracks in order to add any more.
     </string>
 
+    <string name="preset_click_label">Load preset %1$s</string>
+    <string name="delete">Delete</string>
+    <string name="confirm_delete_preset_title">Delete %1$s?</string>
+    <string name="confirm_delete_preset_message">
+        This will not remove the tracks in the preset from your library.</string>
+
     <string name="play">Play</string>
     <string name="pause">Pause</string>
     <string name="play_button_description">Play SoundAura audio</string>
