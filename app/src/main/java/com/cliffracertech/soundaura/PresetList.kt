@@ -25,8 +25,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 
-@Composable
-fun ConfirmDeletePresetDialog(
+@Composable fun ConfirmDeletePresetDialog(
     presetName: String,
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit
@@ -99,8 +98,8 @@ fun ConfirmDeletePresetDialog(
     selectionBrush: Brush,
     presetListProvider: () -> List<Preset>,
     onPresetClick: (Preset) -> Unit,
-    onRenameRequest: (String, String) -> Unit,
-    onDeleteRequest: (String) -> Unit
+    onRenameRequest: (Preset, String) -> Unit,
+    onDeleteRequest: (Preset) -> Unit
 ) = LazyColumn(modifier
     .background(MaterialTheme.colors.surface, MaterialTheme.shapes.large)
 ) {
@@ -121,8 +120,8 @@ fun ConfirmDeletePresetDialog(
         }}
         PresetView(preset = preset,
             modifier = Modifier.background(selectionBrush, shape, itemBackgroundAlpha),
-            onRenameRequest = { onRenameRequest(preset.name, it) },
-            onDeleteRequest = { onDeleteRequest(preset.name) },
+            onRenameRequest = { onRenameRequest(preset, it) },
+            onDeleteRequest = { onDeleteRequest(preset) },
             onClick = { onPresetClick(preset) })
         if (index != list.lastIndex)
             Divider()
@@ -131,11 +130,7 @@ fun ConfirmDeletePresetDialog(
 
 @Preview @Composable
 fun PresetListPreview() = SoundAuraTheme {
-    val list = listOf(
-        Preset("Preset 1"),
-        Preset("Preset 2"),
-        Preset("Preset 3"),
-        Preset("Preset 4"))
+    val list = List(4) { Preset("Preset $it") }
     var selectedPreset by remember { mutableStateOf(list.first()) }
     PresetList(
         selectedPreset = selectedPreset,

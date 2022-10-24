@@ -119,18 +119,9 @@ data class PresetTrack(
     val trackVolume: Float = 1f
 )
 
-/** A data class containing information required to display a preset in a list
- * of presets. Because this will only be used by the user to differentiate
- * presets, the tracks contained in each preset are not necessary here. */
-data class PresetListEntry(
-    val name: String,
-    val trackCount: Int)
-
 @Dao abstract class PresetDao {
-    @Query("SELECT name, (SELECT count(*) FROM presetTrack " +
-                         "WHERE presetName = preset.name) AS trackCount " +
-           "FROM preset")
-    protected abstract fun getPresetList() : Flow<List<PresetListEntry>>
+    @Query("SELECT name FROM preset")
+    protected abstract fun getPresetList() : Flow<List<Preset>>
 
     @Query("WITH presetUriStrings AS " +
                 "(SELECT trackUriString FROM presetTrack WHERE presetName = :presetName) " +
@@ -166,6 +157,9 @@ data class PresetListEntry(
         deletePresetContents(presetName)
         addPresetContents(presetName)
     }
+
+    @Query("UPDATE preset SET name = :newName WHERE name = :oldName")
+    abstract suspend fun renamePreset(oldName: String, newName: String)
 }
 
 @Database(version = 4, exportSchema = true,
