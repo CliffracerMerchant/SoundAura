@@ -25,8 +25,10 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpSize
@@ -205,7 +207,7 @@ class MainActivity : ComponentActivity() {
     @Composable private fun MainContent(
         widthIsConstrained: Boolean,
         padding: PaddingValues,
-    ) = Box(Modifier.fillMaxSize()) {
+    ) = BoxWithConstraints(Modifier.fillMaxSize()) {
         val showingAppSettings = viewModel.showingAppSettings
         val ld = LocalLayoutDirection.current
         // The track list state is remembered here so that the
@@ -252,11 +254,58 @@ class MainActivity : ComponentActivity() {
      *     false, the buttons will be aligned to the screen's bottom edge instead.
      * @param padding The padding that should be used for the button placement.
      */
-    @Composable private fun BoxScope.FloatingActionButtons(
+    @Composable private fun BoxWithConstraintsScope.FloatingActionButtons(
         visible: Boolean,
         alignToEnd: Boolean,
         padding: PaddingValues,
     ) {
+        val density = LocalDensity.current
+        val collapsedSizeModifier = remember(density, constraints, alignToEnd) {
+            // To prevent the
+            val width = with(density) {
+                if (alignToEnd)
+                    constraints.maxHeight.toDp() / 2 - 44.dp
+                else constraints.maxWidth.toDp() / 2 - 44.dp
+            }
+            val height = 56.dp
+            Modifier.requiredSize(if (!alignToEnd) width else height,
+                                  if (!alignToEnd) height else width)
+        }
+        var presetListIsExpanded by remember { mutableStateOf(false) }
+        val presetButtonAlignment by animateAlignmentAsState(when {
+            presetListIsExpanded -> Alignment.Center
+            alignToEnd ->           Alignment.TopEnd
+            else ->                 Alignment.BottomStart
+        })
+        val playButtonTint = if (alignToEnd) MaterialTheme.colors.secondaryVariant
+                             else lerp(MaterialTheme.colors.primaryVariant,
+                                       MaterialTheme.colors.secondaryVariant, 0.5f)
+        AnimatedVisibility(
+            visible = visible,
+            modifier = Modifier
+                .padding(padding).align(presetButtonAlignment)
+                .then(if (presetListIsExpanded) Modifier.restrictWidthAccordingToSizeClass()
+                      else                      collapsedSizeModifier),
+        ) {
+            val list = List(4) { Preset("Super duper extra really long preset name $it") }
+            var selectedPreset by remember { mutableStateOf(list.first()) }
+            val gradientStartColor = if (alignToEnd) MaterialTheme.colors.secondaryVariant
+                                     else            MaterialTheme.colors.primaryVariant
+            FloatingPresetButton(
+                expanded = presetListIsExpanded,
+                onDismissRequest = { presetListIsExpanded = false },
+                backgroundBrush = remember(gradientStartColor, playButtonTint) {
+                    Brush.horizontalGradient(listOf(gradientStartColor, playButtonTint))
+                }, selectedPreset = selectedPreset,
+                presetIsModified = true,
+                presetListProvider = { list },
+                onPresetClick = { selectedPreset = it
+                                  presetListIsExpanded = false },
+                onPresetRenameRequest = { _, _ -> },
+                onPresetDeleteRequest = {},
+                onClick = { presetListIsExpanded = true })
+        }
+
         val playButtonAlignment = if (alignToEnd) Alignment.CenterEnd
                                   else            Alignment.BottomCenter
         AnimatedVisibility( // Play / pause button
@@ -268,9 +317,7 @@ class MainActivity : ComponentActivity() {
             val isPlaying = boundPlayerService?.isPlaying ?: false
             FloatingActionButton(
                 onClick = { boundPlayerService?.toggleIsPlaying() },
-                backgroundColor = if (alignToEnd) MaterialTheme.colors.secondaryVariant
-                                  else lerp(MaterialTheme.colors.primaryVariant,
-                                            MaterialTheme.colors.secondaryVariant, 0.5f),
+                backgroundColor = playButtonTint,
 //                elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp)
                 elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
             ) {

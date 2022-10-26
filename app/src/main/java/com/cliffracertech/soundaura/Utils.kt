@@ -123,7 +123,7 @@ inline fun <reified T: Enum<T>> DataStore<Preferences>.enumPreferenceFlow(
  * Restrict the horizontal width as a percentage of the screen width according
  * to the [LocalWindowSizeClass] value. When the [WindowWidthSizeClass] is
  * equal to [WindowWidthSizeClass.Compact], the width restriction will be equal
- * to 95% of the screen width; with [WindowWidthSizeClass.Medium] the width
+ * to 90% of the screen width; with [WindowWidthSizeClass.Medium] the width
  * restriction is equal to 80% of the screen width; with [WindowWidthSizeClass.Expanded]
  * the width restriction is equal to 60% of the screen width. This modifier can
  * be used to prevent top level UI elements that don't need to be very wide
@@ -136,7 +136,7 @@ fun Modifier.restrictWidthAccordingToSizeClass() = composed {
         val screenWidth = config.screenWidthDp
         val maxWidth = when (widthSizeClass) {
             WindowWidthSizeClass.Compact ->
-                (screenWidth * 19f / 20f).toInt().dp
+                (screenWidth * 9f / 10f).toInt().dp
             WindowWidthSizeClass.Medium ->
                 (screenWidth * 4f / 5f).toInt().dp
             WindowWidthSizeClass.Expanded ->

@@ -58,7 +58,7 @@
     <string name="playing_modified_preset_description">Playing modified preset</string>
     <string name="playing_preset_description">Playing preset</string>
     <string name="preset_selector_title">Select a preset</string>
-    <string name="collapse_preset_selector_description">Close preset selection window</string>
+    <string name="close_preset_selector_description">Close preset selector</string>
 
     <string name="preset_click_label">Load preset %1$s</string>
     <string name="delete">Delete</string>
