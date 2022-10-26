@@ -55,29 +55,27 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 ) {
     Text(preset.name, Modifier.weight(1f).padding(start = 18.dp))
     var showingOptionsMenu by rememberSaveable { mutableStateOf(false) }
+    var showingRenameDialog by rememberSaveable { mutableStateOf(false) }
+    var showingDeleteDialog by rememberSaveable { mutableStateOf(false) }
+
     IconButton({ showingOptionsMenu = true }) {
         Icon(imageVector = Icons.Default.MoreVert,
              contentDescription = stringResource(
                  R.string.item_options_button_description, preset.name))
-    }
 
-    var showingRenameDialog by rememberSaveable { mutableStateOf(false) }
-    var showingDeleteDialog by rememberSaveable { mutableStateOf(false) }
-    DropdownMenu(
-        expanded = showingOptionsMenu,
-        onDismissRequest = { showingOptionsMenu = false }
-    ) {
-        DropdownMenuItem(onClick = {
-            showingRenameDialog = true
-            showingOptionsMenu = false
-        }) {
-            Text(stringResource(R.string.rename))
-        }
-        DropdownMenuItem(onClick = {
-            showingDeleteDialog = true
-            showingOptionsMenu = false
-        }) {
-            Text(stringResource(R.string.remove))
+        DropdownMenu(
+            expanded = showingOptionsMenu,
+            onDismissRequest = { showingOptionsMenu = false }
+        ) {
+            DropdownMenuItem(onClick = {
+                showingRenameDialog = true
+                showingOptionsMenu = false
+            }) { Text(stringResource(R.string.rename)) }
+
+            DropdownMenuItem(onClick = {
+                showingDeleteDialog = true
+                showingOptionsMenu = false
+            }) { Text(stringResource(R.string.remove)) }
         }
     }
 
