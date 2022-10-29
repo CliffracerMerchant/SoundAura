@@ -26,6 +26,7 @@ import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -36,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -281,7 +283,7 @@ class MainActivity : ComponentActivity() {
             val list = List(4) { Preset("Super duper extra really long preset name $it") }
             var currentPreset by remember { mutableStateOf(list.first()) }
             val currentPresetIsModified = true
-            var presetSelectorIsVisible by remember { mutableStateOf(false) }
+            var presetSelectorIsVisible by rememberSaveable { mutableStateOf(false) }
             val isPlaying = boundPlayerService?.isPlaying ?: false
             val backgroundBrush = Brush.horizontalGradient(listOf(
                 MaterialTheme.colors.primaryVariant,
@@ -296,8 +298,12 @@ class MainActivity : ComponentActivity() {
                 clipSize = clipSize,
                 cornerRadius = 28.dp)
             if (presetSelectorIsVisible)
-                Dialog({ presetSelectorIsVisible = false }) {
+                Dialog(
+                    onDismissRequest = { presetSelectorIsVisible = false },
+                    properties = DialogProperties(usePlatformDefaultWidth = false)
+                ) {
                     PresetSelector(
+                        modifier = Modifier.restrictWidthAccordingToSizeClass(),
                         onCloseButtonClick = { presetSelectorIsVisible = false },
                         backgroundBrush = backgroundBrush,
                         currentPreset = currentPreset,
