@@ -51,16 +51,11 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
     Text(modifier = Modifier.fillMaxWidth(),
          textAlign = TextAlign.Center,
          maxLines = 1, style = style,
-         text = stringResource(when {
-             currentPreset == null -> R.string.unsaved_preset_description
-             currentIsModified ->     R.string.playing_modified_preset_description
-             else ->                  R.string.playing_preset_description
-         }))
-    if (currentPreset != null)
-        Text(currentPreset.name,
-             modifier = Modifier.fillMaxWidth(),
-             textAlign = TextAlign.Center,
-             maxLines = 1, style = style)
+         text = when {
+             currentPreset == null -> stringResource(R.string.unsaved_preset_description)
+             currentIsModified ->     currentPreset.name + " *"
+             else ->                  currentPreset.name
+         })
 }
 
 /** Create a [GenericShape] clipped to [clipSize] with rounded corners whose radius is
