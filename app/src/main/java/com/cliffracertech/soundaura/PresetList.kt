@@ -17,7 +17,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.stringResource
@@ -47,10 +46,11 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
     onDeleteRequest: () -> Unit,
     onClick: () -> Unit
 ) = Row(
-    modifier = modifier.padding(2.dp).minTouchTargetSize().clickable (
-        onClickLabel = stringResource(R.string.preset_click_label, preset.name),
-        role = Role.Button,
-        onClick = onClick),
+    modifier = modifier.minTouchTargetSize().clickable (
+            onClickLabel = stringResource(R.string.preset_click_label, preset.name),
+            role = Role.Button,
+            onClick = onClick
+        ).padding(2.dp),
     horizontalArrangement = Arrangement.spacedBy(6.dp),
     verticalAlignment = Alignment.CenterVertically
 ) {
@@ -123,7 +123,7 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
             }
             CompositionLocalProvider(LocalContentColor provides MaterialTheme.colors.onSurface) {
                 PresetView(preset = preset,
-                    modifier = itemModifier.clipToBounds(),
+                    modifier = itemModifier,
                     onRenameRequest = { onRenameRequest(preset, it) },
                     onDeleteRequest = { onDeleteRequest(preset) },
                     onClick = { onPresetClick(preset) })
