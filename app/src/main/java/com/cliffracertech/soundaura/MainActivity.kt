@@ -18,7 +18,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.*
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.SnackbarDuration
+import androidx.compose.material.SnackbarHostState
+import androidx.compose.material.rememberScaffoldState
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -27,12 +30,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -240,97 +243,81 @@ class MainActivity : ComponentActivity() {
                     })
             }
         }
-        FloatingActionButtons(
+        MediaControllerBar(
             visible = !showingAppSettings,
             alignToEnd = !widthIsConstrained,
             padding = padding)
+        AddTrackButton(visible = !showingAppSettings, padding)
     }
 
-    /**
-     * Compose play and add track buttons along the edge of the screen
-     *
-     * @param visible Whether or not the buttons will be visible.
-     * @param alignToEnd Whether to align the buttons to the screen's end edge. If
-     *     false, the buttons will be aligned to the screen's bottom edge instead.
-     * @param padding The padding that should be used for the button placement.
-     */
-    @Composable private fun BoxWithConstraintsScope.FloatingActionButtons(
+    @Composable private fun BoxWithConstraintsScope.MediaControllerBar(
         visible: Boolean,
-        alignToEnd: Boolean,
         padding: PaddingValues,
+        alignToEnd: Boolean
     ) {
         val density = LocalDensity.current
-        val collapsedSizeModifier = remember(density, constraints, alignToEnd) {
-            // To prevent the
-            val width = with(density) {
-                if (alignToEnd)
-                    constraints.maxHeight.toDp() / 2 - 44.dp
-                else constraints.maxWidth.toDp() / 2 - 44.dp
+        val ld = LocalLayoutDirection.current
+        val clipSize = remember(constraints, alignToEnd, density) {
+            with (density) {
+                DpSize(height = 56.dp, width =
+                    if (alignToEnd) (constraints.maxHeight / 2f).toDp()
+                    // The goal is to have the media controller bar have such a width
+                    // that the play/pause icon is centered on the screen. The main
+                    // content area's width is divided by two, then 28dp is added to
+                    // to account for the media controller bar's rounded corner radius,
+                    // then the start padding is added.
+                    else (constraints.maxWidth / 2f).toDp() +
+                        28.dp - padding.calculateStartPadding(ld))
             }
-            val height = 56.dp
-            Modifier.requiredSize(if (!alignToEnd) width else height,
-                                  if (!alignToEnd) height else width)
         }
-        var presetListIsExpanded by remember { mutableStateOf(false) }
-        val presetButtonAlignment by animateAlignmentAsState(when {
-            presetListIsExpanded -> Alignment.Center
-            alignToEnd ->           Alignment.TopEnd
-            else ->                 Alignment.BottomStart
-        })
-        val playButtonTint = if (alignToEnd) MaterialTheme.colors.secondaryVariant
-                             else lerp(MaterialTheme.colors.primaryVariant,
-                                       MaterialTheme.colors.secondaryVariant, 0.5f)
+        val alignment = if (alignToEnd) Alignment.TopEnd
+                        else            Alignment.BottomStart
         AnimatedVisibility(
             visible = visible,
-            modifier = Modifier
-                .padding(padding).align(presetButtonAlignment)
-                .then(if (presetListIsExpanded) Modifier.restrictWidthAccordingToSizeClass()
-                      else                      collapsedSizeModifier),
-        ) {
-            val list = List(4) { Preset("Super duper extra really long preset name $it") }
-            var selectedPreset by remember { mutableStateOf(list.first()) }
-            val gradientStartColor = if (alignToEnd) MaterialTheme.colors.secondaryVariant
-                                     else            MaterialTheme.colors.primaryVariant
-            FloatingPresetButton(
-                expanded = presetListIsExpanded,
-                onDismissRequest = { presetListIsExpanded = false },
-                backgroundBrush = remember(gradientStartColor, playButtonTint) {
-                    Brush.horizontalGradient(listOf(gradientStartColor, playButtonTint))
-                }, selectedPreset = selectedPreset,
-                presetIsModified = true,
-                presetListProvider = { list },
-                onPresetClick = { selectedPreset = it
-                                  presetListIsExpanded = false },
-                onPresetRenameRequest = { _, _ -> },
-                onPresetDeleteRequest = {},
-                onClick = { presetListIsExpanded = true })
-        }
-
-        val playButtonAlignment = if (alignToEnd) Alignment.CenterEnd
-                                  else            Alignment.BottomCenter
-        AnimatedVisibility( // Play / pause button
-            visible = visible,
-            modifier = Modifier.padding(padding).align(playButtonAlignment),
+            modifier = Modifier.align(alignment).padding(padding),
             enter = fadeIn(tween(delayMillis = 75)) + scaleIn(overshootTweenSpec(delay = 75)),
             exit = fadeOut(tween(delayMillis = 125)) + scaleOut(anticipateTweenSpec(delay = 75))
         ) {
+            val list = List(4) { Preset("Super duper extra really long preset name $it") }
+            var currentPreset by remember { mutableStateOf(list.first()) }
+            val currentPresetIsModified = true
+            var presetSelectorIsVisible by remember { mutableStateOf(false) }
             val isPlaying = boundPlayerService?.isPlaying ?: false
-            FloatingActionButton(
-                onClick = { boundPlayerService?.toggleIsPlaying() },
-                backgroundColor = playButtonTint,
-//                elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp)
-                elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
-            ) {
-                val description = stringResource(
-                    if (isPlaying) R.string.pause_button_description
-                    else           R.string.play_button_description)
-                PlayPauseIcon(
-                    playing = isPlaying,
-                    contentDescription = description,
-                    tint = MaterialTheme.colors.onPrimary)
-            }
+            val backgroundBrush = Brush.horizontalGradient(listOf(
+                MaterialTheme.colors.primaryVariant,
+                MaterialTheme.colors.secondaryVariant))
+            MediaController(
+                isPlaying = isPlaying,
+                onPlayPauseClick = { boundPlayerService?.toggleIsPlaying() },
+                currentPreset = currentPreset,
+                currentPresetIsModified = true,
+                onCurrentPresetClick = { presetSelectorIsVisible = true },
+                backgroundBrush = backgroundBrush,
+                clipSize = clipSize,
+                cornerRadius = 28.dp)
+            if (presetSelectorIsVisible)
+                Dialog({ presetSelectorIsVisible = false }) {
+                    PresetSelector(
+                        onCloseButtonClick = { presetSelectorIsVisible = false },
+                        backgroundBrush = backgroundBrush,
+                        currentPreset = currentPreset,
+                        currentIsModified = currentPresetIsModified,
+                        presetListProvider = { list },
+                        onPresetClick = { currentPreset = it
+                                          presetSelectorIsVisible = false },
+                        onPresetRenameRequest = { _, _ -> },
+                        onPresetDeleteRequest = {})
+                }
         }
+    }
 
+    /** Compose an add track button at the bottom end edge of the screen,
+     * which is conditionally visible depending on the value of [visible],
+     * with padding equal to the parameter [padding]. */
+    @Composable private fun BoxScope.AddTrackButton(
+        visible: Boolean,
+        padding: PaddingValues,
+    ) {
         AnimatedVisibility( // add track button
             visible = visible,
             modifier = Modifier.align(Alignment.BottomEnd).padding(padding),

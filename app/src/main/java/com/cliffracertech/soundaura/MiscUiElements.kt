@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
@@ -108,7 +109,7 @@ fun Modifier.minTouchTargetSize() =
     contentDescription: String =
         if (playing) stringResource(R.string.pause)
         else         stringResource(R.string.play),
-    tint: Color,
+    tint: Color = LocalContentColor.current,
 ) {
     val playToPause = AnimatedImageVector.animatedVectorResource(R.drawable.play_to_pause)
     val playToPausePainter = rememberAnimatedVectorPainter(playToPause, atEnd = playing)
@@ -171,9 +172,14 @@ fun Modifier.minTouchTargetSize() =
     AnimatedContent(targetState, modifier, { transition }, content = content)
 }
 
-@Composable fun VerticalDivider() =
-    Box(Modifier.fillMaxHeight().width((1.5).dp)
-        .background(MaterialTheme.colors.onSurface.copy(alpha = 0.12f)))
+@Composable fun RowScope.VerticalDivider(
+    modifier: Modifier = Modifier,
+    heightFraction: Float = 0.8f,
+) = Box(modifier
+    .width((1.5).dp)
+    .fillMaxHeight(heightFraction)
+    .align(Alignment.CenterVertically)
+    .background(MaterialTheme.colors.onSurface.copy(alpha = 0.12f)))
 
 /**
  * Compose a bulleted list of [String]s.
