@@ -174,12 +174,12 @@ fun Modifier.minTouchTargetSize() =
 
 @Composable fun RowScope.VerticalDivider(
     modifier: Modifier = Modifier,
-    heightFraction: Float = 0.8f,
+    heightFraction: Float = 1f,
 ) = Box(modifier
     .width((1.5).dp)
     .fillMaxHeight(heightFraction)
     .align(Alignment.CenterVertically)
-    .background(MaterialTheme.colors.onSurface.copy(alpha = 0.12f)))
+    .background(LocalContentColor.current.copy(alpha = 0.25f)))
 
 /**
  * Compose a bulleted list of [String]s.

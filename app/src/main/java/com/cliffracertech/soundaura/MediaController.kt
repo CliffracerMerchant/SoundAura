@@ -141,7 +141,7 @@ fun Modifier.horizontalAppGradientBackground(
                     currentIsModified = currentPresetIsModified,
                     onClick = onCurrentPresetClick)
             }
-            VerticalDivider()
+            VerticalDivider(heightFraction = 0.8f)
             IconButton(onPlayPauseClick) {
                 PlayPauseIcon(isPlaying)
             }
