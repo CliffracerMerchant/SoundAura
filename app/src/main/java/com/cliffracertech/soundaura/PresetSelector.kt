@@ -45,6 +45,7 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
     }
     PresetList(
         modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
+        shape = MaterialTheme.shapes.medium,
         currentPreset = currentPreset,
         selectionBrush = backgroundBrush,
         presetListProvider = presetListProvider,

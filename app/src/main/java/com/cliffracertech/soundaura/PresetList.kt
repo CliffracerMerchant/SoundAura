@@ -4,9 +4,12 @@ package com.cliffracertech.soundaura
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -90,6 +93,7 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 
 @Composable fun PresetList(
     modifier: Modifier = Modifier,
+    shape: CornerBasedShape = MaterialTheme.shapes.large,
     currentPreset: Preset? = null,
     selectionBrush: Brush,
     presetListProvider: () -> List<Preset>,
@@ -97,7 +101,6 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
     onRenameRequest: (Preset, String) -> Unit,
     onDeleteRequest: (Preset) -> Unit
 ) {
-    val shape = MaterialTheme.shapes.large
     LazyColumn(modifier.background(MaterialTheme.colors.surface, shape)) {
         val list = presetListProvider()
         itemsIndexed(
