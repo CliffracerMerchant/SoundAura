@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.material.IconButton
+import androidx.compose.material.LocalContentColor
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
@@ -29,15 +30,24 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) = Column(
-    modifier = modifier.clickable(
-        onClick = onClick, role = Role.Button,
-        onClickLabel = stringResource(R.string.preset_button_click_label)),
+    modifier = modifier
+        .fillMaxHeight()
+        .clickable(
+            onClick = onClick, role = Role.Button,
+            onClickLabel = stringResource(R.string.preset_button_click_label))
+        .padding(start = 16.dp, end = 8.dp),
     verticalArrangement = Arrangement.Center
 ) {
     val style = MaterialTheme.typography.caption
     // For some reason setting the column's horizontal alignment to center
     // results in one text being centered, but not the other. Setting both
     // Texts to fill max width and use TextAlign.Center is a workaround.
+    Text(text = stringResource(
+             if (currentPreset == null) R.string.playing
+             else R.string.playing_preset_description),
+         modifier = Modifier.fillMaxWidth(),
+         textAlign = TextAlign.Center,
+         maxLines = 1, style = style)
     Text(modifier = Modifier.fillMaxWidth(),
          textAlign = TextAlign.Center,
          maxLines = 1, style = style,
@@ -129,17 +139,17 @@ fun Modifier.horizontalAppGradientBackground(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
-        Box(Modifier.weight(1f).padding(start = 16.dp, end = 8.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            CurrentPresetButton(
-                currentPreset = currentPreset,
-                currentIsModified = currentPresetIsModified,
-                onClick = onCurrentPresetClick)
-        }
-        VerticalDivider()
-        IconButton(onPlayPauseClick) {
-            PlayPauseIcon(isPlaying)
+        CompositionLocalProvider(LocalContentColor provides MaterialTheme.colors.onPrimary) {
+            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                CurrentPresetButton(
+                    currentPreset = currentPreset,
+                    currentIsModified = currentPresetIsModified,
+                    onClick = onCurrentPresetClick)
+            }
+            VerticalDivider()
+            IconButton(onPlayPauseClick) {
+                PlayPauseIcon(isPlaying)
+            }
         }
     }
 }
