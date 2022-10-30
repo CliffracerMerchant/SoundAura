@@ -179,7 +179,16 @@ fun Modifier.minTouchTargetSize() =
     .width((1.5).dp)
     .fillMaxHeight(heightFraction)
     .align(Alignment.CenterVertically)
-    .background(LocalContentColor.current.copy(alpha = 0.25f)))
+    .background(LocalContentColor.current.copy(alpha = 0.2f)))
+
+@Composable fun ColumnScope.HorizontalDivider(
+    modifier: Modifier = Modifier,
+    widthFraction: Float = 1f,
+) = Box(modifier
+    .height((1.5).dp)
+    .fillMaxWidth(widthFraction)
+    .align(Alignment.CenterHorizontally)
+    .background(LocalContentColor.current.copy(alpha = 0.2f)))
 
 /**
  * Compose a bulleted list of [String]s.

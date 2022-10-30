@@ -260,23 +260,30 @@ class MainActivity : ComponentActivity() {
         val density = LocalDensity.current
         val ld = LocalLayoutDirection.current
         val clipSize = remember(constraints, alignToEnd, density) {
-            with (density) {
-                DpSize(height = 56.dp, width =
-                    if (alignToEnd) (constraints.maxHeight / 2f).toDp()
-                    // The goal is to have the media controller bar have such a width
-                    // that the play/pause icon is centered on the screen. The main
-                    // content area's width is divided by two, then 28dp is added to
-                    // to account for the media controller bar's rounded corner radius,
-                    // then the start padding is added.
-                    else (constraints.maxWidth / 2f).toDp() +
-                        28.dp - padding.calculateStartPadding(ld))
-            }
+            with (density) { DpSize(
+                // The goal is to have the media controller bar have such a
+                // width/height that the play/pause icon is centered in the
+                // screen's width/height. The main content area's width/height
+                // is divided by two, then 28dp is added to to account for the
+                // media controller bar's rounded corner radius, then because
+                // the constraints do not account for it, either the entire
+                // start padding or half of the top padding is added. Only
+                // half the top padding is added because space is more
+                // constrained when the media controller bar is being aligned
+                // to the screen's end.
+                height = if (!alignToEnd) 56.dp else
+                    (constraints.maxHeight / 2f).toDp() +
+                    28.dp - padding.calculateTopPadding() / 2,
+                width = if (alignToEnd) 56.dp else
+                    (constraints.maxWidth / 2f).toDp() +
+                    28.dp - padding.calculateStartPadding(ld)
+            )}
         }
         val alignment = if (alignToEnd) Alignment.TopEnd
                         else            Alignment.BottomStart
         AnimatedVisibility(
             visible = visible,
-            modifier = Modifier.align(alignment).padding(padding),
+            modifier = Modifier.padding(padding),
             enter = fadeIn(tween(delayMillis = 75)) + scaleIn(overshootTweenSpec(delay = 75)),
             exit = fadeOut(tween(delayMillis = 125)) + scaleOut(anticipateTweenSpec(delay = 75))
         ) {
@@ -289,6 +296,7 @@ class MainActivity : ComponentActivity() {
                 MaterialTheme.colors.primaryVariant,
                 MaterialTheme.colors.secondaryVariant))
             MediaController(
+                alignment = alignment,
                 isPlaying = isPlaying,
                 onPlayPauseClick = { boundPlayerService?.toggleIsPlaying() },
                 currentPreset = currentPreset,
