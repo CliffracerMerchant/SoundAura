@@ -2,15 +2,11 @@
  * License 2.0. See license.md in the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.GenericShape
-import androidx.compose.material.IconButton
-import androidx.compose.material.LocalContentColor
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,7 +18,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.*
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
@@ -48,32 +44,28 @@ fun Modifier.rotateClockwise() = layout { measurable, constraints ->
     val onClickLabel = stringResource(R.string.preset_button_click_label)
     val columnModifier = remember(modifier, orientation) {
         modifier.fillMaxSize()
-            .clickable(onClick = onClick, role = Role.Button,
-                       onClickLabel = onClickLabel)
+            .clickable(true, onClickLabel, Role.Button, onClick)
             .then(if (orientation == Orientation.Horizontal)
                       Modifier.padding(start = 16.dp, end = 8.dp)
                   else Modifier.padding(top = 16.dp, bottom = 8.dp)
                                .rotateClockwise())
     }
-    Column(columnModifier, Arrangement.Center) {
+    Column(columnModifier, Arrangement.Center, Alignment.CenterHorizontally) {
         val style = MaterialTheme.typography.caption
-        // For some reason setting the column's horizontal alignment to center
-        // results in one text being centered, but not the other. Setting both
-        // Texts to fill max width and use TextAlign.Center is a workaround.
         Text(text = stringResource(
                  if (currentPreset == null) R.string.playing
                  else R.string.playing_preset_description),
-             modifier = Modifier.fillMaxWidth(),
-             textAlign = TextAlign.Center,
              maxLines = 1, style = style)
-        Text(modifier = Modifier.fillMaxWidth(),
-             textAlign = TextAlign.Center,
-             maxLines = 1, style = style,
-             text = when {
-                 currentPreset == null -> stringResource(R.string.unsaved_preset_description)
-                 currentIsModified ->     currentPreset.name + " *"
-                 else ->                  currentPreset.name
-             })
+        Row {
+            AutoscrollText(
+                text = currentPreset?.name ?:
+                    stringResource(R.string.unsaved_preset_description),
+                modifier = Modifier.weight(1f, false),
+                overflow = TextOverflow.Ellipsis,
+                style = style)
+            if (currentIsModified)
+                Text(" *", style = style.copy(fontSize = 14.sp))
+        }
     }
 }
 
