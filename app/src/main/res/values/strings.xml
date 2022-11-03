@@ -186,8 +186,7 @@
     <string name="tile_tutorial_add_tile_help_text">
         The button to edit your quick settings tiles might appear
         differently depending on your device manufacturer and
-        Android version. If you can\'t figure out how to add quick
-        settings tiles, try searching \'edit quick settings tiles\'
+        Android version. Try searching \'edit quick settings tiles\'
         along with your device manufacturer on an internet search
         engine.</string>
     <string name="tile_tutorial_add_tile_button_text">Add tile</string>
