@@ -36,8 +36,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -301,27 +299,42 @@ class MainActivity : ComponentActivity() {
                 onPlayPauseClick = { boundPlayerService?.toggleIsPlaying() },
                 currentPreset = currentPreset,
                 currentPresetIsModified = true,
-                onCurrentPresetClick = { presetSelectorIsVisible = true },
-                backgroundBrush = backgroundBrush,
+                onCurrentPresetClick = {
+                    presetSelectorIsVisible = true
+                }, backgroundBrush = backgroundBrush,
                 clipSize = clipSize,
                 cornerRadius = 28.dp)
-            if (presetSelectorIsVisible)
-                Dialog(
-                    onDismissRequest = { presetSelectorIsVisible = false },
-                    properties = DialogProperties(usePlatformDefaultWidth = false)
-                ) {
-                    PresetSelector(
-                        modifier = Modifier.restrictWidthAccordingToSizeClass(),
-                        onCloseButtonClick = { presetSelectorIsVisible = false },
-                        backgroundBrush = backgroundBrush,
-                        currentPreset = currentPreset,
-                        currentIsModified = currentPresetIsModified,
-                        presetListProvider = { list },
-                        onPresetClick = { currentPreset = it
-                                          presetSelectorIsVisible = false },
-                        onPresetRenameRequest = { _, _ -> },
-                        onPresetDeleteRequest = {})
-                }
+            var newPresetName by rememberSaveable { mutableStateOf("")}
+            val nameValidator = remember { { newName: String -> when {
+                newName.isBlank() ->
+                    "The preset's name must not be blank"
+                newName.length % 2 == 1 ->
+                    "New preset names must have an even number of characters"
+                else -> null
+            }}}
+            val nameValidatorMessage by remember { derivedStateOf {
+                nameValidator(newPresetName)
+            }}
+            PresetSelectorDialog(
+                visible = presetSelectorIsVisible,
+                onCloseButtonClick = { presetSelectorIsVisible = false },
+                backgroundBrush = backgroundBrush,
+                currentPreset = currentPreset,
+                currentIsModified = currentPresetIsModified,
+                presetListProvider = { list },
+                onPresetClick = { currentPreset = it
+                                  presetSelectorIsVisible = false },
+                onPresetRenameRequest = { _, _ -> },
+                onPresetDeleteRequest = {},
+                onOverwriteCurrentPresetRequest = { presetSelectorIsVisible = false },
+                onNewPresetNameChange = { newPresetName = it },
+                newPresetNameValidatorMessage = nameValidatorMessage,
+                onSaveNewPresetRequest = remember { {
+                    if (it.isNotBlank()) {
+                        presetSelectorIsVisible = false
+                        true
+                    } else false
+                }})
         }
     }
 
