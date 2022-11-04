@@ -4,7 +4,9 @@
 package com.cliffracertech.soundaura
 
 import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -16,11 +18,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.google.accompanist.insets.LocalWindowInsets
 
 /**
  * A row of buttons for an alert dialog.
@@ -70,6 +74,20 @@ import androidx.compose.ui.window.DialogProperties
         }
 }) {
     content()
+}
+
+@Composable private fun SoundAuraDialogContent(
+    titleLayout: @Composable ColumnScope.() -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+    buttons: @Composable ColumnScope.() -> Unit,
+    modifier: Modifier = Modifier
+) = Surface(modifier, MaterialTheme.shapes.medium) {
+    Column {
+        titleLayout()
+        Column(Modifier.weight(1f, false).verticalScroll(rememberScrollState()),
+            content = content)
+        buttons()
+    }
 }
 
 // SoundAuraDialog was created to have more control over the layout of the dialog
@@ -144,14 +162,18 @@ import androidx.compose.ui.window.DialogProperties
             style = MaterialTheme.typography.body1)
     }
 ) = Dialog(onDismissRequest, DialogProperties(usePlatformDefaultWidth = useDefaultWidth)) {
-    Surface(modifier, MaterialTheme.shapes.medium) {
-        Column {
-            titleLayout()
-            Column(Modifier.weight(1f, false).verticalScroll(rememberScrollState()),
-                   content = content)
-            buttons()
-        }
-    }
+    if (!useDefaultWidth) {
+        val imeIsOpen by imeIsOpen()
+        val yOffset by animateFloatAsState(
+            if (!imeIsOpen) 0f
+            else LocalWindowInsets.current
+                .run { ime.bottom - navigationBars.bottom } / -2f)
+        Box(Modifier
+            .graphicsLayer { translationY = yOffset }
+            .fillMaxSize()
+            .clickable(onClick = onDismissRequest), Alignment.Center,
+        ) { SoundAuraDialogContent(titleLayout, content, buttons, modifier) }
+    } else SoundAuraDialogContent(titleLayout, content, buttons, modifier)
 }
 
 /**

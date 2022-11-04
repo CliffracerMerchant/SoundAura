@@ -3,8 +3,8 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
@@ -97,7 +97,6 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
         onDeleteRequest = onPresetDeleteRequest)
 
     HorizontalDivider()
-
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
         var showingOverwritePresetDialog by rememberSaveable { mutableStateOf(false) }
         TextButton(
@@ -177,6 +176,8 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 ) {
     var currentName by rememberSaveable { mutableStateOf("") }
     SoundAuraDialog(
+        modifier = Modifier.restrictWidthAccordingToSizeClass(),
+        useDefaultWidth = false,
         title = stringResource(R.string.create_new_preset_dialog_title),
         onDismissRequest = onDismissRequest,
         confirmButtonEnabled = nameValidatorMessage == null,
@@ -202,7 +203,7 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
                 Icon(Icons.Default.Error,
                      contentDescription = null,
                      tint = MaterialTheme.colors.error)
-                Crossfade(nameValidatorMessage ?: previousNameValidatorMessage) {
+                AnimatedContent(nameValidatorMessage ?: previousNameValidatorMessage) {
                     Text(it, Modifier.weight(1f), MaterialTheme.colors.error)
                 }
                 if (nameValidatorMessage != null)
@@ -259,7 +260,7 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
     onOverwriteCurrentPresetRequest: () -> Unit,
     onNewPresetNameChange: (String) -> Unit,
     newPresetNameValidatorMessage: String?,
-    onSaveNewPresetRequest: (String) -> Boolean,
+    onCreateNewPresetRequest: (String) -> Boolean,
 ) {
     if (visible) Dialog(
         onDismissRequest = onCloseButtonClick,
@@ -278,6 +279,6 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
             onOverwriteCurrentPresetRequest = onOverwriteCurrentPresetRequest,
             onNewPresetNameChange = onNewPresetNameChange,
             newPresetNameValidatorMessage = newPresetNameValidatorMessage,
-            onCreateNewPresetRequest = onSaveNewPresetRequest)
+            onCreateNewPresetRequest = onCreateNewPresetRequest)
     }
 }

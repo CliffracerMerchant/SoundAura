@@ -26,7 +26,9 @@ import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -285,7 +287,12 @@ class MainActivity : ComponentActivity() {
             enter = fadeIn(tween(delayMillis = 75)) + scaleIn(overshootTweenSpec(delay = 75)),
             exit = fadeOut(tween(delayMillis = 125)) + scaleOut(anticipateTweenSpec(delay = 75))
         ) {
-            val list = List(4) { Preset("Super duper extra really long preset name $it") }
+            val list = remember { mutableStateListOf(
+                Preset("Super duper extra really long preset name 0"),
+                Preset("Super duper extra really long preset name 1"),
+                Preset("Super duper extra really long preset name 2"),
+                Preset("Super duper extra really long preset name 3")
+            ) }
             var currentPreset by remember { mutableStateOf(list.first()) }
             val currentPresetIsModified = true
             var presetSelectorIsVisible by rememberSaveable { mutableStateOf(false) }
@@ -324,14 +331,15 @@ class MainActivity : ComponentActivity() {
                 presetListProvider = { list },
                 onPresetClick = { currentPreset = it
                                   presetSelectorIsVisible = false },
-                onPresetRenameRequest = { _, _ -> },
-                onPresetDeleteRequest = {},
+                onPresetRenameRequest = { preset, newName -> list.replaceAll { if (it != preset) it else Preset(newName) }},
+                onPresetDeleteRequest = list::remove,
                 onOverwriteCurrentPresetRequest = { presetSelectorIsVisible = false },
                 onNewPresetNameChange = { newPresetName = it },
                 newPresetNameValidatorMessage = nameValidatorMessage,
-                onSaveNewPresetRequest = remember { {
+                onCreateNewPresetRequest = remember { {
                     if (it.isNotBlank()) {
                         presetSelectorIsVisible = false
+                        list.add(Preset(it))
                         true
                     } else false
                 }})

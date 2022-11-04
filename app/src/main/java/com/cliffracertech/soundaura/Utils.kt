@@ -3,13 +3,17 @@
 package com.cliffracertech.soundaura
 
 import android.support.v4.media.session.PlaybackStateCompat
+import android.view.ViewTreeObserver
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.Lifecycle
@@ -146,6 +150,21 @@ fun Modifier.restrictWidthAccordingToSizeClass() = composed {
         Modifier.widthIn(max = maxWidth)
     }
     this.then(modifier)
+}
+
+/** Returns a [State]`<Boolean>` that indicates whether or not the soft keyboard is open. */
+@Composable fun imeIsOpen(): State<Boolean> {
+    val imeIsOpen = remember { mutableStateOf(false) }
+    val view = LocalView.current
+    DisposableEffect(view) {
+        val listener = ViewTreeObserver.OnGlobalLayoutListener {
+            imeIsOpen.value = ViewCompat.getRootWindowInsets(view)
+                ?.isVisible(WindowInsetsCompat.Type.ime()) ?: true
+        }
+        view.viewTreeObserver.addOnGlobalLayoutListener(listener)
+        onDispose { view.viewTreeObserver.removeOnGlobalLayoutListener(listener) }
+    }
+    return imeIsOpen
 }
 
 fun Int.toPlaybackStateString() = when (this) {
