@@ -18,10 +18,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.SnackbarDuration
-import androidx.compose.material.SnackbarHostState
-import androidx.compose.material.rememberScaffoldState
+import androidx.compose.material.*
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -267,10 +264,11 @@ class MainActivity : ComponentActivity() {
                 // is divided by two, then 28dp is added to to account for the
                 // media controller bar's rounded corner radius, then because
                 // the constraints do not account for it, either the entire
-                // start padding or half of the top padding is added. Only
-                // half the top padding is added because space is more
-                // constrained when the media controller bar is being aligned
-                // to the screen's end.
+                // start padding (for bottom aligned layouts in portrait) or
+                // half of the top padding (for end aligned layouts in landscape)
+                // is added. Only half the top padding is added because space is
+                // more constrained when the media controller bar is being
+                // aligned to the screen's end.
                 height = if (!alignToEnd) 56.dp else
                     (constraints.maxHeight / 2f).toDp() +
                     28.dp - padding.calculateTopPadding() / 2,
@@ -329,11 +327,18 @@ class MainActivity : ComponentActivity() {
                 currentPreset = currentPreset,
                 currentIsModified = currentPresetIsModified,
                 presetListProvider = { list },
-                onPresetClick = { currentPreset = it
-                                  presetSelectorIsVisible = false },
-                onPresetRenameRequest = { preset, newName -> list.replaceAll { if (it != preset) it else Preset(newName) }},
+                onPresetRenameRequest = { preset, newName ->
+                    list.replaceAll {
+                        if (it != preset) it
+                        else Preset(newName)
+                    }
+                },
+                onPresetOverwriteRequest = { presetSelectorIsVisible = false },
                 onPresetDeleteRequest = list::remove,
-                onOverwriteCurrentPresetRequest = { presetSelectorIsVisible = false },
+                onPresetClick = {
+                    currentPreset = it
+                    presetSelectorIsVisible = false
+                },
                 onNewPresetNameChange = { newPresetName = it },
                 newPresetNameValidatorMessage = nameValidatorMessage,
                 onCreateNewPresetRequest = remember { {
@@ -355,7 +360,9 @@ class MainActivity : ComponentActivity() {
     ) {
         AnimatedVisibility( // add track button
             visible = visible,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(padding),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(padding),
             enter = fadeIn(tween()) + scaleIn(overshootTweenSpec()),
             exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTweenSpec()),
         ) {

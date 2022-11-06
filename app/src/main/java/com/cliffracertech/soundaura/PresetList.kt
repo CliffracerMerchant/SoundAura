@@ -2,15 +2,13 @@
  * License 2.0. See license.md in the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -23,14 +21,34 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
-import kotlinx.coroutines.delay
 
+/**
+ * Show a dialog asking the user to confirm that they would like to overwrite
+ * the [Preset] whose name is equal to [currentPresetName] with any current
+ * changes. The cancel and ok buttons will invoke [onDismissRequest] and
+ * [onConfirm], respectively.
+ */
+@Composable fun ConfirmPresetOverwriteDialog(
+    currentPresetName: String,
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit,
+) = SoundAuraDialog(
+    title = stringResource(R.string.confirm_overwrite_preset_dialog_title),
+    text = stringResource(R.string.confirm_overwrite_preset_dialog_message, currentPresetName),
+    onDismissRequest = onDismissRequest,
+    onConfirm = {
+        onConfirm()
+        onDismissRequest()
+    })
+
+/**
+ * Show a dialog asking the user to confirm that they want
+ * to delete the [Preset] whose name equals [presetName].
+ */
 @Composable fun ConfirmDeletePresetDialog(
     presetName: String,
     onDismissRequest: () -> Unit,
@@ -45,39 +63,30 @@ import kotlinx.coroutines.delay
         onDismissRequest()
     })
 
-@Composable fun AutoscrollText(
-    text: String,
-    modifier: Modifier = Modifier,
-    overflow: TextOverflow = TextOverflow.Ellipsis,
-    style: TextStyle = LocalTextStyle.current,
-) = BoxWithConstraints(modifier, Alignment.Center, propagateMinConstraints = true)
-{
-    val scrollState = rememberScrollState()
-    var shouldAnimate by remember { mutableStateOf(true) }
-    var animationDuration by remember { mutableStateOf(0) }
-    if (animationDuration > 0)
-        LaunchedEffect(shouldAnimate) {
-            scrollState.animateScrollTo(scrollState.maxValue,
-            tween(animationDuration, 2000, LinearEasing))
-            delay(2000)
-            scrollState.animateScrollTo(0)
-            shouldAnimate = !shouldAnimate
-        }
-    Text(text,
-        modifier = Modifier.horizontalScroll(scrollState, false),
-        overflow = overflow,
-        maxLines = 1,
-        onTextLayout = {
-            val overflowAmount = it.size.width - constraints.maxWidth
-            animationDuration = overflowAmount.coerceAtLeast(0) * 10
-        }, style = style)
-}
-
+/**
+ * A view to display the name and modified status of a [Preset] instance. An
+ * options button is also provided that provides options to rename, overwrite,
+ * or delete the preset.
+ *
+ * @param modifier The [Modifier] to use for the view
+ * @param preset The [Preset] instance whose name is being displayed
+ * @param isModified Whether or not the [Preset] has unsaved changes. This will
+ *     be indicated by an asterisk next to the [Preset]'s name.
+ * @param onRenameRequest The callback that will be invoked when the user has
+ *     requested that the [Preset]'s name be changed to the String parameter
+ * @param onOverwriteRequest The callback that will be invoked when the user
+ *     has requested that the [Preset] be overwritten with the current track/
+ *     volume combination
+ * @param onDeleteRequest The callback that will be invoked when the user has
+ *     requested that the [Preset] be deleted
+ * @param onClick The callback that will be invoked when the user clicks the view
+ */
 @Composable fun PresetView(
     modifier: Modifier = Modifier,
     preset: Preset,
     isModified: Boolean,
     onRenameRequest: (String) -> Unit,
+    onOverwriteRequest: () -> Unit,
     onDeleteRequest: () -> Unit,
     onClick: () -> Unit
 ) = Row(
@@ -94,13 +103,14 @@ import kotlinx.coroutines.delay
     Row(Modifier.weight(1f).padding(start = 18.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AutoscrollText(preset.name, Modifier.weight(1f, false))
+        MarqueeText(preset.name, Modifier.weight(1f, false))
         if (isModified)
             Text(" *", style = LocalTextStyle.current.copy(fontSize = 18.sp))
     }
     var showingOptionsMenu by rememberSaveable { mutableStateOf(false) }
     var showingRenameDialog by rememberSaveable { mutableStateOf(false) }
     var showingDeleteDialog by rememberSaveable { mutableStateOf(false) }
+    var showingOverwriteDialog by rememberSaveable { mutableStateOf(false) }
 
     IconButton({ showingOptionsMenu = true }) {
         Icon(imageVector = Icons.Default.MoreVert,
@@ -117,6 +127,11 @@ import kotlinx.coroutines.delay
             }) { Text(stringResource(R.string.rename)) }
 
             DropdownMenuItem(onClick = {
+                showingOverwriteDialog = true
+                showingOptionsMenu = false
+            }) { Text(stringResource(R.string.overwrite)) }
+
+            DropdownMenuItem(onClick = {
                 showingDeleteDialog = true
                 showingOptionsMenu = false
             }) { Text(stringResource(R.string.remove)) }
@@ -128,22 +143,57 @@ import kotlinx.coroutines.delay
             onDismissRequest = { showingRenameDialog = false },
             onConfirm = onRenameRequest)
 
+    if (showingOverwriteDialog)
+        ConfirmPresetOverwriteDialog(
+            currentPresetName = preset.name,
+            onDismissRequest = { showingOverwriteDialog = false },
+            onConfirm = onOverwriteRequest)
+
     if (showingDeleteDialog)
         ConfirmDeletePresetDialog(preset.name,
             onDismissRequest = { showingDeleteDialog = false },
             onConfirm = onDeleteRequest)
 }
 
+/**
+ * Display a list of [Preset]s, with an options menu for each [Preset]
+ * to allow for renaming, overwriting, and deletion. Optionally, a single
+ * [Preset] identified as the active one will have the [selectionBrush]
+ * applied to it to indicate this status.
+ *
+ * @param modifier The [Modifier] to use for the [Preset] list
+ * @param shape The shape to use for the [Preset] list. This is passed as a
+ *     parameter instead of allowing it to be set through the [Modifier] so
+ *     that the shape of each item in the list can be inferred from its
+ *     position, allowing the selection brush to not go outside its parent's
+ *     bounds.
+ * @param activePreset The [Preset], if any, currently marked as the active one
+ * @param activePresetIsModified Whether or not the [Preset] marked as the
+ *     active one has been modified. An asterisk will be placed next to its
+ *     name in this case to indicate this to the user.
+ * @param selectionBrush The [Brush] that will be applied to the active
+ *     [Preset] to indicate its status as the active [Preset]
+ * @param presetListProvider A lambda that returns the list of presets when invoked
+ * @param onPresetClick The callback that will be invoked when the user clicks on a [Preset]
+ * @param onPresetRenameRequest The callback that will be invoked when the user
+ *     has requested that the [Preset] parameter be renamed to the [String] parameter
+ * @param onPresetOverwriteRequest The callback that will be invoked when the
+ *     user has requested the current track / volume combination to overwrite
+ *     the one currently associated with the [Preset] parameter
+ * @param onPresetDeleteRequest The callback that will be invoked when the user
+ *     has requested that the [Preset] parameter be deleted
+ */
 @Composable fun PresetList(
     modifier: Modifier = Modifier,
     shape: CornerBasedShape = MaterialTheme.shapes.large,
-    currentPreset: Preset? = null,
-    currentIsModified: Boolean,
+    activePreset: Preset? = null,
+    activePresetIsModified: Boolean,
     selectionBrush: Brush,
     presetListProvider: () -> List<Preset>,
+    onPresetRenameRequest: (Preset, String) -> Unit,
+    onPresetOverwriteRequest: (Preset) -> Unit,
+    onPresetDeleteRequest: (Preset) -> Unit,
     onPresetClick: (Preset) -> Unit,
-    onRenameRequest: (Preset, String) -> Unit,
-    onDeleteRequest: (Preset) -> Unit
 ) {
     LazyColumn(modifier.background(MaterialTheme.colors.surface, shape)) {
         val list = presetListProvider()
@@ -152,7 +202,7 @@ import kotlinx.coroutines.delay
             key = { _, preset -> preset.name },
             contentType = { _, _ -> }
         ) { index, preset ->
-            val isSelected = preset == currentPreset
+            val isSelected = preset == activePreset
             val itemModifier = remember(list.size, index, isSelected) {
                 if (!isSelected) Modifier
                 else Modifier.background(selectionBrush, alpha = 0.5f, shape = when {
@@ -166,9 +216,10 @@ import kotlinx.coroutines.delay
                 PresetView(
                     modifier = itemModifier,
                     preset = preset,
-                    isModified = preset == currentPreset && currentIsModified,
-                    onRenameRequest = { onRenameRequest(preset, it) },
-                    onDeleteRequest = { onDeleteRequest(preset) },
+                    isModified = preset == activePreset && activePresetIsModified,
+                    onRenameRequest = { onPresetRenameRequest(preset, it) },
+                    onOverwriteRequest = { onPresetOverwriteRequest(preset) },
+                    onDeleteRequest = { onPresetDeleteRequest(preset) },
                     onClick = { onPresetClick(preset) })
                 if (index != list.lastIndex)
                     Divider()
@@ -182,13 +233,14 @@ fun PresetListPreview() = SoundAuraTheme {
     val list = List(4) { Preset("Super Duper Extra Really Long Preset Name$it") }
     var selectedPreset by remember { mutableStateOf(list.first()) }
     PresetList(
-        currentPreset = selectedPreset,
-        currentIsModified = true,
+        activePreset = selectedPreset,
+        activePresetIsModified = true,
         selectionBrush = Brush.horizontalGradient(
             listOf(MaterialTheme.colors.primaryVariant,
                    MaterialTheme.colors.secondaryVariant)),
-        onRenameRequest = { _, _ -> },
-        onDeleteRequest = {},
         presetListProvider = { list },
-        onPresetClick = { selectedPreset = it })
+        onPresetClick = { selectedPreset = it },
+        onPresetRenameRequest = { _, _ -> },
+        onPresetDeleteRequest = {},
+        onPresetOverwriteRequest = {})
 }

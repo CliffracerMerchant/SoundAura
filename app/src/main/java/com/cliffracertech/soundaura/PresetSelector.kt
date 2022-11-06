@@ -24,138 +24,6 @@ import androidx.compose.ui.window.DialogProperties
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 
 /**
- * Show a [PresetList] of [Preset]s (with the currently playing preset, if any,
- * highlighted) for the user to choose from, along with buttons to save changes
- * to the current preset and to create a new preset.
- *
- * @param modifier The [Modifier] to use for the PresetSelector
- * @param onCloseButtonClick The callback that will be invoked when the user
- *     clicks the close button
- * @param backgroundBrush The [Brush] that will be used to paint the
- *     background of the selector
- * @param currentPreset The currently active [Preset], if any
- * @param currentIsModified Whether or not the current preset has been modified
- *     since the last time it was saved
- * @param presetListProvider A lambda that will return the list of presets when invoked
- * @param onPresetClick The callback that will be invoked when the user clicks
- *     on a preset from the list
- * @param onPresetRenameRequest The callback that will be invoked when the user
- *     requests the renaming of the [Preset] parameter to the provided [String] value
- * @param onPresetDeleteRequest The callback that will be invoked when the user
- *     requests the deletion of the [Preset] parameter
- * @param onOverwriteCurrentPresetRequest The callback that will be invoked
- *     when the user requests that the [Preset] parameter has any current
- *     changes saved
- * @param onNewPresetNameChange The callback that will be invoked when the user
- *     has entered a new value in the name field during the creation of a new preset
- * @param newPresetNameValidatorMessage A message describing why the currently
- *     input value for a new [Preset]'s name is not acceptable, or null if the
- *     current name is acceptable.
- * @param onCreateNewPresetRequest The callback that will be invoked when the
- *     user requests the creation of a new [Preset] with the provided name. The
- *     returned value should indicate whether or not the new [Preset] will be
- *     created, in which case the inner [NewPresetDialog] will close, or not
- *     acceptable, in which case the dialog will remain open.
- */
-@Composable fun PresetSelector(
-    modifier: Modifier = Modifier,
-    onCloseButtonClick: () -> Unit,
-    backgroundBrush: Brush,
-    currentPreset: Preset? = null,
-    currentIsModified: Boolean,
-    presetListProvider: () -> List<Preset>,
-    onPresetClick: (Preset) -> Unit,
-    onPresetRenameRequest: (Preset, String) -> Unit,
-    onPresetDeleteRequest: (Preset) -> Unit,
-    onOverwriteCurrentPresetRequest: () -> Unit,
-    onNewPresetNameChange: (String) -> Unit,
-    newPresetNameValidatorMessage: String?,
-    onCreateNewPresetRequest: (String) -> Boolean,
-) = Column(modifier.background(backgroundBrush, MaterialTheme.shapes.large)) {
-
-    Row(modifier = Modifier.padding(start = 16.dp, top = 4.dp,
-                                    bottom = 2.dp, end = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Spacer(Modifier.weight(1f))
-        Text(stringResource(R.string.preset_selector_title),
-            style = MaterialTheme.typography.h6)
-        Spacer(Modifier.weight(1f))
-        IconButton(onClick = onCloseButtonClick) {
-            Icon(Icons.Default.Close, stringResource(R.string.close_preset_selector_description))
-        }
-    }
-    PresetList(
-        modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
-        shape = MaterialTheme.shapes.medium,
-        currentPreset = currentPreset,
-        currentIsModified = currentIsModified,
-        selectionBrush = backgroundBrush,
-        presetListProvider = presetListProvider,
-        onPresetClick = onPresetClick,
-        onRenameRequest = onPresetRenameRequest,
-        onDeleteRequest = onPresetDeleteRequest)
-
-    HorizontalDivider()
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
-        var showingOverwritePresetDialog by rememberSaveable { mutableStateOf(false) }
-        TextButton(
-            onClick = { showingOverwritePresetDialog = true },
-            modifier = Modifier.minTouchTargetSize().weight(1f),
-            enabled = currentPreset != null,
-            shape = MaterialTheme.shapes.large.bottomStartShape(),
-        ) {
-            Text(stringResource(R.string.save_preset_changes_button_text),
-                 color = MaterialTheme.colors.onPrimary)
-        }
-        VerticalDivider()
-        if (showingOverwritePresetDialog && currentPreset != null)
-            ConfirmPresetOverwriteDialog(
-                currentPresetName = currentPreset.name,
-                onDismissRequest = { showingOverwritePresetDialog = false },
-                onConfirm = {
-                    showingOverwritePresetDialog = false
-                    onOverwriteCurrentPresetRequest()
-                })
-
-        var showingSaveNewPresetDialog by rememberSaveable { mutableStateOf(false) }
-        TextButton(
-            onClick = { showingSaveNewPresetDialog = true },
-            modifier = Modifier.minTouchTargetSize().weight(1f),
-            shape = MaterialTheme.shapes.large.bottomStartShape(),
-        ) {
-            Text(stringResource(R.string.create_new_preset_button_text),
-                 color = MaterialTheme.colors.onPrimary)
-        }
-        if (showingSaveNewPresetDialog)
-            CreateNewPresetDialog(
-                onNameChange = onNewPresetNameChange,
-                nameValidatorMessage = newPresetNameValidatorMessage,
-                onDismissRequest = { showingSaveNewPresetDialog = false },
-                onConfirm = {
-                    if (onCreateNewPresetRequest(it))
-                        showingSaveNewPresetDialog = false
-                })
-    }
-}
-
-/**
- * Show a dialog asking the user to confirm that they would like to overwrite
- * the [Preset] whose name is equal to [currentPresetName] with any current
- * changes. The cancel and ok buttons will invoke [onDismissRequest] and
- * [onConfirm], respectively.
- */
-@Composable fun ConfirmPresetOverwriteDialog(
-    currentPresetName: String,
-    onDismissRequest: () -> Unit,
-    onConfirm: () -> Unit,
-) = SoundAuraDialog(
-    title = stringResource(R.string.confirm_overwrite_preset_dialog_title),
-    text = stringResource(R.string.confirm_overwrite_preset_dialog_message, currentPresetName),
-    onDismissRequest = onDismissRequest,
-    onConfirm = onConfirm)
-
-/**
  * Show a dialog to create a new preset.
  *
  * @Param onNameChange The callback that will be invoked when the user input
@@ -196,13 +64,13 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
         var previousNameValidatorMessage by remember { mutableStateOf("") }
         AnimatedVisibility(nameValidatorMessage != null) {
             Row(Modifier.align(Alignment.CenterHorizontally)
-                        .padding(start = 16.dp, end = 16.dp, top = 8.dp),
+                .padding(start = 16.dp, end = 16.dp, top = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(Icons.Default.Error,
-                     contentDescription = null,
-                     tint = MaterialTheme.colors.error)
+                    contentDescription = null,
+                    tint = MaterialTheme.colors.error)
                 AnimatedContent(nameValidatorMessage ?: previousNameValidatorMessage) {
                     Text(it, Modifier.weight(1f), MaterialTheme.colors.error)
                 }
@@ -210,6 +78,123 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
                     previousNameValidatorMessage = nameValidatorMessage
             }
         }
+    }
+}
+
+/**
+ * Show a [PresetList] of [Preset]s (with the currently playing preset, if any,
+ * highlighted) for the user to choose from, along with buttons to save changes
+ * to the current preset and to create a new preset.
+ *
+ * @param modifier The [Modifier] to use for the PresetSelector
+ * @param onCloseButtonClick The callback that will be invoked when the user
+ *     clicks the close button
+ * @param backgroundBrush The [Brush] that will be used to paint the
+ *     background of the selector
+ * @param activePreset The currently active [Preset], if any
+ * @param activePresetIsModified Whether or not the active preset has been modified
+ *     since the last time it was saved
+ * @param presetListProvider A lambda that will return the list of presets when invoked
+ * @param onPresetRenameRequest The callback that will be invoked when the user
+ *     requests the renaming of the [Preset] parameter to the provided [String] value
+ * @param onPresetOverwriteRequest The callback that will be invoked when the
+ *     user requests the [Preset] parameter to be overwritten with the currently
+ *     playing track / volume combination.
+ * @param onPresetDeleteRequest The callback that will be invoked when the user
+ *     requests the deletion of the [Preset] parameter
+ * @param onPresetClick The callback that will be invoked when the user clicks
+ *     on a preset from the list
+ * @param onNewPresetNameChange The callback that will be invoked when the user
+ *     has entered a new value in the name field during the creation of a new preset
+ * @param newPresetNameValidatorMessage A message describing why the currently
+ *     input value for a new [Preset]'s name is not acceptable, or null if the
+ *     current name is acceptable.
+ * @param onCreateNewPresetRequest The callback that will be invoked when the
+ *     user requests the creation of a new [Preset] with the provided name. The
+ *     returned value should indicate whether or not the new [Preset] will be
+ *     created, in which case the inner [NewPresetDialog] will close, or not
+ *     acceptable, in which case the dialog will remain open.
+ */
+@Composable fun PresetSelector(
+    modifier: Modifier = Modifier,
+    onCloseButtonClick: () -> Unit,
+    backgroundBrush: Brush,
+    activePreset: Preset? = null,
+    activePresetIsModified: Boolean,
+    presetListProvider: () -> List<Preset>,
+    onPresetRenameRequest: (Preset, String) -> Unit,
+    onPresetOverwriteRequest: (Preset) -> Unit,
+    onPresetDeleteRequest: (Preset) -> Unit,
+    onPresetClick: (Preset) -> Unit,
+    onNewPresetNameChange: (String) -> Unit,
+    newPresetNameValidatorMessage: String?,
+    onCreateNewPresetRequest: (String) -> Boolean,
+) = Column(modifier.background(backgroundBrush, MaterialTheme.shapes.large)) {
+
+    Row(modifier = Modifier.padding(start = 16.dp, top = 4.dp,
+                                    bottom = 2.dp, end = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Spacer(Modifier.weight(1f))
+        Text(stringResource(R.string.preset_selector_title),
+            style = MaterialTheme.typography.h6)
+        Spacer(Modifier.weight(1f))
+        IconButton(onClick = onCloseButtonClick) {
+            Icon(Icons.Default.Close, stringResource(R.string.close_preset_selector_description))
+        }
+    }
+    PresetList(
+        modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
+        shape = MaterialTheme.shapes.medium,
+        activePreset = activePreset,
+        activePresetIsModified = activePresetIsModified,
+        selectionBrush = backgroundBrush,
+        presetListProvider = presetListProvider,
+        onPresetClick = onPresetClick,
+        onPresetRenameRequest = onPresetRenameRequest,
+        onPresetOverwriteRequest = onPresetOverwriteRequest,
+        onPresetDeleteRequest = onPresetDeleteRequest)
+
+    HorizontalDivider()
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
+        var showingOverwritePresetDialog by rememberSaveable { mutableStateOf(false) }
+        TextButton(
+            onClick = { showingOverwritePresetDialog = true },
+            modifier = Modifier.minTouchTargetSize().weight(1f),
+            enabled = activePreset != null,
+            shape = MaterialTheme.shapes.large.bottomStartShape(),
+        ) {
+            Text(stringResource(R.string.overwrite),
+                 color = MaterialTheme.colors.onPrimary)
+        }
+        VerticalDivider()
+        if (showingOverwritePresetDialog && activePreset != null)
+            ConfirmPresetOverwriteDialog(
+                currentPresetName = activePreset.name,
+                onDismissRequest = { showingOverwritePresetDialog = false },
+                onConfirm = {
+                    showingOverwritePresetDialog = false
+                    onPresetOverwriteRequest(activePreset)
+                })
+
+        var showingSaveNewPresetDialog by rememberSaveable { mutableStateOf(false) }
+        TextButton(
+            onClick = { showingSaveNewPresetDialog = true },
+            modifier = Modifier.minTouchTargetSize().weight(1f),
+            shape = MaterialTheme.shapes.large.bottomStartShape(),
+        ) {
+            Text(stringResource(R.string.create_new_preset_button_text),
+                 color = MaterialTheme.colors.onPrimary)
+        }
+        if (showingSaveNewPresetDialog)
+            CreateNewPresetDialog(
+                onNameChange = onNewPresetNameChange,
+                nameValidatorMessage = newPresetNameValidatorMessage,
+                onDismissRequest = { showingSaveNewPresetDialog = false },
+                onConfirm = {
+                    if (onCreateNewPresetRequest(it))
+                        showingSaveNewPresetDialog = false
+                })
     }
 }
 
@@ -225,13 +210,13 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
             backgroundBrush = Brush.horizontalGradient(
                 listOf(MaterialTheme.colors.primaryVariant,
                        MaterialTheme.colors.secondaryVariant)),
-            currentPreset = currentPreset,
-            currentIsModified = false,
+            activePreset = currentPreset,
+            activePresetIsModified = false,
             presetListProvider = { list },
             onPresetClick = { currentPreset = it },
             onPresetRenameRequest = { _, _ -> },
             onPresetDeleteRequest = {},
-            onOverwriteCurrentPresetRequest = {},
+            onPresetOverwriteRequest = {},
             newPresetNameValidatorMessage = nameValidatorMessage,
             onNewPresetNameChange = {
                 nameValidatorMessage = if (it.length % 2 == 0) null else
@@ -254,10 +239,10 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
     currentPreset: Preset? = null,
     currentIsModified: Boolean,
     presetListProvider: () -> List<Preset>,
-    onPresetClick: (Preset) -> Unit,
     onPresetRenameRequest: (Preset, String) -> Unit,
+    onPresetOverwriteRequest: (Preset) -> Unit,
     onPresetDeleteRequest: (Preset) -> Unit,
-    onOverwriteCurrentPresetRequest: () -> Unit,
+    onPresetClick: (Preset) -> Unit,
     onNewPresetNameChange: (String) -> Unit,
     newPresetNameValidatorMessage: String?,
     onCreateNewPresetRequest: (String) -> Boolean,
@@ -270,13 +255,13 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
             modifier = modifier.restrictWidthAccordingToSizeClass(),
             onCloseButtonClick = onCloseButtonClick,
             backgroundBrush = backgroundBrush,
-            currentPreset = currentPreset,
-            currentIsModified = currentIsModified,
+            activePreset = currentPreset,
+            activePresetIsModified = currentIsModified,
             presetListProvider = presetListProvider,
-            onPresetClick = onPresetClick,
             onPresetRenameRequest = onPresetRenameRequest,
+            onPresetOverwriteRequest = onPresetOverwriteRequest,
             onPresetDeleteRequest = onPresetDeleteRequest,
-            onOverwriteCurrentPresetRequest = onOverwriteCurrentPresetRequest,
+            onPresetClick = onPresetClick,
             onNewPresetNameChange = onNewPresetNameChange,
             newPresetNameValidatorMessage = newPresetNameValidatorMessage,
             onCreateNewPresetRequest = onCreateNewPresetRequest)

@@ -4,13 +4,16 @@ package com.cliffracertech.soundaura
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.AnimationConstants.DefaultDurationMillis
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
@@ -19,9 +22,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -30,9 +31,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 
 fun Modifier.minTouchTargetSize() =
     sizeIn(minWidth = 48.dp, minHeight = 48.dp)
@@ -243,4 +253,48 @@ fun Modifier.minTouchTargetSize() =
         if (it in linkTextStartIndex..linkTextLastIndex)
             onLinkClick()
     }
+}
+
+/**
+ * Display a single line [Text] that, when width restrictions prevent the
+ * whole line from being visible, automatically scrolls to its end, springs
+ * back to its beginning, and repeats this cycle indefinitely. The parameters
+ * mirror those of [Text], except that the maxLines and the softWrap parameters
+ * are unable to be changed.
+ */
+@Composable fun MarqueeText(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = Color.Unspecified,
+    fontSize: TextUnit = TextUnit.Unspecified,
+    fontStyle: FontStyle? = null,
+    fontWeight: FontWeight? = null,
+    fontFamily: FontFamily? = null,
+    letterSpacing: TextUnit = TextUnit.Unspecified,
+    textDecoration: TextDecoration? = null,
+    textAlign: TextAlign? = null,
+    lineHeight: TextUnit = TextUnit.Unspecified,
+    overflow: TextOverflow = TextOverflow.Clip,
+    onTextLayout: (TextLayoutResult) -> Unit = {},
+    style: TextStyle = LocalTextStyle.current,
+) = BoxWithConstraints(modifier, Alignment.Center) {
+    val scrollState = rememberScrollState()
+    var shouldAnimate by remember { mutableStateOf(true) }
+    var animationDuration by remember { mutableStateOf(0) }
+    if (animationDuration > 0)
+        LaunchedEffect(shouldAnimate) {
+            scrollState.animateScrollTo(scrollState.maxValue,
+                tween(animationDuration, 2000, LinearEasing))
+            delay(2000)
+            scrollState.animateScrollTo(0)
+            shouldAnimate = !shouldAnimate
+        }
+    Text(text, Modifier.horizontalScroll(scrollState, false),
+        color, fontSize, fontStyle, fontWeight, fontFamily, letterSpacing,
+        textDecoration, textAlign, lineHeight, overflow, maxLines = 1,
+        onTextLayout = {
+            onTextLayout(it)
+            val overflowAmount = it.size.width - constraints.maxWidth
+            animationDuration = overflowAmount.coerceAtLeast(0) * 10
+        }, style = style)
 }

@@ -46,8 +46,8 @@ fun Modifier.rotateClockwise() = layout { measurable, constraints ->
         modifier.fillMaxSize()
             .clickable(true, onClickLabel, Role.Button, onClick)
             .then(if (orientation == Orientation.Horizontal)
-                      Modifier.padding(start = 16.dp, end = 8.dp)
-                  else Modifier.padding(top = 16.dp, bottom = 8.dp)
+                      Modifier.padding(start = 12.dp, end = 8.dp)
+                  else Modifier.padding(top = 12.dp, bottom = 8.dp)
                                .rotateClockwise())
     }
     Column(columnModifier, Arrangement.Center, Alignment.CenterHorizontally) {
@@ -57,7 +57,7 @@ fun Modifier.rotateClockwise() = layout { measurable, constraints ->
                  else R.string.playing_preset_description),
              maxLines = 1, style = style)
         Row {
-            AutoscrollText(
+            MarqueeText(
                 text = currentPreset?.name ?:
                     stringResource(R.string.unsaved_preset_description),
                 modifier = Modifier.weight(1f, false),

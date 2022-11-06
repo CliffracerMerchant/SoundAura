@@ -144,7 +144,7 @@ data class PresetTrack(
         deletePresetName(presetName)
     }
 
-    @Query("INSERT INTO preset (name) VALUES (:presetName)")
+    @Query("INSERT OR IGNORE INTO preset (name) VALUES (:presetName)")
     protected abstract suspend fun addPresetName(presetName: String)
 
     @Query("INSERT INTO presetTrack " +
