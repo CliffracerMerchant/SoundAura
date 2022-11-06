@@ -5,11 +5,9 @@ package com.cliffracertech.soundaura
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -18,7 +16,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
@@ -92,7 +89,6 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 ) = Row(
     modifier = modifier
         .minTouchTargetSize()
-        .fillMaxWidth()
         .clickable (
             onClickLabel = stringResource(R.string.preset_click_label, preset.name),
             role = Role.Button,
@@ -109,8 +105,8 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
     }
     var showingOptionsMenu by rememberSaveable { mutableStateOf(false) }
     var showingRenameDialog by rememberSaveable { mutableStateOf(false) }
-    var showingDeleteDialog by rememberSaveable { mutableStateOf(false) }
     var showingOverwriteDialog by rememberSaveable { mutableStateOf(false) }
+    var showingDeleteDialog by rememberSaveable { mutableStateOf(false) }
 
     IconButton({ showingOptionsMenu = true }) {
         Icon(imageVector = Icons.Default.MoreVert,
@@ -162,11 +158,6 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
  * applied to it to indicate this status.
  *
  * @param modifier The [Modifier] to use for the [Preset] list
- * @param shape The shape to use for the [Preset] list. This is passed as a
- *     parameter instead of allowing it to be set through the [Modifier] so
- *     that the shape of each item in the list can be inferred from its
- *     position, allowing the selection brush to not go outside its parent's
- *     bounds.
  * @param activePreset The [Preset], if any, currently marked as the active one
  * @param activePresetIsModified Whether or not the [Preset] marked as the
  *     active one has been modified. An asterisk will be placed next to its
@@ -185,7 +176,6 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
  */
 @Composable fun PresetList(
     modifier: Modifier = Modifier,
-    shape: CornerBasedShape = MaterialTheme.shapes.large,
     activePreset: Preset? = null,
     activePresetIsModified: Boolean,
     selectionBrush: Brush,
@@ -195,7 +185,7 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
     onPresetDeleteRequest: (Preset) -> Unit,
     onPresetClick: (Preset) -> Unit,
 ) {
-    LazyColumn(modifier.background(MaterialTheme.colors.surface, shape)) {
+    LazyColumn(modifier) {
         val list = presetListProvider()
         itemsIndexed(
             items = list,
@@ -205,12 +195,7 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
             val isSelected = preset == activePreset
             val itemModifier = remember(list.size, index, isSelected) {
                 if (!isSelected) Modifier
-                else Modifier.background(selectionBrush, alpha = 0.5f, shape = when {
-                    list.size == 1 ->          shape
-                    index == 0 ->              shape.topShape()
-                    index == list.lastIndex -> shape.bottomShape()
-                    else ->                    RectangleShape
-                })
+                else Modifier.background(selectionBrush, alpha = 0.5f)
             }
             CompositionLocalProvider(LocalContentColor provides MaterialTheme.colors.onSurface) {
                 PresetView(
