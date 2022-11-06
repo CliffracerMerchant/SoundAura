@@ -2,18 +2,24 @@
  * License 2.0. See license.md in the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import androidx.compose.foundation.*
+import android.graphics.Path
+import android.graphics.RectF
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.GenericShape
-import androidx.compose.material.*
+import androidx.compose.material.IconButton
+import androidx.compose.material.LocalContentColor
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -22,6 +28,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.*
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
+import kotlin.math.roundToInt
 
 fun Modifier.rotateClockwise() = layout { measurable, constraints ->
     val placeable = measurable.measure(constraints.copy(
@@ -69,8 +76,10 @@ fun Modifier.rotateClockwise() = layout { measurable, constraints ->
     }
 }
 
-/** Create a [GenericShape] clipped to [clipSize] with rounded corners whose radius is
- * equal to [cornerSize]. [clipSize] will be measured from the right in RTL layouts.*/
+private val rect = RectF()
+
+/** Create a [GenericShape] clipped to [clipSize] with rounded corners whose radius
+ * is equal to [cornerSize], aligned within the parent according to [alignment]. */
 private fun clippedRoundedCornerShape(
     clipSize: DpSize,
     cornerSize: Dp,
@@ -78,23 +87,20 @@ private fun clippedRoundedCornerShape(
     alignment: Alignment,
 ) = with(density) {
     GenericShape { size, ld ->
+        rect.left = 0f
+        rect.top = 0f
+        rect.right = clipSize.width.toPx()
+        rect.bottom = clipSize.height.toPx()
+        val intSize = IntSize(clipSize.width.roundToPx(),
+                              clipSize.height.roundToPx())
+        val parentSize = IntSize(size.width.roundToInt(),
+                                 size.height.roundToInt())
+        val offset = alignment.align(intSize, parentSize, ld)
+        rect.offset(offset.x.toFloat(), offset.y.toFloat())
+
         val cornerRadius = cornerSize.toPx()
-        val endAligned = alignment == Alignment.TopEnd ||
-                         alignment == Alignment.BottomEnd
-        val flipHorizontally = (ld == LayoutDirection.Rtl) xor endAligned
-        val flipVertically = alignment == Alignment.BottomStart ||
-                             alignment == Alignment.BottomEnd
-        addRoundRect(RoundRect(
-            left = if (!flipHorizontally) 0f
-                   else size.width - clipSize.width.toPx(),
-            right = if (flipHorizontally) size.width
-                    else clipSize.width.toPx(),
-            top = if (!flipVertically) 0f
-                  else size.height - clipSize.height.toPx(),
-            bottom = if (flipVertically) size.height
-                     else clipSize.height.toPx(),
-            radiusX = cornerRadius,
-            radiusY = cornerRadius))
+        asAndroidPath().addRoundRect(
+            rect, cornerRadius, cornerRadius, Path.Direction.CW)
     }
 }
 
