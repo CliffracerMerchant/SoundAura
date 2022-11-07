@@ -4,10 +4,11 @@ package com.cliffracertech.soundaura
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -176,6 +177,7 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
  */
 @Composable fun PresetList(
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(),
     activePreset: Preset? = null,
     activePresetIsModified: Boolean,
     selectionBrush: Brush,
@@ -185,15 +187,11 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
     onPresetDeleteRequest: (Preset) -> Unit,
     onPresetClick: (Preset) -> Unit,
 ) {
-    LazyColumn(modifier) {
+    LazyColumn(modifier, contentPadding = contentPadding) {
         val list = presetListProvider()
-        itemsIndexed(
-            items = list,
-            key = { _, preset -> preset.name },
-            contentType = { _, _ -> }
-        ) { index, preset ->
+        items(list, key = { it.name }) { preset ->
             val isSelected = preset == activePreset
-            val itemModifier = remember(list.size, index, isSelected) {
+            val itemModifier = remember(isSelected) {
                 if (!isSelected) Modifier
                 else Modifier.background(selectionBrush, alpha = 0.5f)
             }
@@ -206,8 +204,7 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
                     onOverwriteRequest = { onPresetOverwriteRequest(preset) },
                     onDeleteRequest = { onPresetDeleteRequest(preset) },
                     onClick = { onPresetClick(preset) })
-                if (index != list.lastIndex)
-                    Divider()
+                Divider()
             }
         }
     }
