@@ -130,7 +130,7 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
             DropdownMenuItem(onClick = {
                 showingDeleteDialog = true
                 showingOptionsMenu = false
-            }) { Text(stringResource(R.string.remove)) }
+            }) { Text(stringResource(R.string.delete)) }
         }
     }
 
