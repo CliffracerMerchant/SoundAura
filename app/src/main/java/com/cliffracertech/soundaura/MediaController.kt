@@ -41,7 +41,7 @@ fun Modifier.rotateClockwise() = layout { measurable, constraints ->
     }
 }.rotate(90f)
 
-@Composable private fun CurrentPresetButton(
+@Composable fun CurrentPresetButton(
     orientation: Orientation,
     currentPreset: Preset?,
     currentIsModified: Boolean,

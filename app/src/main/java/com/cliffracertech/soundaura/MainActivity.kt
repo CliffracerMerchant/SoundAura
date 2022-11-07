@@ -27,10 +27,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpSize
@@ -242,46 +242,22 @@ class MainActivity : ComponentActivity() {
                     })
             }
         }
-        MediaControllerBar(
+        FloatingMediaController(
             visible = !showingAppSettings,
             alignToEnd = !widthIsConstrained,
             padding = padding)
         AddTrackButton(visible = !showingAppSettings, padding)
     }
 
-    @Composable private fun BoxWithConstraintsScope.MediaControllerBar(
+    @Composable private fun FloatingMediaController(
         visible: Boolean,
         padding: PaddingValues,
         alignToEnd: Boolean
     ) {
-        val density = LocalDensity.current
-        val ld = LocalLayoutDirection.current
-        val clipSize = remember(constraints, alignToEnd, density) {
-            with (density) { DpSize(
-                // The goal is to have the media controller bar have such a
-                // width/height that the play/pause icon is centered in the
-                // screen's width/height. The main content area's width/height
-                // is divided by two, then 28dp is added to to account for the
-                // media controller bar's rounded corner radius, then because
-                // the constraints do not account for it, either the entire
-                // start padding (for bottom aligned layouts in portrait) or
-                // half of the top padding (for end aligned layouts in landscape)
-                // is added. Only half the top padding is added because space is
-                // more constrained when the media controller bar is being
-                // aligned to the screen's end.
-                height = if (!alignToEnd) 56.dp else
-                    (constraints.maxHeight / 2f).toDp() +
-                    28.dp - padding.calculateTopPadding() / 2,
-                width = if (alignToEnd) 56.dp else
-                    (constraints.maxWidth / 2f).toDp() +
-                    28.dp - padding.calculateStartPadding(ld)
-            )}
-        }
-        val alignment = if (alignToEnd) Alignment.TopEnd
-                        else            Alignment.BottomStart
+        val alignment = (if (alignToEnd) Alignment.TopEnd
+                         else            Alignment.BottomStart) as BiasAlignment
         AnimatedVisibility(
             visible = visible,
-            modifier = Modifier.padding(padding),
             enter = fadeIn(tween(delayMillis = 75)) + scaleIn(overshootTweenSpec(delay = 75)),
             exit = fadeOut(tween(delayMillis = 125)) + scaleOut(anticipateTweenSpec(delay = 75))
         ) {
@@ -293,23 +269,30 @@ class MainActivity : ComponentActivity() {
             ) }
             var currentPreset by remember { mutableStateOf(list.first()) }
             val currentPresetIsModified = true
-            var presetSelectorIsVisible by rememberSaveable { mutableStateOf(false) }
             val isPlaying = boundPlayerService?.isPlaying ?: false
-            val backgroundBrush = Brush.horizontalGradient(listOf(
-                MaterialTheme.colors.primaryVariant,
-                MaterialTheme.colors.secondaryVariant))
-            MediaController(
+            var newPresetName by rememberSaveable { mutableStateOf("")}
+            val startColor = MaterialTheme.colors.primaryVariant
+            val endColor = MaterialTheme.colors.secondaryVariant
+            val backgroundBrush = remember(startColor, endColor) {
+                Brush.horizontalGradient(listOf(startColor, endColor))
+            }
+            FloatingMediaController(
+                modifier = Modifier.padding(padding),
+                backgroundBrush = backgroundBrush,
                 alignment = alignment,
                 isPlaying = isPlaying,
                 onPlayPauseClick = { boundPlayerService?.toggleIsPlaying() },
-                currentPreset = currentPreset,
-                currentPresetIsModified = true,
-                onCurrentPresetClick = {
-                    presetSelectorIsVisible = true
-                }, backgroundBrush = backgroundBrush,
-                clipSize = clipSize,
-                cornerRadius = 28.dp)
-            var newPresetName by rememberSaveable { mutableStateOf("")}
+                activePreset = currentPreset,
+                activePresetIsModified = currentPresetIsModified,
+                presetListProvider = { list },
+                onPresetRenameRequest = { preset, newName ->
+                    list.replaceAll { if (it != preset) it
+                    else Preset(newName) }
+                },
+                onPresetOverwriteRequest = {},
+                onPresetDeleteRequest = list::remove,
+                onPresetClick = { currentPreset = it })
+
             val nameValidator = remember { { newName: String -> when {
                 newName.isBlank() ->
                     "The preset's name must not be blank"
@@ -320,34 +303,6 @@ class MainActivity : ComponentActivity() {
             val nameValidatorMessage by remember { derivedStateOf {
                 nameValidator(newPresetName)
             }}
-            PresetSelectorDialog(
-                visible = presetSelectorIsVisible,
-                onCloseButtonClick = { presetSelectorIsVisible = false },
-                backgroundBrush = backgroundBrush,
-                currentPreset = currentPreset,
-                currentIsModified = currentPresetIsModified,
-                presetListProvider = { list },
-                onPresetRenameRequest = { preset, newName ->
-                    list.replaceAll {
-                        if (it != preset) it
-                        else Preset(newName)
-                    }
-                },
-                onPresetOverwriteRequest = { presetSelectorIsVisible = false },
-                onPresetDeleteRequest = list::remove,
-                onPresetClick = {
-                    currentPreset = it
-                    presetSelectorIsVisible = false
-                },
-                onNewPresetNameChange = { newPresetName = it },
-                newPresetNameValidatorMessage = nameValidatorMessage,
-                onCreateNewPresetRequest = remember { {
-                    if (it.isNotBlank()) {
-                        presetSelectorIsVisible = false
-                        list.add(Preset(it))
-                        true
-                    } else false
-                }})
         }
     }
 
