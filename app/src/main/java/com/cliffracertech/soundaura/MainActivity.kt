@@ -14,23 +14,29 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.animation.*
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.*
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.SnackbarDuration
+import androidx.compose.material.SnackbarHostState
+import androidx.compose.material.rememberScaffoldState
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpSize
@@ -242,20 +248,46 @@ class MainActivity : ComponentActivity() {
                     })
             }
         }
+        var showingPresetSelector by remember { mutableStateOf(false) }
         FloatingMediaController(
             visible = !showingAppSettings,
-            alignToEnd = !widthIsConstrained,
-            padding = padding)
-        AddTrackButton(visible = !showingAppSettings, padding)
+            showingPresetSelector = showingPresetSelector,
+            onActivePresetClick = { showingPresetSelector = true },
+            onCloseButtonClick = { showingPresetSelector = false },
+            padding = padding,
+            alignToEnd = !widthIsConstrained)
+
+
+        val density = LocalDensity.current
+        // Different stiffnesses are used so that the add button
+        // moves in a swooping movement instead of a linear one
+        val addPresetButtonXOffset by animateFloatAsState(
+            targetValue = if (!showingPresetSelector) 0f
+                          else with(density) { (-12).dp.toPx() })
+        val addPresetButtonYOffset by animateFloatAsState(
+            targetValue = if (!showingPresetSelector) 0f
+                          else with(density) { (-12).dp.toPx() },
+            animationSpec = spring(stiffness = Spring.StiffnessLow))
+        AddTrackButton(
+            visible = !showingAppSettings,
+            modifier = Modifier
+                .padding(padding)
+                .graphicsLayer {
+                    translationX = addPresetButtonXOffset
+                    translationY = addPresetButtonYOffset
+                })
     }
 
     @Composable private fun FloatingMediaController(
         visible: Boolean,
+        showingPresetSelector: Boolean,
+        onActivePresetClick: () -> Unit,
+        onCloseButtonClick: () -> Unit,
         padding: PaddingValues,
         alignToEnd: Boolean
     ) {
-        val alignment = (if (alignToEnd) Alignment.TopEnd
-                         else            Alignment.BottomStart) as BiasAlignment
+        val alignment = if (alignToEnd) Alignment.TopEnd
+                        else            Alignment.BottomStart
         AnimatedVisibility(
             visible = visible,
             enter = fadeIn(tween(delayMillis = 75)) + scaleIn(overshootTweenSpec(delay = 75)),
@@ -266,7 +298,7 @@ class MainActivity : ComponentActivity() {
                 Preset("Super duper extra really long preset name 1"),
                 Preset("Super duper extra really long preset name 2"),
                 Preset("Super duper extra really long preset name 3")
-            ) }
+            )}
             var currentPreset by remember { mutableStateOf(list.first()) }
             val currentPresetIsModified = true
             val isPlaying = boundPlayerService?.isPlaying ?: false
@@ -278,12 +310,14 @@ class MainActivity : ComponentActivity() {
             }
             FloatingMediaController(
                 modifier = Modifier.padding(padding),
+                showingPresetSelector = showingPresetSelector,
                 backgroundBrush = backgroundBrush,
-                alignment = alignment,
+                alignment = alignment as BiasAlignment,
                 isPlaying = isPlaying,
                 onPlayPauseClick = { boundPlayerService?.toggleIsPlaying() },
                 activePreset = currentPreset,
                 activePresetIsModified = currentPresetIsModified,
+                onActivePresetClick = onActivePresetClick,
                 presetListProvider = { list },
                 onPresetRenameRequest = { preset, newName ->
                     list.replaceAll { if (it != preset) it
@@ -291,6 +325,7 @@ class MainActivity : ComponentActivity() {
                 },
                 onPresetOverwriteRequest = {},
                 onPresetDeleteRequest = list::remove,
+                onCloseButtonClick = onCloseButtonClick,
                 onPresetClick = { currentPreset = it })
 
             val nameValidator = remember { { newName: String -> when {
@@ -311,15 +346,13 @@ class MainActivity : ComponentActivity() {
      * with padding equal to the parameter [padding]. */
     @Composable private fun BoxScope.AddTrackButton(
         visible: Boolean,
-        padding: PaddingValues,
+        modifier: Modifier,
     ) {
         AnimatedVisibility( // add track button
             visible = visible,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(padding),
-            enter = fadeIn(tween()) + scaleIn(overshootTweenSpec()),
-            exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTweenSpec()),
+            modifier = modifier.align(Alignment.BottomEnd),
+            enter = fadeIn(tween()) + scaleIn(overshootTween()),
+            exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTween()),
         ) {
             AddLocalFilesButton(MaterialTheme.colors.secondaryVariant)
         }

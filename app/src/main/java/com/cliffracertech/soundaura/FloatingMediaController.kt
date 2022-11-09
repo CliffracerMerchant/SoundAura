@@ -142,6 +142,8 @@ private val path = Path()
  * a new preset.
  *
  * @param modifier The [Modifier] to use for the button / popup
+ * @param showingPresetSelector Whether or not the floating button should be
+ *     expanded to show the preset selector
  * @param backgroundBrush A [Brush] to use as the background. This is passed
  *     as a separate parameter instead of allowing the caller to accomplish
  *     this through a [Modifier] so that the [Brush] can be applied across the
@@ -154,6 +156,8 @@ private val path = Path()
  * @param onPlayPauseClick The callback that will be invoked when the play/pause button is clicked
  * @param activePreset The actively playing [Preset], if any
  * @param activePresetIsModified Whether or not the active preset has unsaved changes
+ * @param onActivePresetClick The callback that will be invoked when the active
+ *     preset is clicked
  * @param presetListProvider A lambda that will return the list of presets when invoked
  * @param onPresetRenameRequest The callback that will be invoked when the user
  *     requests the renaming of the [Preset] parameter to the provided [String] value
@@ -162,11 +166,14 @@ private val path = Path()
  *     playing track / volume combination.
  * @param onPresetDeleteRequest The callback that will be invoked when the user
  *     requests the deletion of the [Preset] parameter
+ * @param onCloseButtonClick The callback that will be invoked when
+ *     [showingPresetSelector] is true and the user clicks the close button
  * @param onPresetClick The callback that will be invoked when the user clicks
  *     on a preset from the list
  */
 @Composable fun FloatingMediaController(
     modifier: Modifier = Modifier,
+    showingPresetSelector: Boolean,
     backgroundBrush: Brush,
     cornerRadius: Dp = 28.dp,
     alignment: BiasAlignment,
@@ -174,16 +181,17 @@ private val path = Path()
     onPlayPauseClick: () -> Unit,
     activePreset: Preset?,
     activePresetIsModified: Boolean,
+    onActivePresetClick: () -> Unit,
     presetListProvider: () -> List<Preset>,
     onPresetRenameRequest: (Preset, String) -> Unit,
     onPresetOverwriteRequest: (Preset) -> Unit,
     onPresetDeleteRequest: (Preset) -> Unit,
+    onCloseButtonClick: () -> Unit,
     onPresetClick: (Preset) -> Unit,
 ) = BoxWithConstraints(modifier.fillMaxSize()) {
     require(alignment == Alignment.BottomStart || alignment == Alignment.TopEnd)
-    var isExpanded by remember { mutableStateOf(false) }
-    val expandTransition = updateTransition(isExpanded,
-        label = "MediaController into PresetSelector transition")
+    val expandTransition = updateTransition(showingPresetSelector,
+        label = "FloatingMediaController transition")
     val density = LocalDensity.current
     val collapsedDpSize = remember(constraints, alignment, density) {
         with (density) { DpSize(
@@ -214,12 +222,12 @@ private val path = Path()
                        constraints.maxHeight.toFloat())
     )}
     val animatedSize by expandTransition.animateSize(
-//        transitionSpec = { tween(2000, 0) },
-        label = "MediaController into PresetSelector size transition",
+        transitionSpec = { spring(stiffness = 700f) },
+        label = "FloatingMediaController size transition",
         targetValueByState = { if (it) presetSelectorSize else collapsedSize })
     val transitionProgress by expandTransition.animateFloat(
-//        transitionSpec = { tween(2000, 0) },
-        label = "MediaController into PresetSelector transition progress",
+        transitionSpec = { spring(stiffness = 700f) },
+        label = "FloatingMediaController transition progress",
         targetValueByState = { if (it) 1f else 0f })
     GradientDialogBox(
         gradient = backgroundBrush,
@@ -236,16 +244,16 @@ private val path = Path()
                 expandTransition = expandTransition,
                 transitionProgress = transitionProgress,
                 isPlaying = isPlaying,
-                onActivePresetClick = { isExpanded = true },
+                onActivePresetClick = onActivePresetClick,
                 onPlayPauseClick = onPlayPauseClick,
-                onCloseButtonClick = { isExpanded = false },
+                onCloseButtonClick = onCloseButtonClick,
                 activePreset = activePreset,
                 activePresetIsModified = activePresetIsModified)
             if (transitionProgress > 0f) PresetList(
                 modifier = Modifier
                     .fillMaxSize().padding(8.dp, 0.dp, 8.dp, 8.dp)
                     .background(MaterialTheme.colors.surface, MaterialTheme.shapes.large),
-                contentPadding = PaddingValues(bottom = 72.dp),
+                contentPadding = PaddingValues(bottom = 64.dp),
                 activePreset = activePreset,
                 activePresetIsModified = activePresetIsModified,
                 selectionBrush = backgroundBrush,
@@ -253,11 +261,11 @@ private val path = Path()
                 onPresetRenameRequest = onPresetRenameRequest,
                 onPresetOverwriteRequest = {
                     onPresetOverwriteRequest(it)
-                    isExpanded = false
+                    onCloseButtonClick()
                 }, onPresetDeleteRequest = onPresetDeleteRequest,
                 onPresetClick = {
                     onPresetClick(it)
-                    isExpanded = false
+                    onCloseButtonClick()
                 })
         }
     }
@@ -265,6 +273,7 @@ private val path = Path()
 
 @Preview @Composable
 fun FloatingMediaControllerPreview() = SoundAuraTheme {
+    var isExpanded by remember { mutableStateOf(false) }
     var isPlaying by remember { mutableStateOf(false) }
     val list = remember { mutableStateListOf(
         Preset("Super duper extra really long preset name 0"),
@@ -276,15 +285,17 @@ fun FloatingMediaControllerPreview() = SoundAuraTheme {
     Surface(Modifier.size(400.dp, 600.dp), RectangleShape, Color.White) {
         FloatingMediaController(
             modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
+            showingPresetSelector = isExpanded,
             backgroundBrush = Brush.horizontalGradient(
                 listOf(MaterialTheme.colors.primaryVariant,
-                       MaterialTheme.colors.secondaryVariant)
-            ), cornerRadius = 28.dp,
+                       MaterialTheme.colors.secondaryVariant)),
+            cornerRadius = 28.dp,
             alignment = Alignment.BottomStart as BiasAlignment,
             isPlaying = isPlaying,
             onPlayPauseClick = { isPlaying = !isPlaying },
             activePreset = activePreset,
             activePresetIsModified = true,
+            onActivePresetClick = { isExpanded = true },
             presetListProvider = { list },
             onPresetRenameRequest = { preset, newName ->
                 list.replaceAll { if (it != preset) it
@@ -292,6 +303,7 @@ fun FloatingMediaControllerPreview() = SoundAuraTheme {
             },
             onPresetOverwriteRequest = {},
             onPresetDeleteRequest = list::remove,
+            onCloseButtonClick = { isExpanded = false },
             onPresetClick = { activePreset = it })
     }
 }
