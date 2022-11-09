@@ -10,9 +10,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.IconButton
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Surface
+import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
@@ -83,7 +84,7 @@ private val path = Path()
     val playPauseToCloseIconEndPadding by expandTransition.animateDp(
         label = "MediaController play/pause into preset selector close end padding",
         targetValueByState = { if (it) 8.dp else 2.dp })
-    val isExpanded = expandTransition.currentState
+    val isExpandingOrExpanded = expandTransition.targetState
 
     Row(modifier = modifier
         .fillMaxWidth()
@@ -113,13 +114,23 @@ private val path = Path()
                     VerticalDivider(heightFraction = 0.8f)
                 }
         }
-
-        IconButton(onClick = if (isExpanded) onCloseButtonClick
-                             else            onPlayPauseClick) {
-            if (!isExpanded)
-                PlayPauseIcon(isPlaying)
-            else Icon(Icons.Default.Close, stringResource(
-                R.string.close_preset_selector_description))
+        IconButton(onClick = {
+            if (isExpandingOrExpanded) onCloseButtonClick()
+            else                       onPlayPauseClick()
+        }) {
+            PlayPauseCloseIcon(
+                showClose = isExpandingOrExpanded,
+                isPlaying = isPlaying,
+                closeToPlayPause = !isExpandingOrExpanded &&
+                                   expandTransition.currentState,
+                contentDescriptionProvider = { showClose, isPlaying ->
+                    stringResource(when {
+                        showClose -> R.string.close_preset_selector_description
+                        isPlaying -> R.string.pause_button_description
+                        else ->      R.string.play_button_description
+                    })
+                })
+//            Icon(Icons.Default.Close, null)
         }
     }
 }
@@ -203,11 +214,11 @@ private val path = Path()
                        constraints.maxHeight.toFloat())
     )}
     val animatedSize by expandTransition.animateSize(
-//        { tween(2000, 0) },
+//        transitionSpec = { tween(2000, 0) },
         label = "MediaController into PresetSelector size transition",
         targetValueByState = { if (it) presetSelectorSize else collapsedSize })
     val transitionProgress by expandTransition.animateFloat(
-//        { tween(2000, 0) },
+//        transitionSpec = { tween(2000, 0) },
         label = "MediaController into PresetSelector transition progress",
         targetValueByState = { if (it) 1f else 0f })
     GradientDialogBox(

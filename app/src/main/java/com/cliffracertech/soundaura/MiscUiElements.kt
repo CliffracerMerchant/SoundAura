@@ -113,7 +113,6 @@ fun Modifier.minTouchTargetSize() =
     Icon(minusIcon, contentDescription, Modifier.rotate(angle), iconTint)
 }
 
-
 @Composable fun PlayPauseIcon(
     playing: Boolean,
     contentDescription: String =
@@ -129,6 +128,51 @@ fun Modifier.minTouchTargetSize() =
                    else         pauseToPlayPainter,
          contentDescription = contentDescription,
          tint = tint)
+}
+
+/**
+ * A tri-state animated play / pause / close icon.
+ *
+ * @param showClose Whether the icon should show itself as a close icon
+ * @param isPlaying The playing state that the icon should represent when
+ *     [showClose] is false. The icon will be a pause icon when [isPlaying]
+ *     is true, or a play icon when [isPlaying] is false.
+ * @param closeToPlayPause Whether or not the icon should be transitioning
+ *     from the close icon back to the play / pause icon. This parameter
+ *     will have no effect when [showClose] is true, but is necessary when
+ *     showClose is false for the correct animations to play.
+ * @param contentDescriptionProvider A lambda that will return the correct
+ *     contentDescription for the icon provided the showClose and isPlaying
+ *     states
+ * @param tint The tint to use for the icon
+ */
+
+@Composable fun PlayPauseCloseIcon(
+    showClose: Boolean,
+    isPlaying: Boolean,
+    closeToPlayPause: Boolean,
+    contentDescriptionProvider: @Composable (Boolean, Boolean) -> String,
+    tint: Color = LocalContentColor.current
+) {
+    val playToPause = AnimatedImageVector.animatedVectorResource(R.drawable.play_to_pause)
+    val playToPausePainter = rememberAnimatedVectorPainter(playToPause, atEnd = isPlaying)
+    val pauseToPlay = AnimatedImageVector.animatedVectorResource(R.drawable.pause_to_play)
+    val pauseToPlayPainter = rememberAnimatedVectorPainter(pauseToPlay, atEnd = !isPlaying)
+
+    val playToClose = AnimatedImageVector.animatedVectorResource(R.drawable.play_to_close)
+    val playToClosePainter = rememberAnimatedVectorPainter(playToClose, atEnd = showClose)
+    val pauseToClose = AnimatedImageVector.animatedVectorResource(R.drawable.pause_to_close)
+    val pauseToClosePainter = rememberAnimatedVectorPainter(pauseToClose, atEnd = showClose)
+
+    Icon(contentDescription = contentDescriptionProvider(showClose, isPlaying),
+         tint = tint, painter = when {
+            showClose ->        if (isPlaying) pauseToClosePainter
+                                else           playToClosePainter
+            closeToPlayPause -> if (isPlaying) pauseToClosePainter
+                                else           playToClosePainter
+            else ->             if (isPlaying) playToPausePainter
+                                else           pauseToPlayPainter
+         })
 }
 
 /** A simple back arrow [IconButton] for when only the onClick needs changed. */
