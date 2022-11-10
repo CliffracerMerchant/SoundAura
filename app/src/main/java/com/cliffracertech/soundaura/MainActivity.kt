@@ -18,6 +18,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -31,7 +32,6 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -228,7 +228,7 @@ class MainActivity : ComponentActivity() {
             leftToRight = !showingAppSettings
         ) { showingAppSettingsScreen ->
             if (showingAppSettingsScreen)
-                AppSettings(Modifier.fillMaxSize(), padding)
+                AppSettings(padding, Modifier.fillMaxSize())
             else {
                 // The track list's padding must be adjusted depending on the placement of the FABs.
                 val trackListPadding = remember(padding, widthIsConstrained) {
@@ -263,7 +263,8 @@ class MainActivity : ComponentActivity() {
         // moves in a swooping movement instead of a linear one
         val addPresetButtonXOffset by animateFloatAsState(
             targetValue = if (!showingPresetSelector) 0f
-                          else with(density) { (-12).dp.toPx() })
+                          else with(density) { (-12).dp.toPx() },
+            animationSpec = spring(stiffness = 700f))
         val addPresetButtonYOffset by animateFloatAsState(
             targetValue = if (!showingPresetSelector) 0f
                           else with(density) { (-12).dp.toPx() },
@@ -278,7 +279,7 @@ class MainActivity : ComponentActivity() {
                 })
     }
 
-    @Composable private fun FloatingMediaController(
+    @Composable private fun BoxWithConstraintsScope.FloatingMediaController(
         visible: Boolean,
         showingPresetSelector: Boolean,
         onActivePresetClick: () -> Unit,
@@ -290,8 +291,11 @@ class MainActivity : ComponentActivity() {
                         else            Alignment.BottomStart
         AnimatedVisibility(
             visible = visible,
-            enter = fadeIn(tween(delayMillis = 75)) + scaleIn(overshootTweenSpec(delay = 75)),
-            exit = fadeOut(tween(delayMillis = 125)) + scaleOut(anticipateTweenSpec(delay = 75))
+            modifier = Modifier.align(alignment),
+            enter = fadeIn(tween(delayMillis = 75)) +
+                    scaleIn(overshootTween(delay = 75)),
+            exit = fadeOut(tween(delayMillis = 125)) +
+                   scaleOut(anticipateTween(delay = 75))
         ) {
             val list = remember { mutableStateListOf(
                 Preset("Super duper extra really long preset name 0"),
@@ -303,25 +307,55 @@ class MainActivity : ComponentActivity() {
             val currentPresetIsModified = true
             val isPlaying = boundPlayerService?.isPlaying ?: false
             var newPresetName by rememberSaveable { mutableStateOf("")}
+
             val startColor = MaterialTheme.colors.primaryVariant
             val endColor = MaterialTheme.colors.secondaryVariant
             val backgroundBrush = remember(startColor, endColor) {
-                Brush.horizontalGradient(listOf(startColor, endColor))
+                Brush.horizontalGradient(
+                    colors = listOf(startColor, endColor),
+                    startX = 0f,
+                    endX = constraints.maxWidth.toFloat())
+            }
+            val density = LocalDensity.current
+            val collapsedSize = remember(constraints, alignToEnd, density) {
+                with (density) { DpSize(
+                    // The goal is to have the media controller bar have such a
+                    // width/height that the play/pause icon is centered in the
+                    // screen's width/height. The main content area's width/height
+                    // is divided by two, then 28dp is added to to account for the
+                    // media controller bar's rounded corner radius.
+                    height = if (!alignToEnd) 56.dp
+                             else (constraints.maxHeight / 2f).toDp() + 28.dp,
+                    width = if (alignToEnd) 56.dp
+                            else (constraints.maxWidth / 2f).toDp() + 28.dp)
+                }
+            }
+            val presetSelectorSize = remember(constraints, alignToEnd, density) {
+                val widthFraction = if (alignToEnd) 0.4f
+                                    else            1f
+                with (density) {
+                    DpSize(width = (constraints.maxWidth * widthFraction).toDp(),
+                           height = if (!alignToEnd) 350.dp
+                                    else constraints.maxHeight.toDp())
+                }
             }
             FloatingMediaController(
                 modifier = Modifier.padding(padding),
-                showingPresetSelector = showingPresetSelector,
+                orientation = if (alignToEnd) Orientation.Vertical
+                              else            Orientation.Horizontal,
                 backgroundBrush = backgroundBrush,
-                alignment = alignment as BiasAlignment,
+                collapsedSize = collapsedSize,
+                expandedSize = presetSelectorSize,
+                showingPresetSelector = showingPresetSelector,
                 isPlaying = isPlaying,
-                onPlayPauseClick = { boundPlayerService?.toggleIsPlaying() },
+                onPlayPauseClick = ::onPlayPauseClick,
                 activePreset = currentPreset,
                 activePresetIsModified = currentPresetIsModified,
                 onActivePresetClick = onActivePresetClick,
                 presetListProvider = { list },
                 onPresetRenameRequest = { preset, newName ->
                     list.replaceAll { if (it != preset) it
-                    else Preset(newName) }
+                                      else Preset(newName) }
                 },
                 onPresetOverwriteRequest = {},
                 onPresetDeleteRequest = list::remove,
@@ -356,6 +390,10 @@ class MainActivity : ComponentActivity() {
         ) {
             AddLocalFilesButton(MaterialTheme.colors.secondaryVariant)
         }
+    }
+
+    private fun onPlayPauseClick() {
+        boundPlayerService?.toggleIsPlaying()
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?) =

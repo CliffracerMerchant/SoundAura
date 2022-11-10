@@ -88,8 +88,8 @@ fun Modifier.minTouchTargetSize() =
     Box(Modifier.size(24.dp).background(tint, CircleShape))
     AnimatedVisibility(
         visible = !added,
-        enter = scaleIn(overshootTweenSpec()),
-        exit = scaleOut(anticipateTweenSpec()),
+        enter = scaleIn(overshootTween()),
+        exit = scaleOut(anticipateTween()),
     ) {
         Box(Modifier.size(20.dp).background(backgroundColor, CircleShape))
     }
@@ -185,7 +185,7 @@ fun Modifier.minTouchTargetSize() =
     Icon(Icons.Default.Settings, stringResource(R.string.settings))
 }
 
-@Composable fun <T>overshootTweenSpec(
+@Composable fun <T>overshootTween(
     duration: Int = DefaultDurationMillis,
     delay: Int = 0,
 ) = tween<T>(duration, delay) {
@@ -193,7 +193,7 @@ fun Modifier.minTouchTargetSize() =
     t * t * (3 * t + 2) + 1
 }
 
-@Composable fun <T>anticipateTweenSpec(
+@Composable fun <T>anticipateTween(
     duration: Int = DefaultDurationMillis,
     delay: Int = 0,
 ) = tween<T>(duration, delay) {
