@@ -23,7 +23,32 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 
-@Composable private fun MediaControllerToPresetSelectorTitle(
+@Composable private fun MediaControllerPlayPauseStopIcon(
+    expandTransition: Transition<Boolean>,
+    isPlaying: Boolean,
+    onPlayPauseClick: () -> Unit,
+    onCloseButtonClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) = IconButton(modifier = modifier, onClick = {
+    if (expandTransition.targetState)
+        onCloseButtonClick()
+    else onPlayPauseClick()
+}) {
+    PlayPauseCloseIcon(
+        showClose = expandTransition.targetState,
+        isPlaying = isPlaying,
+        closeToPlayPause = !expandTransition.targetState &&
+                           expandTransition.currentState,
+        contentDescriptionProvider = { showClose, isPlaying ->
+            stringResource(when {
+                showClose -> R.string.close_preset_selector_description
+                isPlaying -> R.string.pause_button_description
+                else ->      R.string.play_button_description
+            })
+        })
+}
+
+@Composable private fun HorizontalMediaControllerAndPresetSelectorTitle(
     modifier: Modifier = Modifier,
     expandTransition: Transition<Boolean>,
     transitionProgress: Float,
@@ -34,18 +59,16 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
     activePreset: Preset?,
     activePresetIsModified: Boolean,
 ) {
-    val playPauseToCloseIconEndPadding by expandTransition.animateDp(
+    val endPadding by expandTransition.animateDp(
+        transitionSpec = { spring(stiffness = 700f) },
         label = "MediaController play/pause into preset selector close end padding",
         targetValueByState = { if (it) 8.dp else 2.dp })
-    val isExpandingOrExpanded = expandTransition.targetState
 
-    Row(modifier = modifier
-        .fillMaxWidth()
-        .padding(end = playPauseToCloseIconEndPadding),
+    Row(modifier = modifier.padding(end = endPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.weight(1f), Alignment.Center) {
-            if (transitionProgress != 0f)
+            if (transitionProgress > 0f)
                 Text(stringResource(R.string.preset_selector_title),
                     modifier = Modifier
                         .align(Alignment.Center)
@@ -54,7 +77,7 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
                         .graphicsLayer { alpha = transitionProgress },
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.h6)
-            if (transitionProgress != 1f)
+            if (transitionProgress < 1f)
                 Row(Modifier.align(Alignment.Center)
                     .graphicsLayer { alpha = 1f - transitionProgress },
                 ) {
@@ -67,23 +90,9 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
                     VerticalDivider(heightFraction = 0.8f)
                 }
         }
-        IconButton(onClick = {
-            if (isExpandingOrExpanded) onCloseButtonClick()
-            else                       onPlayPauseClick()
-        }) {
-            PlayPauseCloseIcon(
-                showClose = isExpandingOrExpanded,
-                isPlaying = isPlaying,
-                closeToPlayPause = !isExpandingOrExpanded &&
-                                   expandTransition.currentState,
-                contentDescriptionProvider = { showClose, isPlaying ->
-                    stringResource(when {
-                        showClose -> R.string.close_preset_selector_description
-                        isPlaying -> R.string.pause_button_description
-                        else ->      R.string.play_button_description
-                    })
-                })
-        }
+        MediaControllerPlayPauseStopIcon(
+            expandTransition, isPlaying,
+            onPlayPauseClick, onCloseButtonClick)
     }
 }
 
