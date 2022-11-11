@@ -113,23 +113,6 @@ fun Modifier.minTouchTargetSize() =
     Icon(minusIcon, contentDescription, Modifier.rotate(angle), iconTint)
 }
 
-@Composable fun PlayPauseIcon(
-    playing: Boolean,
-    contentDescription: String =
-        if (playing) stringResource(R.string.pause)
-        else         stringResource(R.string.play),
-    tint: Color = LocalContentColor.current,
-) {
-    val playToPause = AnimatedImageVector.animatedVectorResource(R.drawable.play_to_pause)
-    val playToPausePainter = rememberAnimatedVectorPainter(playToPause, atEnd = playing)
-    val pauseToPlay = AnimatedImageVector.animatedVectorResource(R.drawable.pause_to_play)
-    val pauseToPlayPainter = rememberAnimatedVectorPainter(pauseToPlay, atEnd = !playing)
-    Icon(painter = if (playing) playToPausePainter
-                   else         pauseToPlayPainter,
-         contentDescription = contentDescription,
-         tint = tint)
-}
-
 /**
  * A tri-state animated play / pause / close icon.
  *
@@ -146,7 +129,6 @@ fun Modifier.minTouchTargetSize() =
  *     states
  * @param tint The tint to use for the icon
  */
-
 @Composable fun PlayPauseCloseIcon(
     showClose: Boolean,
     isPlaying: Boolean,
@@ -230,8 +212,7 @@ fun Modifier.minTouchTargetSize() =
     modifier: Modifier = Modifier,
     heightFraction: Float = 1f,
 ) = Box(modifier
-    .width((1.5).dp)
-    .fillMaxHeight(heightFraction)
+    .width((1.5).dp).fillMaxHeight(heightFraction)
     .align(Alignment.CenterVertically)
     .background(LocalContentColor.current.copy(alpha = 0.2f)))
 
@@ -239,8 +220,7 @@ fun Modifier.minTouchTargetSize() =
     modifier: Modifier = Modifier,
     widthFraction: Float = 1f,
 ) = Box(modifier
-    .height((1.5).dp)
-    .fillMaxWidth(widthFraction)
+    .fillMaxWidth(widthFraction).height((1.5).dp)
     .align(Alignment.CenterHorizontally)
     .background(LocalContentColor.current.copy(alpha = 0.2f)))
 
