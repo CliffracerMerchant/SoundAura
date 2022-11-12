@@ -1,0 +1,1 @@
+Add a 'show active tracks first' option to the popup sort options menu.
