@@ -190,15 +190,20 @@ import com.google.accompanist.insets.statusBarsPadding
  * parameter, and a checked or unchecked radio button besides each to show
  * the currently selected value.
  *
- * @param expanded Whether the dropdown menu is displayed.
+ * @param expanded Whether the dropdown menu is displayed
  * @param values An array of all possible values for the enum type,
- *               usually accessed with [enumValues]<T>().
+ *               usually accessed with [enumValues]<T>()
  * @param valueNames An Array<String> containing [String] values to use
- *                   to represent each value of the parameter enum type T.
- * @param currentValue The currently selected enum value.
- * @param onValueChanged The callback that will be invoked when the user taps an item.
+ *                   to represent each value of the parameter enum type T
+ * @param currentValue The currently selected enum value
+ * @param onValueChanged The callback that will be invoked when the user taps an item
  * @param onDismissRequest The callback that will be invoked when the menu should
- *                         be dismissed.
+ *                         be dismissed
+ * @param showOtherContentFirst Whether or not to show additional content passed
+ *     to [otherContent] above the enum value buttons. If false, the additional
+ *     content will be displayed below the enum value buttons instead.
+ * @param otherContent Additional content to display either before or after the
+ *     enum value buttons, according to the value of [showOtherContentsFirst]
  */
 @Composable fun <T> EnumDropDownMenu(
     expanded: Boolean,
@@ -206,8 +211,12 @@ import com.google.accompanist.insets.statusBarsPadding
     valueNames: Array<String>,
     currentValue: T,
     onValueChanged: (T) -> Unit,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
+    showOtherContentFirst: Boolean = true,
+    otherContent: @Composable ColumnScope.() -> Unit = {},
 ) = DropdownMenu(expanded, onDismissRequest) {
+    if (showOtherContentFirst)
+        otherContent()
     values.forEachIndexed { index, value ->
         DropdownMenuItem({ onValueChanged(value); onDismissRequest() }) {
             val name = valueNames.getOrNull(index) ?: "Error"
@@ -219,6 +228,8 @@ import com.google.accompanist.insets.statusBarsPadding
             Icon(vector, name, Modifier.size(36.dp).padding(8.dp))
         }
     }
+    if (!showOtherContentFirst)
+        otherContent()
 }
 
 /**
