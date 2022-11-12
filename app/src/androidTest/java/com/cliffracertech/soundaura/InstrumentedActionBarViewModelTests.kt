@@ -59,9 +59,9 @@ class InstrumentedActionBarViewModelTests {
 
     @Test fun onShowActiveTracksFirstSwitchClick() {
         assertThat(instance.showActiveTracksFirst).isFalse()
-        onShowActiveTracksFirstSwitchClick()
+        instance.onShowActiveTracksFirstSwitchClick()
         assertThat(instance.showActiveTracksFirst).isTrue()
-        onShowActiveTracksFirstSwitchClick()
+        instance.onShowActiveTracksFirstSwitchClick()
         assertThat(instance.showActiveTracksFirst).isFalse()
     }
 

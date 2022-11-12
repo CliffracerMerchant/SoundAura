@@ -215,7 +215,7 @@ class DatabaseTests {
         dao.setName(testTracks[2].uriString, "f track")
         tracks = dao.getAllTracks(Track.Sort.OrderAdded, true, "track").first()
         assertThat(tracks).containsExactly(
-            testTracks[1], testTracks[3], testTracks[0], testTracks[2].copy(name = "f track"), testTracks[0]
+            testTracks[1], testTracks[3], testTracks[0], testTracks[2].copy(name = "f track"),
         ).inOrder()
     }
 
