@@ -2,12 +2,19 @@
  * License 2.0. See license.md in the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.DropdownMenuItem
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Switch
+import androidx.compose.material.TabRowDefaults.Divider
+import androidx.compose.material.Text
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -83,6 +90,7 @@ class ActionBarViewModel(
     modifier: Modifier = Modifier,
 ) {
     val viewModel: ActionBarViewModel = viewModel()
+    var showActiveTracksFirst by rememberSaveable { mutableStateOf(false) }
 
     ListActionBar(
         modifier = modifier,
@@ -99,5 +107,19 @@ class ActionBarViewModel(
         sortOptionNames = Track.Sort.stringValues(),
         currentSortOption = viewModel.trackSort,
         onSortOptionClick = viewModel::onTrackSortOptionClick,
-        otherContent = { SettingsButton(viewModel::onSettingsButtonClick) })
+        otherSortMenuContent = { onDismissRequest ->
+            DropdownMenuItem(onClick = {
+                onDismissRequest()
+                showActiveTracksFirst = !showActiveTracksFirst
+            }) {
+                Text(stringResource(R.string.show_active_tracks_first),
+                     style = MaterialTheme.typography.button)
+                Spacer(Modifier.weight(1f).widthIn(12.dp))
+                Switch(checked = showActiveTracksFirst,
+                       onCheckedChange = null)
+            }
+            Divider()
+        }, otherContent = {
+            SettingsButton(viewModel::onSettingsButtonClick)
+        })
 }
