@@ -136,6 +136,9 @@ data class PresetTrack(
     @Query("SELECT name FROM preset")
     protected abstract fun getPresetList() : Flow<List<Preset>>
 
+    @Query("SELECT EXISTS(SELECT name FROM preset WHERE name = :name)")
+    abstract suspend fun presetNameIsAlreadyInUse(name: String?): Boolean
+
     @Query("WITH presetUriStrings AS " +
                 "(SELECT trackUriString FROM presetTrack WHERE presetName = :presetName) " +
            "UPDATE track SET " +

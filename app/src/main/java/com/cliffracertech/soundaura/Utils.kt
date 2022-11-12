@@ -37,6 +37,14 @@ fun LifecycleOwner.repeatWhenStarted(onStarted: suspend CoroutineScope.() -> Uni
     }
 }
 
+/** Return a State<T> object that is updated with the latest values of the receiver flow,
+ * with an initial value of [initialValue]. [scope] is used for the collection of the flow. */
+fun <T> Flow<T>.collectAsState(initialValue: T, scope: CoroutineScope): State<T> {
+    val state = mutableStateOf(initialValue)
+    onEach { state.value = it }.launchIn(scope)
+    return state
+}
+
 /** Return a [State]`<T>` that contains the most recent value for the [DataStore]
  * preference pointed to by [key], with an initial value of [initialValue]. */
 fun <T> DataStore<Preferences>.preferenceState(

@@ -36,7 +36,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 // The stored context object here is the application
@@ -125,21 +128,29 @@ class AddPresetButtonViewModel(
 
     var showingAddPresetDialog by mutableStateOf(false)
         private set
-    private var newPresetName by mutableStateOf<String?>(null)
-    private fun nameValidator(newName: String?) = when {
-        newName?.isBlank() == true ->
-            "The preset's name must not be blank"
-        newName?.length?.mod(2) == 1 ->
-            "New preset names must have an even number of characters"
+    private val newPresetName = MutableStateFlow<String?>(null)
+
+    private suspend fun nameValidator(newPresetName: String?) = when {
+        newPresetName == null -> null
+        newPresetName.isBlank() -> null
+        else -> dao.presetNameIsAlreadyInUse(newPresetName)
+    }
+
+    private fun nameValidatorResultToMessage(nameIsAlreadyInUse: Boolean?) = when {
+        newPresetName.value?.isBlank() == true ->
+            StringResource(R.string.preset_name_cannot_be_blank_warning_message)
+        nameIsAlreadyInUse == true ->
+            StringResource(R.string.preset_name_already_in_use_warning_message)
         else -> null
     }
 
-    val nameValidatorMessage by derivedStateOf {
-        nameValidator(newPresetName)
-    }
+    val nameValidatorMessage by newPresetName
+        .map(::nameValidator)
+        .map(::nameValidatorResultToMessage)
+        .collectAsState(null, scope)
 
     fun onClick() {
-        this.newPresetName = null
+        newPresetName.value = null
         showingAddPresetDialog = true
     }
 
@@ -148,14 +159,34 @@ class AddPresetButtonViewModel(
     }
 
     fun onNewPresetNameChange(newName: String) {
-        newPresetName = newName
+        newPresetName.value = newName
     }
 
-    fun onDialogConfirm(newPresetName: String) {
-        if (nameValidator(newPresetName) == null) {
-            showingAddPresetDialog = false
-            this.newPresetName = null
-        } else this.newPresetName = newPresetName
+    fun onDialogConfirm() {
+        // nameValidatorResultToMessage intentionally returns null right after
+        // onClick is called, even though the newPresetName at that time is
+        // null (i.e. an invalid name). This allows the user to start entering
+        // a name before the no blank names warning message is displayed. This
+        // check sets newPresetName.value to a blank string instead of null so
+        // that the no blank names warning message is still displayed if they
+        // attempt to confirm the dialog with this initial blank name.
+        if (newPresetName.value == null)
+            newPresetName.value = ""
+        else scope.launch {
+            // Although the create new preset dialog should prevent confirmation
+            // unless nameValidatorMessage is null, we still have to check the
+            // entered name here before we actually add it to the database. This
+            // prevents the case where the user changes the input to an invalid
+            // name, and then confirms the new name before the suspend functions
+            // underlying nameValidatorMessage have a chance to return a non-null
+            // message.
+            val nameValidatorResult = nameValidator(newPresetName.value ?: "")
+            val message = nameValidatorResultToMessage(nameValidatorResult)
+            if (message == null) {
+                showingAddPresetDialog = false
+                newPresetName.value = null
+            } else newPresetName.value = newPresetName.value ?: ""
+        }
     }
 }
 
@@ -200,10 +231,14 @@ enum class AddButtonTarget { Track, Preset }
             onDismissRequest = addTrackViewModel::onDialogDismiss,
             onConfirmRequest = addTrackViewModel::onDialogConfirm)
 
+    val context = LocalContext.current
+    val nameValidatorMessage by remember { derivedStateOf {
+        addPresetViewModel.nameValidatorMessage?.resolve(context)
+    }}
     if (addPresetViewModel.showingAddPresetDialog)
         CreateNewPresetDialog(
             onNameChange = addPresetViewModel::onNewPresetNameChange,
-            nameValidatorMessage = addPresetViewModel.nameValidatorMessage,
+            nameValidatorMessage = nameValidatorMessage,
             onDismissRequest = addPresetViewModel::onDialogDismiss,
             onConfirm = addPresetViewModel::onDialogConfirm)
 
@@ -303,14 +338,13 @@ val List<String>.containsBlanks get() =
  *     entered new name is acceptable, or an error message explaining why the
  *     new name is not acceptable otherwise.
  * @param onDismissRequest The callback that will be invoked when the dialog is dismissed
- * @param onConfirm The callback that will be invoked when the confirm button
- *     has been clicked
+ * @param onConfirm The callback that will be invoked when the confirm button has been clicked
  */
 @Composable fun CreateNewPresetDialog(
     onNameChange: (String) -> Unit,
     nameValidatorMessage: String?,
     onDismissRequest: () -> Unit,
-    onConfirm: (String) -> Unit,
+    onConfirm: () -> Unit,
 ) {
     var currentName by rememberSaveable { mutableStateOf("") }
     SoundAuraDialog(
@@ -319,7 +353,7 @@ val List<String>.containsBlanks get() =
         title = stringResource(R.string.create_new_preset_dialog_title),
         onDismissRequest = onDismissRequest,
         confirmButtonEnabled = nameValidatorMessage == null,
-        onConfirm = { onConfirm(currentName) }
+        onConfirm = onConfirm
     ) {
         TextField(
             onValueChange = {
