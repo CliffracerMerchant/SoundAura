@@ -9,10 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -213,6 +210,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
     modifier: Modifier = Modifier,
     orientation: Orientation,
     backgroundBrush: Brush,
+    contentColor: Color,
     collapsedSize: DpSize,
     expandedSize: DpSize,
     showingPresetSelector: Boolean,
@@ -245,52 +243,55 @@ val Orientation.isVertical get() = this == Orientation.Vertical
         label = "FloatingMediaController height transition",
         targetValueByState = { if (it) expandedSize.height
                                else    collapsedSize.height })
-
-    Column(
-        modifier = modifier
-            .size(animatedWidth, animatedHeight)
-            .background(backgroundBrush, RoundedCornerShape(28.dp)),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        val titleHeight by expandTransition.animateDp(
-            transitionSpec = { spring(stiffness = springStiffness) },
-            label = "FloatingMediaController title height transition",
-        ) { expanded ->
-            if (expanded && orientation.isVertical)
-                collapsedSize.width
-            else collapsedSize.height
-        }
-        MediaControllerAndPresetSelectorTitle(
-            modifier = Modifier.height(titleHeight),
-            orientation = orientation,
-            expandTransition = expandTransition,
-            transitionProgress = transitionProgress,
-            isPlaying = isPlaying,
-            onActivePresetClick = onActivePresetClick,
-            onPlayPauseClick = onPlayPauseClick,
-            onCloseButtonClick = onCloseButtonClick,
-            activePreset = activePreset,
-            activePresetIsModified = activePresetIsModified)
-
-        if (transitionProgress > 0f)
-            PresetList(
-                modifier = Modifier
-                    .fillMaxHeight().padding(8.dp, 0.dp, 8.dp, 8.dp).weight(1f)
-                    .background(MaterialTheme.colors.surface, MaterialTheme.shapes.large),
-                contentPadding = PaddingValues(bottom = 64.dp),
+    CompositionLocalProvider(LocalContentColor provides contentColor) {
+        Column(
+            modifier = modifier
+                .size(animatedWidth, animatedHeight)
+                .background(backgroundBrush, RoundedCornerShape(28.dp)),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            val titleHeight by expandTransition.animateDp(
+                transitionSpec = { spring(stiffness = springStiffness) },
+                label = "FloatingMediaController title height transition",
+            ) { expanded ->
+                if (expanded && orientation.isVertical)
+                    collapsedSize.width
+                else collapsedSize.height
+            }
+            MediaControllerAndPresetSelectorTitle(
+                modifier = Modifier.height(titleHeight),
+                orientation = orientation,
+                expandTransition = expandTransition,
+                transitionProgress = transitionProgress,
+                isPlaying = isPlaying,
+                onActivePresetClick = onActivePresetClick,
+                onPlayPauseClick = onPlayPauseClick,
+                onCloseButtonClick = onCloseButtonClick,
                 activePreset = activePreset,
-                activePresetIsModified = activePresetIsModified,
-                selectionBrush = backgroundBrush,
-                presetListProvider = presetListProvider,
-                onPresetRenameRequest = onPresetRenameRequest,
-                onPresetOverwriteRequest = {
-                    onPresetOverwriteRequest(it)
-                    onCloseButtonClick()
-                }, onPresetDeleteRequest = onPresetDeleteRequest,
-                onPresetClick = {
-                    onPresetClick(it)
-                    onCloseButtonClick()
-                })
+                activePresetIsModified = activePresetIsModified)
+
+            if (transitionProgress > 0f)
+                PresetList(
+                    modifier = Modifier
+                        .fillMaxHeight().weight(1f)
+                        .padding(8.dp, 0.dp, 8.dp, 8.dp)
+                        .background(MaterialTheme.colors.surface,
+                                    MaterialTheme.shapes.large),
+                    contentPadding = PaddingValues(bottom = 64.dp),
+                    activePreset = activePreset,
+                    activePresetIsModified = activePresetIsModified,
+                    selectionBrush = backgroundBrush,
+                    presetListProvider = presetListProvider,
+                    onPresetRenameRequest = onPresetRenameRequest,
+                    onPresetOverwriteRequest = {
+                        onPresetOverwriteRequest(it)
+                        onCloseButtonClick()
+                    }, onPresetDeleteRequest = onPresetDeleteRequest,
+                    onPresetClick = {
+                        onPresetClick(it)
+                        onCloseButtonClick()
+                    })
+        }
     }
 }
 
@@ -315,6 +316,7 @@ fun FloatingMediaControllerPreview() = SoundAuraTheme {
                 backgroundBrush = Brush.horizontalGradient(
                     listOf(MaterialTheme.colors.primaryVariant,
                            MaterialTheme.colors.secondaryVariant)),
+                contentColor = MaterialTheme.colors.onPrimary,
                 collapsedSize = DpSize(220.dp, 56.dp),
                 expandedSize = DpSize(388.dp, 250.dp),
                 showingPresetSelector = isExpanded,

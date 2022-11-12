@@ -352,6 +352,7 @@ class MainActivity : ComponentActivity() {
                 orientation = if (alignToEnd) Orientation.Vertical
                               else            Orientation.Horizontal,
                 backgroundBrush = backgroundBrush,
+                contentColor = MaterialTheme.colors.onPrimary,
                 collapsedSize = collapsedSize,
                 expandedSize = presetSelectorSize,
                 showingPresetSelector = showingPresetSelector,
