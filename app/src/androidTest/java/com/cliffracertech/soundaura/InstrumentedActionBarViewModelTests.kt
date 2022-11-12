@@ -5,11 +5,13 @@ package com.cliffracertech.soundaura
 
 import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.cliffracertech.soundaura.SoundAura.pref_key_showActiveTracksFirst
 import com.cliffracertech.soundaura.SoundAura.pref_key_trackSort
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +31,7 @@ class InstrumentedActionBarViewModelTests {
     private val dataStore = PreferenceDataStoreFactory.create(scope = coroutineScope) {
         context.preferencesDataStoreFile("testDatastore")
     }
+    private val showActiveTracksFirstKey = booleanPreferencesKey(pref_key_showActiveTracksFirst)
     private val trackSortKey = intPreferencesKey(pref_key_trackSort)
     private lateinit var instance: ActionBarViewModel
 
@@ -44,6 +47,22 @@ class InstrumentedActionBarViewModelTests {
         runTest { dataStore.edit { it.clear() } }
         coroutineScope.cancel()
         Dispatchers.resetMain()
+    }
+
+    @Test fun showActiveTracksFirst() {
+        assertThat(instance.showActiveTracksFirst).isFalse()
+        runTest { dataStore.edit { it[showActiveTracksFirstKey] = true } }
+        assertThat(instance.showActiveTracksFirst).isTrue()
+        runTest { dataStore.edit { it[showActiveTracksFirstKey] = false } }
+        assertThat(instance.showActiveTracksFirst).isFalse()
+    }
+
+    @Test fun onShowActiveTracksFirstSwitchClick() {
+        assertThat(instance.showActiveTracksFirst).isFalse()
+        onShowActiveTracksFirstSwitchClick()
+        assertThat(instance.showActiveTracksFirst).isTrue()
+        onShowActiveTracksFirstSwitchClick()
+        assertThat(instance.showActiveTracksFirst).isFalse()
     }
 
     @Test fun trackSort() {
