@@ -114,6 +114,51 @@ class AddTrackButtonViewModel(
     }
 }
 
+@HiltViewModel
+class AddPresetButtonViewModel(
+    private val dao: PresetDao,
+    coroutineScope: CoroutineScope?,
+) : ViewModel() {
+    @Inject constructor(dao: PresetDao) : this(dao, null)
+
+    private val scope = coroutineScope ?: viewModelScope
+
+    var showingAddPresetDialog by mutableStateOf(false)
+        private set
+    private var newPresetName by mutableStateOf<String?>(null)
+    private fun nameValidator(newName: String?) = when {
+        newName?.isBlank() == true ->
+            "The preset's name must not be blank"
+        newName?.length?.mod(2) == 1 ->
+            "New preset names must have an even number of characters"
+        else -> null
+    }
+
+    val nameValidatorMessage by derivedStateOf {
+        nameValidator(newPresetName)
+    }
+
+    fun onClick() {
+        this.newPresetName = null
+        showingAddPresetDialog = true
+    }
+
+    fun onDialogDismiss() {
+        showingAddPresetDialog = false
+    }
+
+    fun onNewPresetNameChange(newName: String) {
+        newPresetName = newName
+    }
+
+    fun onDialogConfirm(newPresetName: String) {
+        if (nameValidator(newPresetName) == null) {
+            showingAddPresetDialog = false
+            this.newPresetName = null
+        } else this.newPresetName = newPresetName
+    }
+}
+
 /** An enum class whose values describe the entities that can be added by the [AddButton]. */
 enum class AddButtonTarget { Track, Preset }
 
@@ -131,23 +176,12 @@ enum class AddButtonTarget { Track, Preset }
     modifier: Modifier = Modifier,
 ) {
     val addTrackViewModel: AddTrackButtonViewModel = viewModel()
-    var showingAddNewPresetDialog by rememberSaveable { mutableStateOf(false) }
-    var newPresetName by rememberSaveable { mutableStateOf("")}
-    val nameValidator = remember { { newName: String -> when {
-        newName.isBlank() ->
-            "The preset's name must not be blank"
-        newName.length % 2 == 1 ->
-            "New preset names must have an even number of characters"
-        else -> null
-    }}}
-    val nameValidatorMessage by remember { derivedStateOf {
-        nameValidator(newPresetName)
-    }}
+    val addPresetViewModel: AddPresetButtonViewModel = viewModel()
 
     FloatingActionButton(
         onClick = { when(target) {
             AddButtonTarget.Track -> addTrackViewModel.onClick()
-            AddButtonTarget.Preset -> showingAddNewPresetDialog = true
+            AddButtonTarget.Preset -> addPresetViewModel.onClick()
         }},
         modifier = modifier,
         backgroundColor = backgroundColor,
@@ -166,12 +200,12 @@ enum class AddButtonTarget { Track, Preset }
             onDismissRequest = addTrackViewModel::onDialogDismiss,
             onConfirmRequest = addTrackViewModel::onDialogConfirm)
 
-    if (showingAddNewPresetDialog)
+    if (addPresetViewModel.showingAddPresetDialog)
         CreateNewPresetDialog(
-            onNameChange = { newPresetName = it },
-            nameValidatorMessage = nameValidatorMessage,
-            onDismissRequest = { showingAddNewPresetDialog = false },
-            onConfirm = { showingAddNewPresetDialog = false })
+            onNameChange = addPresetViewModel::onNewPresetNameChange,
+            nameValidatorMessage = addPresetViewModel.nameValidatorMessage,
+            onDismissRequest = addPresetViewModel::onDialogDismiss,
+            onConfirm = addPresetViewModel::onDialogConfirm)
 
 }
 
