@@ -23,7 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -31,7 +31,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 
 /**
@@ -196,34 +198,41 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 
 /** Compose an explanation for the user about how to add the app's quick
  * settings tile to their status bar. */
-@Composable private fun PreApi33TileTutorial() {
+@Composable private fun ColumnScope.PreApi33TileTutorial() {
     Spacer(Modifier.size(16.dp))
     Text(stringResource(R.string.tile_tutorial_add_tile_text))
-    Column {
-        var showingAddTileHelp by rememberSaveable { mutableStateOf(false) }
-        Row(modifier = Modifier
-                .minTouchTargetSize()
-                .clickable { showingAddTileHelp = !showingAddTileHelp },
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val localTextStyle = LocalTextStyle.current
-            val style = remember(localTextStyle) {
-                localTextStyle.copy(fontWeight = FontWeight.Bold)
-            }
-            Text(stringResource(R.string.tile_tutorial_add_tile_help_button_text),
-                 style = style)
-            val iconRotation by animateFloatAsState(
-                if (showingAddTileHelp) 180f else 0f)
-            Spacer(Modifier.weight(1f))
-            Icon(imageVector = Icons.Default.ExpandMore,
-                contentDescription = stringResource(
-                    if (showingAddTileHelp)
-                        R.string.tile_tutorial_add_tile_help_button_hide_description
-                    else R.string.tile_tutorial_add_tile_help_button_show_description),
-                modifier = Modifier.rotate(iconRotation))
+
+    var showingAddTileHelp by rememberSaveable { mutableStateOf(false) }
+    Row(modifier = Modifier
+            .minTouchTargetSize()
+            .clickable { showingAddTileHelp = !showingAddTileHelp },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val localTextStyle = LocalTextStyle.current
+        val style = remember(localTextStyle) {
+            localTextStyle.copy(fontWeight = FontWeight.Bold)
         }
-        AnimatedVisibility(showingAddTileHelp) {
-            Text(stringResource(R.string.tile_tutorial_add_tile_help_text))
+        Text(stringResource(R.string.tile_tutorial_add_tile_help_button_text),
+             style = style)
+        val iconRotation by animateFloatAsState(
+            if (showingAddTileHelp) 180f else 0f)
+        Spacer(Modifier.weight(1f))
+        Icon(imageVector = Icons.Default.ExpandMore,
+            contentDescription = stringResource(
+                if (showingAddTileHelp)
+                    R.string.tile_tutorial_add_tile_help_button_hide_description
+                else R.string.tile_tutorial_add_tile_help_button_show_description),
+            modifier = Modifier.graphicsLayer { rotationZ = iconRotation })
+    }
+    AnimatedVisibility(showingAddTileHelp) {
+        Text(stringResource(R.string.tile_tutorial_add_tile_help_text))
+    }
+}
+
+@Preview @Composable fun PreApi33TileTutorialPreview() = SoundAuraTheme {
+    Surface(Modifier.padding(12.dp)) {
+        Column {
+            PreApi33TileTutorial()
         }
     }
 }

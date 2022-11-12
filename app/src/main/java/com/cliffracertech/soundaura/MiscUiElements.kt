@@ -4,13 +4,16 @@ package com.cliffracertech.soundaura
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.AnimationConstants.DefaultDurationMillis
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
@@ -19,9 +22,8 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
@@ -29,9 +31,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 
 fun Modifier.minTouchTargetSize() =
     sizeIn(minWidth = 48.dp, minHeight = 48.dp)
@@ -77,8 +88,8 @@ fun Modifier.minTouchTargetSize() =
     Box(Modifier.size(24.dp).background(tint, CircleShape))
     AnimatedVisibility(
         visible = !added,
-        enter = scaleIn(overshootTweenSpec()),
-        exit = scaleOut(anticipateTweenSpec()),
+        enter = scaleIn(overshootTween()),
+        exit = scaleOut(anticipateTween()),
     ) {
         Box(Modifier.size(20.dp).background(backgroundColor, CircleShape))
     }
@@ -102,22 +113,48 @@ fun Modifier.minTouchTargetSize() =
     Icon(minusIcon, contentDescription, Modifier.rotate(angle), iconTint)
 }
 
-
-@Composable fun PlayPauseIcon(
-    playing: Boolean,
-    contentDescription: String =
-        if (playing) stringResource(R.string.pause)
-        else         stringResource(R.string.play),
-    tint: Color,
+/**
+ * A tri-state animated play / pause / close icon.
+ *
+ * @param showClose Whether the icon should show itself as a close icon
+ * @param isPlaying The playing state that the icon should represent when
+ *     [showClose] is false. The icon will be a pause icon when [isPlaying]
+ *     is true, or a play icon when [isPlaying] is false.
+ * @param closeToPlayPause Whether or not the icon should be transitioning
+ *     from the close icon back to the play / pause icon. This parameter
+ *     will have no effect when [showClose] is true, but is necessary when
+ *     showClose is false for the correct animations to play.
+ * @param contentDescriptionProvider A lambda that will return the correct
+ *     contentDescription for the icon provided the showClose and isPlaying
+ *     states
+ * @param tint The tint to use for the icon
+ */
+@Composable fun PlayPauseCloseIcon(
+    showClose: Boolean,
+    isPlaying: Boolean,
+    closeToPlayPause: Boolean,
+    contentDescriptionProvider: @Composable (Boolean, Boolean) -> String,
+    tint: Color = LocalContentColor.current
 ) {
     val playToPause = AnimatedImageVector.animatedVectorResource(R.drawable.play_to_pause)
-    val playToPausePainter = rememberAnimatedVectorPainter(playToPause, atEnd = playing)
+    val playToPausePainter = rememberAnimatedVectorPainter(playToPause, atEnd = isPlaying)
     val pauseToPlay = AnimatedImageVector.animatedVectorResource(R.drawable.pause_to_play)
-    val pauseToPlayPainter = rememberAnimatedVectorPainter(pauseToPlay, atEnd = !playing)
-    Icon(painter = if (playing) playToPausePainter
-                   else         pauseToPlayPainter,
-         contentDescription = contentDescription,
-         tint = tint)
+    val pauseToPlayPainter = rememberAnimatedVectorPainter(pauseToPlay, atEnd = !isPlaying)
+
+    val playToClose = AnimatedImageVector.animatedVectorResource(R.drawable.play_to_close)
+    val playToClosePainter = rememberAnimatedVectorPainter(playToClose, atEnd = showClose)
+    val pauseToClose = AnimatedImageVector.animatedVectorResource(R.drawable.pause_to_close)
+    val pauseToClosePainter = rememberAnimatedVectorPainter(pauseToClose, atEnd = showClose)
+
+    Icon(contentDescription = contentDescriptionProvider(showClose, isPlaying),
+         tint = tint, painter = when {
+            showClose ->        if (isPlaying) pauseToClosePainter
+                                else           playToClosePainter
+            closeToPlayPause -> if (isPlaying) pauseToClosePainter
+                                else           playToClosePainter
+            else ->             if (isPlaying) playToPausePainter
+                                else           pauseToPlayPainter
+         })
 }
 
 /** A simple back arrow [IconButton] for when only the onClick needs changed. */
@@ -130,7 +167,7 @@ fun Modifier.minTouchTargetSize() =
     Icon(Icons.Default.Settings, stringResource(R.string.settings))
 }
 
-@Composable fun <T>overshootTweenSpec(
+@Composable fun <T>overshootTween(
     duration: Int = DefaultDurationMillis,
     delay: Int = 0,
 ) = tween<T>(duration, delay) {
@@ -138,7 +175,7 @@ fun Modifier.minTouchTargetSize() =
     t * t * (3 * t + 2) + 1
 }
 
-@Composable fun <T>anticipateTweenSpec(
+@Composable fun <T>anticipateTween(
     duration: Int = DefaultDurationMillis,
     delay: Int = 0,
 ) = tween<T>(duration, delay) {
@@ -171,9 +208,21 @@ fun Modifier.minTouchTargetSize() =
     AnimatedContent(targetState, modifier, { transition }, content = content)
 }
 
-@Composable fun VerticalDivider() =
-    Box(Modifier.fillMaxHeight().width((1.5).dp)
-        .background(MaterialTheme.colors.onSurface.copy(alpha = 0.12f)))
+@Composable fun RowScope.VerticalDivider(
+    modifier: Modifier = Modifier,
+    heightFraction: Float = 1f,
+) = Box(modifier
+    .width((1.5).dp).fillMaxHeight(heightFraction)
+    .align(Alignment.CenterVertically)
+    .background(LocalContentColor.current.copy(alpha = 0.2f)))
+
+@Composable fun ColumnScope.HorizontalDivider(
+    modifier: Modifier = Modifier,
+    widthFraction: Float = 1f,
+) = Box(modifier
+    .fillMaxWidth(widthFraction).height((1.5).dp)
+    .align(Alignment.CenterHorizontally)
+    .background(LocalContentColor.current.copy(alpha = 0.2f)))
 
 /**
  * Compose a bulleted list of [String]s.
@@ -228,4 +277,48 @@ fun Modifier.minTouchTargetSize() =
         if (it in linkTextStartIndex..linkTextLastIndex)
             onLinkClick()
     }
+}
+
+/**
+ * Display a single line [Text] that, when width restrictions prevent the
+ * whole line from being visible, automatically scrolls to its end, springs
+ * back to its beginning, and repeats this cycle indefinitely. The parameters
+ * mirror those of [Text], except that the maxLines and the softWrap parameters
+ * are unable to be changed.
+ */
+@Composable fun MarqueeText(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = Color.Unspecified,
+    fontSize: TextUnit = TextUnit.Unspecified,
+    fontStyle: FontStyle? = null,
+    fontWeight: FontWeight? = null,
+    fontFamily: FontFamily? = null,
+    letterSpacing: TextUnit = TextUnit.Unspecified,
+    textDecoration: TextDecoration? = null,
+    textAlign: TextAlign? = null,
+    lineHeight: TextUnit = TextUnit.Unspecified,
+    overflow: TextOverflow = TextOverflow.Clip,
+    onTextLayout: (TextLayoutResult) -> Unit = {},
+    style: TextStyle = LocalTextStyle.current,
+) = BoxWithConstraints(modifier, Alignment.Center) {
+    val scrollState = rememberScrollState()
+    var shouldAnimate by remember { mutableStateOf(true) }
+    var animationDuration by remember { mutableStateOf(0) }
+    if (animationDuration > 0)
+        LaunchedEffect(shouldAnimate) {
+            scrollState.animateScrollTo(scrollState.maxValue,
+                tween(animationDuration, 2000, LinearEasing))
+            delay(2000)
+            scrollState.animateScrollTo(0)
+            shouldAnimate = !shouldAnimate
+        }
+    Text(text, Modifier.horizontalScroll(scrollState, false),
+        color, fontSize, fontStyle, fontWeight, fontFamily, letterSpacing,
+        textDecoration, textAlign, lineHeight, overflow, maxLines = 1,
+        onTextLayout = {
+            onTextLayout(it)
+            val overflowAmount = it.size.width - constraints.maxWidth
+            animationDuration = overflowAmount.coerceAtLeast(0) * 10
+        }, style = style)
 }

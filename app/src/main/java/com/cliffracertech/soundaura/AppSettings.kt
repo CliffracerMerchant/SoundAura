@@ -25,8 +25,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable fun AppSettings(
+    contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
-    contentPadding: PaddingValues
 ) = Surface(modifier, color = MaterialTheme.colors.background) {
     LazyColumn(
         contentPadding = contentPadding,

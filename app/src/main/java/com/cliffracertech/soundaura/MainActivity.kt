@@ -14,19 +14,29 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.animation.*
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.*
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.SnackbarDuration
+import androidx.compose.material.SnackbarHostState
+import androidx.compose.material.rememberScaffoldState
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpSize
@@ -205,7 +215,7 @@ class MainActivity : ComponentActivity() {
     @Composable private fun MainContent(
         widthIsConstrained: Boolean,
         padding: PaddingValues,
-    ) = Box(Modifier.fillMaxSize()) {
+    ) = BoxWithConstraints(Modifier.fillMaxSize()) {
         val showingAppSettings = viewModel.showingAppSettings
         val ld = LocalLayoutDirection.current
         // The track list state is remembered here so that the
@@ -218,7 +228,7 @@ class MainActivity : ComponentActivity() {
             leftToRight = !showingAppSettings
         ) { showingAppSettingsScreen ->
             if (showingAppSettingsScreen)
-                AppSettings(Modifier.fillMaxSize(), padding)
+                AppSettings(padding, Modifier.fillMaxSize())
             else {
                 // The track list's padding must be adjusted depending on the placement of the FABs.
                 val trackListPadding = remember(padding, widthIsConstrained) {
@@ -238,60 +248,150 @@ class MainActivity : ComponentActivity() {
                     })
             }
         }
-        FloatingActionButtons(
+        var showingPresetSelector by rememberSaveable { mutableStateOf(false) }
+        MediaController(
             visible = !showingAppSettings,
-            alignToEnd = !widthIsConstrained,
-            padding = padding)
+            showingPresetSelector = showingPresetSelector,
+            onActivePresetClick = { showingPresetSelector = true },
+            onCloseButtonClick = { showingPresetSelector = false },
+            padding = padding,
+            alignToEnd = !widthIsConstrained)
+
+
+        val density = LocalDensity.current
+        // Different stiffnesses are used so that the add button
+        // moves in a swooping movement instead of a linear one
+        val addPresetButtonXOffset by animateFloatAsState(
+            targetValue = if (!showingPresetSelector) 0f
+                          else with(density) { (-12).dp.toPx() },
+            animationSpec = spring(stiffness = 700f))
+        val addPresetButtonYOffset by animateFloatAsState(
+            targetValue = if (!showingPresetSelector) 0f
+                          else with(density) { (-12).dp.toPx() },
+            animationSpec = spring(stiffness = Spring.StiffnessLow))
+        AddTrackButton(
+            visible = !showingAppSettings,
+            modifier = Modifier.padding(padding).graphicsLayer {
+                translationX = addPresetButtonXOffset
+                translationY = addPresetButtonYOffset
+            }, target = if (showingPresetSelector)
+                            AddButtonTarget.Preset
+                        else AddButtonTarget.Track)
     }
 
-    /**
-     * Compose play and add track buttons along the edge of the screen
-     *
-     * @param visible Whether or not the buttons will be visible.
-     * @param alignToEnd Whether to align the buttons to the screen's end edge. If
-     *     false, the buttons will be aligned to the screen's bottom edge instead.
-     * @param padding The padding that should be used for the button placement.
-     */
-    @Composable private fun BoxScope.FloatingActionButtons(
+    @Composable private fun BoxWithConstraintsScope.MediaController(
         visible: Boolean,
-        alignToEnd: Boolean,
+        showingPresetSelector: Boolean,
+        onActivePresetClick: () -> Unit,
+        onCloseButtonClick: () -> Unit,
         padding: PaddingValues,
+        alignToEnd: Boolean
     ) {
-        val playButtonAlignment = if (alignToEnd) Alignment.CenterEnd
-                                  else            Alignment.BottomCenter
-        AnimatedVisibility( // Play / pause button
+        val alignment = if (alignToEnd) Alignment.TopEnd
+                        else            Alignment.BottomStart
+        AnimatedVisibility(
             visible = visible,
-            modifier = Modifier.padding(padding).align(playButtonAlignment),
-            enter = fadeIn(tween(delayMillis = 75)) + scaleIn(overshootTweenSpec(delay = 75)),
-            exit = fadeOut(tween(delayMillis = 125)) + scaleOut(anticipateTweenSpec(delay = 75))
+            modifier = Modifier.align(alignment),
+            enter = fadeIn(tween(delayMillis = 75)) +
+                    scaleIn(overshootTween(delay = 75)),
+            exit = fadeOut(tween(delayMillis = 125)) +
+                   scaleOut(anticipateTween(delay = 75))
         ) {
+            val list = remember { mutableStateListOf(
+                Preset("Super duper extra really long preset name 0"),
+                Preset("Super duper extra really long preset name 1"),
+                Preset("Super duper extra really long preset name 2"),
+                Preset("Super duper extra really long preset name 3")
+            )}
+            var currentPreset by remember { mutableStateOf(list.first()) }
+            val currentPresetIsModified = true
             val isPlaying = boundPlayerService?.isPlaying ?: false
-            FloatingActionButton(
-                onClick = { boundPlayerService?.toggleIsPlaying() },
-                backgroundColor = if (alignToEnd) MaterialTheme.colors.secondaryVariant
-                                  else lerp(MaterialTheme.colors.primaryVariant,
-                                            MaterialTheme.colors.secondaryVariant, 0.5f),
-//                elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp)
-                elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
-            ) {
-                val description = stringResource(
-                    if (isPlaying) R.string.pause_button_description
-                    else           R.string.play_button_description)
-                PlayPauseIcon(
-                    playing = isPlaying,
-                    contentDescription = description,
-                    tint = MaterialTheme.colors.onPrimary)
-            }
-        }
 
+            val density = LocalDensity.current
+            val ld = LocalLayoutDirection.current
+            val collapsedSize = remember(constraints, alignToEnd, density) {
+                with (density) { DpSize(
+                    // The goal is to have the media controller bar have such a
+                    // width/height that the play/pause icon is centered in the
+                    // content area's width in portrait mode. The main content
+                    // area's width is divided by two, then 28dp is added to to
+                    // account for the media controller bar's rounded corner radius.
+                    // The start padding also must be subtracted.
+                    height = if (!alignToEnd) 56.dp else
+                        (constraints.maxHeight / 2f).toDp() + 28.dp,
+                    width = if (alignToEnd) 56.dp else
+                        (constraints.maxWidth / 2f).toDp() + 28.dp - padding.calculateStartPadding(ld)
+                )}
+            }
+            val presetSelectorSize = remember(constraints, alignToEnd, density) {
+                val widthFraction = if (alignToEnd) 0.6f else 1.0f
+                with (density) {
+                    DpSize(width = (constraints.maxWidth * widthFraction).toDp(),
+                           height = if (!alignToEnd) 350.dp
+                                    else constraints.maxHeight.toDp())
+                }
+            }
+            val startColor = MaterialTheme.colors.primaryVariant
+            val endColor = MaterialTheme.colors.secondaryVariant
+            val backgroundBrush = remember(alignToEnd, showingPresetSelector, startColor, endColor) {
+                val viewStart = with(density) {
+                    if (alignToEnd)
+                        constraints.maxWidth - padding.calculateEndPadding(ld).toPx() -
+                            if (showingPresetSelector) presetSelectorSize.width.toPx()
+                            else                       collapsedSize.width.toPx()
+                    else padding.calculateStartPadding(ld).toPx()
+                }
+                Brush.horizontalGradient(
+                    colors = listOf(startColor, endColor),
+                    startX = -viewStart,
+                    endX = constraints.maxWidth - viewStart)
+            }
+
+            MediaController(
+                modifier = Modifier.padding(padding),
+                orientation = if (alignToEnd) Orientation.Vertical
+                              else            Orientation.Horizontal,
+                backgroundBrush = backgroundBrush,
+                collapsedSize = collapsedSize,
+                expandedSize = presetSelectorSize,
+                showingPresetSelector = showingPresetSelector,
+                isPlaying = isPlaying,
+                onPlayPauseClick = ::onPlayPauseClick,
+                activePreset = currentPreset,
+                activePresetIsModified = currentPresetIsModified,
+                onActivePresetClick = onActivePresetClick,
+                presetListProvider = { list },
+                onPresetRenameRequest = { preset, newName ->
+                    list.replaceAll { if (it != preset) it
+                                      else Preset(newName) }
+                },
+                onPresetOverwriteRequest = {},
+                onPresetDeleteRequest = list::remove,
+                onCloseButtonClick = onCloseButtonClick,
+                onPresetClick = { currentPreset = it })
+        }
+    }
+
+    /** Compose an add track button at the bottom end edge of the screen,
+     * which is conditionally visible depending on the value of [visible],
+     * with padding equal to the parameter [padding]. */
+    @Composable private fun BoxScope.AddTrackButton(
+        visible: Boolean,
+        modifier: Modifier,
+        target: AddButtonTarget,
+    ) {
         AnimatedVisibility( // add track button
             visible = visible,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(padding),
-            enter = fadeIn(tween()) + scaleIn(overshootTweenSpec()),
-            exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTweenSpec()),
+            modifier = modifier.align(Alignment.BottomEnd),
+            enter = fadeIn(tween()) + scaleIn(overshootTween()),
+            exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTween()),
         ) {
-            AddLocalFilesButton(MaterialTheme.colors.secondaryVariant)
+            AddButton(target, MaterialTheme.colors.secondaryVariant)
         }
+    }
+
+    private fun onPlayPauseClick() {
+        boundPlayerService?.toggleIsPlaying()
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?) =
