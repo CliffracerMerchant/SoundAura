@@ -67,9 +67,22 @@ data class Track(
     @Query("SELECT * FROM track WHERE name LIKE :filter")
     protected abstract fun getAllTracksSortedByOrderAdded(filter: String): Flow<List<Track>>
 
-    fun getAllTracks(sort: Track.Sort, searchFilter: String?): Flow<List<Track>> {
+    @Query("SELECT * FROM track WHERE name LIKE :filter ORDER BY isActive DESC, name COLLATE NOCASE ASC")
+    protected abstract fun getAllTracksSortedByActiveThenNameAsc(filter: String): Flow<List<Track>>
+
+    @Query("SELECT * FROM track WHERE name LIKE :filter ORDER BY isActive DESC, name COLLATE NOCASE DESC")
+    protected abstract fun getAllTracksSortedByActiveThenNameDesc(filter: String): Flow<List<Track>>
+
+    @Query("SELECT * FROM track WHERE name LIKE :filter ORDER BY isActive DESC")
+    protected abstract fun getAllTracksSortedByActiveThenOrderAdded(filter: String): Flow<List<Track>>
+
+    fun getAllTracks(sort: Track.Sort, showActiveFirst: Boolean, searchFilter: String?): Flow<List<Track>> {
         val filter = "%${searchFilter ?: ""}%"
-        return when (sort) {
+        return if (showActiveFirst) when (sort) {
+            Track.Sort.NameAsc ->    getAllTracksSortedByActiveThenNameAsc(filter)
+            Track.Sort.NameDesc ->   getAllTracksSortedByActiveThenNameDesc(filter)
+            Track.Sort.OrderAdded -> getAllTracksSortedByActiveThenOrderAdded(filter)
+        } else when (sort) {
             Track.Sort.NameAsc ->    getAllTracksSortedByNameAsc(filter)
             Track.Sort.NameDesc ->   getAllTracksSortedByNameDesc(filter)
             Track.Sort.OrderAdded -> getAllTracksSortedByOrderAdded(filter)

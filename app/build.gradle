@@ -16,7 +16,7 @@ android {
         applicationId "com.cliffracertech.soundaura"
         minSdk 24
         targetSdk 33
-        versionCode 7
+        versionCode 8
         versionName "1.4.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         javaCompileOptions {

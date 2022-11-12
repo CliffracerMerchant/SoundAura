@@ -2,19 +2,27 @@
  * License 2.0. See license.md in the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.DropdownMenuItem
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Switch
+import androidx.compose.material.TabRowDefaults.Divider
+import androidx.compose.material.Text
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.cliffracertech.soundaura.SoundAura.pref_key_showActiveTracksFirst
 import com.cliffracertech.soundaura.SoundAura.pref_key_trackSort
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -44,6 +52,15 @@ class ActionBarViewModel(
             if (showingAppSettings)
                 R.string.app_settings_description
             else R.string.app_name)
+    }
+
+    private val showActiveTracksFirstKey = booleanPreferencesKey(pref_key_showActiveTracksFirst)
+    val showActiveTracksFirst by dataStore.preferenceState(showActiveTracksFirstKey, false, scope)
+
+    fun onShowActiveTracksFirstSwitchClick() {
+        scope.launch { dataStore.edit {
+            it[showActiveTracksFirstKey] = !showActiveTracksFirst
+        }}
     }
 
     private val trackSortKey = intPreferencesKey(pref_key_trackSort)
@@ -99,5 +116,19 @@ class ActionBarViewModel(
         sortOptionNames = Track.Sort.stringValues(),
         currentSortOption = viewModel.trackSort,
         onSortOptionClick = viewModel::onTrackSortOptionClick,
-        otherContent = { SettingsButton(viewModel::onSettingsButtonClick) })
+        otherSortMenuContent = { onDismissRequest ->
+            DropdownMenuItem(onClick = {
+                onDismissRequest()
+                viewModel.onShowActiveTracksFirstSwitchClick()
+            }) {
+                Text(stringResource(R.string.show_active_tracks_first),
+                     style = MaterialTheme.typography.button)
+                Spacer(Modifier.weight(1f).widthIn(12.dp))
+                Switch(checked = viewModel.showActiveTracksFirst,
+                       onCheckedChange = null)
+            }
+            Divider()
+        }, otherContent = {
+            SettingsButton(viewModel::onSettingsButtonClick)
+        })
 }
