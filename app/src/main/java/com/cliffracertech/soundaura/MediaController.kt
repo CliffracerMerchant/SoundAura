@@ -47,7 +47,7 @@ fun Modifier.rotateClockwise() = layout { measurable, constraints ->
 val Orientation.isHorizontal get() = this == Orientation.Horizontal
 val Orientation.isVertical get() = this == Orientation.Vertical
 
-@Composable fun ActivePresetIndicator(
+@Composable private fun ActivePresetIndicator(
     modifier: Modifier = Modifier,
     orientation: Orientation,
     activePreset: Preset?,

@@ -249,7 +249,7 @@ class MainActivity : ComponentActivity() {
             }
         }
         var showingPresetSelector by remember { mutableStateOf(false) }
-        FloatingMediaController(
+        MediaController(
             visible = !showingAppSettings,
             showingPresetSelector = showingPresetSelector,
             onActivePresetClick = { showingPresetSelector = true },
@@ -279,7 +279,7 @@ class MainActivity : ComponentActivity() {
                 })
     }
 
-    @Composable private fun BoxWithConstraintsScope.FloatingMediaController(
+    @Composable private fun BoxWithConstraintsScope.MediaController(
         visible: Boolean,
         showingPresetSelector: Boolean,
         onActivePresetClick: () -> Unit,
@@ -308,38 +308,47 @@ class MainActivity : ComponentActivity() {
             val isPlaying = boundPlayerService?.isPlaying ?: false
             var newPresetName by rememberSaveable { mutableStateOf("")}
 
-            val startColor = MaterialTheme.colors.primaryVariant
-            val endColor = MaterialTheme.colors.secondaryVariant
-            val backgroundBrush = remember(startColor, endColor) {
-                Brush.horizontalGradient(
-                    colors = listOf(startColor, endColor),
-                    startX = 0f,
-                    endX = constraints.maxWidth.toFloat())
-            }
             val density = LocalDensity.current
+            val ld = LocalLayoutDirection.current
             val collapsedSize = remember(constraints, alignToEnd, density) {
                 with (density) { DpSize(
                     // The goal is to have the media controller bar have such a
                     // width/height that the play/pause icon is centered in the
-                    // screen's width/height. The main content area's width/height
-                    // is divided by two, then 28dp is added to to account for the
-                    // media controller bar's rounded corner radius.
-                    height = if (!alignToEnd) 56.dp
-                             else (constraints.maxHeight / 2f).toDp() + 28.dp,
-                    width = if (alignToEnd) 56.dp
-                            else (constraints.maxWidth / 2f).toDp() + 28.dp)
-                }
+                    // content area's width in portrait mode. The main content
+                    // area's width is divided by two, then 28dp is added to to
+                    // account for the media controller bar's rounded corner radius.
+                    // The start padding also must be subtracted.
+                    height = if (!alignToEnd) 56.dp else
+                        (constraints.maxHeight / 2f).toDp() + 28.dp,
+                    width = if (alignToEnd) 56.dp else
+                        (constraints.maxWidth / 2f).toDp() + 28.dp - padding.calculateStartPadding(ld)
+                )}
             }
             val presetSelectorSize = remember(constraints, alignToEnd, density) {
-                val widthFraction = if (alignToEnd) 0.4f
-                                    else            1f
+                val widthFraction = if (alignToEnd) 0.6f else 1.0f
                 with (density) {
                     DpSize(width = (constraints.maxWidth * widthFraction).toDp(),
                            height = if (!alignToEnd) 350.dp
                                     else constraints.maxHeight.toDp())
                 }
             }
-            FloatingMediaController(
+            val startColor = MaterialTheme.colors.primaryVariant
+            val endColor = MaterialTheme.colors.secondaryVariant
+            val backgroundBrush = remember(alignToEnd, showingPresetSelector, startColor, endColor) {
+                val viewStart = with(density) {
+                    if (alignToEnd)
+                        constraints.maxWidth - padding.calculateEndPadding(ld).toPx() -
+                            if (showingPresetSelector) presetSelectorSize.width.toPx()
+                            else                       collapsedSize.width.toPx()
+                    else padding.calculateStartPadding(ld).toPx()
+                }
+                Brush.horizontalGradient(
+                    colors = listOf(startColor, endColor),
+                    startX = -viewStart,
+                    endX = constraints.maxWidth - viewStart)
+            }
+
+            MediaController(
                 modifier = Modifier.padding(padding),
                 orientation = if (alignToEnd) Orientation.Vertical
                               else            Orientation.Horizontal,
