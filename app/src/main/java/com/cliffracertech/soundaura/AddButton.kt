@@ -10,18 +10,19 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
@@ -41,7 +42,7 @@ import javax.inject.Inject
 // The stored context object here is the application
 // context, and therefore does not present a problem.
 @HiltViewModel @SuppressLint("StaticFieldLeak")
-class AddLocalFilesButtonViewModel(
+class AddTrackButtonViewModel(
     @ApplicationContext
     private val context: Context,
     private val trackDao: TrackDao,
@@ -113,29 +114,65 @@ class AddLocalFilesButtonViewModel(
     }
 }
 
+/** An enum class whose values describe the entities that can be added by the [AddButton]. */
+enum class AddButtonTarget { Track, Preset }
+
 /**
- * Compose a button to add local files with state provided by an
- * instance of [AddLocalFilesButtonViewModel].
+ * A button to add local files or presets, with state provided by instances
+ * of [AddTrackButtonViewModel] and [AddPresetButtonViewModel].
  *
- * @param backgroundColor The color to use for the button's background.
+ * @param target The [AddButtonTarget] that should be added when the button is clicked
+ * @param backgroundColor The color to use for the button's background
+ * @param modifier The [Modifier] to use for the button
  */
-@Composable fun AddLocalFilesButton(backgroundColor: Color) {
-    val viewModel: AddLocalFilesButtonViewModel = viewModel()
+@Composable fun AddButton(
+    target: AddButtonTarget,
+    backgroundColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val addTrackViewModel: AddTrackButtonViewModel = viewModel()
+    var showingAddNewPresetDialog by rememberSaveable { mutableStateOf(false) }
+    var newPresetName by rememberSaveable { mutableStateOf("")}
+    val nameValidator = remember { { newName: String -> when {
+        newName.isBlank() ->
+            "The preset's name must not be blank"
+        newName.length % 2 == 1 ->
+            "New preset names must have an even number of characters"
+        else -> null
+    }}}
+    val nameValidatorMessage by remember { derivedStateOf {
+        nameValidator(newPresetName)
+    }}
 
     FloatingActionButton(
-        onClick = viewModel::onClick,
+        onClick = { when(target) {
+            AddButtonTarget.Track -> addTrackViewModel.onClick()
+            AddButtonTarget.Preset -> showingAddNewPresetDialog = true
+        }},
+        modifier = modifier,
         backgroundColor = backgroundColor,
         elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
     ) {
         Icon(imageVector = Icons.Default.Add,
-            contentDescription = stringResource(R.string.add_button_description),
+            contentDescription = stringResource(when(target) {
+                AddButtonTarget.Track -> R.string.add_track_button_description
+                AddButtonTarget.Preset -> R.string.add_preset_button_description
+            }),
             tint = MaterialTheme.colors.onPrimary)
     }
 
-    if (viewModel.showingDialog)
+    if (addTrackViewModel.showingDialog)
         AddTracksFromLocalFilesDialog(
-            onDismissRequest = viewModel::onDialogDismiss,
-            onConfirmRequest = viewModel::onDialogConfirm)
+            onDismissRequest = addTrackViewModel::onDialogDismiss,
+            onConfirmRequest = addTrackViewModel::onDialogConfirm)
+
+    if (showingAddNewPresetDialog)
+        CreateNewPresetDialog(
+            onNameChange = { newPresetName = it },
+            nameValidatorMessage = nameValidatorMessage,
+            onDismissRequest = { showingAddNewPresetDialog = false },
+            onConfirm = { showingAddNewPresetDialog = false })
+
 }
 
 /**
@@ -220,3 +257,62 @@ val List<String>.containsBlanks get() =
             singleLine = true,
             modifier = Modifier.fillMaxWidth())
     }})
+
+/**
+ * Show a dialog to create a new preset.
+ *
+ * @Param onNameChange The callback that will be invoked when the user input
+ *     for the new preset's name changes.
+ * @param nameValidatorMessage A nullable String that represents a warning
+ *     message that should be displayed to the user regarding the new preset's
+ *     name. Generally onNameChange should change this value to null if the
+ *     entered new name is acceptable, or an error message explaining why the
+ *     new name is not acceptable otherwise.
+ * @param onDismissRequest The callback that will be invoked when the dialog is dismissed
+ * @param onConfirm The callback that will be invoked when the confirm button
+ *     has been clicked
+ */
+@Composable fun CreateNewPresetDialog(
+    onNameChange: (String) -> Unit,
+    nameValidatorMessage: String?,
+    onDismissRequest: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    var currentName by rememberSaveable { mutableStateOf("") }
+    SoundAuraDialog(
+        modifier = Modifier.restrictWidthAccordingToSizeClass(),
+        useDefaultWidth = false,
+        title = stringResource(R.string.create_new_preset_dialog_title),
+        onDismissRequest = onDismissRequest,
+        confirmButtonEnabled = nameValidatorMessage == null,
+        onConfirm = { onConfirm(currentName) }
+    ) {
+        TextField(
+            onValueChange = {
+                currentName = it
+                onNameChange(it)
+            }, value = currentName,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            isError = nameValidatorMessage != null,
+            singleLine = true,
+            textStyle = MaterialTheme.typography.body1)
+
+        var previousNameValidatorMessage by remember { mutableStateOf("") }
+        AnimatedVisibility(nameValidatorMessage != null) {
+            Row(Modifier.align(Alignment.CenterHorizontally)
+                .padding(start = 16.dp, end = 16.dp, top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Default.Error,
+                    contentDescription = null,
+                    tint = MaterialTheme.colors.error)
+                AnimatedContent(nameValidatorMessage ?: previousNameValidatorMessage) {
+                    Text(it, Modifier.weight(1f), MaterialTheme.colors.error)
+                }
+                if (nameValidatorMessage != null)
+                    previousNameValidatorMessage = nameValidatorMessage
+            }
+        }
+    }
+}

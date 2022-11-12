@@ -36,12 +36,7 @@
         This will remove the track from your library,
         but will not delete the file from your device.</string>
 
-    <string name="add_button_description">Add track</string>
-    <string name="add_button_expanded_description">Cancel add track</string>
-    <string name="download">Download</string>
-    <string name="local_files">Local files</string>
-    <string name="download_button_message">
-        The download button is non-functional at this time</string>
+    <string name="add_track_button_description">Add track</string>
     <string name="add_local_files_dialog_title">Confirm track name(s)</string>
     <string name="track_already_exists_error_message">
         This file is already in the library.</string>
@@ -62,7 +57,7 @@
     <string name="overwrite">Overwrite</string>
     <string name="confirm_overwrite_preset_dialog_title">Confirm overwrite preset</string>
     <string name="confirm_overwrite_preset_dialog_message">This will overwrite the preset %1$s. Are you sure?</string>
-    <string name="create_new_preset_button_text">Create new</string>
+    <string name="add_preset_button_description">Create new preset</string>
     <string name="create_new_preset_dialog_title">Enter new preset name</string>
     <string name="create_new_preset_dialog_warning_message">Another preset with the same name already exists.</string>
 

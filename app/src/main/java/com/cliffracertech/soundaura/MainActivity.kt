@@ -248,7 +248,7 @@ class MainActivity : ComponentActivity() {
                     })
             }
         }
-        var showingPresetSelector by remember { mutableStateOf(false) }
+        var showingPresetSelector by rememberSaveable { mutableStateOf(false) }
         MediaController(
             visible = !showingAppSettings,
             showingPresetSelector = showingPresetSelector,
@@ -271,12 +271,12 @@ class MainActivity : ComponentActivity() {
             animationSpec = spring(stiffness = Spring.StiffnessLow))
         AddTrackButton(
             visible = !showingAppSettings,
-            modifier = Modifier
-                .padding(padding)
-                .graphicsLayer {
-                    translationX = addPresetButtonXOffset
-                    translationY = addPresetButtonYOffset
-                })
+            modifier = Modifier.padding(padding).graphicsLayer {
+                translationX = addPresetButtonXOffset
+                translationY = addPresetButtonYOffset
+            }, target = if (showingPresetSelector)
+                            AddButtonTarget.Preset
+                        else AddButtonTarget.Track)
     }
 
     @Composable private fun BoxWithConstraintsScope.MediaController(
@@ -306,7 +306,6 @@ class MainActivity : ComponentActivity() {
             var currentPreset by remember { mutableStateOf(list.first()) }
             val currentPresetIsModified = true
             val isPlaying = boundPlayerService?.isPlaying ?: false
-            var newPresetName by rememberSaveable { mutableStateOf("")}
 
             val density = LocalDensity.current
             val ld = LocalLayoutDirection.current
@@ -370,17 +369,6 @@ class MainActivity : ComponentActivity() {
                 onPresetDeleteRequest = list::remove,
                 onCloseButtonClick = onCloseButtonClick,
                 onPresetClick = { currentPreset = it })
-
-            val nameValidator = remember { { newName: String -> when {
-                newName.isBlank() ->
-                    "The preset's name must not be blank"
-                newName.length % 2 == 1 ->
-                    "New preset names must have an even number of characters"
-                else -> null
-            }}}
-            val nameValidatorMessage by remember { derivedStateOf {
-                nameValidator(newPresetName)
-            }}
         }
     }
 
@@ -390,6 +378,7 @@ class MainActivity : ComponentActivity() {
     @Composable private fun BoxScope.AddTrackButton(
         visible: Boolean,
         modifier: Modifier,
+        target: AddButtonTarget,
     ) {
         AnimatedVisibility( // add track button
             visible = visible,
@@ -397,7 +386,7 @@ class MainActivity : ComponentActivity() {
             enter = fadeIn(tween()) + scaleIn(overshootTween()),
             exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTween()),
         ) {
-            AddLocalFilesButton(MaterialTheme.colors.secondaryVariant)
+            AddButton(target, MaterialTheme.colors.secondaryVariant)
         }
     }
 
