@@ -67,7 +67,7 @@ import com.google.accompanist.insets.statusBarsPadding
  * only display it if [showBackButtonForNavigation] is true. The title will be
  * replaced by the search query if it is not null.
  *
- * @param modifier The [Modifier] to use for the bar.
+ * @param modifier The [Modifier] to use for the bar
  * @param showBackButtonForNavigation Whether or not the back button should be
  *     visible due to other state held outside the action bar. If [searchQuery]
  *     is not null, the back button will be shown regardless.
@@ -75,10 +75,10 @@ import com.google.accompanist.insets.statusBarsPadding
  *     button is clicked while [showBackButtonForNavigation] is true. If the
  *     back button is shown due to a non-null search query, the back button
  *     will close the search query and [onBackButtonClick] will not be called.
- * @param title The title that will be displayed when there is no search query.
- * @param searchQuery The current search query that will be displayed if not null.
+ * @param title The title that will be displayed when there is no search query
+ * @param searchQuery The current search query that will be displayed if not null
  * @param onSearchQueryChanged The callback that will be invoked when the
- *     user input should modify the value of the search query.
+ *     user input should modify the value of the search query
  * @param showRightAlignedContent Whether or not the contents to the right
  *     of the back button and title / search query should be shown. If false
  *     the search button, change sort button, and any content described in
@@ -91,11 +91,18 @@ import com.google.accompanist.insets.statusBarsPadding
  * @param sortOptions An array of all possible sorting enum values,
  *     usually accessed with [enumValues]<T>()
  * @param sortOptionNames An array containing the [String] values that
- *     should represent each sorting option.
+ *     should represent each sorting option
  * @param currentSortOption A value of the type parameter that indicates
- *     the currently selected sort option.
+ *     the currently selected sort option
+ * @param onSortOptionClick The callback that will be invoked when the
+ *     user clicks on a sort option
+ * @param otherSortMenuContent A composable lambda that contains other
+ *     content that should be displayed in the popup sort menu. The
+ *     dismiss request lambda for the popup sort menu is passed as a
+ *     parameter so that additional sort menu contents can close the
+ *     menu in their on click action.
  * @param otherContent A composable containing other contents that should
- *     be placed at the end of the action bar.
+ *     be placed at the end of the action bar
  */
 @Composable fun <T> ListActionBar(
     modifier: Modifier = Modifier,
@@ -110,6 +117,7 @@ import com.google.accompanist.insets.statusBarsPadding
     sortOptionNames: Array<String>,
     currentSortOption: T,
     onSortOptionClick: (T) -> Unit,
+    otherSortMenuContent: @Composable ColumnScope.(onDismissRequest: () -> Unit) -> Unit = {},
     otherContent: @Composable () -> Unit = { },
 ) = GradientToolBar(modifier) {
     // Back button
@@ -178,7 +186,8 @@ import com.google.accompanist.insets.statusBarsPadding
                     valueNames = sortOptionNames,
                     currentValue = currentSortOption,
                     onValueChanged = onSortOptionClick,
-                    onDismissRequest = { sortMenuShown = false })
+                    onDismissRequest = { sortMenuShown = false },
+                    otherContent = { otherSortMenuContent { sortMenuShown = false } })
             }
             otherContent()
         }
