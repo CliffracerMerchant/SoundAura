@@ -44,6 +44,11 @@ class PreferencesModule {
 }
 
 object SoundAura {
+    /** A boolean value that indicates whether the list of tracks should
+     * be sorted by tracks' active states (with active tracks appearing
+     * before inactive ones) before being sorted by another sorting method. */
+    const val pref_key_showActiveTracksFirst = "show_active_tracks_first"
+
     /** An int value that represents the ordinal of the desired [Track.Sort]
      * enum value to use for sorting tracks in the main activity. */
     const val pref_key_trackSort = "track_sort"

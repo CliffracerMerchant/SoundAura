@@ -64,14 +64,14 @@ class AddLocalFilesButtonViewModelTests {
     @Test fun dialogConfirm() = runTest {
         clickShowsDialog()
         val testTrack = Track("uriString", "name")
-        var tracks = trackDao.getAllTracks(Track.Sort.OrderAdded, null).first()
+        var tracks = trackDao.getAllTracks(Track.Sort.OrderAdded, false, null).first()
         assertThat(tracks).isEmpty()
 
         instance.onDialogConfirm(
             trackUris = listOf(Uri.parse(testTrack.uriString)),
             trackNames = listOf(testTrack.name))
         assertThat(instance.showingDialog).isFalse()
-        tracks = trackDao.getAllTracks(Track.Sort.OrderAdded, null).first()
+        tracks = trackDao.getAllTracks(Track.Sort.OrderAdded, false, null).first()
         assertThat(tracks).containsExactly(testTrack)
     }
 
@@ -82,15 +82,15 @@ class AddLocalFilesButtonViewModelTests {
         val testTrack = Track("uriString", "name")
         val trackUris = listOf(Uri.parse(testTrack.uriString))
         val trackNames = listOf(testTrack.name)
-        var tracks = trackDao.getAllTracks(Track.Sort.OrderAdded, null).first()
+        var tracks = trackDao.getAllTracks(Track.Sort.OrderAdded, false, null).first()
         assertThat(tracks).isEmpty()
 
         instance.onDialogConfirm(trackUris, trackNames)
-        tracks = trackDao.getAllTracks(Track.Sort.OrderAdded, null).first()
+        tracks = trackDao.getAllTracks(Track.Sort.OrderAdded, false, null).first()
         assertThat(tracks).containsExactly(testTrack)
 
         instance.onDialogConfirm(trackUris, trackNames)
-        tracks = trackDao.getAllTracks(Track.Sort.OrderAdded, null).first()
+        tracks = trackDao.getAllTracks(Track.Sort.OrderAdded, false, null).first()
         assertThat(tracks).containsExactly(testTrack)
 
         assertThat(latestMessage?.stringResource?.stringResId)

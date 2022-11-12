@@ -24,13 +24,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.cliffracertech.soundaura.SoundAura.pref_key_showActiveTracksFirst
 import com.cliffracertech.soundaura.SoundAura.pref_key_trackSort
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -79,6 +80,8 @@ class TrackListViewModel(
     ) : this(dataStore, trackDao, searchQueryState, null)
 
     private val scope = coroutineScope ?: viewModelScope
+    private val showActiveTracksFirstKey = booleanPreferencesKey(pref_key_showActiveTracksFirst)
+    private val showActiveTracksFirst = dataStore.preferenceFlow(showActiveTracksFirstKey, false)
     private val trackSortKey = intPreferencesKey(pref_key_trackSort)
     private val trackSort = dataStore.enumPreferenceFlow<Track.Sort>(trackSortKey)
 
@@ -87,7 +90,7 @@ class TrackListViewModel(
 
     init {
         val searchQueryFlow = snapshotFlow { searchQueryState.query.value }
-        combine(trackSort, searchQueryFlow, trackDao::getAllTracks)
+        combine(trackSort, showActiveTracksFirst, searchQueryFlow, trackDao::getAllTracks)
             .transformLatest { emitAll(it) }
             .onEach { tracks = it }
             .launchIn(scope)

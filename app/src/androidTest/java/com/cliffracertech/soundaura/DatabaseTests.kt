@@ -40,7 +40,7 @@ class DatabaseTests {
     fun closeDb() = db.close()
 
     private suspend fun getAllTracks() =
-        dao.getAllTracks(Track.Sort.OrderAdded, null).first()
+        dao.getAllTracks(Track.Sort.OrderAdded, false, null).first()
 
     @Test fun initialState() = runBlocking {
         val items = getAllTracks()
@@ -147,27 +147,99 @@ class DatabaseTests {
         assertThat(tracks[2].hasError).isFalse()
     }
 
+    @Test fun getAllTracksSortedByNameAscWithActiveFirst() = runBlocking {
+        val testTracks = listOf(
+            Track("track0uri", "b track", isActive = false),
+            Track("track1uri", "c track", isActive = true),
+            Track("track2uri", "a track", isActive = false),
+            Track("track4uri", "d track", isActive = true))
+        dao.insert(testTracks)
+        var tracks = dao.getAllTracks(Track.Sort.NameAsc, true, null).first()
+        assertThat(tracks).containsExactly(
+            testTracks[1], testTracks[3], testTracks[2], testTracks[0]
+        ).inOrder()
+
+        tracks = dao.getAllTracks(Track.Sort.NameAsc, true, "track").first()
+        assertThat(tracks).containsExactly(
+            testTracks[1], testTracks[3], testTracks[2], testTracks[0]
+        ).inOrder()
+
+        dao.setName(testTracks[0].uriString, "f track")
+        tracks = dao.getAllTracks(Track.Sort.NameAsc, true, "track").first()
+        assertThat(tracks).containsExactly(
+            testTracks[1], testTracks[3], testTracks[2], testTracks[0].copy(name = "f track")
+        ).inOrder()
+    }
+
+    @Test fun getAllTracksSortedByNameDescWithActiveFirst() = runBlocking {
+        val testTracks = listOf(
+            Track("track0uri", "b track", isActive = false),
+            Track("track1uri", "c track", isActive = true),
+            Track("track2uri", "a track", isActive = false),
+            Track("track4uri", "d track", isActive = true))
+        dao.insert(testTracks)
+        var tracks = dao.getAllTracks(Track.Sort.NameDesc, true, null).first()
+        assertThat(tracks).containsExactly(
+            testTracks[3], testTracks[1], testTracks[0], testTracks[2]
+        ).inOrder()
+
+        tracks = dao.getAllTracks(Track.Sort.NameDesc, true, "track").first()
+        assertThat(tracks).containsExactly(
+            testTracks[3], testTracks[1], testTracks[0], testTracks[2]
+        ).inOrder()
+
+        dao.setName(testTracks[2].uriString, "f track")
+        tracks = dao.getAllTracks(Track.Sort.NameDesc, true, "track").first()
+        assertThat(tracks).containsExactly(
+            testTracks[3], testTracks[1], testTracks[2].copy(name = "f track"), testTracks[0]
+        ).inOrder()
+    }
+
+    @Test fun getAllTracksSortedByOrderAddedWithActiveFirst() = runBlocking {
+        val testTracks = listOf(
+            Track("track0uri", "b track", isActive = false),
+            Track("track1uri", "c track", isActive = true),
+            Track("track2uri", "a track", isActive = false),
+            Track("track4uri", "d track", isActive = true))
+        dao.insert(testTracks)
+        var tracks = dao.getAllTracks(Track.Sort.OrderAdded, true, null).first()
+        assertThat(tracks).containsExactly(
+            testTracks[1], testTracks[3], testTracks[0], testTracks[2]
+        ).inOrder()
+
+        tracks = dao.getAllTracks(Track.Sort.OrderAdded, true, "track").first()
+        assertThat(tracks).containsExactly(
+            testTracks[1], testTracks[3], testTracks[0], testTracks[2]
+        ).inOrder()
+
+        dao.setName(testTracks[2].uriString, "f track")
+        tracks = dao.getAllTracks(Track.Sort.OrderAdded, true, "track").first()
+        assertThat(tracks).containsExactly(
+            testTracks[1], testTracks[3], testTracks[0], testTracks[2].copy(name = "f track"),
+        ).inOrder()
+    }
+
     @Test fun getAllTracksSortedByNameAsc() = runBlocking {
         val testTracks = listOf(
             Track("track0uri", "b track"),
             Track("track1uri", "c track"),
             Track("track2uri", "a track"))
         dao.insert(testTracks)
-        var tracks = dao.getAllTracks(Track.Sort.NameAsc, null).first()
+        var tracks = dao.getAllTracks(Track.Sort.NameAsc, false, null).first()
         assertThat(tracks).containsExactly(
             testTracks[2], testTracks[0], testTracks[1]
         ).inOrder()
 
-        tracks = dao.getAllTracks(Track.Sort.NameAsc, "track").first()
+        tracks = dao.getAllTracks(Track.Sort.NameAsc, false, "track").first()
         assertThat(tracks).containsExactly(
             testTracks[2], testTracks[0], testTracks[1]
         ).inOrder()
 
-        tracks = dao.getAllTracks(Track.Sort.NameAsc, "b").first()
+        tracks = dao.getAllTracks(Track.Sort.NameAsc, false, "b").first()
         assertThat(tracks).containsExactly(testTracks[0])
 
         dao.setName(testTracks[0].uriString, "f track")
-        tracks = dao.getAllTracks(Track.Sort.NameAsc, "track").first()
+        tracks = dao.getAllTracks(Track.Sort.NameAsc, false, "track").first()
         assertThat(tracks).containsExactly(
             testTracks[2], testTracks[1], testTracks[0].copy(name = "f track")
         ).inOrder()
@@ -179,21 +251,21 @@ class DatabaseTests {
             Track("track1uri", "c track"),
             Track("track2uri", "a track"))
         dao.insert(testTracks)
-        var tracks = dao.getAllTracks(Track.Sort.NameDesc, null).first()
+        var tracks = dao.getAllTracks(Track.Sort.NameDesc, false, null).first()
         assertThat(tracks).containsExactly(
             testTracks[1], testTracks[0], testTracks[2]
         ).inOrder()
 
-        tracks = dao.getAllTracks(Track.Sort.NameDesc, "track").first()
+        tracks = dao.getAllTracks(Track.Sort.NameDesc, false, "track").first()
         assertThat(tracks).containsExactly(
             testTracks[1], testTracks[0], testTracks[2]
         ).inOrder()
 
-        tracks = dao.getAllTracks(Track.Sort.NameDesc, "b").first()
+        tracks = dao.getAllTracks(Track.Sort.NameDesc, false, "b").first()
         assertThat(tracks).containsExactly(testTracks[0])
 
         dao.setName(testTracks[0].uriString, "f track")
-        tracks = dao.getAllTracks(Track.Sort.NameDesc, "track").first()
+        tracks = dao.getAllTracks(Track.Sort.NameDesc, false, "track").first()
         assertThat(tracks).containsExactly(
             testTracks[0].copy(name = "f track"), testTracks[1], testTracks[2]
         ).inOrder()
@@ -205,25 +277,25 @@ class DatabaseTests {
             Track("track1uri", "c track"),
             Track("track2uri", "a track"))
         dao.insert(testTracks)
-        var tracks = dao.getAllTracks(Track.Sort.OrderAdded, null).first()
+        var tracks = dao.getAllTracks(Track.Sort.OrderAdded, false, null).first()
         assertThat(tracks).containsExactly(
             testTracks[0], testTracks[1], testTracks[2]
         ).inOrder()
 
-        tracks = dao.getAllTracks(Track.Sort.OrderAdded, "track").first()
+        tracks = dao.getAllTracks(Track.Sort.OrderAdded, false, "track").first()
         assertThat(tracks).containsExactly(
             testTracks[0], testTracks[1], testTracks[2]
         ).inOrder()
 
         dao.delete(testTracks[1].uriString)
-        tracks = dao.getAllTracks(Track.Sort.OrderAdded, null).first()
+        tracks = dao.getAllTracks(Track.Sort.OrderAdded, false, null).first()
         assertThat(tracks).containsExactly(
             testTracks[0], testTracks[2]
         ).inOrder()
         val newTrack = Track("track3uri", "z track")
 
         dao.insert(newTrack)
-        tracks = dao.getAllTracks(Track.Sort.OrderAdded, null).first()
+        tracks = dao.getAllTracks(Track.Sort.OrderAdded, false, null).first()
         assertThat(tracks).containsExactly(
             testTracks[0], testTracks[2], newTrack
         ).inOrder()
