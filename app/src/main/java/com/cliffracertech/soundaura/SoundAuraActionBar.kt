@@ -10,18 +10,19 @@ import androidx.compose.material.Switch
 import androidx.compose.material.TabRowDefaults.Divider
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.cliffracertech.soundaura.SoundAura.pref_key_showActiveTracksFirst
 import com.cliffracertech.soundaura.SoundAura.pref_key_trackSort
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -51,6 +52,15 @@ class ActionBarViewModel(
             if (showingAppSettings)
                 R.string.app_settings_description
             else R.string.app_name)
+    }
+
+    private val showActiveTracksFirstKey = booleanPreferencesKey(pref_key_showActiveTracksFirst)
+    val showActiveTracksFirst by dataStore.preferenceState(showActiveTracksFirstKey, false, scope)
+
+    fun onShowActiveTracksFirstSwitchClick() {
+        scope.launch { dataStore.edit {
+            it[showActiveTracksFirstKey] = !showActiveTracksFirst
+        }}
     }
 
     private val trackSortKey = intPreferencesKey(pref_key_trackSort)
@@ -90,7 +100,6 @@ class ActionBarViewModel(
     modifier: Modifier = Modifier,
 ) {
     val viewModel: ActionBarViewModel = viewModel()
-    var showActiveTracksFirst by rememberSaveable { mutableStateOf(false) }
 
     ListActionBar(
         modifier = modifier,
@@ -110,12 +119,12 @@ class ActionBarViewModel(
         otherSortMenuContent = { onDismissRequest ->
             DropdownMenuItem(onClick = {
                 onDismissRequest()
-                showActiveTracksFirst = !showActiveTracksFirst
+                viewModel.onShowActiveTracksFirstSwitchClick()
             }) {
                 Text(stringResource(R.string.show_active_tracks_first),
                      style = MaterialTheme.typography.button)
                 Spacer(Modifier.weight(1f).widthIn(12.dp))
-                Switch(checked = showActiveTracksFirst,
+                Switch(checked = viewModel.showActiveTracksFirst,
                        onCheckedChange = null)
             }
             Divider()
