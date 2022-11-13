@@ -297,14 +297,6 @@ class MainActivity : ComponentActivity() {
             exit = fadeOut(tween(delayMillis = 125)) +
                    scaleOut(anticipateTween(delay = 75))
         ) {
-            val list = remember { mutableStateListOf(
-                Preset("Super duper extra really long preset name 0"),
-                Preset("Super duper extra really long preset name 1"),
-                Preset("Super duper extra really long preset name 2"),
-                Preset("Super duper extra really long preset name 3")
-            )}
-            var currentPreset by remember { mutableStateOf(list.first()) }
-            val currentPresetIsModified = true
             val isPlaying = boundPlayerService?.isPlaying ?: false
 
             val density = LocalDensity.current
@@ -347,7 +339,7 @@ class MainActivity : ComponentActivity() {
                     endX = constraints.maxWidth - viewStart)
             }
 
-            MediaController(
+            StatefulMediaController(
                 modifier = Modifier.padding(padding),
                 orientation = if (alignToEnd) Orientation.Vertical
                               else            Orientation.Horizontal,
@@ -358,18 +350,8 @@ class MainActivity : ComponentActivity() {
                 showingPresetSelector = showingPresetSelector,
                 isPlaying = isPlaying,
                 onPlayPauseClick = ::onPlayPauseClick,
-                activePreset = currentPreset,
-                activePresetIsModified = currentPresetIsModified,
                 onActivePresetClick = onActivePresetClick,
-                presetListProvider = { list },
-                onPresetRenameRequest = { preset, newName ->
-                    list.replaceAll { if (it != preset) it
-                                      else Preset(newName) }
-                },
-                onPresetOverwriteRequest = {},
-                onPresetDeleteRequest = list::remove,
-                onCloseButtonClick = onCloseButtonClick,
-                onPresetClick = { currentPreset = it })
+                onCloseButtonClick = onCloseButtonClick)
         }
     }
 

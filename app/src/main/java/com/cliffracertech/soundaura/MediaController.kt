@@ -273,7 +273,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
             if (transitionProgress > 0f)
                 PresetList(
                     modifier = Modifier
-                        .fillMaxHeight().weight(1f)
+                        .fillMaxWidth().weight(1f)
                         .padding(8.dp, 0.dp, 8.dp, 8.dp)
                         .background(MaterialTheme.colors.surface,
                                     MaterialTheme.shapes.large),

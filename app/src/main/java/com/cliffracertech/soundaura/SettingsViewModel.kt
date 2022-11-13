@@ -57,6 +57,9 @@ object SoundAura {
      * enum value to use as the application's light/dark theme. */
     const val pref_key_appTheme = "app_theme"
 
+    /** A [String] value that represents the name of the currently active preset. */
+    const val pref_key_activePresetName = "active_preset_name"
+
     /**
      * A boolean value that indicates whether playback should occur in the
      * background. Expected behavior when playInBackground == false is:
