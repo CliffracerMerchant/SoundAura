@@ -48,25 +48,31 @@
         remove some tracks in order to add any more.
     </string>
 
-    <string name="preset_button_click_label">Change current preset</string>
+    <string name="preset_button_click_label">Change active preset</string>
     <string name="unsaved_preset_description">Unsaved preset</string>
-    <string name="playing_modified_preset_description">Playing modified preset</string>
     <string name="playing_preset_description">Playing preset</string>
     <string name="preset_selector_title">Select a preset</string>
+    <string name="empty_preset_list_message">You don\'t have any saved presets.
+        Tap the add button below to save the current sound mix as a preset.</string>
+    <string name="preset_click_label">Load preset %1$s</string>
     <string name="close_preset_selector_description">Close preset selector</string>
+
     <string name="overwrite">Overwrite</string>
     <string name="confirm_overwrite_preset_dialog_title">Confirm overwrite preset</string>
-    <string name="confirm_overwrite_preset_dialog_message">This will overwrite the preset %1$s. Are you sure?</string>
-    <string name="add_preset_button_description">Create new preset</string>
-    <string name="create_new_preset_dialog_title">Enter new preset name</string>
-    <string name="preset_name_cannot_be_blank_warning_message">The preset\'s name cannot be blank</string>
-    <string name="preset_name_already_in_use_warning_message">Another preset with the same name already exists.</string>
+    <string name="confirm_overwrite_preset_dialog_message">
+        This will overwrite the preset %1$s. Are you sure?</string>
 
-    <string name="preset_click_label">Load preset %1$s</string>
     <string name="delete">Delete</string>
     <string name="confirm_delete_preset_title">Delete %1$s?</string>
     <string name="confirm_delete_preset_message">
         This will not remove the tracks in the preset from your library.</string>
+
+    <string name="add_preset_button_description">Create new preset</string>
+    <string name="create_new_preset_dialog_title">Enter new preset name</string>
+    <string name="preset_name_cannot_be_blank_warning_message">
+        The preset\'s name cannot be blank</string>
+    <string name="preset_name_already_in_use_warning_message">
+        Another preset with the same name already exists.</string>
 
     <string name="play">Play</string>
     <string name="pause">Pause</string>

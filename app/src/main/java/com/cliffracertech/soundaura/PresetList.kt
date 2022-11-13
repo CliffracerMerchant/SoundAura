@@ -2,11 +2,10 @@
  * License 2.0. See license.md in the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
@@ -19,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -186,18 +186,24 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
     onPresetOverwriteRequest: (Preset) -> Unit,
     onPresetDeleteRequest: (Preset) -> Unit,
     onPresetClick: (Preset) -> Unit,
-) {
-    LazyColumn(modifier, contentPadding = contentPadding) {
-        val list = presetListProvider()
-        items(list, key = { it.name }) { preset ->
-            val isSelected = preset == activePreset
-            val itemModifier = remember(isSelected) {
-                if (!isSelected) Modifier
-                else Modifier.background(selectionBrush, alpha = 0.5f)
+) = CompositionLocalProvider(LocalContentColor provides MaterialTheme.colors.onSurface) {
+    val list = presetListProvider()
+    AnimatedContent(
+        targetState = list.isEmpty(),
+        modifier = modifier
+    ) { listIsEmpty ->
+        if (listIsEmpty)
+            Box(Modifier.fillMaxSize(), Alignment.Center) {
+                Text(stringResource(R.string.empty_preset_list_message),
+                     modifier = Modifier.fillMaxWidth(0.67f),
+                     textAlign = TextAlign.Justify)
             }
-            CompositionLocalProvider(LocalContentColor provides MaterialTheme.colors.onSurface) {
+        else LazyColumn(contentPadding = contentPadding) {
+            items(list, key = { it.name }) { preset ->
                 PresetView(
-                    modifier = itemModifier,
+                    modifier =
+                        if (preset != activePreset) Modifier
+                        else Modifier.background(selectionBrush, alpha = 0.5f),
                     preset = preset,
                     isModified = preset == activePreset && activePresetIsModified,
                     onRenameRequest = { onPresetRenameRequest(preset, it) },
