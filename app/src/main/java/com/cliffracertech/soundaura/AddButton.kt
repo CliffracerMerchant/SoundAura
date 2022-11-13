@@ -29,17 +29,21 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.cliffracertech.soundaura.SoundAura.pref_key_activePresetName
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 // The stored context object here is the application
@@ -120,11 +124,17 @@ class AddTrackButtonViewModel(
 @HiltViewModel
 class AddPresetButtonViewModel(
     private val dao: PresetDao,
+    private val dataStore: DataStore<Preferences>,
     coroutineScope: CoroutineScope?,
 ) : ViewModel() {
-    @Inject constructor(dao: PresetDao) : this(dao, null)
+
+    @Inject constructor(
+        dao: PresetDao,
+        dataStore: DataStore<Preferences>
+    ) : this(dao, dataStore, null)
 
     private val scope = coroutineScope ?: viewModelScope
+    private val activePresetKey = stringPreferencesKey(pref_key_activePresetName)
 
     var showingAddPresetDialog by mutableStateOf(false)
         private set
@@ -180,12 +190,17 @@ class AddPresetButtonViewModel(
             // name, and then confirms the new name before the suspend functions
             // underlying nameValidatorMessage have a chance to return a non-null
             // message.
-            val nameValidatorResult = nameValidator(newPresetName.value ?: "")
+            val name = newPresetName.value ?: ""
+            val nameValidatorResult = nameValidator(name)
             val message = nameValidatorResultToMessage(nameValidatorResult)
-            if (message == null) {
-                showingAddPresetDialog = false
-                newPresetName.value = null
-            } else newPresetName.value = newPresetName.value ?: ""
+            if (message != null) return@launch
+
+            showingAddPresetDialog = false
+            newPresetName.value = null
+            dao.savePreset(name)
+            dataStore.edit {
+                it[activePresetKey] = name
+            }
         }
     }
 }
