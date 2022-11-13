@@ -115,11 +115,13 @@ data class Preset(
         foreignKeys = [ ForeignKey(entity = Track::class,
                                    parentColumns=["uriString"],
                                    childColumns=["trackUriString"],
-                                   onDelete=ForeignKey.NO_ACTION),
+                                   onUpdate=ForeignKey.CASCADE,
+                                   onDelete=ForeignKey.CASCADE),
                         ForeignKey(entity = Preset::class,
                                    parentColumns=["name"],
                                    childColumns=["presetName"],
-                                   onDelete=ForeignKey.NO_ACTION)])
+                                   onUpdate=ForeignKey.CASCADE,
+                                   onDelete=ForeignKey.CASCADE)])
 data class PresetTrack(
     @ColumnInfo(name = "presetName")
     val presetName: String,
