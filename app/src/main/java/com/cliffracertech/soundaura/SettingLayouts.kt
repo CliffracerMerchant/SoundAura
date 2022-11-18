@@ -30,7 +30,7 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) = Surface(
-    modifier = modifier.restrictWidthAccordingToSizeClass(),
+    modifier = modifier.restrictWidthAccordingToSizeClass(compactPadding = 0.dp),
     shape = MaterialTheme.shapes.large
 ) {
     Column(Modifier.padding(20.dp, 10.dp, 20.dp, 6.dp)) {

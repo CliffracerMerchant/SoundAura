@@ -225,10 +225,11 @@ class MainActivity : ComponentActivity() {
 
         SlideAnimatedContent(
             targetState = showingAppSettings,
-            leftToRight = !showingAppSettings
+            leftToRight = !showingAppSettings,
+            modifier = Modifier.fillMaxSize()
         ) { showingAppSettingsScreen ->
             if (showingAppSettingsScreen)
-                AppSettings(padding, Modifier.fillMaxSize())
+                AppSettings(padding)
             else {
                 // The track list's padding must be adjusted depending on the placement of the FABs.
                 val trackListPadding = remember(padding, widthIsConstrained) {
@@ -303,53 +304,46 @@ class MainActivity : ComponentActivity() {
             val screenWidthDp = with(density) { constraints.maxWidth.toDp() }
             val startPadding = padding.calculateStartPadding(ld)
             val endPadding = padding.calculateEndPadding(ld)
-            val collapsedSize = remember(constraints, alignToEnd, density) {
-                DpSize(
-                    // The goal is to have the media controller bar have such a
-                    // width/height that the play/pause icon is centered in the
-                    // content area's width in portrait mode, or centered in the
-                    // content area's height in landscape mode. The main content
-                    // area's width/height is divided by two, then 28dp is added
-                    // to account for the media controller bar's rounded corner
-                    // radius. The min value between this calculated width/height
-                    // and the full content area width/height minus 64dp (i.e.
-                    // the add button's 56dp size plus an 8dp margin) is then
-                    // used to ensure that for small screen sizes the media
-                    // controller can't overlap the add button.
-                    width = if (alignToEnd) 56.dp else {
-                        val contentAreaWidth = screenWidthDp - startPadding - endPadding
-                        minOf(contentAreaWidth / 2f + 28.dp, contentAreaWidth - 64.dp)
-                    },
-                    height = if (!alignToEnd) 56.dp else {
-                        val screenHeightDp = with(density) { constraints.maxHeight.toDp() }
-                        val topPadding = padding.calculateTopPadding()
-                        val bottomPadding = padding.calculateBottomPadding()
-                        val contentAreaHeight = screenHeightDp - topPadding - bottomPadding
-                        minOf(contentAreaHeight / 2f + 28.dp, contentAreaHeight - 64.dp)
-                    })
-            }
-            val expandedSize = remember(constraints, alignToEnd, density) {
-                val widthFraction = if (alignToEnd) 0.6f else 1.0f
-                with (density) { DpSize(
-                    width = screenWidthDp * widthFraction - startPadding - endPadding,
-                    height = if (!alignToEnd) 350.dp
-                             else constraints.maxHeight.toDp() -
-                                 padding.calculateTopPadding() -
-                                 padding.calculateBottomPadding()
-                )}
-            }
+            val contentWidth = screenWidthDp - startPadding - endPadding
+
+            val screenHeightDp = with(density) { constraints.maxHeight.toDp() }
+            val topPadding = padding.calculateTopPadding()
+            val bottomPadding = padding.calculateBottomPadding()
+            val contentHeight = screenHeightDp - topPadding - bottomPadding
+
+            val collapsedSize = remember { DpSize(
+                // The goal is to have the media controller bar have such a
+                // width/height that the play/pause icon is centered in the
+                // content area's width in portrait mode, or centered in the
+                // content area's height in landscape mode. The main content
+                // area's width/height is divided by two, then 28dp is added
+                // to account for the media controller bar's rounded corner
+                // radius. The min value between this calculated width/height
+                // and the full content area width/height minus 64dp (i.e.
+                // the add button's 56dp size plus an 8dp margin) is then
+                // used to ensure that for small screen sizes the media
+                // controller can't overlap the add button.
+                width = if (alignToEnd) 56.dp else
+                    minOf(contentWidth / 2f + 28.dp, contentWidth - 64.dp),
+                height = if (!alignToEnd) 56.dp else
+                    minOf(contentHeight / 2f + 28.dp, contentHeight - 64.dp)
+            )}
+            val expandedSize = remember { DpSize(
+                width = contentWidth * if (alignToEnd) 0.6f else 1.0f,
+                height = if (!alignToEnd) 350.dp else contentHeight
+            )}
             val startColor = MaterialTheme.colors.primaryVariant
             val endColor = MaterialTheme.colors.secondaryVariant
-            val backgroundBrush = remember(alignToEnd, showingPresetSelector, startColor, endColor) {
-                val dpStart = if (!alignToEnd) startPadding
-                              else screenWidthDp - endPadding -
-                                  if (showingPresetSelector) expandedSize.width
-                                  else                       collapsedSize.width
-                val viewStart = with(density) { dpStart.toPx() }
+            val backgroundBrush = remember(showingPresetSelector, startColor, endColor) {
+                val viewStart = if (!alignToEnd) startPadding
+                                else screenWidthDp - endPadding -
+                                    if (showingPresetSelector) expandedSize.width
+                                    else                       collapsedSize.width
+                val viewStartPx = with (density) { viewStart.toPx() }
                 Brush.horizontalGradient(
                     colors = listOf(startColor, endColor),
-                    startX = -viewStart,
-                    endX = constraints.maxWidth - viewStart)
+                    startX = -viewStartPx,
+                    endX = constraints.maxWidth - viewStartPx)
             }
 
             StatefulMediaController(
