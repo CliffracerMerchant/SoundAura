@@ -3,7 +3,6 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import android.util.Log
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,13 +14,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -284,11 +288,11 @@ val Orientation.isVertical get() = this == Orientation.Vertical
         val padding = 8.dp
         val shape = MaterialTheme.shapes.large
         val presetListSize = remember {
-            val titleHeight = if (orientation.isVertical) collapsedSize.width
-                              else                        collapsedSize.height
-            Log.d("SoundAuraTag", "expandedSize.height(${expandedSize.height}) - titleHeight($titleHeight) - padding($padding) = ${expandedSize.height - titleHeight - padding}")
-            DpSize(expandedSize.width - padding * 4,
-                   expandedSize.height - titleHeight - padding)
+            val presetListTitleHeight =
+                if (orientation.isVertical) collapsedSize.width
+                else                        collapsedSize.height
+            DpSize(expandedSize.width - padding * 2,
+                   expandedSize.height - presetListTitleHeight - padding)
         }
         val minScaleX = remember {
             (collapsedSize.width - padding * 2) / (expandedSize.width - padding * 2)

@@ -9,7 +9,6 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
-import android.util.Log
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -153,7 +152,7 @@ class MainActivity : ComponentActivity() {
                         // The 56dp is added here manually for the action bar's height.
                         additionalTop = 8.dp + 56.dp,
                         additionalEnd = 8.dp,
-                        additionalBottom = 8.dp)
+                        additionalBottom = 0.dp)
                     MainContent(widthIsConstrained, padding)
                 })
         }
@@ -301,6 +300,9 @@ class MainActivity : ComponentActivity() {
 
             val density = LocalDensity.current
             val ld = LocalLayoutDirection.current
+            val screenWidthDp = with(density) { constraints.maxWidth.toDp() }
+            val startPadding = padding.calculateStartPadding(ld)
+            val endPadding = padding.calculateEndPadding(ld)
             val collapsedSize = remember(constraints, alignToEnd, density) {
                 DpSize(
                     // The goal is to have the media controller bar have such a
@@ -315,10 +317,6 @@ class MainActivity : ComponentActivity() {
                     // used to ensure that for small screen sizes the media
                     // controller can't overlap the add button.
                     width = if (alignToEnd) 56.dp else {
-                        val screenWidthDp = with(density) { constraints.maxWidth.toDp() }
-                        Log.d("SoundAuraTag", "screen width = $screenWidthDp")
-                        val startPadding = padding.calculateStartPadding(ld)
-                        val endPadding = padding.calculateEndPadding(ld)
                         val contentAreaWidth = screenWidthDp - startPadding - endPadding
                         minOf(contentAreaWidth / 2f + 28.dp, contentAreaWidth - 64.dp)
                     },
@@ -333,22 +331,21 @@ class MainActivity : ComponentActivity() {
             val expandedSize = remember(constraints, alignToEnd, density) {
                 val widthFraction = if (alignToEnd) 0.6f else 1.0f
                 with (density) { DpSize(
-                    width = (constraints.maxWidth * widthFraction).toDp() -
-                        padding.run { calculateStartPadding(ld) - calculateEndPadding(ld) },
+                    width = screenWidthDp * widthFraction - startPadding - endPadding,
                     height = if (!alignToEnd) 350.dp
-                             else constraints.maxHeight.toDp()
+                             else constraints.maxHeight.toDp() -
+                                 padding.calculateTopPadding() -
+                                 padding.calculateBottomPadding()
                 )}
             }
             val startColor = MaterialTheme.colors.primaryVariant
             val endColor = MaterialTheme.colors.secondaryVariant
             val backgroundBrush = remember(alignToEnd, showingPresetSelector, startColor, endColor) {
-                val viewStart = with(density) {
-                    if (alignToEnd)
-                        constraints.maxWidth - padding.calculateEndPadding(ld).toPx() -
-                            if (showingPresetSelector) expandedSize.width.toPx()
-                            else                       collapsedSize.width.toPx()
-                    else padding.calculateStartPadding(ld).toPx()
-                }
+                val dpStart = if (!alignToEnd) startPadding
+                              else screenWidthDp - endPadding -
+                                  if (showingPresetSelector) expandedSize.width
+                                  else                       collapsedSize.width
+                val viewStart = with(density) { dpStart.toPx() }
                 Brush.horizontalGradient(
                     colors = listOf(startColor, endColor),
                     startX = -viewStart,
