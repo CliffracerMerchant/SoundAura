@@ -18,7 +18,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundaura.SoundAura.pref_key_activePresetName
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -35,15 +37,13 @@ class MediaControllerViewModel(
     ) : this(dao, dataStore, null)
 
     private val scope = coroutineScope ?: viewModelScope
-    private val activePresetKey = stringPreferencesKey(pref_key_activePresetName)
+    private val activePresetNameKey = stringPreferencesKey(pref_key_activePresetName)
 
     val presetList by dao.getPresetList()
-        .collectAsState(emptyList(), scope)
+        .map { it.toImmutableList() }
+        .collectAsState(listOf<Preset>().toImmutableList(), scope)
 
-    private val activePresetName by dataStore.preferenceState(activePresetKey, "", scope)
-    val activePreset by derivedStateOf {
-        presetList.find { it.name == activePresetName }
-    }
+    val activePresetName by dataStore.nullablePreferenceState(activePresetNameKey, scope)
 
     var activePresetIsModified by mutableStateOf(false)
         private set
@@ -70,7 +70,7 @@ class MediaControllerViewModel(
         scope.launch {
             dao.loadPreset(preset.name)
             dataStore.edit {
-                it[activePresetKey] = preset.name
+                it[activePresetNameKey] = preset.name
             }
         }
     }
@@ -101,10 +101,10 @@ class MediaControllerViewModel(
         showingPresetSelector = showingPresetSelector,
         isPlaying = isPlaying,
         onPlayPauseClick = onPlayPauseClick,
-        activePreset = viewModel.activePreset,
+        activePresetNameProvider = remember{{ viewModel.activePresetName }},
         activePresetIsModified = viewModel.activePresetIsModified,
         onActivePresetClick = onActivePresetClick,
-        presetListProvider = { viewModel.presetList },
+        presetListProvider = remember {{ viewModel.presetList }},
         onPresetRenameRequest = viewModel::onPresetRenameRequest,
         onPresetOverwriteRequest = viewModel::onPresetOverwriteRequest,
         onPresetDeleteRequest = viewModel::onPresetDeleteRequest,

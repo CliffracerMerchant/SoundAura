@@ -59,6 +59,19 @@ fun <T> DataStore<Preferences>.preferenceState(
     return state
 }
 
+/** Return a [State]`<T?>` that contains the most recent value for the [DataStore]
+ * preference pointed to by [key], with an initial value of null. */
+fun <T> DataStore<Preferences>.nullablePreferenceState(
+    key: Preferences.Key<T>,
+    scope: CoroutineScope,
+) : State<T?> {
+    val state = mutableStateOf<T?>(null)
+    data.map { it[key] }
+        .onEach { state.value = it }
+        .launchIn(scope)
+    return state
+}
+
 /** Return a [State]`<T>` that contains the most recent value for the
  * [DataStore] preference pointed to by [key], with a default value of
  * [defaultValue]. awaitPreferenceState will suspend until the first value
@@ -148,11 +161,11 @@ fun Modifier.restrictWidthAccordingToSizeClass() = composed {
         val screenWidth = config.screenWidthDp
         val maxWidth = when (widthSizeClass) {
             WindowWidthSizeClass.Compact ->
-                (screenWidth * 9f / 10f).toInt().dp
+                (screenWidth * 0.9f).toInt().dp
             WindowWidthSizeClass.Medium ->
-                (screenWidth * 4f / 5f).toInt().dp
+                (screenWidth * 0.8f).toInt().dp
             WindowWidthSizeClass.Expanded ->
-                (screenWidth * 3f / 5f).toInt().dp
+                (screenWidth * 0.6f).toInt().dp
             else -> screenWidth.dp
         }
         Modifier.widthIn(max = maxWidth)

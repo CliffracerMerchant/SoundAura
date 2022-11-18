@@ -284,12 +284,16 @@ fun Modifier.minTouchTargetSize() =
  * whole line from being visible, automatically scrolls to its end, springs
  * back to its beginning, and repeats this cycle indefinitely. The parameters
  * mirror those of [Text], except that the maxLines and the softWrap parameters
- * are unable to be changed.
+ * are unable to be changed, and the additional [maxWidthPx] parameter. If the
+ * available horizontal space is known at the composition site, this can be
+ * passed in as the value of [maxWidthPx] to prevent [MarqueeText] from
+ * needing to calculate this itself.
  */
 @Composable fun MarqueeText(
     text: String,
     modifier: Modifier = Modifier,
     color: Color = Color.Unspecified,
+    maxWidthPx: Int? = null,
     fontSize: TextUnit = TextUnit.Unspecified,
     fontStyle: FontStyle? = null,
     fontWeight: FontWeight? = null,
@@ -301,24 +305,33 @@ fun Modifier.minTouchTargetSize() =
     overflow: TextOverflow = TextOverflow.Clip,
     onTextLayout: (TextLayoutResult) -> Unit = {},
     style: TextStyle = LocalTextStyle.current,
-) = BoxWithConstraints(modifier, Alignment.Center) {
-    val scrollState = rememberScrollState()
-    var shouldAnimate by remember { mutableStateOf(true) }
-    var animationDuration by remember { mutableStateOf(0) }
-    if (animationDuration > 0)
-        LaunchedEffect(shouldAnimate) {
-            scrollState.animateScrollTo(scrollState.maxValue,
-                tween(animationDuration, 2000, LinearEasing))
-            delay(2000)
-            scrollState.animateScrollTo(0)
-            shouldAnimate = !shouldAnimate
+) {
+    val content = @Composable { maxWidthPx: Int ->
+        val scrollState = rememberScrollState()
+        var shouldAnimate by remember { mutableStateOf(true) }
+        var animationDuration by remember { mutableStateOf(0) }
+        if (animationDuration > 0)
+            LaunchedEffect(shouldAnimate) {
+                scrollState.animateScrollTo(scrollState.maxValue,
+                    tween(animationDuration, 2000, LinearEasing))
+                delay(2000)
+                scrollState.animateScrollTo(0)
+                shouldAnimate = !shouldAnimate
+            }
+        Text(text, Modifier.horizontalScroll(scrollState, false),
+            color, fontSize, fontStyle, fontWeight, fontFamily, letterSpacing,
+            textDecoration, textAlign, lineHeight, overflow, maxLines = 1,
+            onTextLayout = {
+                onTextLayout(it)
+                val overflowAmount = it.size.width - maxWidthPx
+                animationDuration = overflowAmount.coerceAtLeast(0) * 10
+            }, style = style)
+    }
+    if (maxWidthPx != null)
+        Box(modifier, Alignment.Center) {
+            content(maxWidthPx)
         }
-    Text(text, Modifier.horizontalScroll(scrollState, false),
-        color, fontSize, fontStyle, fontWeight, fontFamily, letterSpacing,
-        textDecoration, textAlign, lineHeight, overflow, maxLines = 1,
-        onTextLayout = {
-            onTextLayout(it)
-            val overflowAmount = it.size.width - constraints.maxWidth
-            animationDuration = overflowAmount.coerceAtLeast(0) * 10
-        }, style = style)
+    else BoxWithConstraints(modifier, Alignment.Center) {
+        content(constraints.maxWidth)
+    }
 }

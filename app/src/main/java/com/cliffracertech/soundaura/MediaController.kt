@@ -3,6 +3,7 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
+import android.util.Log
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,21 +15,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.DpSize
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.*
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 
-private const val springStiffness = 700f
+private const val springStiffness = 600f
+//private const val springStiffness = 10f
 
 fun Modifier.rotateClockwise() = layout { measurable, constraints ->
     val placeable = measurable.measure(constraints.copy(
@@ -47,7 +46,8 @@ val Orientation.isVertical get() = this == Orientation.Vertical
 @Composable private fun ActivePresetIndicator(
     modifier: Modifier = Modifier,
     orientation: Orientation,
-    activePreset: Preset?,
+    maxWidthPx: Int,
+    activePresetNameProvider: () -> String?,
     activeIsModified: Boolean,
     onClick: () -> Unit,
 ) {
@@ -62,19 +62,21 @@ val Orientation.isVertical get() = this == Orientation.Vertical
     }
     Column(columnModifier, Arrangement.Center, Alignment.CenterHorizontally) {
         val style = MaterialTheme.typography.caption
+        val activePresetName = activePresetNameProvider()
         Text(text = stringResource(
-            if (activePreset == null) R.string.playing
-            else R.string.playing_preset_description),
-            maxLines = 1, style = style, softWrap = false)
+                 if (activePresetName == null) R.string.playing
+                 else R.string.playing_preset_description),
+             maxLines = 1, style = style, softWrap = false)
         Row {
             MarqueeText(
-                text = activePreset?.name ?:
-                stringResource(R.string.unsaved_preset_description),
+                text = activePresetName ?:
+                    stringResource(R.string.unsaved_preset_description),
+                maxWidthPx = maxWidthPx,
                 modifier = Modifier.weight(1f, false),
                 style = style)
             if (activeIsModified)
                 Text(" *", maxLines = 1, softWrap = false,
-                    style = style.copy(fontSize = 14.sp))
+                     style = style.copy(fontSize = 14.sp))
         }
     }
 }
@@ -107,67 +109,73 @@ val Orientation.isVertical get() = this == Orientation.Vertical
 @Composable private fun MediaControllerAndPresetSelectorTitle(
     modifier: Modifier = Modifier,
     orientation: Orientation,
+    maxWidthPx: Int,
     expandTransition: Transition<Boolean>,
-    transitionProgress: Float,
+    transitionProgressProvider: () -> Float,
     isPlaying: Boolean,
     onActivePresetClick: () -> Unit,
     onPlayPauseClick: () -> Unit,
     onCloseButtonClick: () -> Unit,
-    activePreset: Preset?,
+    activePresetNameProvider: () -> String?,
     activePresetIsModified: Boolean,
-) {
-    // This extra end padding when the view is expanded makes the close
-    // button align with the more options buttons for each listed preset
-    val endPadding by expandTransition.animateDp(
-        transitionSpec = { spring(stiffness = springStiffness) },
-        label = "MediaController play/pause into preset selector close end padding",
-        targetValueByState = { if (it) 4.dp else 0.dp })
+) = Box(modifier = modifier.fillMaxWidth()) {
+    val isExpandedOrExpanding = expandTransition.targetState ||
+                                expandTransition.isRunning
+    if (isExpandedOrExpanding)
+        Text(stringResource(R.string.preset_selector_title),
+            modifier = Modifier
+                .align(Alignment.Center)
+                .graphicsLayer { alpha = transitionProgressProvider() },
+            maxLines = 1, softWrap = false,
+            style = MaterialTheme.typography.h6)
 
-    Box(modifier = modifier.fillMaxWidth().padding(end = endPadding)) {
-        if (transitionProgress > 0f)
-            Text(stringResource(R.string.preset_selector_title),
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .graphicsLayer { alpha = transitionProgress },
-                textAlign = TextAlign.Center,
-                maxLines = 1, softWrap = false,
-                style = MaterialTheme.typography.h6)
-        if (transitionProgress < 1f) {
-            if (orientation == Orientation.Horizontal)
-                Row(modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .height(56.dp)
-                    .padding(end = 52.dp)
-                    .graphicsLayer { alpha = 1f - transitionProgress },
-                ) {
-                    ActivePresetIndicator(
-                        orientation = Orientation.Horizontal,
-                        activePreset = activePreset,
-                        activeIsModified = activePresetIsModified,
-                        modifier = Modifier.weight(1f),
-                        onClick = onActivePresetClick)
-                    VerticalDivider(heightFraction = 0.8f)
-                }
-            else Column(modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .width(56.dp)
-                .padding(bottom = 52.dp)
-                .graphicsLayer { alpha = 1f - transitionProgress }
+    val isCollapsedOrCollapsing = !expandTransition.targetState ||
+                                  expandTransition.isRunning
+    val density = LocalDensity.current
+    if (isCollapsedOrCollapsing) {
+        val maxWidth = maxWidthPx - with (density) { 56.dp.roundToPx() }
+        if (orientation == Orientation.Horizontal)
+            Row(modifier = Modifier
+                .align(Alignment.CenterStart)
+                .height(56.dp)
+                .padding(end = 52.dp)
+                .graphicsLayer { alpha = 1f - transitionProgressProvider() },
             ) {
                 ActivePresetIndicator(
-                    orientation = Orientation.Vertical,
-                    activePreset = activePreset,
-                    activeIsModified = activePresetIsModified,
                     modifier = Modifier.weight(1f),
+                    orientation = Orientation.Horizontal,
+                    maxWidthPx = maxWidth,
+                    activePresetNameProvider = activePresetNameProvider,
+                    activeIsModified = activePresetIsModified,
                     onClick = onActivePresetClick)
-                HorizontalDivider(widthFraction = 0.8f)
+                VerticalDivider(heightFraction = 0.8f)
             }
+        else Column(modifier = Modifier
+            .align(Alignment.CenterEnd)
+            .width(56.dp)
+            .padding(bottom = 52.dp)
+            .graphicsLayer { alpha = 1f - transitionProgressProvider() }
+        ) {
+            ActivePresetIndicator(
+                modifier = Modifier.weight(1f),
+                orientation = Orientation.Vertical,
+                maxWidthPx = maxWidth,
+                activePresetNameProvider = activePresetNameProvider,
+                activeIsModified = activePresetIsModified,
+                onClick = onActivePresetClick)
+            HorizontalDivider(widthFraction = 0.8f)
         }
-        MediaControllerPlayPauseStopButton(
-            expandTransition, isPlaying,
-            onPlayPauseClick, onCloseButtonClick,
-            Modifier.align(Alignment.BottomEnd).size(56.dp))
     }
+
+    // This extra  when the view is expanded makes the close
+    // button align with the more options buttons for each listed preset
+    val closeButtonXOffset = remember { with (density) { 4.dp.toPx() } }
+    MediaControllerPlayPauseStopButton(
+        expandTransition, isPlaying,
+        onPlayPauseClick, onCloseButtonClick,
+        Modifier.align(Alignment.BottomEnd).size(56.dp).graphicsLayer {
+            translationX = -closeButtonXOffset * transitionProgressProvider()
+        })
 }
 
 /**
@@ -189,7 +197,8 @@ val Orientation.isVertical get() = this == Orientation.Vertical
  *     expanded to show the preset selector
  * @param isPlaying The is playing state of the media
  * @param onPlayPauseClick The callback that will be invoked when the play/pause button is clicked
- * @param activePreset The actively playing [Preset], if any
+ * @param activePresetNameProvider A function that returns the name of the
+ *     actively playing [Preset], or null if there isn't one, when invoked
  * @param activePresetIsModified Whether or not the active preset has unsaved changes
  * @param onActivePresetClick The callback that will be invoked when the active
  *     preset is clicked
@@ -216,16 +225,16 @@ val Orientation.isVertical get() = this == Orientation.Vertical
     showingPresetSelector: Boolean,
     isPlaying: Boolean,
     onPlayPauseClick: () -> Unit,
-    activePreset: Preset?,
+    activePresetNameProvider: () -> String?,
     activePresetIsModified: Boolean,
     onActivePresetClick: () -> Unit,
-    presetListProvider: () -> List<Preset>,
+    presetListProvider: () -> ImmutableList<Preset>,
     onPresetRenameRequest: (Preset, String) -> Unit,
     onPresetOverwriteRequest: (Preset) -> Unit,
     onPresetDeleteRequest: (Preset) -> Unit,
     onCloseButtonClick: () -> Unit,
     onPresetClick: (Preset) -> Unit,
-) {
+) = CompositionLocalProvider(LocalContentColor provides contentColor) {
     val expandTransition = updateTransition(
         targetState = showingPresetSelector,
         label = "FloatingMediaController transition")
@@ -243,69 +252,87 @@ val Orientation.isVertical get() = this == Orientation.Vertical
         label = "FloatingMediaController height transition",
         targetValueByState = { if (it) expandedSize.height
                                else    collapsedSize.height })
-    CompositionLocalProvider(LocalContentColor provides contentColor) {
-        Column(
-            modifier = modifier
-                .size(animatedWidth, animatedHeight)
-                .background(backgroundBrush, RoundedCornerShape(28.dp)),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            val titleHeight by expandTransition.animateDp(
-                transitionSpec = { spring(stiffness = springStiffness) },
-                label = "FloatingMediaController title height transition",
-            ) { expanded ->
-                if (expanded && orientation.isVertical)
-                    collapsedSize.width
-                else collapsedSize.height
-            }
-            MediaControllerAndPresetSelectorTitle(
-                modifier = Modifier.height(titleHeight),
-                orientation = orientation,
-                expandTransition = expandTransition,
-                transitionProgress = transitionProgress,
-                isPlaying = isPlaying,
-                onActivePresetClick = onActivePresetClick,
-                onPlayPauseClick = onPlayPauseClick,
-                onCloseButtonClick = onCloseButtonClick,
-                activePreset = activePreset,
-                activePresetIsModified = activePresetIsModified)
 
-            if (transitionProgress > 0f)
-                PresetList(
-                    modifier = Modifier
-                        .fillMaxWidth().weight(1f)
-                        .padding(8.dp, 0.dp, 8.dp, 8.dp)
-                        .background(MaterialTheme.colors.surface,
-                                    MaterialTheme.shapes.large),
-                    contentPadding = PaddingValues(bottom = 64.dp),
-                    activePreset = activePreset,
-                    activePresetIsModified = activePresetIsModified,
-                    selectionBrush = backgroundBrush,
-                    presetListProvider = presetListProvider,
-                    onPresetRenameRequest = onPresetRenameRequest,
-                    onPresetOverwriteRequest = {
-                        onPresetOverwriteRequest(it)
-                        onCloseButtonClick()
-                    }, onPresetDeleteRequest = onPresetDeleteRequest,
-                    onPresetClick = {
-                        onPresetClick(it)
-                        onCloseButtonClick()
-                    })
+    Column(
+        modifier = modifier
+            .size(animatedWidth, animatedHeight)
+            .background(backgroundBrush, RoundedCornerShape(28.dp)),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        val titleHeight by expandTransition.animateDp(
+            transitionSpec = { spring(stiffness = springStiffness) },
+            label = "FloatingMediaController title height transition",
+        ) { expanded ->
+            if (expanded && orientation.isVertical)
+                collapsedSize.width
+            else collapsedSize.height
         }
+        MediaControllerAndPresetSelectorTitle(
+            modifier = Modifier.height(titleHeight),
+            orientation = orientation,
+            maxWidthPx = with(LocalDensity.current) {
+                collapsedSize.width.roundToPx()
+            }, expandTransition = expandTransition,
+            transitionProgressProvider = { transitionProgress },
+            isPlaying = isPlaying,
+            onActivePresetClick = onActivePresetClick,
+            onPlayPauseClick = onPlayPauseClick,
+            onCloseButtonClick = onCloseButtonClick,
+            activePresetNameProvider = activePresetNameProvider,
+            activePresetIsModified = activePresetIsModified)
+
+        val padding = 8.dp
+        val shape = MaterialTheme.shapes.large
+        val presetListSize = remember {
+            val titleHeight = if (orientation.isVertical) collapsedSize.width
+                              else                        collapsedSize.height
+            Log.d("SoundAuraTag", "expandedSize.height(${expandedSize.height}) - titleHeight($titleHeight) - padding($padding) = ${expandedSize.height - titleHeight - padding}")
+            DpSize(expandedSize.width - padding * 4,
+                   expandedSize.height - titleHeight - padding)
+        }
+        val minScaleX = remember {
+            (collapsedSize.width - padding * 2) / (expandedSize.width - padding * 2)
+        }
+        if (expandTransition.run { currentState || isRunning })
+            PresetList(
+                modifier = Modifier
+//                    .padding(padding, 0.dp, padding, padding)
+                    .requiredSize(presetListSize)
+                    .graphicsLayer {
+                        alpha = transitionProgress
+                        scaleY = transitionProgress
+                        scaleX = minScaleX + (1f - minScaleX) * transitionProgress
+                    }
+                    .background(MaterialTheme.colors.surface, shape),
+                contentPadding = PaddingValues(bottom = 64.dp),
+                activePresetNameProvider = activePresetNameProvider,
+                activePresetIsModified = activePresetIsModified,
+                selectionBrush = backgroundBrush,
+                presetListProvider = presetListProvider,
+                onPresetRenameRequest = onPresetRenameRequest,
+                onPresetOverwriteRequest = remember{{
+                    onPresetOverwriteRequest(it)
+                    onCloseButtonClick()
+                }},
+                onPresetDeleteRequest = onPresetDeleteRequest,
+                onPresetClick = remember {{
+                    onPresetClick(it)
+                    onCloseButtonClick()
+                }})
     }
 }
 
 @Preview @Composable
-fun FloatingMediaControllerPreview() = SoundAuraTheme {
+fun MediaControllerPreview() = SoundAuraTheme {
     var isExpanded by remember { mutableStateOf(false) }
     var isPlaying by remember { mutableStateOf(false) }
-    val list = remember { mutableStateListOf(
+    val list = remember { listOf(
         Preset("Super duper extra really long preset name 0"),
         Preset("Super duper extra really long preset name 1"),
         Preset("Super duper extra really long preset name 2"),
         Preset("Super duper extra really long preset name 3")
-    ) }
-    var activePreset by remember { mutableStateOf(list.first()) }
+    ).toImmutableList() }
+    var activePresetName by remember { mutableStateOf<String?>(list.first().name) }
     Surface(Modifier.size(400.dp, 600.dp), RectangleShape, Color.White) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
             MediaController(
@@ -322,18 +349,15 @@ fun FloatingMediaControllerPreview() = SoundAuraTheme {
                 showingPresetSelector = isExpanded,
                 isPlaying = isPlaying,
                 onPlayPauseClick = { isPlaying = !isPlaying },
-                activePreset = activePreset,
+                activePresetNameProvider = { activePresetName },
                 activePresetIsModified = true,
                 onActivePresetClick = { isExpanded = true },
                 presetListProvider = { list },
-                onPresetRenameRequest = { preset, newName ->
-                    list.replaceAll { if (it != preset) it
-                                      else Preset(newName) }
-                },
+                onPresetRenameRequest = { _, _ -> },
                 onPresetOverwriteRequest = {},
-                onPresetDeleteRequest = list::remove,
+                onPresetDeleteRequest = {},
                 onCloseButtonClick = { isExpanded = false },
-                onPresetClick = { activePreset = it })
+                onPresetClick = { activePresetName = it.name })
         }
     }
 }
