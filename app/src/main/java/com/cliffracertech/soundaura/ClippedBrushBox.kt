@@ -5,6 +5,7 @@ package com.cliffracertech.soundaura
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -14,8 +15,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.LayoutDirection
@@ -71,32 +72,35 @@ val LayoutDirection.isLtr get() = this == LayoutDirection.Ltr
  * Return a [TransformOrigin] that corresponds to the visual center of an
  * instance of [ClippedBrushBox]. Because [ClippedBrushBox] fills the max
  * available size before clipping itself down, effects that rely on a
- * [TransformOrigin], e.g. a scaling effect, will not work as expected on
+ * [TransformOrigin], e.g. scaling effects, will not work as expected on
  * a [ClippedBrushBox] unless the transform origin for the effect is set
  * to the one returned by this method.
  */
-fun BoxWithConstraintsScope.clippedBrushBoxTransformOrigin(
+@Composable
+fun BoxWithConstraintsScope.rememberClippedBrushBoxTransformOrigin(
     dpSize: DpSize,
     alignment: BiasAlignment,
     padding: PaddingValues,
-    layoutDirection: LayoutDirection,
-    density: Density
 ): TransformOrigin {
-    val size = with (density) { dpSize.toSize() }
-    val maxWidth = constraints.maxWidth.toFloat()
-    val maxHeight = constraints.maxHeight.toFloat()
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
+    return remember {
+        val size = with(density) { dpSize.toSize() }
+        val maxWidth = constraints.maxWidth.toFloat()
+        val maxHeight = constraints.maxHeight.toFloat()
 
-    val xAlignment = alignment.horizontalBias / 2f + 0.5f
-    val yAlignment = alignment.verticalBias / 2f + 0.5f
-    val alignmentOffset = Offset(
-        x = if (layoutDirection.isLtr)
+        val xAlignment = alignment.horizontalBias / 2f + 0.5f
+        val yAlignment = alignment.verticalBias / 2f + 0.5f
+        val alignmentOffset = Offset(
+            x = if (layoutDirection.isLtr)
                 (maxWidth - size.width) * xAlignment
             else size.width - (maxWidth - size.width) * xAlignment,
-        y = (maxHeight - size.height) * yAlignment)
+            y = (maxHeight - size.height) * yAlignment)
 
-    val halfSizeOffset = Offset(size.width / 2, size.height / 2)
-    val bottomPadding = with (density) { padding.calculateBottomPadding().toPx() }
-    val paddingOffset = Offset(0f, bottomPadding)
-    val totalOffset = alignmentOffset + halfSizeOffset - paddingOffset
-    return TransformOrigin(totalOffset.x / maxWidth, totalOffset.y / maxHeight)
+        val halfSizeOffset = Offset(size.width / 2, size.height / 2)
+        val bottomPadding = with(density) { padding.calculateBottomPadding().toPx() }
+        val paddingOffset = Offset(0f, bottomPadding)
+        val totalOffset = alignmentOffset + halfSizeOffset - paddingOffset
+        TransformOrigin(totalOffset.x / maxWidth, totalOffset.y / maxHeight)
+    }
 }

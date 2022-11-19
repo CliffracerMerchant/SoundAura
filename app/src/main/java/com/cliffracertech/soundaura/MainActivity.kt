@@ -325,18 +325,9 @@ class MainActivity : ComponentActivity() {
                    height = if (!alignToEnd) 350.dp
                             else contentAreaSize.height)
         }
-
         val alignment = if (alignToEnd) Alignment.TopEnd as BiasAlignment
                         else            Alignment.BottomStart as BiasAlignment
-
-        val transformOrigin =
-            if (showingPresetSelector) remember {
-                clippedBrushBoxTransformOrigin(
-                    expandedSize, alignment, padding, ld, density)
-            } else remember {
-                clippedBrushBoxTransformOrigin(
-                    collapsedSize, alignment, padding, ld, density)
-            }
+        val transformOrigin = rememberClippedBrushBoxTransformOrigin(collapsedSize, alignment, padding)
 
         AnimatedVisibility(
             visible = visible,
