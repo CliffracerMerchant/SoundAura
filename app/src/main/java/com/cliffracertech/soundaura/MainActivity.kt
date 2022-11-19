@@ -30,7 +30,6 @@ import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
@@ -59,6 +58,7 @@ import javax.inject.Inject
 @ActivityRetainedScoped
 class MainActivityNavigationState @Inject constructor() {
     var showingAppSettings by mutableStateOf(false)
+    var showingPresetSelector by mutableStateOf(false)
 }
 
 @HiltViewModel
@@ -68,12 +68,25 @@ class MainActivityViewModel @Inject constructor(
 ) : ViewModel() {
     val messages = messageHandler.messages
     val showingAppSettings get() = navigationState.showingAppSettings
+    val showingPresetSelector get() = navigationState.showingPresetSelector
 
-    fun onBackButtonClick() =
-        if (showingAppSettings) {
+    fun onBackButtonClick() = when {
+        showingAppSettings -> {
             navigationState.showingAppSettings = false
             true
-        } else false
+        } showingPresetSelector -> {
+            navigationState.showingPresetSelector = false
+            true
+        } else -> false
+    }
+
+    fun onMediaControllerPresetClick() {
+        navigationState.showingPresetSelector = true
+    }
+
+    fun onPresetSelectorCloseButtonClick() {
+        navigationState.showingPresetSelector = false
+    }
 }
 
 val LocalWindowSizeClass = compositionLocalOf {
@@ -116,13 +129,12 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContentWithTheme {
-            val scaffoldState = rememberScaffoldState()
-
-            MessageDisplayer(scaffoldState.snackbarHostState)
-
             val windowWidthSizeClass = LocalWindowSizeClass.current.widthSizeClass
             val widthIsConstrained = windowWidthSizeClass == WindowWidthSizeClass.Compact
             val insets = LocalWindowInsets.current
+
+            val scaffoldState = rememberScaffoldState()
+            MessageDisplayer(scaffoldState.snackbarHostState)
 
             com.google.accompanist.insets.ui.Scaffold(
                 scaffoldState = scaffoldState,
@@ -246,12 +258,13 @@ class MainActivity : ComponentActivity() {
                     })
             }
         }
-        var showingPresetSelector by rememberSaveable { mutableStateOf(false) }
+
+        val showingPresetSelector = viewModel.showingPresetSelector
         MediaController(
             visible = !showingAppSettings,
-            showingPresetSelector = showingPresetSelector,
-            onActivePresetClick = { showingPresetSelector = true },
-            onCloseButtonClick = { showingPresetSelector = false },
+            showingPresetSelector = viewModel.showingPresetSelector,
+            onActivePresetClick = viewModel::onMediaControllerPresetClick,
+            onCloseButtonClick = viewModel::onPresetSelectorCloseButtonClick,
             padding = padding,
             alignToEnd = !widthIsConstrained)
 
@@ -261,7 +274,7 @@ class MainActivity : ComponentActivity() {
         val addPresetButtonXOffset by animateFloatAsState(
             targetValue = if (!showingPresetSelector) 0f
                           else with(density) { (-16).dp.toPx() },
-            animationSpec = spring(stiffness = 700f))
+            animationSpec = spring(stiffness = 600f))
         val addPresetButtonYOffset by animateFloatAsState(
             targetValue = if (!showingPresetSelector) 0f
                           else with(density) { (-16).dp.toPx() },

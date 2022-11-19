@@ -78,6 +78,7 @@ class ActionBarViewModel(
 
     fun onSettingsButtonClick() {
         searchQuery = null
+        navigationState.showingPresetSelector = false
         navigationState.showingAppSettings = true
     }
 

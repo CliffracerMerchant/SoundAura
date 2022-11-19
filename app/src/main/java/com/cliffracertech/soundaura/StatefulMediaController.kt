@@ -78,7 +78,7 @@ class MediaControllerViewModel(
     }
 }
 
-/** A MediaController */
+/** A [MediaController] with state provided by an instance of [MediaControllerViewModel]. */
 @Composable fun StatefulMediaController(
     modifier: Modifier = Modifier,
     orientation: Orientation,
