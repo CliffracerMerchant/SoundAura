@@ -68,7 +68,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
             Spacer(Modifier.width(6.dp))
             Switch(checked = viewModel.playInBackground,
-                onCheckedChange = { viewModel.onPlayInBackgroundSwitchClick() })
+                onCheckedChange = remember {{ viewModel.onPlayInBackgroundSwitchClick() }})
         }
         if (viewModel.showingPlayInBackgroundExplanation)
             PlayInBackgroundExplanationDialog(
@@ -106,7 +106,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
                 onClick = viewModel::onAutoPauseDuringCallClick
             ) {
                 Switch(checked = viewModel.autoPauseDuringCall,
-                    onCheckedChange = { viewModel.onAutoPauseDuringCallClick() })
+                    onCheckedChange = remember {{ viewModel.onAutoPauseDuringCallClick() }})
             }
             if (viewModel.showingPhoneStatePermissionDialog) {
                 val context = LocalContext.current

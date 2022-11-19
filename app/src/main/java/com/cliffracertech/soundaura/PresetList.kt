@@ -142,8 +142,8 @@ import kotlinx.collections.immutable.toImmutableList
  * applied to it to indicate this status.
  *
  * @param modifier The [Modifier] to use for the [Preset] list
- * @param activePresetNameProvider A function that returns the name of the
- *     actively playing [Preset], or null if there isn't one, when invoked
+ * @param activePresetProvider A function that returns the actively
+ *     playing [Preset], or null if there isn't one, when invoked
  * @param activePresetIsModified Whether or not the [Preset] marked as the
  *     active one has been modified. An asterisk will be placed next to its
  *     name in this case to indicate this to the user.
@@ -162,7 +162,7 @@ import kotlinx.collections.immutable.toImmutableList
 @Composable fun PresetList(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
-    activePresetNameProvider: () -> String?,
+    activePresetProvider: () -> Preset?,
     activePresetIsModified: Boolean,
     selectionBrush: Brush,
     presetListProvider: () -> ImmutableList<Preset>,
@@ -186,9 +186,9 @@ import kotlinx.collections.immutable.toImmutableList
             var deleteDialogTarget by rememberSaveable { mutableStateOf<Preset?>(null) }
 
             LazyColumn(Modifier, contentPadding = contentPadding) {
-                val activePresetName = activePresetNameProvider()
+                val activePreset = activePresetProvider()
                 items(presetList, key = { preset -> preset.name }) { preset ->
-                    val isActivePreset = preset.name == activePresetName
+                    val isActivePreset = preset == activePreset
                     PresetView(
                         modifier = if (!isActivePreset) Modifier
                                    else Modifier.background(selectionBrush, alpha = 0.5f),
@@ -236,16 +236,16 @@ fun PresetListPreview() = SoundAuraTheme {
     val list = remember { List(4) {
         Preset("Super Duper Extra Really Long Preset Name$it")
     }.toImmutableList() }
-    var activePresetName by remember { mutableStateOf(list.first().name) }
+    var activePreset by remember { mutableStateOf<Preset?>(list.first()) }
 
     PresetList(
-        activePresetNameProvider = { activePresetName },
+        activePresetProvider = { activePreset },
         activePresetIsModified = true,
         selectionBrush = Brush.horizontalGradient(
             listOf(MaterialTheme.colors.primaryVariant,
                    MaterialTheme.colors.secondaryVariant)),
         presetListProvider = { list },
-        onPresetClick = { activePresetName = it.name },
+        onPresetClick = { activePreset = it },
         onPresetRenameRequest = { _, _ -> },
         onPresetDeleteRequest = {},
         onPresetOverwriteRequest = {}

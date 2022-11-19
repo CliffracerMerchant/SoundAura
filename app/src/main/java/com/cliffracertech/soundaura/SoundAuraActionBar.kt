@@ -105,12 +105,13 @@ class ActionBarViewModel(
     ListActionBar(
         modifier = modifier,
         showBackButtonForNavigation = viewModel.showingAppSettings,
-        onBackButtonClick = {
+        onBackButtonClick = remember{{
             if (!viewModel.onBackButtonClick())
                 onUnhandledBackButtonClick()
-        }, title = viewModel.title.resolve(LocalContext.current),
+        }},
+        title = viewModel.title.resolve(LocalContext.current),
         searchQuery = viewModel.searchQuery,
-        onSearchQueryChanged = { viewModel.searchQuery = it },
+        onSearchQueryChanged = viewModel::searchQuery::set,
         showRightAlignedContent = !viewModel.showingAppSettings,
         onSearchButtonClick = viewModel::onSearchButtonClick,
         sortOptions = Track.Sort.values(),

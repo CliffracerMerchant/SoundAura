@@ -45,7 +45,11 @@ class MediaControllerViewModel(
         .map { it.toImmutableList() }
         .collectAsState(listOf<Preset>().toImmutableList(), scope)
 
-    val activePresetName by dataStore.nullablePreferenceState(activePresetNameKey, scope)
+    private val activePresetName by
+        dataStore.nullablePreferenceState(activePresetNameKey, scope)
+    val activePreset by derivedStateOf {
+        presetList.find { it.name == activePresetName }
+    }
 
     var activePresetIsModified by mutableStateOf(false)
         private set
@@ -107,10 +111,10 @@ class MediaControllerViewModel(
         showingPresetSelector = showingPresetSelector,
         isPlaying = isPlaying,
         onPlayPauseClick = onPlayPauseClick,
-        activePresetNameProvider = remember{{ viewModel.activePresetName }},
+        activePresetProvider = viewModel::activePreset::get,
         activePresetIsModified = viewModel.activePresetIsModified,
         onActivePresetClick = onActivePresetClick,
-        presetListProvider = remember {{ viewModel.presetList }},
+        presetListProvider = viewModel::presetList::get,
         onPresetRenameRequest = viewModel::onPresetRenameRequest,
         onPresetOverwriteRequest = viewModel::onPresetOverwriteRequest,
         onPresetDeleteRequest = viewModel::onPresetDeleteRequest,
