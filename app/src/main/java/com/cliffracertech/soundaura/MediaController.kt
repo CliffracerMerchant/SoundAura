@@ -8,24 +8,20 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.DpSize
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.*
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -197,6 +193,10 @@ val Orientation.isVertical get() = this == Orientation.Vertical
  *     whole parent size, and then clipped down to the size of the contents.
  * @param collapsedSize The size of the media controller when [showingPresetSelector] is false
  * @param expandedSize The size of the media controller when [showingPresetSelector] is true
+ * @param alignment The [BiasAlignment] to use for placement. This alignment should
+ *     not be applied through the [modifier] parameter or it will be applied twice.
+ * @param padding The [PaddingValues] to use for placement. This padding should not
+ *     be applied through the [modifier] parameter or it will be applied twice.
  * @param showingPresetSelector Whether or not the floating button should be
  *     expanded to show the preset selector
  * @param isPlaying The is playing state of the media
@@ -226,6 +226,8 @@ val Orientation.isVertical get() = this == Orientation.Vertical
     contentColor: Color,
     collapsedSize: DpSize,
     expandedSize: DpSize,
+    alignment: BiasAlignment,
+    padding: PaddingValues,
     showingPresetSelector: Boolean,
     isPlaying: Boolean,
     onPlayPauseClick: () -> Unit,
@@ -257,72 +259,81 @@ val Orientation.isVertical get() = this == Orientation.Vertical
         targetValueByState = { if (it) expandedSize.height
                                else    collapsedSize.height })
 
-    Column(
-        modifier = modifier
-            .size(animatedWidth, animatedHeight)
-            .background(backgroundBrush, RoundedCornerShape(28.dp)),
-        horizontalAlignment = Alignment.CenterHorizontally
+    val density = LocalDensity.current
+    val cornerRadius = remember {
+        val radius = with (density) { 28.dp.toPx() }
+        CornerRadius(radius, radius)
+    }
+    ClippedBrushBox(
+        modifier = modifier,
+        brush = backgroundBrush,
+        width = animatedWidth,
+        height = animatedHeight,
+        cornerRadius = cornerRadius,
+        padding = padding,
+        alignment = alignment,
     ) {
-        val titleHeight by expandTransition.animateDp(
-            transitionSpec = { spring(stiffness = springStiffness) },
-            label = "FloatingMediaController title height transition",
-        ) { expanded ->
-            if (expanded && orientation.isVertical)
-                collapsedSize.width
-            else collapsedSize.height
-        }
-        MediaControllerAndPresetSelectorTitle(
-            modifier = Modifier.height(titleHeight),
-            orientation = orientation,
-            maxWidthPx = with(LocalDensity.current) {
-                collapsedSize.width.roundToPx()
-            }, expandTransition = expandTransition,
-            transitionProgressProvider = { transitionProgress },
-            isPlaying = isPlaying,
-            onActivePresetClick = onActivePresetClick,
-            onPlayPauseClick = onPlayPauseClick,
-            onCloseButtonClick = onCloseButtonClick,
-            activePresetNameProvider = activePresetNameProvider,
-            activePresetIsModified = activePresetIsModified)
-
-        val padding = 8.dp
-        val shape = MaterialTheme.shapes.large
-        val presetListSize = remember {
-            val presetListTitleHeight =
-                if (orientation.isVertical) collapsedSize.width
-                else                        collapsedSize.height
-            DpSize(expandedSize.width - padding * 2,
-                   expandedSize.height - presetListTitleHeight - padding)
-        }
-        val minScaleX = remember {
-            (collapsedSize.width - padding * 2) / (expandedSize.width - padding * 2)
-        }
-        if (expandTransition.run { currentState || isRunning })
-            PresetList(
-                modifier = Modifier
-//                    .padding(padding, 0.dp, padding, padding)
-                    .requiredSize(presetListSize)
-                    .graphicsLayer {
-                        alpha = transitionProgress
-                        scaleY = transitionProgress
-                        scaleX = minScaleX + (1f - minScaleX) * transitionProgress
-                    }
-                    .background(MaterialTheme.colors.surface, shape),
-                contentPadding = PaddingValues(bottom = 64.dp),
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            val titleHeight by expandTransition.animateDp(
+                transitionSpec = { spring(stiffness = springStiffness) },
+                label = "FloatingMediaController title height transition",
+            ) { expanded ->
+                if (expanded && orientation.isVertical)
+                    collapsedSize.width
+                else collapsedSize.height
+            }
+            MediaControllerAndPresetSelectorTitle(
+                modifier = Modifier.height(titleHeight),
+                orientation = orientation,
+                maxWidthPx = with(LocalDensity.current) {
+                    collapsedSize.width.roundToPx()
+                }, expandTransition = expandTransition,
+                transitionProgressProvider = { transitionProgress },
+                isPlaying = isPlaying,
+                onActivePresetClick = onActivePresetClick,
+                onPlayPauseClick = onPlayPauseClick,
+                onCloseButtonClick = onCloseButtonClick,
                 activePresetNameProvider = activePresetNameProvider,
-                activePresetIsModified = activePresetIsModified,
-                selectionBrush = backgroundBrush,
-                presetListProvider = presetListProvider,
-                onPresetRenameRequest = onPresetRenameRequest,
-                onPresetOverwriteRequest = remember{{
-                    onPresetOverwriteRequest(it)
-                    onCloseButtonClick()
-                }},
-                onPresetDeleteRequest = onPresetDeleteRequest,
-                onPresetClick = remember {{
-                    onPresetClick(it)
-                    onCloseButtonClick()
-                }})
+                activePresetIsModified = activePresetIsModified)
+
+            val presetListPadding = 8.dp
+            val shape = MaterialTheme.shapes.large
+            val presetListSize = remember {
+                val presetListTitleHeight =
+                    if (orientation.isVertical) collapsedSize.width
+                    else                        collapsedSize.height
+                DpSize(expandedSize.width - presetListPadding * 2,
+                    expandedSize.height - presetListTitleHeight - presetListPadding)
+            }
+            val minScaleX = remember {
+                (collapsedSize.width - presetListPadding * 2) /
+                (expandedSize.width - presetListPadding * 2)
+            }
+            if (expandTransition.run { currentState || isRunning })
+                PresetList(
+                    modifier = Modifier
+                        .requiredSize(presetListSize)
+                        .graphicsLayer {
+                            alpha = transitionProgress
+                            scaleY = transitionProgress
+                            scaleX = minScaleX + (1f - minScaleX) * transitionProgress
+                        }.background(MaterialTheme.colors.surface, shape),
+                    contentPadding = PaddingValues(bottom = 64.dp),
+                    activePresetNameProvider = activePresetNameProvider,
+                    activePresetIsModified = activePresetIsModified,
+                    selectionBrush = backgroundBrush,
+                    presetListProvider = presetListProvider,
+                    onPresetRenameRequest = onPresetRenameRequest,
+                    onPresetOverwriteRequest = remember{{
+                        onPresetOverwriteRequest(it)
+                        onCloseButtonClick()
+                    }},
+                    onPresetDeleteRequest = onPresetDeleteRequest,
+                    onPresetClick = remember {{
+                        onPresetClick(it)
+                        onCloseButtonClick()
+                    }})
+        }
     }
 }
 
@@ -340,9 +351,6 @@ fun MediaControllerPreview() = SoundAuraTheme {
     Surface(Modifier.size(400.dp, 600.dp), RectangleShape, Color.White) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
             MediaController(
-                modifier = Modifier
-                    .padding(start = 8.dp, end = 8.dp, bottom = 8.dp)
-                    .align(Alignment.BottomStart),
                 orientation = Orientation.Horizontal,
                 backgroundBrush = Brush.horizontalGradient(
                     listOf(MaterialTheme.colors.primaryVariant,
@@ -350,6 +358,8 @@ fun MediaControllerPreview() = SoundAuraTheme {
                 contentColor = MaterialTheme.colors.onPrimary,
                 collapsedSize = DpSize(220.dp, 56.dp),
                 expandedSize = DpSize(388.dp, 250.dp),
+                alignment = Alignment.BottomStart as BiasAlignment,
+                padding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 8.dp),
                 showingPresetSelector = isExpanded,
                 isPlaying = isPlaying,
                 onPlayPauseClick = { isPlaying = !isPlaying },

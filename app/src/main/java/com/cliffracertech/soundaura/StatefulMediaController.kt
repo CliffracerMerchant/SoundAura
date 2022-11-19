@@ -4,7 +4,9 @@
 package com.cliffracertech.soundaura
 
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.*
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -84,6 +86,8 @@ class MediaControllerViewModel(
     contentColor: Color,
     collapsedSize: DpSize,
     expandedSize: DpSize,
+    alignment: BiasAlignment,
+    padding: PaddingValues,
     showingPresetSelector: Boolean,
     isPlaying: Boolean,
     onPlayPauseClick: () -> Unit,
@@ -98,6 +102,8 @@ class MediaControllerViewModel(
         contentColor = contentColor,
         collapsedSize = collapsedSize,
         expandedSize = expandedSize,
+        alignment = alignment,
+        padding = padding,
         showingPresetSelector = showingPresetSelector,
         isPlaying = isPlaying,
         onPlayPauseClick = onPlayPauseClick,

@@ -2,10 +2,8 @@
  * License 2.0. See license.md in the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import android.support.v4.media.session.PlaybackStateCompat
 import android.view.ViewTreeObserver
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -13,6 +11,7 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -193,4 +192,21 @@ fun Modifier.restrictWidthAccordingToSizeClass(
         onDispose { view.viewTreeObserver.removeOnGlobalLayoutListener(listener) }
     }
     return imeIsOpen
+}
+
+/** Return a [PaddingValues] created from adding [additionalStart], [additionalTop],
+ * [additionalEnd], and [additionalBottom] to the [original] [PaddingValues] instance. */
+fun paddingValues(
+    original: PaddingValues,
+    layoutDirection: LayoutDirection,
+    additionalStart: Dp = 0.dp,
+    additionalTop: Dp = 0.dp,
+    additionalEnd: Dp = 0.dp,
+    additionalBottom: Dp = 0.dp,
+): PaddingValues {
+    return PaddingValues(
+        start = original.calculateStartPadding(layoutDirection) + additionalStart,
+        top = original.calculateTopPadding() + additionalTop,
+        end = original.calculateEndPadding(layoutDirection) + additionalEnd,
+        bottom = original.calculateBottomPadding() + additionalBottom)
 }
