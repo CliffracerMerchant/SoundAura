@@ -28,23 +28,35 @@ import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlin.math.roundToInt
 
-/**
- * A collection of callbacks for [TrackView] interactions. The first parameter
- * for each of the callbacks is the uri of the track in [String] form.
- *
- * @param onAddRemoveButtonClick The callback that will be invoked when the add/remove button is clicked.
- * @param onVolumeChange The callback that will be invoked when the volume slider's value is changing.
- * @param onVolumeChangeFinished The callback that will be invoked when the volume slider's handle is released.
- * @param onRenameRequest The callback that will be invoked when a rename of the track is requested.
- * @param onDeleteRequest The callback that will be invoked when the deletion of the track is requested.
- */
-class TrackViewCallback(
-    val onAddRemoveButtonClick: (String) -> Unit = { _ -> },
-    val onVolumeChange: (String, Float) -> Unit = { _, _ -> },
-    val onVolumeChangeFinished: (String, Float) -> Unit = { _, _ -> },
-    val onRenameRequest: (String, String) -> Unit = { _, _ -> },
-    val onDeleteRequest: (String) -> Unit = { }
-)
+/** A collection of callbacks for [TrackView] interactions. The first parameter
+ * for each of the callbacks is the uri of the track in [String] form. */
+interface TrackViewCallback {
+    /** The callback that will be invoked when the add/remove button is clicked */
+    fun onAddRemoveButtonClick(uri: String)
+    /** The callback that will be invoked when the volume slider's value is changing */
+    fun onVolumeChange(uri: String, volume: Float)
+    /** The callback that will be invoked when the volume slider's handle is released */
+    fun onVolumeChangeFinished(uri: String, volume: Float)
+    /** The callback that will be invoked when a rename of the track is requested */
+    fun onRenameRequest(uri: String, name: String)
+    /** The callback that will be invoked when the deletion of the track is requested */
+    fun onDeleteRequest(uri: String)
+}
+
+/** Return a remembered [TrackViewCallback] implementation. */
+@Composable fun rememberTrackViewCallback(
+    onAddRemoveButtonClick: (String) -> Unit = { _ -> },
+    onVolumeChange: (String, Float) -> Unit = { _, _ -> },
+    onVolumeChangeFinished: (String, Float) -> Unit = { _, _ -> },
+    onRenameRequest: (String, String) -> Unit = { _, _ -> },
+    onDeleteRequest: (String) -> Unit = { }
+) = remember { object: TrackViewCallback {
+    override fun onAddRemoveButtonClick(uri: String) = onAddRemoveButtonClick(uri)
+    override fun onVolumeChange(uri: String, volume: Float) = onVolumeChange(uri, volume)
+    override fun onVolumeChangeFinished(uri: String, volume: Float) = onVolumeChangeFinished(uri, volume)
+    override fun onRenameRequest(uri: String, name: String) = onRenameRequest(uri, name)
+    override fun onDeleteRequest(uri: String) = onDeleteRequest(uri)
+}}
 
 /**
  * A view that displays an add/remove button, a title, a volume slider, and a
@@ -80,9 +92,6 @@ class TrackViewCallback(
         var volumeSliderValue by remember(track.volume) { mutableStateOf(track.volume) }
         val volumeSliderIsBeingPressed by volumeSliderInteractionSource.collectIsPressedAsState()
         val volumeSliderIsBeingDragged by volumeSliderInteractionSource.collectIsDraggedAsState()
-        val volumeIsChanging by derivedStateOf {
-            volumeSliderIsBeingPressed || volumeSliderIsBeingDragged
-        }
 
         Box(Modifier.weight(1f)) {
             // 1dp start padding is required to make the text align with the volume icon
@@ -102,12 +111,14 @@ class TrackViewCallback(
                 errorMessage = if (!track.hasError) null else
                     stringResource(R.string.file_error_message))
         }
-
         TrackViewEndContentImpl(
             content = when {
-                track.hasError ->   TrackViewEndContent.DeleteButton
-                volumeIsChanging -> TrackViewEndContent.VolumeDisplay
-                else ->             TrackViewEndContent.MoreOptionsButton
+                track.hasError ->
+                    TrackViewEndContent.DeleteButton
+                volumeSliderIsBeingPressed || volumeSliderIsBeingDragged ->
+                    TrackViewEndContent.VolumeDisplay
+                else ->
+                    TrackViewEndContent.MoreOptionsButton
             }, itemName = track.name,
             onRenameRequest = { callback.onRenameRequest(track.uriString, it) },
             onDeleteRequest = { callback.onDeleteRequest(track.uriString) },
@@ -350,7 +361,7 @@ enum class TrackViewEndContent {
 @Preview @Composable
 fun LightTrackViewPreview() = SoundAuraTheme(darkTheme = false) {
     TrackView(
-        callback = TrackViewCallback(),
+        callback = rememberTrackViewCallback(),
         track = Track(
             uriString = "",
             name = "Track 1",
@@ -360,7 +371,7 @@ fun LightTrackViewPreview() = SoundAuraTheme(darkTheme = false) {
 @Preview(showBackground = true) @Composable
 fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme = true) {
     TrackView(
-        callback = TrackViewCallback(),
+        callback = rememberTrackViewCallback(),
         track = Track(
             uriString = "",
             name = "Track 2",
@@ -371,7 +382,7 @@ fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme = true) {
 @Preview @Composable
 fun LightTrackErrorPreview() = SoundAuraTheme(darkTheme = false) {
     TrackView(
-        callback = TrackViewCallback(),
+        callback = rememberTrackViewCallback(),
         track = Track(
             uriString = "",
             name = "Track 3",
@@ -382,7 +393,7 @@ fun LightTrackErrorPreview() = SoundAuraTheme(darkTheme = false) {
 @Preview(showBackground = true) @Composable
 fun DarkTrackErrorPreview() = SoundAuraTheme(darkTheme = true) {
     TrackView(
-        callback = TrackViewCallback(),
+        callback = rememberTrackViewCallback(),
         track = Track(
             uriString = "",
             name = "Track 4",

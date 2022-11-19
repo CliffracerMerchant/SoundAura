@@ -16,7 +16,6 @@ import androidx.compose.material.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
@@ -143,16 +142,14 @@ class TrackListViewModel(
 ) = Surface(modifier, color = MaterialTheme.colors.background) {
     val viewModel: TrackListViewModel = viewModel()
     val context = LocalContext.current
-    val itemCallback = remember {
-        TrackViewCallback(
-            onAddRemoveButtonClick = viewModel::onTrackAddRemoveButtonClick,
-            onVolumeChange = onVolumeChange,
-            onVolumeChangeFinished = viewModel::onTrackVolumeChangeRequest,
-            onRenameRequest = viewModel::onTrackRenameDialogConfirm,
-            onDeleteRequest = {
-                viewModel.onDeleteTrackDialogConfirm(context, it)
-            })
-    }
+    val itemCallback = rememberTrackViewCallback(
+        onAddRemoveButtonClick = viewModel::onTrackAddRemoveButtonClick,
+        onVolumeChange = onVolumeChange,
+        onVolumeChangeFinished = viewModel::onTrackVolumeChangeRequest,
+        onRenameRequest = viewModel::onTrackRenameDialogConfirm,
+        onDeleteRequest = {
+            viewModel.onDeleteTrackDialogConfirm(context, it)
+        })
     TrackList(
         modifier = modifier,
         tracks = viewModel.tracks,
