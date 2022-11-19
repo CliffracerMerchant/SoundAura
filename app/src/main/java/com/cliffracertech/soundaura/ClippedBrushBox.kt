@@ -13,6 +13,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -52,11 +53,17 @@ val LayoutDirection.isLtr get() = this == LayoutDirection.Ltr
             val offset = Offset(
                 x = if (ld.isLtr) (size.width - boxSize.width) * xAlignment
                     else size.width - (size.width - boxSize.width) * xAlignment,
-                y = (size.height - boxSize.height) * yAlignment
-            )
+                y = (size.height - boxSize.height) * yAlignment)
             drawRoundRect(brush, offset, boxSize, cornerRadius)
-        }) {
-        Box(modifier.align(alignment).size(width, height), content = content)
+        }
+    ) {
+        // For some reason the Box was allowing gestures to go through
+        // it. This empty pointerInput modifier prevents this.
+        Box(modifier = modifier
+                .align(alignment)
+                .size(width, height)
+                .pointerInput(Unit) {},
+            content = content)
     }
 }
 
