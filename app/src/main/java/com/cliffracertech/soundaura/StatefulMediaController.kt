@@ -79,6 +79,10 @@ class MediaControllerViewModel(
     fun onPresetRenameRequest(preset: Preset, newName: String) {
         scope.launch {
             dao.renamePreset(preset.name, newName)
+            if (activePreset == preset)
+                dataStore.edit {
+                    it[activePresetNameKey] = newName
+                }
         }
     }
 
