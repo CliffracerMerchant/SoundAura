@@ -146,7 +146,7 @@ class TrackPlayerSet(
 
     fun releaseAll() = uriPlayerMap.values.forEach { it.release() }
 
-    fun update(tracks: List<Track>, startPlayingNewTracks: Boolean) {
+    fun update(tracks: List<ActiveTrack>, startPlayingNewTracks: Boolean) {
         isInitialized = true
 
         // remove players whose track is no longer in the track list

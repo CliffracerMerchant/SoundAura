@@ -20,23 +20,48 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundaura.SoundAura.pref_key_activePresetName
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.scopes.ActivityRetainedScoped
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+@ActivityRetainedScoped
+class ActivePresetState @Inject constructor(
+    dataStore: DataStore<Preferences>,
+    trackDao: TrackDao,
+    presetDao: PresetDao,
+) {
+    private val activePresetNameKey = stringPreferencesKey(pref_key_activePresetName)
+    private val activePresetName = dataStore.preferenceFlow(activePresetNameKey, "")
+    val activePreset = activePresetName
+        .map { if (it.isBlank()) null
+               else presetDao.getPreset(it) }
+
+    private val activeTracks = trackDao.getAllActiveTracks()
+    private val activePresetTracks = activePresetName.transformLatest {
+        emitAll(presetDao.getPresetTracks(it))
+    }
+    val activePresetIsModified = combine(activeTracks, activePresetTracks) { activeTracks, activePresetTracks ->
+        if (activePresetTracks.isEmpty()) false
+        else activeTracks.toHashSet() != activePresetTracks.toHashSet()
+    }
+}
 
 @HiltViewModel
 class MediaControllerViewModel(
     private val dao: PresetDao,
     private val dataStore: DataStore<Preferences>,
+    activePresetState: ActivePresetState,
     coroutineScope: CoroutineScope?
 ) : ViewModel() {
 
     @Inject constructor(
         dao: PresetDao,
-        dataStore: DataStore<Preferences>
-    ) : this(dao, dataStore, null)
+        dataStore: DataStore<Preferences>,
+        activePresetState: ActivePresetState
+    ) : this(dao, dataStore, activePresetState, null)
 
     private val scope = coroutineScope ?: viewModelScope
     private val activePresetNameKey = stringPreferencesKey(pref_key_activePresetName)
@@ -45,14 +70,8 @@ class MediaControllerViewModel(
         .map { it.toImmutableList() }
         .collectAsState(listOf<Preset>().toImmutableList(), scope)
 
-    private val activePresetName by
-        dataStore.nullablePreferenceState(activePresetNameKey, scope)
-    val activePreset by derivedStateOf {
-        presetList.find { it.name == activePresetName }
-    }
-
-    var activePresetIsModified by mutableStateOf(false)
-        private set
+    val activePreset by activePresetState.activePreset.collectAsState(null, scope)
+    val activePresetIsModified by activePresetState.activePresetIsModified.collectAsState(false, scope)
 
     fun onPresetRenameRequest(preset: Preset, newName: String) {
         scope.launch {

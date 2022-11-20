@@ -231,7 +231,7 @@ class PlayerService: LifecycleService() {
         }
     }
 
-    private fun updatePlayers(tracks: List<Track>) {
+    private fun updatePlayers(tracks: List<ActiveTrack>) {
         val firstUpdate = !playerSet.isInitialized
         playerSet.update(tracks, isPlaying)
 

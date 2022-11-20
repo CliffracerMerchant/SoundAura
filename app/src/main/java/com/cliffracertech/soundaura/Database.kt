@@ -46,6 +46,10 @@ data class Track(
     }
 }
 
+data class ActiveTrack(
+    val uriString: String,
+    val volume: Float)
+
 @Dao abstract class TrackDao {
     @Insert abstract suspend fun insert(track: Track): Long
 
@@ -89,8 +93,8 @@ data class Track(
         }
     }
 
-    @Query("SELECT * FROM track WHERE isActive")
-    abstract fun getAllActiveTracks(): Flow<List<Track>>
+    @Query("SELECT uriString, volume FROM track WHERE isActive")
+    abstract fun getAllActiveTracks(): Flow<List<ActiveTrack>>
 
     @Query("UPDATE track set hasError = 1 WHERE uriString = :uri")
     abstract suspend fun notifyOfError(uri: String)
@@ -135,8 +139,15 @@ data class PresetTrack(
 )
 
 @Dao abstract class PresetDao {
+    @Query("SELECT name FROM preset WHERE name = :presetName")
+    abstract suspend fun getPreset(presetName: String) : Preset
+
     @Query("SELECT name FROM preset")
     abstract fun getPresetList() : Flow<List<Preset>>
+
+    @Query("SELECT trackUriString AS uriString, trackVolume AS volume " +
+           "FROM presetTrack WHERE presetName = :presetName")
+    abstract fun getPresetTracks(presetName: String) : Flow<List<ActiveTrack>>
 
     @Query("SELECT EXISTS(SELECT name FROM preset WHERE name = :name)")
     abstract suspend fun presetNameIsAlreadyInUse(name: String?): Boolean
