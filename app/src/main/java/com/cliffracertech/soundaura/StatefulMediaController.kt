@@ -5,12 +5,20 @@ package com.cliffracertech.soundaura
 
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -23,7 +31,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.scopes.ActivityRetainedScoped
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -41,10 +52,13 @@ class ActivePresetState @Inject constructor(
 
     private val activeTracks =
         trackDao.getAllActiveTracks().map { it.toHashSet() }
-    private val activePresetTracks = activePresetName
+
+    private val activePresetTracks = activePreset
         .transformLatest {
-            emitAll(presetDao.getPresetTracks(it))
+            if (it == null) emptyList<ActiveTrack>()
+            else emitAll(presetDao.getPresetTracks(it.name))
         }.map { it.toHashSet() }
+
     val activePresetIsModified =
         combine(activeTracks, activePresetTracks) { activeTracks, activePresetTracks ->
             if (activePresetTracks.isEmpty()) false
@@ -98,15 +112,40 @@ class MediaControllerViewModel(
         }
     }
 
+    private var newPresetAfterUnsavedChangesWarning by mutableStateOf<Preset?>(null)
+    val showingUnsavedChangesWarning by derivedStateOf {
+        newPresetAfterUnsavedChangesWarning != null
+    }
+
     fun onPresetClick(preset: Preset) {
-        if (activePreset == preset && !activePresetIsModified)
-            return
+        when {
+            activePresetIsModified -> {
+                newPresetAfterUnsavedChangesWarning = preset
+            } activePreset == preset ->
+                return // This skips a pointless saving of the unmodified active preset
+            else -> loadPreset(preset)
+        }
+    }
+
+    private fun loadPreset(preset: Preset) {
         scope.launch {
             dao.loadPreset(preset.name)
             dataStore.edit {
                 it[activePresetNameKey] = preset.name
             }
         }
+    }
+
+    fun onUnsavedChangesWarningCancel() {
+        newPresetAfterUnsavedChangesWarning = null
+    }
+
+    fun onUnsavedChangesWarningConfirm(saveFirst: Boolean) {
+        val newPreset = newPresetAfterUnsavedChangesWarning ?: return
+        if (saveFirst)
+            activePreset?.let(::onPresetOverwriteRequest)
+        loadPreset(newPreset)
+        newPresetAfterUnsavedChangesWarning = null
     }
 }
 
@@ -148,4 +187,53 @@ class MediaControllerViewModel(
         onPresetDeleteRequest = viewModel::onPresetDeleteRequest,
         onCloseButtonClick = onCloseButtonClick,
         onPresetClick = viewModel::onPresetClick)
+
+    if (viewModel.showingUnsavedChangesWarning) {
+        viewModel.activePreset?.name?.let { unsavedPresetName ->
+            UnsavedPresetChangesWarningDialog(
+                unsavedPresetName = unsavedPresetName,
+                onDismissRequest = viewModel::onUnsavedChangesWarningCancel,
+                onConfirm = viewModel::onUnsavedChangesWarningConfirm)
+        }
+    }
 }
+
+/**
+ * Show a dialog warning the user that loading a new preset will cause them
+ * to lose all unsaved changes to the [Preset] named [unsavedPresetName].
+ * [onDismissRequest] will be invoked when the user backs out of the dialog,
+ * taps outside its bounds, or clicks the cancel button. [onConfirm] will be
+ * invoked if the user wants to load the new [Preset] anyways, saving unsaved
+ * changes to the [Preset] named [unsavedPresetName] first if [onConfirm]'s
+ * Boolean parameter is true.
+ */
+@Composable fun UnsavedPresetChangesWarningDialog(
+    unsavedPresetName: String,
+    onDismissRequest: () -> Unit,
+    onConfirm: (saveFirst: Boolean) -> Unit,
+) = SoundAuraDialog(
+    title = stringResource(R.string.unsaved_preset_changes_warning_title),
+    text = stringResource(R.string.unsaved_preset_changes_warning_message, unsavedPresetName),
+    onDismissRequest = onDismissRequest,
+    buttons = {
+        HorizontalDivider(Modifier.padding(top = 12.dp))
+        TextButton(
+            onClick = onDismissRequest,
+            modifier = Modifier.minTouchTargetSize().fillMaxWidth(),
+            shape = RectangleShape,
+        ) { Text(stringResource(R.string.cancel)) }
+
+        HorizontalDivider()
+        TextButton(
+            onClick = { onConfirm(true) },
+            modifier = Modifier.minTouchTargetSize().fillMaxWidth(),
+            shape = RectangleShape,
+        ) { Text(stringResource(R.string.unsaved_preset_changes_warning_save_first_option)) }
+
+        HorizontalDivider()
+        TextButton(
+            onClick = { onConfirm(false) },
+            modifier = Modifier.minTouchTargetSize().fillMaxWidth(),
+            shape = MaterialTheme.shapes.medium.bottomShape(),
+        ) { Text(stringResource(R.string.unsaved_preset_changes_warning_load_anyways_option)) }
+    })

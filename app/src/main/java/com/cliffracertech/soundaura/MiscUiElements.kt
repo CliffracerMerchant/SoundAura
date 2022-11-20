@@ -208,6 +208,8 @@ fun Modifier.minTouchTargetSize() =
     AnimatedContent(targetState, modifier, { transition }, content = content)
 }
 
+/** Add a vertical divider to the [Row]. The divider will take
+ * up a fraction of the [Row]'s height equal to [heightFraction]. */
 @Composable fun RowScope.VerticalDivider(
     modifier: Modifier = Modifier,
     heightFraction: Float = 1f,
@@ -216,6 +218,8 @@ fun Modifier.minTouchTargetSize() =
     .align(Alignment.CenterVertically)
     .background(LocalContentColor.current.copy(alpha = 0.2f)))
 
+/** Add a horizontal divider to the [Column]. The divider will take
+ * up a fraction of the [Column]'s width equal to [widthFraction]. */
 @Composable fun ColumnScope.HorizontalDivider(
     modifier: Modifier = Modifier,
     widthFraction: Float = 1f,
