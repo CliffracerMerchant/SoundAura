@@ -125,13 +125,15 @@ class AddTrackButtonViewModel(
 class AddPresetButtonViewModel(
     private val dao: PresetDao,
     private val dataStore: DataStore<Preferences>,
+    activePresetState: ActivePresetState,
     coroutineScope: CoroutineScope?,
 ) : ViewModel() {
 
     @Inject constructor(
         dao: PresetDao,
-        dataStore: DataStore<Preferences>
-    ) : this(dao, dataStore, null)
+        dataStore: DataStore<Preferences>,
+        activePresetState: ActivePresetState,
+    ) : this(dao, dataStore, activePresetState, null)
 
     private val scope = coroutineScope ?: viewModelScope
     private val activePresetKey = stringPreferencesKey(pref_key_activePresetName)
@@ -159,12 +161,33 @@ class AddPresetButtonViewModel(
         .map(::nameValidatorResultToMessage)
         .collectAsState(null, scope)
 
+    private val activePresetIsModified by activePresetState.activePresetIsModified.collectAsState(false, scope)
+    private val activePreset by activePresetState.activePreset.collectAsState(null, scope)
+    var potentialDuplicatePresetName by mutableStateOf<String?>(null)
+        private set
+
     fun onClick() {
+        val activePresetName = activePreset?.name
+        if (!activePresetIsModified && activePresetName != null) {
+            potentialDuplicatePresetName = activePresetName
+        } else showAddPresetDialog()
+    }
+
+    fun onDuplicatePresetWarningDismiss() {
+        potentialDuplicatePresetName = null
+    }
+
+    fun onDuplicatePresetWarningConfirm() {
+        onDuplicatePresetWarningDismiss()
+        showAddPresetDialog()
+    }
+
+    private fun showAddPresetDialog() {
         newPresetName.value = null
         showingAddPresetDialog = true
     }
 
-    fun onDialogDismiss() {
+    fun onAddPresetDialogDismiss() {
         showingAddPresetDialog = false
     }
 
@@ -172,7 +195,7 @@ class AddPresetButtonViewModel(
         newPresetName.value = newName
     }
 
-    fun onDialogConfirm() {
+    fun onAddPresetDialogConfirm() {
         // nameValidatorResultToMessage intentionally returns null right after
         // onClick is called, even though the newPresetName at that time is
         // null (i.e. an invalid name). This allows the user to start entering
@@ -246,6 +269,13 @@ enum class AddButtonTarget { Track, Preset }
             onDismissRequest = addTrackViewModel::onDialogDismiss,
             onConfirmRequest = addTrackViewModel::onDialogConfirm)
 
+    addPresetViewModel.potentialDuplicatePresetName?.let {
+        DuplicatePresetWarningDialog(
+            duplicatePresetName = it,
+            onDismissRequest = addPresetViewModel::onDuplicatePresetWarningDismiss,
+            onConfirm = addPresetViewModel::onDuplicatePresetWarningConfirm)
+    }
+
     val context = LocalContext.current
     val nameValidatorMessage by remember { derivedStateOf {
         addPresetViewModel.nameValidatorMessage?.resolve(context)
@@ -254,9 +284,8 @@ enum class AddButtonTarget { Track, Preset }
         CreateNewPresetDialog(
             onNameChange = addPresetViewModel::onNewPresetNameChange,
             nameValidatorMessage = nameValidatorMessage,
-            onDismissRequest = addPresetViewModel::onDialogDismiss,
-            onConfirm = addPresetViewModel::onDialogConfirm)
-
+            onDismissRequest = addPresetViewModel::onAddPresetDialogDismiss,
+            onConfirm = addPresetViewModel::onAddPresetDialogConfirm)
 }
 
 /**
@@ -341,6 +370,22 @@ val List<String>.containsBlanks get() =
             singleLine = true,
             modifier = Modifier.fillMaxWidth())
     }})
+
+/**
+ * Show a dialog that warns the user that creating a new preset will result
+ * in it having the same contents as an existing preset with the name
+ * [duplicatePresetName]. [onDismissRequest] and [onConfirm] will be invoked
+ * when the user dismisses or confirms the dialog, respectively.
+ */
+@Composable fun DuplicatePresetWarningDialog(
+    duplicatePresetName: String,
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit,
+) = SoundAuraDialog(
+    title = stringResource(R.string.duplicate_preset_warning_title),
+    text = stringResource(R.string.duplicate_preset_warning_message, duplicatePresetName),
+    onDismissRequest = onDismissRequest,
+    onConfirm = onConfirm)
 
 /**
  * Show a dialog to create a new preset.
