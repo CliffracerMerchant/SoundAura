@@ -99,6 +99,8 @@ class MediaControllerViewModel(
     }
 
     fun onPresetClick(preset: Preset) {
+        if (activePreset == preset && !activePresetIsModified)
+            return
         scope.launch {
             dao.loadPreset(preset.name)
             dataStore.edit {
