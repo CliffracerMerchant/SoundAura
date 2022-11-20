@@ -32,9 +32,8 @@
 
     <string name="remove">Remove</string>
     <string name="confirm_remove_title">Remove %1$s?</string>
-    <string name="confirm_remove_message">
-        This will remove the track from your library,
-        but will not delete the file from your device.</string>
+    <string name="confirm_remove_message">This will remove the track from your library
+        and any presets it is a part of, but will not delete the file from your device.</string>
 
     <string name="add_track_button_description">Add track</string>
     <string name="add_local_files_dialog_title">Confirm track name(s)</string>
