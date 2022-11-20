@@ -39,14 +39,17 @@ class ActivePresetState @Inject constructor(
         .map { if (it.isBlank()) null
                else presetDao.getPreset(it) }
 
-    private val activeTracks = trackDao.getAllActiveTracks()
-    private val activePresetTracks = activePresetName.transformLatest {
-        emitAll(presetDao.getPresetTracks(it))
-    }
-    val activePresetIsModified = combine(activeTracks, activePresetTracks) { activeTracks, activePresetTracks ->
-        if (activePresetTracks.isEmpty()) false
-        else activeTracks.toHashSet() != activePresetTracks.toHashSet()
-    }
+    private val activeTracks =
+        trackDao.getAllActiveTracks().map { it.toHashSet() }
+    private val activePresetTracks = activePresetName
+        .transformLatest {
+            emitAll(presetDao.getPresetTracks(it))
+        }.map { it.toHashSet() }
+    val activePresetIsModified =
+        combine(activeTracks, activePresetTracks) { activeTracks, activePresetTracks ->
+            if (activePresetTracks.isEmpty()) false
+            else activeTracks != activePresetTracks
+        }
 }
 
 @HiltViewModel
