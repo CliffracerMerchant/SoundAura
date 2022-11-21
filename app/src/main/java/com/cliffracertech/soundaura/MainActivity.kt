@@ -109,7 +109,7 @@ class MainActivity : ComponentActivity() {
         boundPlayerService = null
     }
 
-    @Deprecated("Replace with OnBackPressedDispatcher")
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
         @Suppress("DEPRECATION")
         if (!viewModel.onBackButtonClick())
@@ -136,6 +136,7 @@ class MainActivity : ComponentActivity() {
                         // statusBarsPadding, so we have to use applyTop = false
                         // here to prevent the top padding from being doubled.
                         insets = insets.systemBars, applyTop = false, applyBottom = false)
+                    @Suppress("DEPRECATION")
                     SoundAuraActionBar(
                         onUnhandledBackButtonClick = ::onBackPressed,
                         modifier = Modifier.padding(padding))

@@ -79,7 +79,7 @@
 
     <string name="unsaved_preset_changes_warning_title">Unsaved changes</string>
     <string name="unsaved_preset_changes_warning_message">The preset %1$s has unsaved changes.
-        If you load a new preset now, you will lose any changes made since the last save.</string>
+        If you load a new preset now, you will lose any changes made since it was last saved.</string>
     <string name="unsaved_preset_changes_warning_save_first_option">Save changes first</string>
     <string name="unsaved_preset_changes_warning_load_anyways_option">Load anyways</string>
 
