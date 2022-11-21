@@ -75,8 +75,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
                 modifier = Modifier.weight(1f, false),
                 style = style)
             if (activeIsModified)
-                Text(" *", maxLines = 1, softWrap = false,
-                     style = style.copy(fontSize = 14.sp))
+                Text(" *", maxLines = 1, softWrap = false, style = style)
         }
     }
 }
@@ -112,7 +111,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
     maxWidthPx: Int,
     expandTransition: Transition<Boolean>,
     transitionProgressProvider: () -> Float,
-    isPlaying: Boolean,
+    playing: Boolean,
     onActivePresetClick: () -> Unit,
     onPlayPauseClick: () -> Unit,
     onCloseButtonClick: () -> Unit,
@@ -171,8 +170,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
     // button align with the more options buttons for each listed preset
     val closeButtonXOffset = remember { with (density) { 4.dp.toPx() } }
     MediaControllerPlayPauseStopButton(
-        expandTransition, isPlaying,
-        onPlayPauseClick, onCloseButtonClick,
+        expandTransition, playing, onPlayPauseClick, onCloseButtonClick,
         Modifier.align(Alignment.BottomEnd).size(56.dp).graphicsLayer {
             translationX = -closeButtonXOffset * transitionProgressProvider()
         })
@@ -180,9 +178,9 @@ val Orientation.isVertical get() = this == Orientation.Vertical
 
 /**
  * A floating button that shows information about the currently playing [Preset]
- * and a play/pause button. When the current preset is clicked, the button will
- * expand into a popup that contains a [PresetList] to allow the user to choose
- * a new preset.
+ * and a play/pause button. When the parameter [showingPresetSelector] is true,
+ * the button will animate its transformation into a preset selector. In this
+ * state it will contain a [PresetList] to allow the user to choose a new preset.
  *
  * @param modifier The [Modifier] to use for the button / popup
  * @param orientation An [Orientation] value that indicates how the media
@@ -199,13 +197,13 @@ val Orientation.isVertical get() = this == Orientation.Vertical
  *     be applied through the [modifier] parameter or it will be applied twice.
  * @param showingPresetSelector Whether or not the floating button should be
  *     expanded to show the preset selector
- * @param isPlaying The is playing state of the media
+ * @param playing The media play/pause state that the play/pause button should
+ *     use to determine its icon, which will be the opposite of the current state
  * @param onPlayPauseClick The callback that will be invoked when the play/pause button is clicked
  * @param activePresetProvider A function that returns the actively
  *     playing [Preset], or null if there isn't one, when invoked
  * @param activePresetIsModified Whether or not the active preset has unsaved changes
- * @param onActivePresetClick The callback that will be invoked when the active
- *     preset is clicked
+ * @param onActivePresetClick The callback that will be invoked when the active preset is clicked
  * @param presetListProvider A lambda that will return the list of presets when invoked
  * @param onPresetRenameRequest The callback that will be invoked when the user
  *     requests the renaming of the [Preset] parameter to the provided [String] value
@@ -214,10 +212,10 @@ val Orientation.isVertical get() = this == Orientation.Vertical
  *     playing track / volume combination.
  * @param onPresetDeleteRequest The callback that will be invoked when the user
  *     requests the deletion of the [Preset] parameter
- * @param onCloseButtonClick The callback that will be invoked when
+ * @param onPresetSelectorCloseButtonClick The callback that will be invoked when
  *     [showingPresetSelector] is true and the user clicks the close button
- * @param onPresetClick The callback that will be invoked when the user clicks
- *     on a preset from the list
+ * @param onPresetSelectorPresetClick The callback that will be invoked when the user clicks
+ *     on a preset from the [PresetList]
  */
 @Composable fun MediaController(
     modifier: Modifier = Modifier,
@@ -228,18 +226,18 @@ val Orientation.isVertical get() = this == Orientation.Vertical
     expandedSize: DpSize,
     alignment: BiasAlignment,
     padding: PaddingValues,
-    showingPresetSelector: Boolean,
-    isPlaying: Boolean,
+    playing: Boolean,
     onPlayPauseClick: () -> Unit,
     activePresetProvider: () -> Preset?,
     activePresetIsModified: Boolean,
     onActivePresetClick: () -> Unit,
+    showingPresetSelector: Boolean,
     presetListProvider: () -> ImmutableList<Preset>,
     onPresetRenameRequest: (Preset, String) -> Unit,
     onPresetOverwriteRequest: (Preset) -> Unit,
     onPresetDeleteRequest: (Preset) -> Unit,
-    onCloseButtonClick: () -> Unit,
-    onPresetClick: (Preset) -> Unit,
+    onPresetSelectorCloseButtonClick: () -> Unit,
+    onPresetSelectorPresetClick: (Preset) -> Unit,
 ) = CompositionLocalProvider(LocalContentColor provides contentColor) {
     val expandTransition = updateTransition(
         targetState = showingPresetSelector,
@@ -289,10 +287,10 @@ val Orientation.isVertical get() = this == Orientation.Vertical
                     collapsedSize.width.roundToPx()
                 }, expandTransition = expandTransition,
                 transitionProgressProvider = { transitionProgress },
-                isPlaying = isPlaying,
+                playing = playing,
                 onActivePresetClick = onActivePresetClick,
                 onPlayPauseClick = onPlayPauseClick,
-                onCloseButtonClick = onCloseButtonClick,
+                onCloseButtonClick = onPresetSelectorCloseButtonClick,
                 activePresetProvider = activePresetProvider,
                 activePresetIsModified = activePresetIsModified)
 
@@ -324,23 +322,17 @@ val Orientation.isVertical get() = this == Orientation.Vertical
                     selectionBrush = backgroundBrush,
                     presetListProvider = presetListProvider,
                     onPresetRenameRequest = onPresetRenameRequest,
-                    onPresetOverwriteRequest = remember{{
-                        onPresetOverwriteRequest(it)
-                        onCloseButtonClick()
-                    }},
+                    onPresetOverwriteRequest = onPresetOverwriteRequest,
                     onPresetDeleteRequest = onPresetDeleteRequest,
-                    onPresetClick = remember {{
-                        onPresetClick(it)
-                        onCloseButtonClick()
-                    }})
+                    onPresetClick = onPresetSelectorPresetClick)
         }
     }
 }
 
 @Preview @Composable
 fun MediaControllerPreview() = SoundAuraTheme {
-    var isExpanded by remember { mutableStateOf(false) }
-    var isPlaying by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
+    var playing by remember { mutableStateOf(false) }
     val list = remember { listOf(
         Preset("Super duper extra really long preset name 0"),
         Preset("Super duper extra really long preset name 1"),
@@ -360,18 +352,18 @@ fun MediaControllerPreview() = SoundAuraTheme {
                 expandedSize = DpSize(388.dp, 250.dp),
                 alignment = Alignment.BottomStart as BiasAlignment,
                 padding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 8.dp),
-                showingPresetSelector = isExpanded,
-                isPlaying = isPlaying,
-                onPlayPauseClick = { isPlaying = !isPlaying },
+                showingPresetSelector = expanded,
+                playing = playing,
+                onPlayPauseClick = { playing = !playing },
                 activePresetProvider = { activePreset },
                 activePresetIsModified = true,
-                onActivePresetClick = { isExpanded = true },
+                onActivePresetClick = { expanded = true },
                 presetListProvider = { list },
                 onPresetRenameRequest = { _, _ -> },
                 onPresetOverwriteRequest = {},
                 onPresetDeleteRequest = {},
-                onCloseButtonClick = { isExpanded = false },
-                onPresetClick = { activePreset = it })
+                onPresetSelectorCloseButtonClick = { expanded = false },
+                onPresetSelectorPresetClick = { activePreset = it })
         }
     }
 }

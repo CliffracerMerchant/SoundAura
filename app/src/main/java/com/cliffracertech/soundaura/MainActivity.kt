@@ -79,14 +79,6 @@ class MainActivityViewModel @Inject constructor(
             true
         } else -> false
     }
-
-    fun onMediaControllerPresetClick() {
-        navigationState.showingPresetSelector = true
-    }
-
-    fun onPresetSelectorCloseButtonClick() {
-        navigationState.showingPresetSelector = false
-    }
 }
 
 val LocalWindowSizeClass = compositionLocalOf {
@@ -262,9 +254,6 @@ class MainActivity : ComponentActivity() {
         val showingPresetSelector = viewModel.showingPresetSelector
         MediaController(
             visible = !showingAppSettings,
-            showingPresetSelector = viewModel.showingPresetSelector,
-            onActivePresetClick = viewModel::onMediaControllerPresetClick,
-            onCloseButtonClick = viewModel::onPresetSelectorCloseButtonClick,
             padding = padding,
             alignToEnd = !widthIsConstrained)
 
@@ -291,16 +280,13 @@ class MainActivity : ComponentActivity() {
 
     @Composable private fun BoxWithConstraintsScope.MediaController(
         visible: Boolean,
-        showingPresetSelector: Boolean,
-        onActivePresetClick: () -> Unit,
-        onCloseButtonClick: () -> Unit,
         padding: PaddingValues,
         alignToEnd: Boolean
     ) {
         val density = LocalDensity.current
         val ld = LocalLayoutDirection.current
 
-        val contentAreaSize = remember(padding, alignToEnd) {
+        val contentAreaSize = remember(padding) {
             val screenWidthDp = with(density) { constraints.maxWidth.toDp() }
             val startPadding = padding.calculateStartPadding(ld)
             val endPadding = padding.calculateEndPadding(ld)
@@ -365,11 +351,8 @@ class MainActivity : ComponentActivity() {
                 expandedSize = expandedSize,
                 alignment = alignment,
                 padding = padding,
-                showingPresetSelector = showingPresetSelector,
                 isPlaying = boundPlayerService?.isPlaying ?: false,
-                onPlayPauseClick = ::onPlayPauseClick,
-                onActivePresetClick = onActivePresetClick,
-                onCloseButtonClick = onCloseButtonClick)
+                onPlayPauseClick = ::onPlayPauseClick)
         }
     }
 

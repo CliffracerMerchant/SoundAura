@@ -28,8 +28,8 @@ val LayoutDirection.isLtr get() = this == LayoutDirection.Ltr
  * the maximum allowed size, but then clipped down to [width] and [height] with
  * a corner radius matching [cornerRadius]. The parameters [alignment] and
  * [padding] will also be utilized in determining the placement of the box.
- * ClippedBrushBackgroundBox can be used to, e.g., create a box with a gradient
- * that matches a background screen spanning gradient without having to manually
+ * ClippedBrushBox can be used to, e.g., create a box with a gradient that
+ * matches a background screen spanning gradient without having to manually
  * adjust the startX and endX of the gradient depending on the position of the
  * box. Desired padding should only be provided through the [padding] parameter;
  * adding padding to the provided [modifier] will cause it to be applied twice.
@@ -51,9 +51,10 @@ val LayoutDirection.isLtr get() = this == LayoutDirection.Ltr
             val xAlignment = alignment.horizontalBias / 2f + 0.5f
             val yAlignment = alignment.verticalBias / 2f + 0.5f
             val boxSize = Size(width.toPx(), height.toPx())
+            val xOffset = (size.width - boxSize.width) * xAlignment
             val offset = Offset(
-                x = if (ld.isLtr) (size.width - boxSize.width) * xAlignment
-                    else size.width - (size.width - boxSize.width) * xAlignment,
+                x = if (ld.isLtr) xOffset
+                    else size.width - xOffset,
                 y = (size.height - boxSize.height) * yAlignment)
             drawRoundRect(brush, offset, boxSize, cornerRadius)
         }

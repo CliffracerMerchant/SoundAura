@@ -21,7 +21,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -67,8 +66,7 @@ import kotlinx.collections.immutable.toImmutableList
         verticalAlignment = Alignment.CenterVertically
     ) {
         MarqueeText(presetName, Modifier.weight(1f, false))
-        if (isModified)
-            Text(" *", style = LocalTextStyle.current.copy(fontSize = 18.sp))
+        if (isModified) Text(" *")
     }
     var showingOptionsMenu by rememberSaveable { mutableStateOf(false) }
 

@@ -70,6 +70,7 @@ class ActivePresetState @Inject constructor(
 class MediaControllerViewModel(
     private val dao: PresetDao,
     private val dataStore: DataStore<Preferences>,
+    private val navigationState: MainActivityNavigationState,
     activePresetState: ActivePresetState,
     coroutineScope: CoroutineScope?
 ) : ViewModel() {
@@ -77,8 +78,9 @@ class MediaControllerViewModel(
     @Inject constructor(
         dao: PresetDao,
         dataStore: DataStore<Preferences>,
-        activePresetState: ActivePresetState
-    ) : this(dao, dataStore, activePresetState, null)
+        navigationState: MainActivityNavigationState,
+        activePresetState: ActivePresetState,
+    ) : this(dao, dataStore, navigationState, activePresetState, null)
 
     private val scope = coroutineScope ?: viewModelScope
     private val activePresetNameKey = stringPreferencesKey(pref_key_activePresetName)
@@ -89,6 +91,16 @@ class MediaControllerViewModel(
 
     val activePreset by activePresetState.activePreset.collectAsState(null, scope)
     val activePresetIsModified by activePresetState.activePresetIsModified.collectAsState(false, scope)
+
+    val showingPresetSelector get() = navigationState.showingPresetSelector
+
+    fun onActivePresetClick() {
+        navigationState.showingPresetSelector = true
+    }
+
+    fun onPresetSelectorCloseButtonClick() {
+        navigationState.showingPresetSelector = false
+    }
 
     fun onPresetRenameRequest(preset: Preset, newName: String) {
         scope.launch {
@@ -117,7 +129,7 @@ class MediaControllerViewModel(
         newPresetAfterUnsavedChangesWarning != null
     }
 
-    fun onPresetClick(preset: Preset) {
+    fun onPresetSelectorPresetClick(preset: Preset) {
         when {
             activePresetIsModified -> {
                 newPresetAfterUnsavedChangesWarning = preset
@@ -133,6 +145,7 @@ class MediaControllerViewModel(
             dataStore.edit {
                 it[activePresetNameKey] = preset.name
             }
+            onPresetSelectorCloseButtonClick()
         }
     }
 
@@ -159,11 +172,8 @@ class MediaControllerViewModel(
     expandedSize: DpSize,
     alignment: BiasAlignment,
     padding: PaddingValues,
-    showingPresetSelector: Boolean,
     isPlaying: Boolean,
     onPlayPauseClick: () -> Unit,
-    onActivePresetClick: () -> Unit,
-    onCloseButtonClick: () -> Unit,
 ) {
     val viewModel: MediaControllerViewModel = viewModel()
     MediaController(
@@ -175,18 +185,18 @@ class MediaControllerViewModel(
         expandedSize = expandedSize,
         alignment = alignment,
         padding = padding,
-        showingPresetSelector = showingPresetSelector,
-        isPlaying = isPlaying,
+        playing = isPlaying,
         onPlayPauseClick = onPlayPauseClick,
         activePresetProvider = viewModel::activePreset::get,
         activePresetIsModified = viewModel.activePresetIsModified,
-        onActivePresetClick = onActivePresetClick,
+        onActivePresetClick = viewModel::onActivePresetClick,
+        showingPresetSelector = viewModel.showingPresetSelector,
         presetListProvider = viewModel::presetList::get,
         onPresetRenameRequest = viewModel::onPresetRenameRequest,
         onPresetOverwriteRequest = viewModel::onPresetOverwriteRequest,
         onPresetDeleteRequest = viewModel::onPresetDeleteRequest,
-        onCloseButtonClick = onCloseButtonClick,
-        onPresetClick = viewModel::onPresetClick)
+        onPresetSelectorCloseButtonClick = viewModel::onPresetSelectorCloseButtonClick,
+        onPresetSelectorPresetClick = viewModel::onPresetSelectorPresetClick)
 
     if (viewModel.showingUnsavedChangesWarning) {
         viewModel.activePreset?.name?.let { unsavedPresetName ->
