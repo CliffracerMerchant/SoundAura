@@ -120,6 +120,8 @@ class MediaControllerViewModel(
 
     fun onPresetDeleteRequest(preset: Preset) {
         scope.launch {
+            if (preset == activePreset)
+                dataStore.edit { it.remove(activePresetNameKey) }
             dao.deletePreset(preset.name)
         }
     }
@@ -141,10 +143,10 @@ class MediaControllerViewModel(
 
     private fun loadPreset(preset: Preset) {
         scope.launch {
-            dao.loadPreset(preset.name)
             dataStore.edit {
                 it[activePresetNameKey] = preset.name
             }
+            dao.loadPreset(preset.name)
             onPresetSelectorCloseButtonClick()
         }
     }
