@@ -139,7 +139,7 @@ class PlayerService: LifecycleService() {
                 .onEach { playInBackground = it }
                 .launchIn(this)
 
-            trackDao.getAllActiveTracks()
+            trackDao.getActiveTracks()
                 .onEach(::updatePlayers)
                 .launchIn(this)
         }

@@ -123,17 +123,22 @@ class AddTrackButtonViewModel(
 
 @HiltViewModel
 class AddPresetButtonViewModel(
-    private val dao: PresetDao,
+    private val presetDao: PresetDao,
     private val dataStore: DataStore<Preferences>,
+    private val messageHandler: MessageHandler,
+    trackDao: TrackDao,
     activePresetState: ActivePresetState,
     coroutineScope: CoroutineScope?,
 ) : ViewModel() {
 
     @Inject constructor(
-        dao: PresetDao,
+        presetDao: PresetDao,
         dataStore: DataStore<Preferences>,
+        messageHandler: MessageHandler,
+        trackDao: TrackDao,
         activePresetState: ActivePresetState,
-    ) : this(dao, dataStore, activePresetState, null)
+    ) : this(presetDao, dataStore, messageHandler,
+             trackDao, activePresetState, null)
 
     private val scope = coroutineScope ?: viewModelScope
     private val activePresetKey = stringPreferencesKey(pref_key_activePresetName)
@@ -145,7 +150,7 @@ class AddPresetButtonViewModel(
     private suspend fun nameValidator(newPresetName: String?) = when {
         newPresetName == null -> null
         newPresetName.isBlank() -> null
-        else -> dao.presetNameIsAlreadyInUse(newPresetName)
+        else -> presetDao.presetNameIsAlreadyInUse(newPresetName)
     }
 
     private fun nameValidatorResultToMessage(nameIsAlreadyInUse: Boolean?) = when {
@@ -166,12 +171,19 @@ class AddPresetButtonViewModel(
     var potentialDuplicatePresetName by mutableStateOf<String?>(null)
         private set
 
-    fun onClick() {
-        val activePresetName = activePreset?.name
-        if (!activePresetIsModified && activePresetName != null) {
-            potentialDuplicatePresetName = activePresetName
-        } else showAddPresetDialog()
-    }
+    private val activeTracksIsEmpty by trackDao.getActiveTracks()
+        .map { it.isEmpty() }
+        .collectAsState(false, scope)
+
+    fun onClick() { when {
+        !activePresetIsModified && activePreset != null -> {
+            potentialDuplicatePresetName = activePreset?.name
+        } activeTracksIsEmpty -> {
+            messageHandler.postMessage(StringResource(
+                R.string.preset_cannot_be_empty_warning_message))
+        }
+        else -> showAddPresetDialog()
+    }}
 
     fun onDuplicatePresetWarningDismiss() {
         potentialDuplicatePresetName = null
@@ -220,7 +232,7 @@ class AddPresetButtonViewModel(
 
             showingAddPresetDialog = false
             newPresetName.value = null
-            dao.savePreset(name)
+            presetDao.savePreset(name)
             dataStore.edit {
                 it[activePresetKey] = name
             }

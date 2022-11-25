@@ -51,7 +51,7 @@ class ActivePresetState @Inject constructor(
                else presetDao.getPreset(it) }
 
     private val activeTracks =
-        trackDao.getAllActiveTracks().map { it.toHashSet() }
+        trackDao.getActiveTracks().map { it.toHashSet() }
 
     private val activePresetTracks = activePreset
         .transformLatest {

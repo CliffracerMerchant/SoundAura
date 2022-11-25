@@ -94,7 +94,7 @@ data class ActiveTrack(
     }
 
     @Query("SELECT uriString, volume FROM track WHERE isActive")
-    abstract fun getAllActiveTracks(): Flow<List<ActiveTrack>>
+    abstract fun getActiveTracks(): Flow<List<ActiveTrack>>
 
     @Query("UPDATE track set hasError = 1 WHERE uriString = :uri")
     abstract suspend fun notifyOfError(uri: String)

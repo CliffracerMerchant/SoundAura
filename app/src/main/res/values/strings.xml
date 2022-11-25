@@ -71,6 +71,9 @@
     <string name="duplicate_preset_warning_title">Duplicate preset</string>
     <string name="duplicate_preset_warning_message">
         This new preset will have the same contents as the preset %1$s. Create anyways?</string>
+    <string name="preset_cannot_be_empty_warning_message">
+        There are no active tracks to add to the preset.
+        Tap a track\'s add button first.</string>
 
     <string name="add_preset_button_description">Create new preset</string>
     <string name="create_new_preset_dialog_title">Enter new preset name</string>
