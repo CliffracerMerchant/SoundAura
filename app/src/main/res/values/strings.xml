@@ -21,6 +21,8 @@
     <string name="search">Search</string>
     <string name="sort_options_description">Open sorting options</string>
 
+    <string name="empty_track_list_message">Your library is empty. Click
+        the add button below to add local files to your library.</string>
     <string name="add_track_to_mix_description">Add %1$s to sound mix</string>
     <string name="remove_track_from_mix_description">Remove %1$s from sound mix</string>
     <string name="file_error_message">File missing/corrupt</string>

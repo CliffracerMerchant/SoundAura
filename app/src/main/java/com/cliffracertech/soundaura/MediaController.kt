@@ -232,7 +232,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
     activePresetIsModified: Boolean,
     onActivePresetClick: () -> Unit,
     showingPresetSelector: Boolean,
-    presetListProvider: () -> ImmutableList<Preset>,
+    presetListProvider: () -> ImmutableList<Preset>?,
     onPresetRenameRequest: (Preset, String) -> Unit,
     onPresetOverwriteRequest: (Preset) -> Unit,
     onPresetDeleteRequest: (Preset) -> Unit,

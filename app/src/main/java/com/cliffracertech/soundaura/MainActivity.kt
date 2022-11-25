@@ -155,7 +155,7 @@ class MainActivity : ComponentActivity() {
                     val padding = rememberInsetsPaddingValues(
                         insets = insets.systemBars,
                         additionalStart = 8.dp,
-                        // The 56dp is added here manually for the action bar's height.
+                        // The 56dp is added here for the action bar's height.
                         additionalTop = 8.dp + 56.dp,
                         additionalEnd = 8.dp,
                         additionalBottom = 8.dp)
@@ -322,7 +322,7 @@ class MainActivity : ComponentActivity() {
         val expandedSize = remember(padding, alignToEnd) {
             val widthFraction = if (alignToEnd) 0.6f else 1.0f
             DpSize(width = contentAreaSize.width * widthFraction,
-                   height = if (!alignToEnd) 350.dp
+                   height = if (!alignToEnd) 400.dp
                             else contentAreaSize.height)
         }
         val alignment = if (alignToEnd) Alignment.TopEnd as BiasAlignment

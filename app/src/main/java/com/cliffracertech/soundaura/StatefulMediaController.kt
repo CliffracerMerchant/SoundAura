@@ -87,7 +87,7 @@ class MediaControllerViewModel(
 
     val presetList by dao.getPresetList()
         .map { it.toImmutableList() }
-        .collectAsState(listOf<Preset>().toImmutableList(), scope)
+        .collectAsState(null, scope)
 
     val activePreset by activePresetState.activePreset.collectAsState(null, scope)
     val activePresetIsModified by activePresetState.activePresetIsModified.collectAsState(false, scope)

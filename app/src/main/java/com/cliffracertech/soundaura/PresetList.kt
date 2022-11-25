@@ -2,7 +2,7 @@
  * License 2.0. See license.md in the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -149,7 +149,9 @@ import kotlinx.collections.immutable.toImmutableList
  *     name in this case to indicate this to the user.
  * @param selectionBrush The [Brush] that will be applied to the active
  *     [Preset] to indicate its status as the active [Preset]
- * @param presetListProvider A function that returns the list of presets when invoked
+ * @param presetListProvider A function that returns the list of presets when invoked.
+ *     When the returned list is null, it will be interpreted as a loading state.
+ *     When the returned list is empty, an empty message will be displayed instead.
  * @param onPresetClick The callback that will be invoked when the user clicks on a [Preset]
  * @param onPresetRenameRequest The callback that will be invoked when the user
  *     has requested that the [Preset] parameter be renamed to the [String] parameter
@@ -165,7 +167,7 @@ import kotlinx.collections.immutable.toImmutableList
     activePresetProvider: () -> Preset?,
     activePresetIsModified: Boolean,
     selectionBrush: Brush,
-    presetListProvider: () -> ImmutableList<Preset>,
+    presetListProvider: () -> ImmutableList<Preset>?,
     onPresetRenameRequest: (Preset, String) -> Unit,
     onPresetOverwriteRequest: (Preset) -> Unit,
     onPresetDeleteRequest: (Preset) -> Unit,
@@ -173,21 +175,24 @@ import kotlinx.collections.immutable.toImmutableList
 ) = CompositionLocalProvider(LocalContentColor provides MaterialTheme.colors.onSurface) {
     val presetList = presetListProvider()
 
-    AnimatedContent(presetList.isEmpty(), modifier) { listIsEmpty ->
-        if (listIsEmpty)
-            Box(Modifier.fillMaxSize(), Alignment.Center) {
-                Text(stringResource(R.string.empty_preset_list_message),
-                     modifier = Modifier.width(300.dp),
-                     textAlign = TextAlign.Justify)
-            }
-        else {
+    Crossfade(presetList?.isEmpty(), modifier) { when(it) {
+        null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+            CircularProgressIndicator(Modifier.size(50.dp))
+        } true -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+            Text(stringResource(R.string.empty_preset_list_message),
+                 modifier = Modifier.width(300.dp),
+                 textAlign = TextAlign.Justify)
+        } else -> {
             var renameDialogTarget by rememberSaveable { mutableStateOf<Preset?>(null) }
             var overwriteDialogTarget by rememberSaveable { mutableStateOf<Preset?>(null) }
             var deleteDialogTarget by rememberSaveable { mutableStateOf<Preset?>(null) }
 
             LazyColumn(Modifier, contentPadding = contentPadding) {
                 val activePreset = activePresetProvider()
-                items(presetList, key = { preset -> preset.name }) { preset ->
+                items(
+                    items = presetList ?: emptyList(),
+                    key = Preset::name::get
+                ) { preset ->
                     val isActivePreset = preset == activePreset
                     PresetView(
                         modifier = if (!isActivePreset) Modifier
@@ -229,7 +234,7 @@ import kotlinx.collections.immutable.toImmutableList
                     })
             }
         }
-    }
+    }}
 }
 
 @Preview @Composable
@@ -249,6 +254,5 @@ fun PresetListPreview() = SoundAuraTheme {
         onPresetClick = { activePreset = it },
         onPresetRenameRequest = { _, _ -> },
         onPresetDeleteRequest = {},
-        onPresetOverwriteRequest = {}
-    )
+        onPresetOverwriteRequest = {})
 }
