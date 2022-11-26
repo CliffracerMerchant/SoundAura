@@ -37,8 +37,7 @@ import kotlinx.collections.immutable.toImmutableList
  * @param onRenameClick The callback that will be invoked when the user
  *     clicks on the options menu's rename option
  * @param onOverwriteClick The callback that will be invoked when the
- *     user clicks on the options menu's overwrite option, or null if
- *     the overwrite option should not be shown
+ *     user clicks on the options menu's overwrite option
  * @param onDeleteClick The callback that will be invoked when the user
  *     clicks on the option menu's delete option
  * @param onClick The callback that will be invoked when the user clicks the view
@@ -48,7 +47,7 @@ import kotlinx.collections.immutable.toImmutableList
     presetName: String,
     isModified: Boolean,
     onRenameClick: () -> Unit,
-    onOverwriteClick: (() -> Unit)? = null,
+    onOverwriteClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onClick: () -> Unit
 ) = Row(
@@ -84,11 +83,10 @@ import kotlinx.collections.immutable.toImmutableList
                 showingOptionsMenu = false
             }) { Text(stringResource(R.string.rename)) }
 
-            if (onOverwriteClick != null)
-                DropdownMenuItem(onClick = {
-                    onOverwriteClick()
-                    showingOptionsMenu = false
-                }) { Text(stringResource(R.string.overwrite)) }
+            DropdownMenuItem(onClick = {
+                onOverwriteClick()
+                showingOptionsMenu = false
+            }) { Text(stringResource(R.string.overwrite)) }
 
             DropdownMenuItem(onClick = {
                 onDeleteClick()
@@ -200,8 +198,7 @@ import kotlinx.collections.immutable.toImmutableList
                         presetName = preset.name,
                         isModified = isActivePreset && activePresetIsModified,
                         onRenameClick = { renameDialogTarget = preset },
-                        onOverwriteClick = if (isActivePreset && !activePresetIsModified) null
-                                           else {{ overwriteDialogTarget = preset }},
+                        onOverwriteClick = { overwriteDialogTarget = preset },
                         onDeleteClick = { deleteDialogTarget = preset },
                         onClick = remember {{ onPresetClick(preset) }})
                     Divider()

@@ -51,7 +51,7 @@ class ActivePresetState @Inject constructor(
                else presetDao.getPreset(it) }
 
     private val activeTracks =
-        trackDao.getActiveTracks().map { it.toHashSet() }
+        trackDao.getActiveTracks().map(List<ActiveTrack>::toHashSet)
 
     private val activePresetTracks = activePreset
         .transformLatest {
@@ -68,9 +68,11 @@ class ActivePresetState @Inject constructor(
 
 @HiltViewModel
 class MediaControllerViewModel(
-    private val dao: PresetDao,
+    private val presetDao: PresetDao,
     private val dataStore: DataStore<Preferences>,
     private val navigationState: MainActivityNavigationState,
+    private val messageHandler: MessageHandler,
+    trackDao: TrackDao,
     activePresetState: ActivePresetState,
     coroutineScope: CoroutineScope?
 ) : ViewModel() {
@@ -79,13 +81,16 @@ class MediaControllerViewModel(
         dao: PresetDao,
         dataStore: DataStore<Preferences>,
         navigationState: MainActivityNavigationState,
+        messageHandler: MessageHandler,
+        trackDao: TrackDao,
         activePresetState: ActivePresetState,
-    ) : this(dao, dataStore, navigationState, activePresetState, null)
+    ) : this(dao, dataStore, navigationState, messageHandler,
+             trackDao, activePresetState, null)
 
     private val scope = coroutineScope ?: viewModelScope
     private val activePresetNameKey = stringPreferencesKey(pref_key_activePresetName)
 
-    val presetList by dao.getPresetList()
+    val presetList by presetDao.getPresetList()
         .map { it.toImmutableList() }
         .collectAsState(null, scope)
 
@@ -104,7 +109,7 @@ class MediaControllerViewModel(
 
     fun onPresetRenameRequest(preset: Preset, newName: String) {
         scope.launch {
-            dao.renamePreset(preset.name, newName)
+            presetDao.renamePreset(preset.name, newName)
             if (activePreset == preset)
                 dataStore.edit {
                     it[activePresetNameKey] = newName
@@ -112,17 +117,27 @@ class MediaControllerViewModel(
         }
     }
 
-    fun onPresetOverwriteRequest(preset: Preset) {
-        scope.launch {
-            dao.savePreset(preset.name)
+    private val activeTracksIsEmpty by trackDao.getActiveTracks()
+        .map { it.isEmpty() }
+        .collectAsState(false, scope)
+
+    fun onPresetOverwriteRequest(preset: Preset) { when {
+        activeTracksIsEmpty ->
+            messageHandler.postMessage(StringResource(
+                R.string.overwrite_no_active_tracks_error_message))
+        preset == activePreset && !activePresetIsModified ->
+            messageHandler.postMessage(StringResource(
+                R.string.overwrite_no_unsaved_changes_message, preset.name))
+        else -> scope.launch {
+            presetDao.savePreset(preset.name)
         }
-    }
+    }}
 
     fun onPresetDeleteRequest(preset: Preset) {
         scope.launch {
             if (preset == activePreset)
                 dataStore.edit { it.remove(activePresetNameKey) }
-            dao.deletePreset(preset.name)
+            presetDao.deletePreset(preset.name)
         }
     }
 
@@ -146,7 +161,7 @@ class MediaControllerViewModel(
             dataStore.edit {
                 it[activePresetNameKey] = preset.name
             }
-            dao.loadPreset(preset.name)
+            presetDao.loadPreset(preset.name)
             onPresetSelectorCloseButtonClick()
         }
     }
