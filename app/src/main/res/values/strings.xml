@@ -61,7 +61,6 @@
     <string name="overwrite">Overwrite</string>
     <string name="overwrite_no_active_tracks_error_message">
         Presets must have at least one active track. Tap a track\'s add button first</string>
-    <string name="overwrite_no_unsaved_changes_message">The preset %1$s has no unsaved changes</string>
     <string name="confirm_overwrite_preset_dialog_title">Confirm overwrite preset</string>
     <string name="confirm_overwrite_preset_dialog_message">
         This will overwrite the preset %1$s. Are you sure?</string>

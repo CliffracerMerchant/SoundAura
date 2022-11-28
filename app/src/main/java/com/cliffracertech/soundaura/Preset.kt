@@ -4,10 +4,15 @@
 package com.cliffracertech.soundaura
 
 import androidx.annotation.FloatRange
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.room.*
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
+import com.cliffracertech.soundaura.SoundAura.pref_key_activePresetName
+import dagger.hilt.android.scopes.ActivityRetainedScoped
+import kotlinx.coroutines.flow.*
+import javax.inject.Inject
 
 @Entity(tableName = "preset")
 data class Preset(
@@ -172,5 +177,56 @@ class PresetNameValidator(
             clearNewPresetName()
             return name
         }
+    }
+}
+
+/**
+ * ActivePresetState holds the state of a currently active [Preset].
+ * The currently active [Preset] can be collected from the [Flow]`<Preset>`
+ * property [activePreset]. Whether or not the latest [Preset] emitted by
+ * [activePreset] is modified can be collected from the [Flow]`<Boolean>`
+ * property [activePresetIsModified]. The active [Preset] can be changed
+ * or cleared with the methods [setName] and [clear].
+ */
+@ActivityRetainedScoped
+class ActivePresetState @Inject constructor(
+    private val dataStore: DataStore<Preferences>,
+    trackDao: TrackDao,
+    presetDao: PresetDao,
+) {
+    private val activePresetNameKey = stringPreferencesKey(pref_key_activePresetName)
+
+    /** A [Flow]`<Preset>` whose latest value is equal to the [Preset] current
+     * marked as the active one. */
+    val activePreset = dataStore.data
+        .map { it[activePresetNameKey] }
+        .map { if (it.isNullOrBlank()) null
+        else presetDao.getPreset(it) }
+
+    private val activeTracks =
+        trackDao.getActiveTracks().map(List<ActiveTrack>::toHashSet)
+
+    private val activePresetTracks = activePreset
+        .transformLatest {
+            if (it == null) emptyList<ActiveTrack>()
+            else emitAll(presetDao.getPresetTracks(it.name))
+        }.map { it.toHashSet() }
+
+    /** A [Flow]`<Boolean>` whose latest value represents whether or not the
+     * active preset is modified. */
+    val activePresetIsModified =
+        combine(activeTracks, activePresetTracks) { activeTracks, activePresetTracks ->
+            if (activePresetTracks.isEmpty()) false
+            else activeTracks != activePresetTracks
+        }
+
+    /** Set the active preset to the one whose name matches [name]. */
+    suspend fun setName(name: String) {
+        dataStore.edit { it[activePresetNameKey] = name }
+    }
+
+    /** Clear the active preset. */
+    suspend fun clear() {
+        dataStore.edit { it.remove(activePresetNameKey) }
     }
 }

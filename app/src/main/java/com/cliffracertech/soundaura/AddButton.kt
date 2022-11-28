@@ -29,15 +29,10 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.cliffracertech.soundaura.SoundAura.pref_key_activePresetName
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -123,21 +118,20 @@ class AddTrackButtonViewModel(
 @HiltViewModel
 class AddPresetButtonViewModel(
     private val presetDao: PresetDao,
-    private val dataStore: DataStore<Preferences>,
     private val messageHandler: MessageHandler,
+    private val activePresetState: ActivePresetState,
     trackDao: TrackDao,
     coroutineScope: CoroutineScope?,
 ) : ViewModel() {
 
     @Inject constructor(
         presetDao: PresetDao,
-        dataStore: DataStore<Preferences>,
         messageHandler: MessageHandler,
+        activePresetState: ActivePresetState,
         trackDao: TrackDao,
-    ) : this(presetDao, dataStore, messageHandler, trackDao, null)
+    ) : this(presetDao, messageHandler, activePresetState, trackDao, null)
 
     private val scope = coroutineScope ?: viewModelScope
-    private val activePresetKey = stringPreferencesKey(pref_key_activePresetName)
     private val presetNameValidator = PresetNameValidator(presetDao)
     val newPresetNameValidatorMessage by
         presetNameValidator.nameValidatorMessage.collectAsState(null, scope)
@@ -172,7 +166,7 @@ class AddPresetButtonViewModel(
                 ?: return@launch
             showingAddPresetDialog = false
             presetDao.savePreset(validatedName)
-            dataStore.edit { it[activePresetKey] = validatedName }
+            activePresetState.setName(validatedName)
         }
     }
 }
