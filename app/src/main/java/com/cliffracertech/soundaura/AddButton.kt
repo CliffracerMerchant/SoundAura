@@ -41,7 +41,6 @@ import com.cliffracertech.soundaura.SoundAura.pref_key_activePresetName
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -115,7 +114,7 @@ class AddTrackButtonViewModel(
                         string = null,
                         stringResId = R.string.over_file_permission_limit_warning,
                         args = arrayListOf(failedTracks.size, persistedPermissionAllowance)))
-                trackDao.delete(failedTracks.map { it.uriString })
+                trackDao.delete(failedTracks.map(Track::uriString::get))
             }
         }
     }
@@ -142,32 +141,17 @@ class AddPresetButtonViewModel(
 
     private val scope = coroutineScope ?: viewModelScope
     private val activePresetKey = stringPreferencesKey(pref_key_activePresetName)
+    private val presetNameValidator = PresetNameValidator(presetDao)
+    val newPresetNameValidatorMessage by
+        presetNameValidator.nameValidatorMessage.collectAsState(null, scope)
 
     var showingAddPresetDialog by mutableStateOf(false)
         private set
-    private val newPresetName = MutableStateFlow<String?>(null)
 
-    private suspend fun nameValidator(newPresetName: String?) = when {
-        newPresetName == null -> null
-        newPresetName.isBlank() -> null
-        else -> presetDao.presetNameIsAlreadyInUse(newPresetName)
-    }
-
-    private fun nameValidatorResultToMessage(nameIsAlreadyInUse: Boolean?) = when {
-        newPresetName.value?.isBlank() == true ->
-            StringResource(R.string.preset_name_cannot_be_blank_warning_message)
-        nameIsAlreadyInUse == true ->
-            StringResource(R.string.preset_name_already_in_use_warning_message)
-        else -> null
-    }
-
-    val nameValidatorMessage by newPresetName
-        .map(::nameValidator)
-        .map(::nameValidatorResultToMessage)
-        .collectAsState(null, scope)
-
-    private val activePresetIsModified by activePresetState.activePresetIsModified.collectAsState(false, scope)
-    private val activePreset by activePresetState.activePreset.collectAsState(null, scope)
+    private val activePresetIsModified by
+        activePresetState.activePresetIsModified.collectAsState(false, scope)
+    private val activePreset by
+        activePresetState.activePreset.collectAsState(null, scope)
     var potentialDuplicatePresetName by mutableStateOf<String?>(null)
         private set
 
@@ -181,8 +165,7 @@ class AddPresetButtonViewModel(
         } activeTracksIsEmpty -> {
             messageHandler.postMessage(StringResource(
                 R.string.preset_cannot_be_empty_warning_message))
-        }
-        else -> showAddPresetDialog()
+        } else -> showAddPresetDialog()
     }}
 
     fun onDuplicatePresetWarningDismiss() {
@@ -195,7 +178,7 @@ class AddPresetButtonViewModel(
     }
 
     private fun showAddPresetDialog() {
-        newPresetName.value = null
+        presetNameValidator.clearNewPresetName()
         showingAddPresetDialog = true
     }
 
@@ -203,39 +186,16 @@ class AddPresetButtonViewModel(
         showingAddPresetDialog = false
     }
 
-    fun onNewPresetNameChange(newName: String) {
-        newPresetName.value = newName
-    }
+    fun onNewPresetNameChange(newName: String) =
+        presetNameValidator.onNewPresetNameChange(newName)
 
     fun onAddPresetDialogConfirm() {
-        // nameValidatorResultToMessage intentionally returns null right after
-        // onClick is called, even though the newPresetName at that time is
-        // null (i.e. an invalid name). This allows the user to start entering
-        // a name before the no blank names warning message is displayed. This
-        // check sets newPresetName.value to a blank string instead of null so
-        // that the no blank names warning message is still displayed if they
-        // attempt to confirm the dialog with this initial blank name.
-        if (newPresetName.value == null)
-            newPresetName.value = ""
-        else scope.launch {
-            // Although the create new preset dialog should prevent confirmation
-            // unless nameValidatorMessage is null, we still have to check the
-            // entered name here before we actually add it to the database. This
-            // prevents the case where the user changes the input to an invalid
-            // name, and then confirms the new name before the suspend functions
-            // underlying nameValidatorMessage have a chance to return a non-null
-            // message.
-            val name = newPresetName.value ?: ""
-            val nameValidatorResult = nameValidator(name)
-            val message = nameValidatorResultToMessage(nameValidatorResult)
-            if (message != null) return@launch
-
+         scope.launch {
+            val validatedName = presetNameValidator.onPresetNameConfirm()
+                ?: return@launch
             showingAddPresetDialog = false
-            newPresetName.value = null
-            presetDao.savePreset(name)
-            dataStore.edit {
-                it[activePresetKey] = name
-            }
+            presetDao.savePreset(validatedName)
+            dataStore.edit { it[activePresetKey] = validatedName }
         }
     }
 }
@@ -290,7 +250,7 @@ enum class AddButtonTarget { Track, Preset }
 
     val context = LocalContext.current
     val nameValidatorMessage by remember { derivedStateOf {
-        addPresetViewModel.nameValidatorMessage?.resolve(context)
+        addPresetViewModel.newPresetNameValidatorMessage?.resolve(context)
     }}
     if (addPresetViewModel.showingAddPresetDialog)
         CreateNewPresetDialog(
