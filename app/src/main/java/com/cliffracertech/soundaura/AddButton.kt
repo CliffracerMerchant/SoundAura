@@ -126,7 +126,6 @@ class AddPresetButtonViewModel(
     private val dataStore: DataStore<Preferences>,
     private val messageHandler: MessageHandler,
     trackDao: TrackDao,
-    activePresetState: ActivePresetState,
     coroutineScope: CoroutineScope?,
 ) : ViewModel() {
 
@@ -135,9 +134,7 @@ class AddPresetButtonViewModel(
         dataStore: DataStore<Preferences>,
         messageHandler: MessageHandler,
         trackDao: TrackDao,
-        activePresetState: ActivePresetState,
-    ) : this(presetDao, dataStore, messageHandler,
-             trackDao, activePresetState, null)
+    ) : this(presetDao, dataStore, messageHandler, trackDao, null)
 
     private val scope = coroutineScope ?: viewModelScope
     private val activePresetKey = stringPreferencesKey(pref_key_activePresetName)
@@ -148,39 +145,19 @@ class AddPresetButtonViewModel(
     var showingAddPresetDialog by mutableStateOf(false)
         private set
 
-    private val activePresetIsModified by
-        activePresetState.activePresetIsModified.collectAsState(false, scope)
-    private val activePreset by
-        activePresetState.activePreset.collectAsState(null, scope)
-    var potentialDuplicatePresetName by mutableStateOf<String?>(null)
-        private set
-
     private val activeTracksIsEmpty by trackDao.getActiveTracks()
         .map { it.isEmpty() }
         .collectAsState(false, scope)
 
     fun onClick() { when {
-        !activePresetIsModified && activePreset != null -> {
-            potentialDuplicatePresetName = activePreset?.name
-        } activeTracksIsEmpty -> {
+        activeTracksIsEmpty -> {
             messageHandler.postMessage(StringResource(
                 R.string.preset_cannot_be_empty_warning_message))
-        } else -> showAddPresetDialog()
+        } else -> {
+            presetNameValidator.clearNewPresetName()
+            showingAddPresetDialog = true
+        }
     }}
-
-    fun onDuplicatePresetWarningDismiss() {
-        potentialDuplicatePresetName = null
-    }
-
-    fun onDuplicatePresetWarningConfirm() {
-        onDuplicatePresetWarningDismiss()
-        showAddPresetDialog()
-    }
-
-    private fun showAddPresetDialog() {
-        presetNameValidator.clearNewPresetName()
-        showingAddPresetDialog = true
-    }
 
     fun onAddPresetDialogDismiss() {
         showingAddPresetDialog = false
@@ -240,13 +217,6 @@ enum class AddButtonTarget { Track, Preset }
         AddTracksFromLocalFilesDialog(
             onDismissRequest = addTrackViewModel::onDialogDismiss,
             onConfirmRequest = addTrackViewModel::onDialogConfirm)
-
-    addPresetViewModel.potentialDuplicatePresetName?.let {
-        DuplicatePresetWarningDialog(
-            duplicatePresetName = it,
-            onDismissRequest = addPresetViewModel::onDuplicatePresetWarningDismiss,
-            onConfirm = addPresetViewModel::onDuplicatePresetWarningConfirm)
-    }
 
     val context = LocalContext.current
     val nameValidatorMessage by remember { derivedStateOf {
@@ -342,22 +312,6 @@ val List<String>.containsBlanks get() =
             singleLine = true,
             modifier = Modifier.fillMaxWidth())
     }})
-
-/**
- * Show a dialog that warns the user that creating a new preset will result
- * in it having the same contents as an existing preset with the name
- * [duplicatePresetName]. [onDismissRequest] and [onConfirm] will be invoked
- * when the user dismisses or confirms the dialog, respectively.
- */
-@Composable fun DuplicatePresetWarningDialog(
-    duplicatePresetName: String,
-    onDismissRequest: () -> Unit,
-    onConfirm: () -> Unit,
-) = SoundAuraDialog(
-    title = stringResource(R.string.duplicate_preset_warning_title),
-    text = stringResource(R.string.duplicate_preset_warning_message, duplicatePresetName),
-    onDismissRequest = onDismissRequest,
-    onConfirm = onConfirm)
 
 /**
  * Show a dialog to create a new preset.
