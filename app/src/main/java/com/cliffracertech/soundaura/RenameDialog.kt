@@ -68,6 +68,7 @@ abstract class NameValidator {
 /**
  * Show a dialog to rename an object.
  *
+ * @param title The title of the dialog
  * @param initialName The name that will be displayed in the text field initially. This
  *     value will be used when [proposedNameProvider] returns null.
  * @param proposedNameProvider A function that returns the currently proposed name when invoked
@@ -79,6 +80,7 @@ abstract class NameValidator {
  * @param onConfirm The callback that will be invoked when the user clicks the ok button
  */
 @Composable fun RenameDialog(
+    title: String = stringResource(R.string.default_rename_dialog_title),
     initialName: String = "",
     proposedNameProvider: () -> String?,
     onProposedNameChange: (String) -> Unit,
@@ -91,7 +93,7 @@ abstract class NameValidator {
     SoundAuraDialog(
         modifier = Modifier.restrictWidthAccordingToSizeClass(),
         useDefaultWidth = false,
-        title = stringResource(R.string.create_new_preset_dialog_title),
+        title = title,
         onDismissRequest = onDismissRequest,
         confirmButtonEnabled = errorMessage == null,
         onConfirm = onConfirm
@@ -129,9 +131,9 @@ abstract class NameValidator {
 interface RenamePresetCallback {
     val targetProvider: () -> Preset?
     val proposedNameProvider: () -> String?
+    fun onProposedNameChange(newName: String)
     val errorMessageProvider: () -> String?
     fun onRenameStart(preset: Preset) {}
     fun onRenameCancel()
-    fun onProposedNameChange(newName: String)
     fun onRenameConfirm(preset: Preset)
 }

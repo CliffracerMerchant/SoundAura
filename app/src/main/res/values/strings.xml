@@ -30,7 +30,8 @@
     <string name="remove_item_description">Remove %1$s</string>
 
     <string name="rename">Rename</string>
-    <string name="rename_dialog_title">Rename %1$s</string>
+    <string name="default_rename_dialog_title">Enter new name</string>
+    <string name="track_name_cannot_be_blank_error_message">The track\'s name cannot be blank.</string>
 
     <string name="remove">Remove</string>
     <string name="confirm_remove_title">Remove %1$s?</string>

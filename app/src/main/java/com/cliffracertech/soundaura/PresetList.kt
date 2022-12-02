@@ -208,6 +208,7 @@ interface PresetListCallback {
             val renameDialogTarget = callback.renameCallback.targetProvider()
             renameDialogTarget?.let { preset ->
                 RenameDialog(
+                    title = stringResource(R.string.create_new_preset_dialog_title),
                     initialName = preset.name,
                     proposedNameProvider = callback.renameCallback.proposedNameProvider,
                     onProposedNameChange = callback.renameCallback::onProposedNameChange,

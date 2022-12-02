@@ -246,13 +246,13 @@ enum class TrackViewEndContent {
  * @param content The value of TrackViewEndContent that describes what
  *     will be displayed. The visible content will be crossfaded between
  *     when this value changes.
- * @param itemName The name of the item that is being interacted with.
+ * @param itemName The name of the item that is being interacted with
  * @param onRenameRequest The callback that will be invoked when the
  *     user requests through the rename dialog that they wish to change
- *     the item's name to the callback's string parameter.
+ *     the item's name to the callback's string parameter
  * @param onDeleteRequest The callback that will be invoked when the user
  *     requests through the delete dialog that they wish to delete the
- *     item, or when showAsDelete is true and the button is clicked.
+ *     item, or when showAsDelete is true and the button is clicked
  * @param tint The tint that will be used for the more options button
  *     and the volume display. The delete button will use the value
  *     of the local theme's MaterialTheme.colors.error value instead.
@@ -296,8 +296,7 @@ enum class TrackViewEndContent {
         }
 
         if (showingRenameDialog)
-            RenameDialog(itemName, { showingRenameDialog = false }, onRenameRequest)
-
+            TrackRenameDialog(itemName, { showingRenameDialog = false }, onRenameRequest)
         if (showingDeleteDialog)
             ConfirmRemoveDialog(itemName, { showingDeleteDialog = false }, onDeleteRequest)
     }
@@ -318,28 +317,23 @@ enum class TrackViewEndContent {
     }
 }}
 
-@Composable fun RenameDialog(
+@Composable fun TrackRenameDialog(
     itemName: String,
     onDismissRequest: () -> Unit,
-    onConfirm: (String) -> Unit
+    onConfirm: (String) -> Unit,
 ) {
     var currentName by rememberSaveable { mutableStateOf(itemName) }
-    SoundAuraDialog(
-        modifier = Modifier.restrictWidthAccordingToSizeClass(),
-        useDefaultWidth = false,
-        title = stringResource(R.string.rename_dialog_title, itemName),
-        confirmButtonEnabled = currentName.isNotBlank(),
-        confirmText = stringResource(R.string.rename),
+    val errorMessage = if (currentName.isNotBlank()) null
+                       else stringResource(R.string.track_name_cannot_be_blank_error_message)
+    RenameDialog(
+        initialName = itemName,
+        proposedNameProvider = { currentName },
+        onProposedNameChange = { currentName = it },
+        errorMessageProvider = { errorMessage },
+        onDismissRequest = onDismissRequest,
         onConfirm = {
             onConfirm(currentName)
             onDismissRequest()
-        }, onDismissRequest = onDismissRequest,
-        content = { TextField(
-            value = currentName,
-            onValueChange = { currentName = it },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            singleLine = true,
-            textStyle = MaterialTheme.typography.body1)
         })
 }
 

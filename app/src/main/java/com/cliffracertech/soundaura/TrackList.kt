@@ -122,7 +122,7 @@ class TrackListViewModel(
             try {
                 context.contentResolver.releasePersistableUriPermission(
                     uri, FLAG_GRANT_READ_URI_PERMISSION)
-            } catch (e: SecurityException) {}
+            } catch (_: SecurityException) {}
             trackDao.delete(uriString)
         }
     }
