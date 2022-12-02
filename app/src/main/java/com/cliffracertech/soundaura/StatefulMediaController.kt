@@ -50,7 +50,6 @@ class MediaControllerViewModel(
              messageHandler, trackDao, null)
 
     private val scope = coroutineScope ?: viewModelScope
-    private val presetNameValidator = PresetNameValidator(presetDao)
 
     val presetList by presetDao.getPresetList()
         .map { it.toImmutableList() }
@@ -69,26 +68,28 @@ class MediaControllerViewModel(
         navigationState.showingPresetSelector = false
     }
 
-    fun onProposedPresetNameChange(newName: String) =
-        presetNameValidator.setProposedName(newName)
+    private val nameValidator = PresetNameValidator(presetDao)
+    val renameDialogTarget get() = nameValidator.target
+    val proposedPresetName by nameValidator.proposedName.collectAsState(null, scope)
+    val proposedPresetNameErrorMessage by nameValidator.errorMessage.collectAsState(null, scope)
 
-    var renameDialogTarget by mutableStateOf<Preset?>(null)
-        private set
-    val proposedPresetName by presetNameValidator.proposedName.collectAsState(null, scope)
-    val proposedPresetRenameErrorMessage by presetNameValidator.errorMessage.collectAsState(null, scope)
+    fun onPresetRenameClick(preset: Preset) { nameValidator.target = preset }
 
-    fun onPresetRenameClick(preset: Preset) { renameDialogTarget = preset }
     fun onPresetRenameCancel() {
-        renameDialogTarget = null
-        presetNameValidator.clearProposedName()
+        nameValidator.target = null
+        nameValidator.clearProposedName()
     }
+
+    fun onProposedPresetNameChange(newName: String) =
+        nameValidator.setProposedName(newName)
 
     fun onPresetRenameRequest(preset: Preset) {
         scope.launch {
             val name = proposedPresetName ?: preset.name
-            if (presetNameValidator.onNameConfirm(name)) {
-                renameDialogTarget = null
-                presetDao.renamePreset(preset.name, name)
+            if (nameValidator.onNameConfirm(name)) {
+                if (name != nameValidator.target?.name)
+                    presetDao.renamePreset(preset.name, name)
+                nameValidator.target = null
                 if (activePreset == preset)
                     activePresetState.setName(name)
             }
@@ -174,20 +175,18 @@ class MediaControllerViewModel(
     val viewModel: MediaControllerViewModel = viewModel()
     val context = LocalContext.current
     val renameErrorMessage = remember { derivedStateOf {
-        viewModel.proposedPresetRenameErrorMessage?.resolve(context)
+        viewModel.proposedPresetNameErrorMessage?.resolve(context)
     }}
 
     val presetListCallback = remember { object: PresetListCallback {
         override val listProvider = viewModel::presetList::get
-        override val renameCallback = object: RenamePresetCallback {
-            override val targetProvider = viewModel::renameDialogTarget::get
-            override val proposedNameProvider = viewModel::proposedPresetName::get
-            override val errorMessageProvider = renameErrorMessage::value::get
-            override fun onProposedNameChange(newName: String) = viewModel.onProposedPresetNameChange(newName)
-            override fun onRenameStart(preset: Preset) = viewModel.onPresetRenameClick(preset)
-            override fun onRenameCancel() = viewModel.onPresetRenameCancel()
-            override fun onRenameConfirm(preset: Preset) = viewModel.onPresetRenameRequest(preset)
-        }
+        override val renameTargetProvider = viewModel::renameDialogTarget::get
+        override val proposedNameProvider = viewModel::proposedPresetName::get
+        override val renameErrorMessageProvider = renameErrorMessage::value::get
+        override fun onProposedNameChange(newName: String) = viewModel.onProposedPresetNameChange(newName)
+        override fun onRenameStart(preset: Preset) = viewModel.onPresetRenameClick(preset)
+        override fun onRenameCancel() = viewModel.onPresetRenameCancel()
+        override fun onRenameConfirm(preset: Preset) = viewModel.onPresetRenameRequest(preset)
         override fun onOverwriteConfirm(preset: Preset) = viewModel.onPresetOverwriteRequest(preset)
         override fun onDeleteConfirm(preset: Preset) = viewModel.onPresetDeleteRequest(preset)
         override fun onPresetClick(preset: Preset) = viewModel.onPresetSelectorPresetClick(preset)

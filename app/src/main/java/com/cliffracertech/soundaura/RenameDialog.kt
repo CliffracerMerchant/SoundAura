@@ -126,14 +126,3 @@ abstract class NameValidator {
         }
     }
 }
-
-/** A collection of callbacks related to the active renaming of an existing [Preset]. */
-interface RenamePresetCallback {
-    val targetProvider: () -> Preset?
-    val proposedNameProvider: () -> String?
-    fun onProposedNameChange(newName: String)
-    val errorMessageProvider: () -> String?
-    fun onRenameStart(preset: Preset) {}
-    fun onRenameCancel()
-    fun onRenameConfirm(preset: Preset)
-}

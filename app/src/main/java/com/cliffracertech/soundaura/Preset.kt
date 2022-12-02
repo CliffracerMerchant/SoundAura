@@ -4,6 +4,9 @@
 package com.cliffracertech.soundaura
 
 import androidx.annotation.FloatRange
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -101,11 +104,15 @@ data class PresetTrack(
 class PresetNameValidator(
     private val presetDao: PresetDao,
 ) : NameValidator() {
+    var target by mutableStateOf<Preset?>(null)
+
     override suspend fun validateName(proposedName: String?) = when {
         proposedName?.isBlank() == true ->
-            StringResource(R.string.preset_name_cannot_be_blank_warning_message)
+            StringResource(R.string.preset_name_cannot_be_blank_error_message)
+        proposedName == target?.name ->
+            null
         presetDao.presetNameIsAlreadyInUse(proposedName) ->
-            StringResource(R.string.preset_name_already_in_use_warning_message)
+            StringResource(R.string.preset_name_already_in_use_error_message)
         else -> null
     }
 }
