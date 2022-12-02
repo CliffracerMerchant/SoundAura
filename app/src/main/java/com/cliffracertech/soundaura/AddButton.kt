@@ -10,19 +10,15 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Error
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.SnapshotStateList
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
@@ -132,9 +128,6 @@ class AddPresetButtonViewModel(
     ) : this(presetDao, messageHandler, activePresetState, trackDao, null)
 
     private val scope = coroutineScope ?: viewModelScope
-    private val presetNameValidator = PresetNameValidator(presetDao)
-    val newPresetNameValidatorMessage by
-        presetNameValidator.errorMessage.collectAsState(null, scope)
 
     var showingAddPresetDialog by mutableStateOf(false)
         private set
@@ -149,18 +142,22 @@ class AddPresetButtonViewModel(
         else -> showingAddPresetDialog = true
     }}
 
+    private val nameValidator = PresetNameValidator(presetDao)
+    val proposedNewPresetName by nameValidator.proposedName.collectAsState(null, scope)
+    val newPresetNameValidatorMessage by nameValidator.errorMessage.collectAsState(null, scope)
+
     fun onAddPresetDialogDismiss() {
         showingAddPresetDialog = false
-        presetNameValidator.clearProposedName()
+        nameValidator.clearProposedName()
     }
 
     fun onNewPresetNameChange(newName: String) =
-        presetNameValidator.setProposedName(newName)
+        nameValidator.setProposedName(newName)
 
     fun onAddPresetDialogConfirm() {
          scope.launch {
-             val name = presetNameValidator.proposedName.value ?: ""
-             if (presetNameValidator.onNameConfirm(name)) {
+             val name = nameValidator.proposedName.value ?: ""
+             if (nameValidator.onNameConfirm(name)) {
                  showingAddPresetDialog = false
                  presetDao.savePreset(name)
                  activePresetState.setName(name)
@@ -211,13 +208,16 @@ enum class AddButtonTarget { Track, Preset }
             onConfirmRequest = addTrackViewModel::onDialogConfirm)
 
     val context = LocalContext.current
-    val nameValidatorMessage by remember { derivedStateOf {
+    val nameValidatorMessage = remember { derivedStateOf {
         addPresetViewModel.newPresetNameValidatorMessage?.resolve(context)
     }}
     if (addPresetViewModel.showingAddPresetDialog)
-        CreateNewPresetDialog(
-            onNameChange = addPresetViewModel::onNewPresetNameChange,
-            nameValidatorMessage = nameValidatorMessage,
+        RenameDialog(
+            title = stringResource(R.string.create_new_preset_dialog_title),
+            initialName = "",
+            proposedNameProvider = addPresetViewModel::proposedNewPresetName,
+            onProposedNameChange = addPresetViewModel::onNewPresetNameChange,
+            errorMessageProvider = nameValidatorMessage::value::get,
             onDismissRequest = addPresetViewModel::onAddPresetDialogDismiss,
             onConfirm = addPresetViewModel::onAddPresetDialogConfirm)
 }
@@ -304,61 +304,3 @@ val List<String>.containsBlanks get() =
             singleLine = true,
             modifier = Modifier.fillMaxWidth())
     }})
-
-/**
- * Show a dialog to create a new preset.
- *
- * @Param onNameChange The callback that will be invoked when the user input
- *     for the new preset's name changes.
- * @param nameValidatorMessage A nullable String that represents a warning
- *     message that should be displayed to the user regarding the new preset's
- *     name. Generally onNameChange should change this value to null if the
- *     entered new name is acceptable, or an error message explaining why the
- *     new name is not acceptable otherwise.
- * @param onDismissRequest The callback that will be invoked when the dialog is dismissed
- * @param onConfirm The callback that will be invoked when the confirm button has been clicked
- */
-@Composable fun CreateNewPresetDialog(
-    onNameChange: (String) -> Unit,
-    nameValidatorMessage: String?,
-    onDismissRequest: () -> Unit,
-    onConfirm: () -> Unit,
-) {
-    var currentName by rememberSaveable { mutableStateOf("") }
-    SoundAuraDialog(
-        modifier = Modifier.restrictWidthAccordingToSizeClass(),
-        useDefaultWidth = false,
-        title = stringResource(R.string.create_new_preset_dialog_title),
-        onDismissRequest = onDismissRequest,
-        confirmButtonEnabled = nameValidatorMessage == null,
-        onConfirm = onConfirm
-    ) {
-        TextField(
-            onValueChange = {
-                currentName = it
-                onNameChange(it)
-            }, value = currentName,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            isError = nameValidatorMessage != null,
-            singleLine = true,
-            textStyle = MaterialTheme.typography.body1)
-
-        var previousNameValidatorMessage by remember { mutableStateOf("") }
-        AnimatedVisibility(nameValidatorMessage != null) {
-            Row(Modifier.align(Alignment.CenterHorizontally)
-                .padding(start = 16.dp, end = 16.dp, top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.Default.Error,
-                    contentDescription = null,
-                    tint = MaterialTheme.colors.error)
-                AnimatedContent(nameValidatorMessage ?: previousNameValidatorMessage) {
-                    Text(it, Modifier.weight(1f), MaterialTheme.colors.error)
-                }
-                if (nameValidatorMessage != null)
-                    previousNameValidatorMessage = nameValidatorMessage
-            }
-        }
-    }
-}
