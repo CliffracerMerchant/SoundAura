@@ -53,7 +53,7 @@ import kotlinx.collections.immutable.toImmutableList
 ) = Row(
     modifier = modifier
         .minTouchTargetSize()
-        .clickable (
+        .clickable(
             onClickLabel = stringResource(R.string.preset_click_label, presetName),
             role = Role.Button,
             onClick = onClick
@@ -133,6 +133,15 @@ import kotlinx.collections.immutable.toImmutableList
         onDismissRequest()
     })
 
+/** A collection of callbacks used in user [PresetList] interactions. */
+interface PresetListCallback {
+    val listProvider: () -> ImmutableList<Preset>?
+    val renameCallback: RenamePresetCallback
+    fun onOverwriteConfirm(preset: Preset)
+    fun onDeleteConfirm(preset: Preset)
+    fun onPresetClick(preset: Preset)
+}
+
 /**
  * Display a list of [Preset]s, with an options menu for each [Preset]
  * to allow for renaming, overwriting, and deletion. Optionally, a single
@@ -145,19 +154,10 @@ import kotlinx.collections.immutable.toImmutableList
  * @param activePresetIsModified Whether or not the [Preset] marked as the
  *     active one has been modified. An asterisk will be placed next to its
  *     name in this case to indicate this to the user.
- * @param selectionBrush The [Brush] that will be applied to the active
- *     [Preset] to indicate its status as the active [Preset]
- * @param presetListProvider A function that returns the list of presets when invoked.
- *     When the returned list is null, it will be interpreted as a loading state.
- *     When the returned list is empty, an empty message will be displayed instead.
- * @param onPresetClick The callback that will be invoked when the user clicks on a [Preset]
- * @param onPresetRenameRequest The callback that will be invoked when the user
- *     has requested that the [Preset] parameter be renamed to the [String] parameter
- * @param onPresetOverwriteRequest The callback that will be invoked when the
- *     user has requested the current track / volume combination to overwrite
- *     the one currently associated with the [Preset] parameter
- * @param onPresetDeleteRequest The callback that will be invoked when the user
- *     has requested that the [Preset] parameter be deleted
+ * @param selectionBrush The [Brush] that will be applied with alpha = 0.5f
+ *     to the active [Preset] to indicate its status as the active [Preset]
+ * @param callback The [PresetListCallback] that will be used for user
+ *     interactions with the displayed [Preset]s
  */
 @Composable fun PresetList(
     modifier: Modifier = Modifier,
@@ -165,13 +165,9 @@ import kotlinx.collections.immutable.toImmutableList
     activePresetProvider: () -> Preset?,
     activePresetIsModified: Boolean,
     selectionBrush: Brush,
-    presetListProvider: () -> ImmutableList<Preset>?,
-    onPresetRenameRequest: (Preset, String) -> Unit,
-    onPresetOverwriteRequest: (Preset) -> Unit,
-    onPresetDeleteRequest: (Preset) -> Unit,
-    onPresetClick: (Preset) -> Unit,
+    callback: PresetListCallback,
 ) = CompositionLocalProvider(LocalContentColor provides MaterialTheme.colors.onSurface) {
-    val presetList = presetListProvider()
+    val presetList = callback.listProvider()
 
     Crossfade(presetList?.isEmpty(), modifier) { when(it) {
         null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
@@ -181,9 +177,13 @@ import kotlinx.collections.immutable.toImmutableList
                  modifier = Modifier.width(300.dp),
                  textAlign = TextAlign.Justify)
         } else -> {
-            var renameDialogTarget by rememberSaveable { mutableStateOf<Preset?>(null) }
             var overwriteDialogTarget by rememberSaveable { mutableStateOf<Preset?>(null) }
             var deleteDialogTarget by rememberSaveable { mutableStateOf<Preset?>(null) }
+            // Although it is inconsistent, the renameDialogTarget state must be stored in
+            // the view model and accessed through the provided callback due to its more
+            // complicated logic (i.e. unlike the overwrite and delete dialogs, which only
+            // need a simple yes/no confirmation, the rename dialog may be dismissed or not
+            // on ok clicks depending on the validity of the proposed name).
 
             LazyColumn(Modifier, contentPadding = contentPadding) {
                 val activePreset = activePresetProvider()
@@ -197,21 +197,23 @@ import kotlinx.collections.immutable.toImmutableList
                                    else Modifier.background(selectionBrush, alpha = 0.5f),
                         presetName = preset.name,
                         isModified = isActivePreset && activePresetIsModified,
-                        onRenameClick = { renameDialogTarget = preset },
+                        onRenameClick = remember {{ callback.renameCallback.onRenameStart(preset) }},
                         onOverwriteClick = { overwriteDialogTarget = preset },
                         onDeleteClick = { deleteDialogTarget = preset },
-                        onClick = remember {{ onPresetClick(preset) }})
+                        onClick = remember {{ callback.onPresetClick(preset) }})
                     Divider()
                 }
             }
+
+            val renameDialogTarget = callback.renameCallback.targetProvider()
             renameDialogTarget?.let { preset ->
                 RenameDialog(
-                    itemName = preset.name,
-                    onDismissRequest = { renameDialogTarget = null },
-                    onConfirm = {
-                        renameDialogTarget = null
-                        onPresetRenameRequest(preset, it)
-                    })
+                    initialName = preset.name,
+                    proposedNameProvider = callback.renameCallback.proposedNameProvider,
+                    onProposedNameChange = callback.renameCallback::onProposedNameChange,
+                    errorMessageProvider = callback.renameCallback.errorMessageProvider,
+                    onDismissRequest = callback.renameCallback::onRenameCancel,
+                    onConfirm = remember {{ callback.renameCallback.onRenameConfirm(preset) }})
             }
             overwriteDialogTarget?.let { preset ->
                 ConfirmPresetOverwriteDialog(
@@ -219,7 +221,7 @@ import kotlinx.collections.immutable.toImmutableList
                     onDismissRequest = { overwriteDialogTarget = null },
                     onConfirm = {
                         overwriteDialogTarget = null
-                        onPresetOverwriteRequest(preset)
+                        callback.onOverwriteConfirm(preset)
                     })
             }
             deleteDialogTarget?.let { preset ->
@@ -227,7 +229,7 @@ import kotlinx.collections.immutable.toImmutableList
                     onDismissRequest = { deleteDialogTarget = null },
                     onConfirm = {
                         deleteDialogTarget = null
-                        onPresetDeleteRequest(preset)
+                        callback.onDeleteConfirm(preset)
                     })
             }
         }
@@ -240,6 +242,21 @@ fun PresetListPreview() = SoundAuraTheme {
         Preset("Super Duper Extra Really Long Preset Name$it")
     }.toImmutableList() }
     var activePreset by remember { mutableStateOf<Preset?>(list.first()) }
+    val callback = remember { object: PresetListCallback {
+        override val listProvider = { list }
+        override val renameCallback = object: RenamePresetCallback {
+            override val targetProvider = { null }
+            override val proposedNameProvider = { null }
+            override val errorMessageProvider = { null }
+            override fun onProposedNameChange(newName: String) {}
+            override fun onRenameStart(preset: Preset) {}
+            override fun onRenameCancel() {}
+            override fun onRenameConfirm(preset: Preset) {}
+        }
+        override fun onOverwriteConfirm(preset: Preset) {}
+        override fun onDeleteConfirm(preset: Preset) {}
+        override fun onPresetClick(preset: Preset) { activePreset = preset }
+    }}
 
     PresetList(
         activePresetProvider = { activePreset },
@@ -247,9 +264,5 @@ fun PresetListPreview() = SoundAuraTheme {
         selectionBrush = Brush.horizontalGradient(
             listOf(MaterialTheme.colors.primaryVariant,
                    MaterialTheme.colors.secondaryVariant)),
-        presetListProvider = { list },
-        onPresetClick = { activePreset = it },
-        onPresetRenameRequest = { _, _ -> },
-        onPresetDeleteRequest = {},
-        onPresetOverwriteRequest = {})
+        callback = callback)
 }

@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -49,7 +50,7 @@ class MediaControllerViewModel(
              messageHandler, trackDao, null)
 
     private val scope = coroutineScope ?: viewModelScope
-    private val activePresetNameKey = stringPreferencesKey(pref_key_activePresetName)
+    private val presetNameValidator = PresetNameValidator(presetDao)
 
     val presetList by presetDao.getPresetList()
         .map { it.toImmutableList() }
@@ -64,15 +65,33 @@ class MediaControllerViewModel(
         navigationState.showingPresetSelector = true
     }
 
-    fun onPresetSelectorCloseButtonClick() {
+    fun onCloseButtonClick() {
         navigationState.showingPresetSelector = false
     }
 
-    fun onPresetRenameRequest(preset: Preset, newName: String) {
+    fun onProposedPresetNameChange(newName: String) =
+        presetNameValidator.setProposedName(newName)
+
+    var renameDialogTarget by mutableStateOf<Preset?>(null)
+        private set
+    val proposedPresetName by presetNameValidator.proposedName.collectAsState(null, scope)
+    val proposedPresetRenameErrorMessage by presetNameValidator.errorMessage.collectAsState(null, scope)
+
+    fun onPresetRenameClick(preset: Preset) { renameDialogTarget = preset }
+    fun onPresetRenameCancel() {
+        renameDialogTarget = null
+        presetNameValidator.clearProposedName()
+    }
+
+    fun onPresetRenameRequest(preset: Preset) {
         scope.launch {
-            presetDao.renamePreset(preset.name, newName)
-            if (activePreset == preset)
-                activePresetState.setName(newName)
+            val name = proposedPresetName ?: preset.name
+            if (presetNameValidator.onNameConfirm(name)) {
+                renameDialogTarget = null
+                presetDao.renamePreset(preset.name, name)
+                if (activePreset == preset)
+                    activePresetState.setName(name)
+            }
         }
     }
 
@@ -90,7 +109,7 @@ class MediaControllerViewModel(
             presetDao.savePreset(preset.name)
             if (preset != activePreset)
                 activePresetState.setName(preset.name)
-            onPresetSelectorCloseButtonClick()
+            onCloseButtonClick()
         }
     }}
 
@@ -113,7 +132,7 @@ class MediaControllerViewModel(
                 newPresetAfterUnsavedChangesWarning = preset
             } preset == activePreset ->
                 // This skips a pointless saving of the unmodified active preset
-                onPresetSelectorCloseButtonClick()
+                onCloseButtonClick()
             else -> loadPreset(preset)
         }
     }
@@ -122,7 +141,7 @@ class MediaControllerViewModel(
         scope.launch {
             activePresetState.setName(preset.name)
             presetDao.loadPreset(preset.name)
-            onPresetSelectorCloseButtonClick()
+            onCloseButtonClick()
         }
     }
 
@@ -153,6 +172,27 @@ class MediaControllerViewModel(
     onPlayPauseClick: () -> Unit,
 ) {
     val viewModel: MediaControllerViewModel = viewModel()
+    val context = LocalContext.current
+    val renameErrorMessage = remember { derivedStateOf {
+        viewModel.proposedPresetRenameErrorMessage?.resolve(context)
+    }}
+
+    val presetListCallback = remember { object: PresetListCallback {
+        override val listProvider = viewModel::presetList::get
+        override val renameCallback = object: RenamePresetCallback {
+            override val targetProvider = viewModel::renameDialogTarget::get
+            override val proposedNameProvider = viewModel::proposedPresetName::get
+            override val errorMessageProvider = renameErrorMessage::value::get
+            override fun onProposedNameChange(newName: String) = viewModel.onProposedPresetNameChange(newName)
+            override fun onRenameStart(preset: Preset) = viewModel.onPresetRenameClick(preset)
+            override fun onRenameCancel() = viewModel.onPresetRenameCancel()
+            override fun onRenameConfirm(preset: Preset) = viewModel.onPresetRenameRequest(preset)
+        }
+        override fun onOverwriteConfirm(preset: Preset) = viewModel.onPresetOverwriteRequest(preset)
+        override fun onDeleteConfirm(preset: Preset) = viewModel.onPresetDeleteRequest(preset)
+        override fun onPresetClick(preset: Preset) = viewModel.onPresetSelectorPresetClick(preset)
+    }}
+
     MediaController(
         modifier = modifier,
         orientation = orientation,
@@ -168,12 +208,8 @@ class MediaControllerViewModel(
         activePresetIsModified = viewModel.activePresetIsModified,
         onActivePresetClick = viewModel::onActivePresetClick,
         showingPresetSelector = viewModel.showingPresetSelector,
-        presetListProvider = viewModel::presetList::get,
-        onPresetRenameRequest = viewModel::onPresetRenameRequest,
-        onPresetOverwriteRequest = viewModel::onPresetOverwriteRequest,
-        onPresetDeleteRequest = viewModel::onPresetDeleteRequest,
-        onPresetSelectorCloseButtonClick = viewModel::onPresetSelectorCloseButtonClick,
-        onPresetSelectorPresetClick = viewModel::onPresetSelectorPresetClick)
+        presetListCallback = presetListCallback,
+        onCloseButtonClick = viewModel::onCloseButtonClick)
 
     if (viewModel.showingUnsavedChangesWarning) {
         viewModel.activePreset?.name?.let { unsavedPresetName ->

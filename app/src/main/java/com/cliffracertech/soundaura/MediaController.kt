@@ -23,7 +23,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.*
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
 private const val springStiffness = 600f
@@ -204,18 +203,10 @@ val Orientation.isVertical get() = this == Orientation.Vertical
  *     playing [Preset], or null if there isn't one, when invoked
  * @param activePresetIsModified Whether or not the active preset has unsaved changes
  * @param onActivePresetClick The callback that will be invoked when the active preset is clicked
- * @param presetListProvider A lambda that will return the list of presets when invoked
- * @param onPresetRenameRequest The callback that will be invoked when the user
- *     requests the renaming of the [Preset] parameter to the provided [String] value
- * @param onPresetOverwriteRequest The callback that will be invoked when the
- *     user requests the [Preset] parameter to be overwritten with the currently
- *     playing track / volume combination.
- * @param onPresetDeleteRequest The callback that will be invoked when the user
- *     requests the deletion of the [Preset] parameter
- * @param onPresetSelectorCloseButtonClick The callback that will be invoked when
+ * @param presetListCallback The [PresetListCallback] that will be used for user
+ *     interactions with the [Preset]s displayed when [showingPresetSelector] is true
+ * @param onCloseButtonClick The callback that will be invoked when
  *     [showingPresetSelector] is true and the user clicks the close button
- * @param onPresetSelectorPresetClick The callback that will be invoked when the user clicks
- *     on a preset from the [PresetList]
  */
 @Composable fun MediaController(
     modifier: Modifier = Modifier,
@@ -232,12 +223,8 @@ val Orientation.isVertical get() = this == Orientation.Vertical
     activePresetIsModified: Boolean,
     onActivePresetClick: () -> Unit,
     showingPresetSelector: Boolean,
-    presetListProvider: () -> ImmutableList<Preset>?,
-    onPresetRenameRequest: (Preset, String) -> Unit,
-    onPresetOverwriteRequest: (Preset) -> Unit,
-    onPresetDeleteRequest: (Preset) -> Unit,
-    onPresetSelectorCloseButtonClick: () -> Unit,
-    onPresetSelectorPresetClick: (Preset) -> Unit,
+    presetListCallback: PresetListCallback,
+    onCloseButtonClick: () -> Unit,
 ) = CompositionLocalProvider(LocalContentColor provides contentColor) {
     val expandTransition = updateTransition(
         targetState = showingPresetSelector,
@@ -290,7 +277,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
                 playing = playing,
                 onActivePresetClick = onActivePresetClick,
                 onPlayPauseClick = onPlayPauseClick,
-                onCloseButtonClick = onPresetSelectorCloseButtonClick,
+                onCloseButtonClick = onCloseButtonClick,
                 activePresetProvider = activePresetProvider,
                 activePresetIsModified = activePresetIsModified)
 
@@ -320,11 +307,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
                     activePresetProvider = activePresetProvider,
                     activePresetIsModified = activePresetIsModified,
                     selectionBrush = backgroundBrush,
-                    presetListProvider = presetListProvider,
-                    onPresetRenameRequest = onPresetRenameRequest,
-                    onPresetOverwriteRequest = onPresetOverwriteRequest,
-                    onPresetDeleteRequest = onPresetDeleteRequest,
-                    onPresetClick = onPresetSelectorPresetClick)
+                    callback = presetListCallback)
         }
     }
 }
@@ -340,6 +323,22 @@ fun MediaControllerPreview() = SoundAuraTheme {
         Preset("Super duper extra really long preset name 3")
     ).toImmutableList() }
     var activePreset by remember { mutableStateOf<Preset?>(list.first()) }
+    val callback = remember { object: PresetListCallback {
+        override val listProvider = { list }
+        override val renameCallback = object: RenamePresetCallback {
+            override val targetProvider = { null }
+            override val proposedNameProvider = { null }
+            override val errorMessageProvider = { null }
+            override fun onProposedNameChange(newName: String) {}
+            override fun onRenameStart(preset: Preset) {}
+            override fun onRenameCancel() {}
+            override fun onRenameConfirm(preset: Preset) {}
+        }
+        override fun onOverwriteConfirm(preset: Preset) {}
+        override fun onDeleteConfirm(preset: Preset) {}
+        override fun onPresetClick(preset: Preset) { activePreset = preset }
+    }}
+
     Surface(Modifier.size(400.dp, 600.dp), RectangleShape, Color.White) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
             MediaController(
@@ -358,12 +357,8 @@ fun MediaControllerPreview() = SoundAuraTheme {
                 activePresetProvider = { activePreset },
                 activePresetIsModified = true,
                 onActivePresetClick = { expanded = true },
-                presetListProvider = { list },
-                onPresetRenameRequest = { _, _ -> },
-                onPresetOverwriteRequest = {},
-                onPresetDeleteRequest = {},
-                onPresetSelectorCloseButtonClick = { expanded = false },
-                onPresetSelectorPresetClick = { activePreset = it })
+                presetListCallback = callback,
+                onCloseButtonClick = { expanded = false })
         }
     }
 }
