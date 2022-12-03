@@ -52,8 +52,8 @@ abstract class SoundAuraDatabase : RoomDatabase() {
                     `trackUriString` TEXT NOT NULL,
                     `trackVolume` REAL NOT NULL,
                 PRIMARY KEY (presetName, trackUriString),
-                FOREIGN KEY(`presetName`) REFERENCES `preset`(`name`) ON UPDATE NO ACTION ON DELETE NO ACTION,
-                FOREIGN KEY(`trackUriString`) REFERENCES `track`(`uriString`) ON UPDATE NO ACTION ON DELETE NO ACTION)""")
+                FOREIGN KEY(`presetName`) REFERENCES `preset`(`name`) ON UPDATE CASCADE ON DELETE CASCADE,
+                FOREIGN KEY(`trackUriString`) REFERENCES `track`(`uriString`) ON UPDATE CASCADE ON DELETE CASCADE)""")
         }
     }
 }

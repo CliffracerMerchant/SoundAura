@@ -301,6 +301,8 @@ class DatabaseTests {
         ).inOrder()
     }
 
+    private fun Track.toActiveTrack() = ActiveTrack(uriString, volume)
+
     @Test fun getAllActiveTracks() = runBlocking {
         addingTracks()
         var allTracks = getAllTracks()
@@ -311,12 +313,14 @@ class DatabaseTests {
         dao.toggleIsActive(allTracks[2].uriString)
         allTracks = getAllTracks()
         activeTracks = dao.getActiveTracks().first()
-        assertThat(activeTracks).containsExactly(allTracks[0], allTracks[2])
+        assertThat(activeTracks).containsExactly(
+            allTracks[0].toActiveTrack(),
+            allTracks[2].toActiveTrack())
 
         dao.toggleIsActive(allTracks[0].uriString)
         allTracks = getAllTracks()
         activeTracks = dao.getActiveTracks().first()
-        assertThat(activeTracks).containsExactly(allTracks[2])
+        assertThat(activeTracks).containsExactly(allTracks[2].toActiveTrack())
         Unit
     }
 
