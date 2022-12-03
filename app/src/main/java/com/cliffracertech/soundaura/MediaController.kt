@@ -25,8 +25,7 @@ import androidx.compose.ui.unit.*
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlinx.collections.immutable.toImmutableList
 
-private const val springStiffness = 600f
-//private const val springStiffness = 10f
+private const val tweenDuration = 250
 
 fun Modifier.rotateClockwise() = layout { measurable, constraints ->
     val placeable = measurable.measure(constraints.copy(
@@ -117,9 +116,9 @@ val Orientation.isVertical get() = this == Orientation.Vertical
     activePresetProvider: () -> Preset?,
     activePresetIsModified: Boolean,
 ) = Box(modifier = modifier.fillMaxWidth()) {
-    val isExpandedOrExpanding = expandTransition.targetState ||
-                                expandTransition.isRunning
-    if (isExpandedOrExpanding)
+    val isFullyCollapsed = !expandTransition.targetState &&
+                           !expandTransition.currentState
+    if (!isFullyCollapsed)
         Text(stringResource(R.string.preset_selector_title),
             modifier = Modifier
                 .align(Alignment.Center)
@@ -127,10 +126,10 @@ val Orientation.isVertical get() = this == Orientation.Vertical
             maxLines = 1, softWrap = false,
             style = MaterialTheme.typography.h6)
 
-    val isCollapsedOrCollapsing = !expandTransition.targetState ||
-                                  expandTransition.isRunning
+    val isFullyExpanded = expandTransition.targetState &&
+                          expandTransition.currentState
     val density = LocalDensity.current
-    if (isCollapsedOrCollapsing) {
+    if (!isFullyExpanded) {
         val maxWidth = maxWidthPx - with (density) { 56.dp.roundToPx() }
         if (orientation == Orientation.Horizontal)
             Row(modifier = Modifier
@@ -230,16 +229,16 @@ val Orientation.isVertical get() = this == Orientation.Vertical
         targetState = showingPresetSelector,
         label = "FloatingMediaController transition")
     val transitionProgress by expandTransition.animateFloat(
-        transitionSpec = { spring(stiffness = springStiffness) },
+        transitionSpec = { tween(tweenDuration) },
         label = "FloatingMediaController transition progress",
         targetValueByState = { if (it) 1f else 0f })
     val animatedWidth by expandTransition.animateDp(
-        transitionSpec = { spring(stiffness = springStiffness) },
+        transitionSpec = { tween(tweenDuration) },
         label = "FloatingMediaController width transition",
         targetValueByState = { if (it) expandedSize.width
                                else    collapsedSize.width })
     val animatedHeight by expandTransition.animateDp(
-        transitionSpec = { spring(stiffness = springStiffness) },
+        transitionSpec = { tween(tweenDuration) },
         label = "FloatingMediaController height transition",
         targetValueByState = { if (it) expandedSize.height
                                else    collapsedSize.height })
@@ -260,7 +259,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             val titleHeight by expandTransition.animateDp(
-                transitionSpec = { spring(stiffness = springStiffness) },
+                transitionSpec = { tween(tweenDuration) },
                 label = "FloatingMediaController title height transition",
             ) { expanded ->
                 if (expanded && orientation.isVertical)

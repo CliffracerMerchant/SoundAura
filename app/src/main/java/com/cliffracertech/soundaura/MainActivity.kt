@@ -14,9 +14,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.animation.*
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -264,11 +262,11 @@ class MainActivity : ComponentActivity() {
         val addPresetButtonXOffset by animateFloatAsState(
             targetValue = if (!showingPresetSelector) 0f
                           else with(density) { (-16).dp.toPx() },
-            animationSpec = spring(stiffness = 600f))
+            animationSpec = tween(250))
         val addPresetButtonYOffset by animateFloatAsState(
             targetValue = if (!showingPresetSelector) 0f
                           else with(density) { (-16).dp.toPx() },
-            animationSpec = spring(stiffness = Spring.StiffnessLow))
+            animationSpec = tween(350))
         AddTrackButton(
             visible = !showingAppSettings,
             modifier = Modifier.padding(padding).graphicsLayer {
@@ -322,7 +320,7 @@ class MainActivity : ComponentActivity() {
         val expandedSize = remember(padding, alignToEnd) {
             val widthFraction = if (alignToEnd) 0.6f else 1.0f
             DpSize(width = contentAreaSize.width * widthFraction,
-                   height = if (!alignToEnd) 400.dp
+                   height = if (!alignToEnd) 350.dp
                             else contentAreaSize.height)
         }
         val alignment = if (alignToEnd) Alignment.TopEnd as BiasAlignment
