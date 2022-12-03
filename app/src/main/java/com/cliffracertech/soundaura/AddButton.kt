@@ -134,7 +134,7 @@ class AddPresetButtonViewModel(
 
     private val activeTracksIsEmpty by trackDao.getActiveTracks()
         .map { it.isEmpty() }
-        .collectAsState(false, scope)
+        .collectAsState(true, scope)
 
     fun onClick() { when {
         activeTracksIsEmpty -> messageHandler.postMessage(

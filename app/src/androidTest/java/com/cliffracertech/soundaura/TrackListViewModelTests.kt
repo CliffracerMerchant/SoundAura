@@ -25,7 +25,7 @@ class TrackListViewModelTests {
     private lateinit var db: SoundAuraDatabase
     private lateinit var dao: TrackDao
     private lateinit var instance: TrackListViewModel
-    private lateinit var instanceTracksFlow: Flow<ImmutableList<Track>?>
+    private lateinit var tracksFlow: Flow<ImmutableList<Track>?>
     private val testTracks = List(5) {
         Track(uriString = "uri$it", name = "track $it")
     }
@@ -35,37 +35,24 @@ class TrackListViewModelTests {
         dao = db.trackDao()
         searchQueryState = SearchQueryState()
         instance = TrackListViewModel(context.dataStore, dao, searchQueryState)
-        instanceTracksFlow = snapshotFlow { instance.tracks }
+        tracksFlow = snapshotFlow { instance.tracks }
     }
     @After fun cleanUp() = db.close()
 
-    private suspend fun <T> Flow<T>.waitUntil(
-        timeOut: Long = 2000L,
-        condition: (T) -> Boolean
-    ): T {
-        val start = System.currentTimeMillis()
-        var value = first()
-        while (!condition(value) && System.currentTimeMillis() - start < timeOut) {
-            Thread.sleep(50L)
-            value = first()
-        }
-        return value
-    }
-
     @Test fun tracksPropertyReflectsAddedTracks() = runTest {
-        var tracks = instanceTracksFlow.first()
+        var tracks = tracksFlow.first()
         assertThat(tracks?.isEmpty() != false).isTrue()
         dao.insert(testTracks)
-        tracks = instanceTracksFlow.waitUntil { !it.isNullOrEmpty() }
+        tracks = tracksFlow.waitUntil { !it.isNullOrEmpty() }
         assertThat(tracks).containsExactlyElementsIn(testTracks).inOrder()
     }
 
     @Test fun deleteTrackDialogConfirm() = runTest {
         dao.insert(testTracks)
-        var tracks = instanceTracksFlow.waitUntil { !it.isNullOrEmpty() }
+        var tracks = tracksFlow.waitUntil { !it.isNullOrEmpty() }
         val track3 = testTracks[2]
         instance.onDeleteTrackDialogConfirm(context, track3.uriString)
-        tracks = instanceTracksFlow.waitUntil {
+        tracks = tracksFlow.waitUntil {
             it?.size == (tracks!!.size - 1)
         }
         assertThat(tracks).containsExactlyElementsIn(testTracks.minus(track3)).inOrder()
@@ -73,10 +60,10 @@ class TrackListViewModelTests {
 
     @Test fun trackAddRemoveClick() = runTest {
         dao.insert(testTracks)
-        var tracks = instanceTracksFlow.waitUntil { !it.isNullOrEmpty() }
+        var tracks = tracksFlow.waitUntil { !it.isNullOrEmpty() }
         assertThat(tracks?.map(Track::isActive)).doesNotContain(true)
         instance.onTrackAddRemoveButtonClick(testTracks[3].uriString)
-        tracks = instanceTracksFlow.waitUntil {
+        tracks = tracksFlow.waitUntil {
             it?.map(Track::isActive)?.get(3) == true
         }
         assertThat(tracks?.map(Track::isActive))
@@ -84,7 +71,7 @@ class TrackListViewModelTests {
             .inOrder()
         instance.onTrackAddRemoveButtonClick(testTracks[1].uriString)
         instance.onTrackAddRemoveButtonClick(testTracks[3].uriString)
-        tracks = instanceTracksFlow.waitUntil {
+        tracks = tracksFlow.waitUntil {
             it?.map(Track::isActive)?.get(1) == true
         }
         assertThat(tracks?.map(Track::isActive))
@@ -94,13 +81,13 @@ class TrackListViewModelTests {
 
     @Test fun trackVolumeChangeRequest() = runTest {
         dao.insert(testTracks)
-        var tracks = instanceTracksFlow.waitUntil { !it.isNullOrEmpty() }
+        var tracks = tracksFlow.waitUntil { !it.isNullOrEmpty() }
         val expectedVolumes = mutableListOf(1f, 1f, 1f, 1f, 1f)
         assertThat(tracks?.map(Track::volume))
             .containsExactlyElementsIn(expectedVolumes)
         instance.onTrackVolumeChangeRequest(testTracks[2].uriString, 0.5f)
         expectedVolumes[2] = 0.5f
-        tracks = instanceTracksFlow.waitUntil {
+        tracks = tracksFlow.waitUntil {
             it?.map(Track::volume)?.get(2) == 0.5f
         }
         assertThat(tracks?.map(Track::volume))
@@ -111,7 +98,7 @@ class TrackListViewModelTests {
         expectedVolumes[2] = 1f
         expectedVolumes[1] = 0.25f
         expectedVolumes[4] = 0.75f
-        tracks = instanceTracksFlow.waitUntil {
+        tracks = tracksFlow.waitUntil {
             it?.map(Track::volume)?.get(2) == 1f
         }
         assertThat(tracks?.map { it.volume })
@@ -120,11 +107,11 @@ class TrackListViewModelTests {
 
     @Test fun trackRenameDialogConfirm() = runTest {
         dao.insert(testTracks)
-        var tracks = instanceTracksFlow.waitUntil { !it.isNullOrEmpty() }
+        var tracks = tracksFlow.waitUntil { !it.isNullOrEmpty() }
         assertThat(tracks?.get(3)?.name).isEqualTo(testTracks[3].name)
         val newTrack3Name = "new ${testTracks[3].name}"
         instance.onTrackRenameDialogConfirm(testTracks[3].uriString, newTrack3Name)
-        tracks = instanceTracksFlow.waitUntil {
+        tracks = tracksFlow.waitUntil {
             it?.map(Track::name)?.contains(newTrack3Name) == true
         }
         val expectedTracks = testTracks
@@ -136,10 +123,10 @@ class TrackListViewModelTests {
     @Test fun searchQueriesWork() = runTest {
         dao.insert(testTracks)
         searchQueryState.query.value = "3"
-        var tracks = instanceTracksFlow.waitUntil { it?.size == 1 }
+        var tracks = tracksFlow.waitUntil { it?.size == 1 }
         assertThat(tracks).containsExactlyElementsIn(listOf(testTracks[3]))
         searchQueryState.query.value = "track "
-        tracks = instanceTracksFlow.waitUntil { it?.size == testTracks.size }
+        tracks = tracksFlow.waitUntil { it?.size == testTracks.size }
         assertThat(tracks).containsExactlyElementsIn(testTracks).inOrder()
     }
 }

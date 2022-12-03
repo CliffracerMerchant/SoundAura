@@ -60,19 +60,6 @@ fun <T> DataStore<Preferences>.preferenceState(
     return state
 }
 
-/** Return a [State]`<T?>` that contains the most recent value for the [DataStore]
- * preference pointed to by [key], with an initial value of null. */
-fun <T> DataStore<Preferences>.nullablePreferenceState(
-    key: Preferences.Key<T>,
-    scope: CoroutineScope,
-) : State<T?> {
-    val state = mutableStateOf<T?>(null)
-    data.map { it[key] }
-        .onEach { state.value = it }
-        .launchIn(scope)
-    return state
-}
-
 /** Return a [State]`<T>` that contains the most recent value for the
  * [DataStore] preference pointed to by [key], with a default value of
  * [defaultValue]. awaitPreferenceState will suspend until the first value
@@ -209,4 +196,17 @@ fun paddingValues(
         top = original.calculateTopPadding() + additionalTop,
         end = original.calculateEndPadding(layoutDirection) + additionalEnd,
         bottom = original.calculateBottomPadding() + additionalBottom)
+}
+
+suspend fun <T> Flow<T>.waitUntil(
+    timeOut: Long = 2000L,
+    condition: (T) -> Boolean
+): T {
+    val start = System.currentTimeMillis()
+    var value = first()
+    while (!condition(value) && System.currentTimeMillis() - start < timeOut) {
+        Thread.sleep(50L)
+        value = first()
+    }
+    return value
 }
