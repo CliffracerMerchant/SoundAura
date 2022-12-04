@@ -10,7 +10,6 @@ import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -19,12 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
@@ -142,6 +136,9 @@ import com.google.accompanist.insets.statusBarsPadding
         targetState = searchQuery != null,
         modifier = Modifier.weight(1f)
     ) { searchQueryIsNotNull ->
+        // This inner row should be unnecessary, but prevents a minor animation
+        // bug where the search underline appears thicker during the animation,
+        // but then changes to its final thickness after the animation ends.
         Row(Modifier.fillMaxHeight(), verticalAlignment = Alignment.CenterVertically) {
             // lastSearchQuery is used so that when the search query changes from a
             // non-null non-blank value to null, the search query will be recomposed
@@ -152,7 +149,7 @@ import com.google.accompanist.insets.statusBarsPadding
             var lastSearchQuery by rememberSaveable { mutableStateOf("") }
             if (searchQueryIsNotNull) {
                 val text = searchQuery ?: lastSearchQuery
-                AutoFocusSearchQuery(text, onSearchQueryChanged)
+                SearchQuery(text, onSearchQueryChanged)
                 @Suppress("UNUSED_VALUE")
                 if (searchQuery != null)
                     lastSearchQuery = searchQuery
@@ -242,41 +239,29 @@ import com.google.accompanist.insets.statusBarsPadding
 }
 
 /**
- * A search query that auto-focuses when first composed,
- * and displays an underline as a background.
+ * A search query that displays an underline as a background.
  *
  * @param query The current value of the search query
  * @param onQueryChanged The callback to be invoked when user input changes the query
+ * @param modifier The [Modifier] used for the entire search query
  */
-@Composable fun AutoFocusSearchQuery(
+@Composable fun SearchQuery(
     query: String,
-    onQueryChanged: (String) -> Unit
-) {
-    val focusManager = LocalFocusManager.current
-    val focusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
-
-    BasicTextField(
-        value = query,
-        onValueChange = onQueryChanged,
-        textStyle = MaterialTheme.typography.h6
-            .copy(color = MaterialTheme.colors.onPrimary),
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-        modifier = Modifier
-            .focusRequester(focusRequester)
-            .onFocusChanged {
-                if (it.isFocused) keyboardController?.show()
-            },
-        singleLine = true,
-    ) { innerTextField ->
-        Box {
-            innerTextField()
-            Divider(Modifier.align(Alignment.BottomStart),
-                    LocalContentColor.current, (1.5).dp)
-        }
+    onQueryChanged: (String) -> Unit,
+    modifier: Modifier = Modifier
+) = BasicTextField(
+    value = query,
+    onValueChange = onQueryChanged,
+    textStyle = MaterialTheme.typography.h6,
+    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+    modifier = modifier.minTouchTargetSize(),
+    singleLine = true,
+) { innerTextField ->
+    Column(verticalArrangement = Arrangement.Center) {
+        innerTextField()
+        Divider(color = LocalContentColor.current,
+                thickness = (1.5).dp)
     }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
 }
 
 @Preview @Composable fun PreviewListActionBarWithTitle() =
