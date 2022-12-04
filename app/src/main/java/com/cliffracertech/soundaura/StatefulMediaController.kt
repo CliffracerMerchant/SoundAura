@@ -55,8 +55,9 @@ class MediaControllerViewModel(
         .map { it.toImmutableList() }
         .collectAsState(null, scope)
 
-    val activePreset by activePresetState.activePreset.collectAsState(null, scope)
-    val activePresetIsModified by activePresetState.activePresetIsModified.collectAsState(false, scope)
+    val activePresetName by activePresetState.name.collectAsState(null, scope)
+    val activePresetIsModified by activePresetState.isModified.collectAsState(false, scope)
+    val Preset.isActive get() = name == activePresetName
 
     val showingPresetSelector get() = navigationState.showingPresetSelector
 
@@ -90,7 +91,7 @@ class MediaControllerViewModel(
                 if (name != nameValidator.target?.name)
                     presetDao.renamePreset(preset.name, name)
                 nameValidator.target = null
-                if (activePreset == preset)
+                if (preset.isActive)
                     activePresetState.setName(name)
             }
         }
@@ -100,23 +101,32 @@ class MediaControllerViewModel(
         .map { it.isEmpty() }
         .collectAsState(false, scope)
 
-    fun onPresetOverwriteRequest(preset: Preset) { when {
-        activeTracksIsEmpty ->
-            messageHandler.postMessage(StringResource(
-                R.string.overwrite_no_active_tracks_error_message))
-        preset == activePreset && !activePresetIsModified -> {
-            // This prevents a pointless saving of the unmodified active preset
-        } else -> scope.launch {
-            presetDao.savePreset(preset.name)
-            if (preset != activePreset)
-                activePresetState.setName(preset.name)
-            onCloseButtonClick()
+    private fun onPresetOverwriteRequest(presetName: String) {
+        val isActive = presetName == activePresetName
+        when {
+            activeTracksIsEmpty ->
+                messageHandler.postMessage(StringResource(
+                    R.string.overwrite_no_active_tracks_error_message))
+            isActive && !activePresetIsModified -> {
+                // This prevents a pointless saving of the unmodified active preset
+            } else -> scope.launch {
+                presetDao.savePreset(presetName)
+                // Since the current sound mix is being saved to the preset
+                // whose name == presetName, we want to make it the active
+                // preset if it isn't currently.
+                if (!isActive)
+                    activePresetState.setName(presetName)
+                onCloseButtonClick()
+            }
         }
-    }}
+    }
+
+    fun onPresetOverwriteRequest(preset: Preset) =
+        onPresetOverwriteRequest(preset.name)
 
     fun onPresetDeleteRequest(preset: Preset) {
         scope.launch {
-            if (preset == activePreset)
+            if (preset.isActive)
                 activePresetState.clear()
             presetDao.deletePreset(preset.name)
         }
@@ -131,7 +141,7 @@ class MediaControllerViewModel(
         when {
             activePresetIsModified -> {
                 newPresetAfterUnsavedChangesWarning = preset
-            } preset == activePreset ->
+            } preset.isActive ->
                 // This skips a pointless saving of the unmodified active preset
                 onCloseButtonClick()
             else -> loadPreset(preset)
@@ -153,7 +163,7 @@ class MediaControllerViewModel(
     fun onUnsavedChangesWarningConfirm(saveFirst: Boolean) {
         val newPreset = newPresetAfterUnsavedChangesWarning ?: return
         if (saveFirst)
-            activePreset?.let(::onPresetOverwriteRequest)
+            activePresetName?.let(::onPresetOverwriteRequest)
         loadPreset(newPreset)
         newPresetAfterUnsavedChangesWarning = null
     }
@@ -203,7 +213,7 @@ class MediaControllerViewModel(
         padding = padding,
         playing = isPlaying,
         onPlayPauseClick = onPlayPauseClick,
-        activePresetProvider = viewModel::activePreset::get,
+        activePresetNameProvider = viewModel::activePresetName::get,
         activePresetIsModified = viewModel.activePresetIsModified,
         onActivePresetClick = viewModel::onActivePresetClick,
         showingPresetSelector = viewModel.showingPresetSelector,
@@ -211,7 +221,7 @@ class MediaControllerViewModel(
         onCloseButtonClick = viewModel::onCloseButtonClick)
 
     if (viewModel.showingUnsavedChangesWarning) {
-        viewModel.activePreset?.name?.let { unsavedPresetName ->
+        viewModel.activePresetName?.let { unsavedPresetName ->
             UnsavedPresetChangesWarningDialog(
                 unsavedPresetName = unsavedPresetName,
                 onDismissRequest = viewModel::onUnsavedChangesWarningCancel,

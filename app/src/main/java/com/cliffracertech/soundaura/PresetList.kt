@@ -175,8 +175,8 @@ interface PresetListCallback {
  * applied to it to indicate this status.
  *
  * @param modifier The [Modifier] to use for the [Preset] list
- * @param activePresetProvider A function that returns the actively
- *     playing [Preset], or null if there isn't one, when invoked
+ * @param activePresetNameProvider A function that returns the actively
+ *     playing [Preset]'s name, or null if there isn't one, when invoked
  * @param activePresetIsModified Whether or not the [Preset] marked as the
  *     active one has been modified. An asterisk will be placed next to its
  *     name in this case to indicate this to the user.
@@ -188,7 +188,7 @@ interface PresetListCallback {
 @Composable fun PresetList(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
-    activePresetProvider: () -> Preset?,
+    activePresetNameProvider: () -> String?,
     activePresetIsModified: Boolean,
     selectionBrush: Brush,
     callback: PresetListCallback,
@@ -212,12 +212,11 @@ interface PresetListCallback {
             // on ok clicks depending on the validity of the proposed name).
 
             LazyColumn(Modifier, contentPadding = contentPadding) {
-                val activePreset = activePresetProvider()
                 items(
                     items = presetList ?: emptyList(),
                     key = Preset::name::get
                 ) { preset ->
-                    val isActivePreset = preset == activePreset
+                    val isActivePreset = preset.name == activePresetNameProvider()
                     PresetView(
                         modifier = if (!isActivePreset) Modifier
                                    else Modifier.background(selectionBrush, alpha = 0.5f),
@@ -268,7 +267,7 @@ fun PresetListPreview() = SoundAuraTheme {
     val list = remember { List(4) {
         Preset("Super Duper Extra Really Long Preset Name$it")
     }.toImmutableList() }
-    var activePreset by remember { mutableStateOf<Preset?>(list.first()) }
+    val activePresetName = remember { mutableStateOf<String?>(list.first().name) }
     val callback = remember { object: PresetListCallback {
         override val listProvider = { list }
         override val renameTargetProvider = { null }
@@ -280,11 +279,13 @@ fun PresetListPreview() = SoundAuraTheme {
         override fun onRenameConfirm(preset: Preset) {}
         override fun onOverwriteConfirm(preset: Preset) {}
         override fun onDeleteConfirm(preset: Preset) {}
-        override fun onPresetClick(preset: Preset) { activePreset = preset }
+        override fun onPresetClick(preset: Preset) {
+            activePresetName.value = preset.name
+        }
     }}
 
     PresetList(
-        activePresetProvider = { activePreset },
+        activePresetNameProvider = activePresetName::value::get,
         activePresetIsModified = true,
         selectionBrush = Brush.horizontalGradient(
             listOf(MaterialTheme.colors.primaryVariant,

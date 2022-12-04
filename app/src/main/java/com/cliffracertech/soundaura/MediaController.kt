@@ -45,7 +45,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
     modifier: Modifier = Modifier,
     orientation: Orientation,
     maxWidthPx: Int,
-    activePresetProvider: () -> Preset?,
+    activePresetNameProvider: () -> String?,
     activeIsModified: Boolean,
     onClick: () -> Unit,
 ) {
@@ -60,14 +60,14 @@ val Orientation.isVertical get() = this == Orientation.Vertical
     }
     Column(columnModifier, Arrangement.Center, Alignment.CenterHorizontally) {
         val style = MaterialTheme.typography.caption
-        val activePreset = activePresetProvider()
+        val activePresetName = activePresetNameProvider()
         Text(text = stringResource(
-                 if (activePreset == null) R.string.playing
+                 if (activePresetName == null) R.string.playing
                  else R.string.playing_preset_description),
              maxLines = 1, style = style, softWrap = false)
         Row {
             MarqueeText(
-                text = activePreset?.name ?:
+                text = activePresetName ?:
                     stringResource(R.string.unsaved_preset_description),
                 maxWidthPx = maxWidthPx,
                 modifier = Modifier.weight(1f, false),
@@ -113,7 +113,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
     onActivePresetClick: () -> Unit,
     onPlayPauseClick: () -> Unit,
     onCloseButtonClick: () -> Unit,
-    activePresetProvider: () -> Preset?,
+    activePresetNameProvider: () -> String?,
     activePresetIsModified: Boolean,
 ) = Box(modifier = modifier.fillMaxWidth()) {
     val isFullyCollapsed = !expandTransition.targetState &&
@@ -142,7 +142,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
                     modifier = Modifier.weight(1f),
                     orientation = Orientation.Horizontal,
                     maxWidthPx = maxWidth,
-                    activePresetProvider = activePresetProvider,
+                    activePresetNameProvider = activePresetNameProvider,
                     activeIsModified = activePresetIsModified,
                     onClick = onActivePresetClick)
                 VerticalDivider(heightFraction = 0.8f)
@@ -157,7 +157,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
                 modifier = Modifier.weight(1f),
                 orientation = Orientation.Vertical,
                 maxWidthPx = maxWidth,
-                activePresetProvider = activePresetProvider,
+                activePresetNameProvider = activePresetNameProvider,
                 activeIsModified = activePresetIsModified,
                 onClick = onActivePresetClick)
             HorizontalDivider(widthFraction = 0.8f)
@@ -198,8 +198,8 @@ val Orientation.isVertical get() = this == Orientation.Vertical
  * @param playing The media play/pause state that the play/pause button should
  *     use to determine its icon, which will be the opposite of the current state
  * @param onPlayPauseClick The callback that will be invoked when the play/pause button is clicked
- * @param activePresetProvider A function that returns the actively
- *     playing [Preset], or null if there isn't one, when invoked
+ * @param activePresetNameProvider A function that returns the actively
+ *     playing [Preset]'s name, or null if there isn't one, when invoked
  * @param activePresetIsModified Whether or not the active preset has unsaved changes
  * @param onActivePresetClick The callback that will be invoked when the active preset is clicked
  * @param presetListCallback The [PresetListCallback] that will be used for user
@@ -218,7 +218,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
     padding: PaddingValues,
     playing: Boolean,
     onPlayPauseClick: () -> Unit,
-    activePresetProvider: () -> Preset?,
+    activePresetNameProvider: () -> String?,
     activePresetIsModified: Boolean,
     onActivePresetClick: () -> Unit,
     showingPresetSelector: Boolean,
@@ -277,7 +277,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
                 onActivePresetClick = onActivePresetClick,
                 onPlayPauseClick = onPlayPauseClick,
                 onCloseButtonClick = onCloseButtonClick,
-                activePresetProvider = activePresetProvider,
+                activePresetNameProvider = activePresetNameProvider,
                 activePresetIsModified = activePresetIsModified)
 
             val listPadding = 8.dp
@@ -303,7 +303,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
                             scaleX = minScaleX + (1f - minScaleX) * transitionProgress
                         }.background(MaterialTheme.colors.surface, shape),
                     contentPadding = PaddingValues(bottom = 64.dp),
-                    activePresetProvider = activePresetProvider,
+                    activePresetNameProvider = activePresetNameProvider,
                     activePresetIsModified = activePresetIsModified,
                     selectionBrush = backgroundBrush,
                     callback = presetListCallback)
@@ -321,7 +321,7 @@ fun MediaControllerPreview() = SoundAuraTheme {
         Preset("Super duper extra really long preset name 2"),
         Preset("Super duper extra really long preset name 3")
     ).toImmutableList() }
-    var activePreset by remember { mutableStateOf<Preset?>(list.first()) }
+    val activePresetName = remember { mutableStateOf<String?>(list.first().name) }
     val callback = remember { object: PresetListCallback {
         override val listProvider = { list }
         override val renameTargetProvider = { null }
@@ -333,7 +333,9 @@ fun MediaControllerPreview() = SoundAuraTheme {
         override fun onRenameConfirm(preset: Preset) {}
         override fun onOverwriteConfirm(preset: Preset) {}
         override fun onDeleteConfirm(preset: Preset) {}
-        override fun onPresetClick(preset: Preset) { activePreset = preset }
+        override fun onPresetClick(preset: Preset) {
+            activePresetName.value = preset.name
+        }
     }}
 
     Surface(Modifier.size(400.dp, 600.dp), RectangleShape, Color.White) {
@@ -351,7 +353,7 @@ fun MediaControllerPreview() = SoundAuraTheme {
                 showingPresetSelector = expanded,
                 playing = playing,
                 onPlayPauseClick = { playing = !playing },
-                activePresetProvider = { activePreset },
+                activePresetNameProvider = activePresetName::value::get,
                 activePresetIsModified = true,
                 onActivePresetClick = { expanded = true },
                 presetListCallback = callback,

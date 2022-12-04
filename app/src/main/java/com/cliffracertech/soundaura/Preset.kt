@@ -47,8 +47,8 @@ data class PresetTrack(
     val trackVolume: Float = 1f)
 
 @Dao abstract class PresetDao {
-    @Query("SELECT name FROM preset WHERE name = :presetName")
-    abstract suspend fun getPreset(presetName: String) : Preset
+    @Query("SELECT EXISTS(SELECT name FROM preset WHERE name = :presetName)")
+    abstract suspend fun exists(presetName: String): Boolean
 
     @Query("SELECT name FROM preset")
     abstract fun getPresetList() : Flow<List<Preset>>
@@ -118,12 +118,11 @@ class PresetNameValidator(
 }
 
 /**
- * ActivePresetState holds the state of a currently active [Preset].
- * The currently active [Preset] can be collected from the [Flow]`<Preset>`
- * property [activePreset]. Whether or not the latest [Preset] emitted by
- * [activePreset] is modified can be collected from the [Flow]`<Boolean>`
- * property [activePresetIsModified]. The active [Preset] can be changed
- * or cleared with the methods [setName] and [clear].
+ * ActivePresetState holds the state of a currently active [Preset]. The name
+ * of the currently active [Preset] can be collected from the [Flow]`<String?>`
+ * property [name]. Whether or not the active [Preset] is modified can be
+ * collected from the [Flow]`<Boolean>` property [isModified]. The active
+ * [Preset] can be changed or cleared with the methods [setName] and [clear].
  */
 @ActivityRetainedScoped
 class ActivePresetState @Inject constructor(
@@ -131,39 +130,38 @@ class ActivePresetState @Inject constructor(
     trackDao: TrackDao,
     presetDao: PresetDao,
 ) {
-    private val activePresetNameKey = stringPreferencesKey(pref_key_activePresetName)
+    private val nameKey = stringPreferencesKey(pref_key_activePresetName)
 
     /** A [Flow]`<Preset>` whose latest value is equal to the [Preset] current
      * marked as the active one. */
-    val activePreset = dataStore.data
-        .map { it[activePresetNameKey] }
-        .map { if (it.isNullOrBlank()) null
-        else presetDao.getPreset(it) }
+    val name = dataStore.data.map { it[nameKey] }.map { when {
+        it.isNullOrBlank() -> null
+        presetDao.exists(it) -> it
+        else -> null
+    }}
 
-    private val activeTracks =
+    private val allActiveTracks =
         trackDao.getActiveTracks().map(List<ActiveTrack>::toHashSet)
 
-    private val activePresetTracks = activePreset
-        .transformLatest {
+    private val presetTracks = name.transformLatest {
             if (it == null) emptyList<ActiveTrack>()
-            else emitAll(presetDao.getPresetTracks(it.name))
+            else emitAll(presetDao.getPresetTracks(it))
         }.map { it.toHashSet() }
 
     /** A [Flow]`<Boolean>` whose latest value represents whether or not the
      * active preset is modified. */
-    val activePresetIsModified =
-        combine(activeTracks, activePresetTracks) { activeTracks, activePresetTracks ->
-            if (activePresetTracks.isEmpty()) false
-            else activeTracks != activePresetTracks
-        }
+    val isModified = combine(allActiveTracks, presetTracks) { activeTracks, presetTracks ->
+        if (presetTracks.isEmpty()) false
+        else activeTracks != presetTracks
+    }
 
     /** Set the active preset to the one whose name matches [name]. */
     suspend fun setName(name: String) {
-        dataStore.edit { it[activePresetNameKey] = name }
+        dataStore.edit { it[nameKey] = name }
     }
 
     /** Clear the active preset. */
     suspend fun clear() {
-        dataStore.edit { it.remove(activePresetNameKey) }
+        dataStore.edit { it.remove(nameKey) }
     }
 }
