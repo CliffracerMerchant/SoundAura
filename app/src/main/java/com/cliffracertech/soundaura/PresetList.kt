@@ -155,9 +155,8 @@ interface PresetListCallback {
     fun onRenameStart(preset: Preset) {}
     /** The callback that will be invoked when the rename dialog is dismissed */
     fun onRenameCancel()
-    /** The callback that will be invoked when the rename
-     * dialog for [preset]'s ok button is clicked */
-    fun onRenameConfirm(preset: Preset)
+    /** The callback that will be invoked when the rename dialog ok button is clicked */
+    fun onRenameConfirm()
     /** The callback that will be invoked when the user confirms that
      * they want to overwrite [preset] with the current sound mix */
     fun onOverwriteConfirm(preset: Preset)
@@ -239,7 +238,7 @@ interface PresetListCallback {
                     onProposedNameChange = callback::onProposedNameChange,
                     errorMessageProvider = callback.renameErrorMessageProvider,
                     onDismissRequest = callback::onRenameCancel,
-                    onConfirm = remember {{ callback.onRenameConfirm(preset) }})
+                    onConfirm = callback::onRenameConfirm)
             }
             overwriteDialogTarget?.let { preset ->
                 ConfirmPresetOverwriteDialog(
@@ -276,7 +275,7 @@ fun PresetListPreview() = SoundAuraTheme {
         override fun onProposedNameChange(newName: String) {}
         override fun onRenameStart(preset: Preset) {}
         override fun onRenameCancel() {}
-        override fun onRenameConfirm(preset: Preset) {}
+        override fun onRenameConfirm() {}
         override fun onOverwriteConfirm(preset: Preset) {}
         override fun onDeleteConfirm(preset: Preset) {}
         override fun onPresetClick(preset: Preset) {

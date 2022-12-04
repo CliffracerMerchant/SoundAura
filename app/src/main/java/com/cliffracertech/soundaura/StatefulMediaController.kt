@@ -84,7 +84,8 @@ class MediaControllerViewModel(
     fun onProposedPresetNameChange(newName: String) =
         nameValidator.setProposedName(newName)
 
-    fun onPresetRenameRequest(preset: Preset) {
+    fun onPresetRenameConfirm() {
+        val preset = renameDialogTarget ?: return
         scope.launch {
             val name = proposedPresetName ?: preset.name
             if (nameValidator.onNameConfirm(name)) {
@@ -196,7 +197,7 @@ class MediaControllerViewModel(
         override fun onProposedNameChange(newName: String) = viewModel.onProposedPresetNameChange(newName)
         override fun onRenameStart(preset: Preset) = viewModel.onPresetRenameClick(preset)
         override fun onRenameCancel() = viewModel.onPresetRenameCancel()
-        override fun onRenameConfirm(preset: Preset) = viewModel.onPresetRenameRequest(preset)
+        override fun onRenameConfirm() = viewModel.onPresetRenameConfirm()
         override fun onOverwriteConfirm(preset: Preset) = viewModel.onPresetOverwriteRequest(preset)
         override fun onDeleteConfirm(preset: Preset) = viewModel.onPresetDeleteRequest(preset)
         override fun onPresetClick(preset: Preset) = viewModel.onPresetSelectorPresetClick(preset)

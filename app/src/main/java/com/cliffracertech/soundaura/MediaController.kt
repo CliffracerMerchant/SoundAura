@@ -330,7 +330,7 @@ fun MediaControllerPreview() = SoundAuraTheme {
         override fun onProposedNameChange(newName: String) {}
         override fun onRenameStart(preset: Preset) {}
         override fun onRenameCancel() {}
-        override fun onRenameConfirm(preset: Preset) {}
+        override fun onRenameConfirm() {}
         override fun onOverwriteConfirm(preset: Preset) {}
         override fun onDeleteConfirm(preset: Preset) {}
         override fun onPresetClick(preset: Preset) {
