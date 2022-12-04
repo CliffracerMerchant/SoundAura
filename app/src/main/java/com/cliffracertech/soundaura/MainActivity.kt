@@ -36,7 +36,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
@@ -57,6 +56,16 @@ import javax.inject.Inject
 class MainActivityNavigationState @Inject constructor() {
     var showingAppSettings by mutableStateOf(false)
     var showingPresetSelector by mutableStateOf(false)
+
+    fun onBackButtonClick() = when {
+        showingAppSettings -> {
+            showingAppSettings = false
+            true
+        } showingPresetSelector -> {
+            showingPresetSelector = false
+            true
+        } else -> false
+    }
 }
 
 @HiltViewModel
@@ -68,15 +77,7 @@ class MainActivityViewModel @Inject constructor(
     val showingAppSettings get() = navigationState.showingAppSettings
     val showingPresetSelector get() = navigationState.showingPresetSelector
 
-    fun onBackButtonClick() = when {
-        showingAppSettings -> {
-            navigationState.showingAppSettings = false
-            true
-        } showingPresetSelector -> {
-            navigationState.showingPresetSelector = false
-            true
-        } else -> false
-    }
+    fun onBackButtonClick() = navigationState.onBackButtonClick()
 }
 
 val LocalWindowSizeClass = compositionLocalOf {
@@ -199,20 +200,16 @@ class MainActivity : ComponentActivity() {
      * MainActivityViewModel's messages member and display them using snack bars.*/
     @Composable private fun MessageDisplayer(
         snackbarHostState: SnackbarHostState
-    ) {
-        val dismissLabel = stringResource(R.string.dismiss)
-
-        LaunchedEffect(Unit) {
-            viewModel.messages.collect { message ->
-                val context = this@MainActivity
-                val messageText = message.stringResource.resolve(context)
-                val actionLabel = message.actionStringResource?.resolve(context)
-                                                    ?: dismissLabel.uppercase()
-                snackbarHostState.showSnackbar(
-                    message = messageText,
-                    actionLabel = actionLabel,
-                    duration = SnackbarDuration.Short)
-            }
+    ) = LaunchedEffect(Unit) {
+        viewModel.messages.collect { message ->
+            val context = this@MainActivity
+            val messageText = message.stringResource.resolve(context)
+            val actionLabel = message.actionStringResource?.resolve(context) ?:
+                              context.getString(R.string.dismiss).uppercase()
+            snackbarHostState.showSnackbar(
+                message = messageText,
+                actionLabel = actionLabel,
+                duration = SnackbarDuration.Short)
         }
     }
 

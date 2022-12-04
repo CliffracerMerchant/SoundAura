@@ -82,11 +82,7 @@ class ActionBarViewModel(
         navigationState.showingAppSettings = true
     }
 
-    fun onBackButtonClick() =
-        if (showingAppSettings) {
-            navigationState.showingAppSettings = false
-            true
-        } else false
+    fun onBackButtonClick() = navigationState.onBackButtonClick()
 }
 
 /**
@@ -101,7 +97,10 @@ class ActionBarViewModel(
     modifier: Modifier = Modifier,
 ) {
     val viewModel: ActionBarViewModel = viewModel()
-
+    val context = LocalContext.current
+    val title by remember { derivedStateOf {
+        viewModel.title.resolve(context)
+    }}
     ListActionBar(
         modifier = modifier,
         showBackButtonForNavigation = viewModel.showingAppSettings,
@@ -109,7 +108,7 @@ class ActionBarViewModel(
             if (!viewModel.onBackButtonClick())
                 onUnhandledBackButtonClick()
         }},
-        title = viewModel.title.resolve(LocalContext.current),
+        title = title,
         searchQuery = viewModel.searchQuery,
         onSearchQueryChanged = viewModel::searchQuery::set,
         showRightAlignedContent = !viewModel.showingAppSettings,
