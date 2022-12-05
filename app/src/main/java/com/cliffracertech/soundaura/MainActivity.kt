@@ -14,21 +14,28 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.*
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.SnackbarDuration
+import androidx.compose.material.SnackbarHostState
+import androidx.compose.material.rememberScaffoldState
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
@@ -48,6 +55,17 @@ import javax.inject.Inject
 @ActivityRetainedScoped
 class MainActivityNavigationState @Inject constructor() {
     var showingAppSettings by mutableStateOf(false)
+    var showingPresetSelector by mutableStateOf(false)
+
+    fun onBackButtonClick() = when {
+        showingAppSettings -> {
+            showingAppSettings = false
+            true
+        } showingPresetSelector -> {
+            showingPresetSelector = false
+            true
+        } else -> false
+    }
 }
 
 @HiltViewModel
@@ -57,12 +75,9 @@ class MainActivityViewModel @Inject constructor(
 ) : ViewModel() {
     val messages = messageHandler.messages
     val showingAppSettings get() = navigationState.showingAppSettings
+    val showingPresetSelector get() = navigationState.showingPresetSelector
 
-    fun onBackButtonClick() =
-        if (showingAppSettings) {
-            navigationState.showingAppSettings = false
-            true
-        } else false
+    fun onBackButtonClick() = navigationState.onBackButtonClick()
 }
 
 val LocalWindowSizeClass = compositionLocalOf {
@@ -93,7 +108,7 @@ class MainActivity : ComponentActivity() {
         boundPlayerService = null
     }
 
-    @Deprecated("Replace with OnBackPressedDispatcher")
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
         @Suppress("DEPRECATION")
         if (!viewModel.onBackButtonClick())
@@ -105,13 +120,12 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContentWithTheme {
-            val scaffoldState = rememberScaffoldState()
-
-            MessageDisplayer(scaffoldState.snackbarHostState)
-
             val windowWidthSizeClass = LocalWindowSizeClass.current.widthSizeClass
             val widthIsConstrained = windowWidthSizeClass == WindowWidthSizeClass.Compact
             val insets = LocalWindowInsets.current
+
+            val scaffoldState = rememberScaffoldState()
+            MessageDisplayer(scaffoldState.snackbarHostState)
 
             com.google.accompanist.insets.ui.Scaffold(
                 scaffoldState = scaffoldState,
@@ -121,6 +135,7 @@ class MainActivity : ComponentActivity() {
                         // statusBarsPadding, so we have to use applyTop = false
                         // here to prevent the top padding from being doubled.
                         insets = insets.systemBars, applyTop = false, applyBottom = false)
+                    @Suppress("DEPRECATION")
                     SoundAuraActionBar(
                         onUnhandledBackButtonClick = ::onBackPressed,
                         modifier = Modifier.padding(padding))
@@ -139,7 +154,7 @@ class MainActivity : ComponentActivity() {
                     val padding = rememberInsetsPaddingValues(
                         insets = insets.systemBars,
                         additionalStart = 8.dp,
-                        // The 56dp is added here manually for the action bar's height.
+                        // The 56dp is added here for the action bar's height.
                         additionalTop = 8.dp + 56.dp,
                         additionalEnd = 8.dp,
                         additionalBottom = 8.dp)
@@ -185,27 +200,23 @@ class MainActivity : ComponentActivity() {
      * MainActivityViewModel's messages member and display them using snack bars.*/
     @Composable private fun MessageDisplayer(
         snackbarHostState: SnackbarHostState
-    ) {
-        val dismissLabel = stringResource(R.string.dismiss)
-
-        LaunchedEffect(Unit) {
-            viewModel.messages.collect { message ->
-                val context = this@MainActivity
-                val messageText = message.stringResource.resolve(context)
-                val actionLabel = message.actionStringResource?.resolve(context)
-                                                    ?: dismissLabel.uppercase()
-                snackbarHostState.showSnackbar(
-                    message = messageText,
-                    actionLabel = actionLabel,
-                    duration = SnackbarDuration.Short)
-            }
+    ) = LaunchedEffect(Unit) {
+        viewModel.messages.collect { message ->
+            val context = this@MainActivity
+            val messageText = message.stringResource.resolve(context)
+            val actionLabel = message.actionStringResource?.resolve(context) ?:
+                              context.getString(R.string.dismiss).uppercase()
+            snackbarHostState.showSnackbar(
+                message = messageText,
+                actionLabel = actionLabel,
+                duration = SnackbarDuration.Short)
         }
     }
 
     @Composable private fun MainContent(
         widthIsConstrained: Boolean,
         padding: PaddingValues,
-    ) = Box(Modifier.fillMaxSize()) {
+    ) = BoxWithConstraints(Modifier.fillMaxSize()) {
         val showingAppSettings = viewModel.showingAppSettings
         val ld = LocalLayoutDirection.current
         // The track list state is remembered here so that the
@@ -215,20 +226,17 @@ class MainActivity : ComponentActivity() {
 
         SlideAnimatedContent(
             targetState = showingAppSettings,
-            leftToRight = !showingAppSettings
+            leftToRight = !showingAppSettings,
+            modifier = Modifier.fillMaxSize()
         ) { showingAppSettingsScreen ->
             if (showingAppSettingsScreen)
-                AppSettings(Modifier.fillMaxSize(), padding)
+                AppSettings(padding)
             else {
                 // The track list's padding must be adjusted depending on the placement of the FABs.
                 val trackListPadding = remember(padding, widthIsConstrained) {
-                    PaddingValues(
-                        start = padding.calculateStartPadding(ld),
-                        top = padding.calculateTopPadding(),
-                        end = padding.calculateEndPadding(ld) +
-                              if (widthIsConstrained) 0.dp else 64.dp,
-                        bottom = padding.calculateBottomPadding() +
-                                 if (widthIsConstrained) 64.dp else 0.dp)
+                    paddingValues(padding, ld,
+                        additionalEnd = if (widthIsConstrained) 0.dp else 64.dp,
+                        additionalBottom = if (widthIsConstrained) 64.dp else 0.dp)
                 }
                 StatefulTrackList(
                     padding = trackListPadding,
@@ -238,60 +246,133 @@ class MainActivity : ComponentActivity() {
                     })
             }
         }
-        FloatingActionButtons(
+
+        val showingPresetSelector = viewModel.showingPresetSelector
+        MediaController(
             visible = !showingAppSettings,
-            alignToEnd = !widthIsConstrained,
-            padding = padding)
+            padding = padding,
+            alignToEnd = !widthIsConstrained)
+
+        val density = LocalDensity.current
+        // Different stiffnesses are used so that the add button
+        // moves in a swooping movement instead of a linear one
+        val addPresetButtonXOffset by animateFloatAsState(
+            targetValue = if (!showingPresetSelector) 0f
+                          else with(density) { (-16).dp.toPx() },
+            animationSpec = tween(250))
+        val addPresetButtonYOffset by animateFloatAsState(
+            targetValue = if (!showingPresetSelector) 0f
+                          else with(density) { (-16).dp.toPx() },
+            animationSpec = tween(350))
+        AddTrackButton(
+            visible = !showingAppSettings,
+            modifier = Modifier.padding(padding).graphicsLayer {
+                translationX = addPresetButtonXOffset
+                translationY = addPresetButtonYOffset
+            }, target = if (showingPresetSelector)
+                            AddButtonTarget.Preset
+                        else AddButtonTarget.Track)
     }
 
-    /**
-     * Compose play and add track buttons along the edge of the screen
-     *
-     * @param visible Whether or not the buttons will be visible.
-     * @param alignToEnd Whether to align the buttons to the screen's end edge. If
-     *     false, the buttons will be aligned to the screen's bottom edge instead.
-     * @param padding The padding that should be used for the button placement.
-     */
-    @Composable private fun BoxScope.FloatingActionButtons(
+    @Composable private fun BoxWithConstraintsScope.MediaController(
         visible: Boolean,
-        alignToEnd: Boolean,
         padding: PaddingValues,
+        alignToEnd: Boolean
     ) {
-        val playButtonAlignment = if (alignToEnd) Alignment.CenterEnd
-                                  else            Alignment.BottomCenter
-        AnimatedVisibility( // Play / pause button
-            visible = visible,
-            modifier = Modifier.padding(padding).align(playButtonAlignment),
-            enter = fadeIn(tween(delayMillis = 75)) + scaleIn(overshootTweenSpec(delay = 75)),
-            exit = fadeOut(tween(delayMillis = 125)) + scaleOut(anticipateTweenSpec(delay = 75))
-        ) {
-            val isPlaying = boundPlayerService?.isPlaying ?: false
-            FloatingActionButton(
-                onClick = { boundPlayerService?.toggleIsPlaying() },
-                backgroundColor = if (alignToEnd) MaterialTheme.colors.secondaryVariant
-                                  else lerp(MaterialTheme.colors.primaryVariant,
-                                            MaterialTheme.colors.secondaryVariant, 0.5f),
-//                elevation = FloatingActionButtonDefaults.elevation(8.dp, 4.dp)
-                elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
-            ) {
-                val description = stringResource(
-                    if (isPlaying) R.string.pause_button_description
-                    else           R.string.play_button_description)
-                PlayPauseIcon(
-                    playing = isPlaying,
-                    contentDescription = description,
-                    tint = MaterialTheme.colors.onPrimary)
-            }
-        }
+        val density = LocalDensity.current
+        val ld = LocalLayoutDirection.current
 
+        val contentAreaSize = remember(padding) {
+            val screenWidthDp = with(density) { constraints.maxWidth.toDp() }
+            val startPadding = padding.calculateStartPadding(ld)
+            val endPadding = padding.calculateEndPadding(ld)
+            val width = screenWidthDp - startPadding - endPadding
+
+            val screenHeightDp = with(density) { constraints.maxHeight.toDp() }
+            val topPadding = padding.calculateTopPadding()
+            val bottomPadding = padding.calculateBottomPadding()
+            val height = screenHeightDp - topPadding - bottomPadding
+
+            DpSize(width, height)
+        }
+        val collapsedSize = remember(padding, alignToEnd) {
+            // The goal is to have the media controller bar have such a
+            // width/height that the play/pause icon is centered in the
+            // content area's width in portrait mode, or centered in the
+            // content area's height in landscape mode. The main content
+            // area's width/height is divided by two, then 28dp is added
+            // to account for the media controller bar's rounded corner
+            // radius. The min value between this calculated width/height
+            // and the full content area width/height minus 64dp (i.e.
+            // the add button's 56dp size plus an 8dp margin) is then
+            // used to ensure that for small screen sizes the media
+            // controller can't overlap the add button.
+            DpSize(width = if (alignToEnd) 56.dp else minOf(
+                               contentAreaSize.width / 2f + 28.dp,
+                               contentAreaSize.width - 64.dp),
+                   height = if (!alignToEnd) 56.dp else minOf(
+                               contentAreaSize.height / 2f + 28.dp,
+                               contentAreaSize.height - 64.dp))
+        }
+        val expandedSize = remember(padding, alignToEnd) {
+            val widthFraction = if (alignToEnd) 0.6f else 1.0f
+            DpSize(width = contentAreaSize.width * widthFraction,
+                   height = if (!alignToEnd) 350.dp
+                            else contentAreaSize.height)
+        }
+        val alignment = if (alignToEnd) Alignment.TopEnd as BiasAlignment
+                        else            Alignment.BottomStart as BiasAlignment
+        val transformOrigin = rememberClippedBrushBoxTransformOrigin(collapsedSize, alignment, padding)
+
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(tween(delayMillis = 75)) +
+                    scaleIn(overshootTween(delay = 75),
+                            transformOrigin = transformOrigin),
+            exit = fadeOut(tween(delayMillis = 125)) +
+                   scaleOut(anticipateTween(delay = 75),
+                            transformOrigin = transformOrigin)
+        ) {
+            val startColor = MaterialTheme.colors.primaryVariant
+            val endColor = MaterialTheme.colors.secondaryVariant
+            val backgroundBrush = remember(startColor, endColor) {
+                Brush.horizontalGradient(colors = listOf(startColor, endColor))
+            }
+            StatefulMediaController(
+                orientation = if (alignToEnd) Orientation.Vertical
+                              else            Orientation.Horizontal,
+                backgroundBrush = backgroundBrush,
+                contentColor = MaterialTheme.colors.onPrimary,
+                collapsedSize = collapsedSize,
+                expandedSize = expandedSize,
+                alignment = alignment,
+                padding = padding,
+                isPlaying = boundPlayerService?.isPlaying ?: false,
+                onPlayPauseClick = ::onPlayPauseClick)
+        }
+    }
+
+    /** Compose an add button at the bottom end edge of the screen that is
+     * conditionally visible depending on the value of [visible]. [target]
+     * defines the value of [AddButtonTarget] that describes the type of
+     * entity that will be added.*/
+    @Composable private fun BoxScope.AddTrackButton(
+        visible: Boolean,
+        target: AddButtonTarget,
+        modifier: Modifier = Modifier,
+    ) {
         AnimatedVisibility( // add track button
             visible = visible,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(padding),
-            enter = fadeIn(tween()) + scaleIn(overshootTweenSpec()),
-            exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTweenSpec()),
+            modifier = modifier.align(Alignment.BottomEnd),
+            enter = fadeIn(tween()) + scaleIn(overshootTween()),
+            exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTween()),
         ) {
-            AddLocalFilesButton(MaterialTheme.colors.secondaryVariant)
+            AddButton(target, MaterialTheme.colors.secondaryVariant)
         }
+    }
+
+    private fun onPlayPauseClick() {
+        boundPlayerService?.toggleIsPlaying()
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?) =

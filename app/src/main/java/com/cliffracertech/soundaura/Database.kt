@@ -4,10 +4,6 @@
 package com.cliffracertech.soundaura
 
 import android.content.Context
-import androidx.annotation.FloatRange
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import androidx.room.*
 import androidx.room.migration.Migration
 import com.cliffracertech.soundaura.SoundAuraDatabase.Companion.addAllMigrations
@@ -16,102 +12,18 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
-@Entity(tableName = "track")
-data class Track(
-    @ColumnInfo(name="uriString") @PrimaryKey
-    val uriString: String,
-    @ColumnInfo(name="name")
-    val name: String,
-    @ColumnInfo(name="isActive", defaultValue = "0")
-    val isActive: Boolean = false,
-    @FloatRange(from = 0.0, to = 1.0)
-    @ColumnInfo(name="volume", defaultValue = "1.0")
-    val volume: Float = 1f,
-    @ColumnInfo(name="hasError", defaultValue = "0")
-    val hasError: Boolean = false,
-) {
-    enum class Sort { NameAsc, NameDesc, OrderAdded;
-
-        companion object {
-            @Composable fun stringValues() = with(LocalContext.current) {
-                remember { arrayOf(getString(R.string.name_ascending),
-                                   getString(R.string.name_descending),
-                                   getString(R.string.order_added)) }
-            }
-        }
-    }
-}
-
-@Dao abstract class TrackDao {
-    @Insert abstract suspend fun insert(track: Track): Long
-
-    @Insert(onConflict  = OnConflictStrategy.IGNORE)
-    abstract suspend fun insert(track: List<Track>): List<Long>
-
-    @Query("DELETE FROM track WHERE uriString = :uriString")
-    abstract suspend fun delete(uriString: String)
-
-    @Query("DELETE FROM track WHERE uriString in (:uriStrings)")
-    abstract suspend fun delete(uriStrings: List<String>)
-
-    @Query("SELECT * FROM track WHERE name LIKE :filter ORDER BY name COLLATE NOCASE ASC")
-    protected abstract fun getAllTracksSortedByNameAsc(filter: String): Flow<List<Track>>
-
-    @Query("SELECT * FROM track WHERE name LIKE :filter ORDER BY name COLLATE NOCASE DESC")
-    protected abstract fun getAllTracksSortedByNameDesc(filter: String): Flow<List<Track>>
-
-    @Query("SELECT * FROM track WHERE name LIKE :filter")
-    protected abstract fun getAllTracksSortedByOrderAdded(filter: String): Flow<List<Track>>
-
-    @Query("SELECT * FROM track WHERE name LIKE :filter ORDER BY isActive DESC, name COLLATE NOCASE ASC")
-    protected abstract fun getAllTracksSortedByActiveThenNameAsc(filter: String): Flow<List<Track>>
-
-    @Query("SELECT * FROM track WHERE name LIKE :filter ORDER BY isActive DESC, name COLLATE NOCASE DESC")
-    protected abstract fun getAllTracksSortedByActiveThenNameDesc(filter: String): Flow<List<Track>>
-
-    @Query("SELECT * FROM track WHERE name LIKE :filter ORDER BY isActive DESC")
-    protected abstract fun getAllTracksSortedByActiveThenOrderAdded(filter: String): Flow<List<Track>>
-
-    fun getAllTracks(sort: Track.Sort, showActiveFirst: Boolean, searchFilter: String?): Flow<List<Track>> {
-        val filter = "%${searchFilter ?: ""}%"
-        return if (showActiveFirst) when (sort) {
-            Track.Sort.NameAsc ->    getAllTracksSortedByActiveThenNameAsc(filter)
-            Track.Sort.NameDesc ->   getAllTracksSortedByActiveThenNameDesc(filter)
-            Track.Sort.OrderAdded -> getAllTracksSortedByActiveThenOrderAdded(filter)
-        } else when (sort) {
-            Track.Sort.NameAsc ->    getAllTracksSortedByNameAsc(filter)
-            Track.Sort.NameDesc ->   getAllTracksSortedByNameDesc(filter)
-            Track.Sort.OrderAdded -> getAllTracksSortedByOrderAdded(filter)
-        }
-    }
-
-    @Query("SELECT * FROM track WHERE isActive")
-    abstract fun getAllActiveTracks(): Flow<List<Track>>
-
-    @Query("UPDATE track set hasError = 1 WHERE uriString = :uri")
-    abstract suspend fun notifyOfError(uri: String)
-
-    @Query("UPDATE track set isActive = 1 - isActive WHERE uriString = :uri")
-    abstract suspend fun toggleIsActive(uri: String)
-
-    @Query("UPDATE track SET volume = :volume WHERE uriString = :uri")
-    abstract suspend fun setVolume(uri: String, volume: Float)
-
-    @Query("UPDATE track SET name = :name WHERE uriString = :uri")
-    abstract suspend fun setName(uri: String, name: String)
-}
-
-@Database(entities = [Track::class], version = 3, exportSchema = true)
+@Database(version = 4, exportSchema = true,
+          entities = [Track::class, Preset::class, PresetTrack::class])
 abstract class SoundAuraDatabase : RoomDatabase() {
     abstract fun trackDao(): TrackDao
+    abstract fun presetDao(): PresetDao
 
     companion object {
         fun addAllMigrations(builder: Builder<SoundAuraDatabase>) =
-            builder.addMigrations(migration1to2, migration2to3)
+            builder.addMigrations(migration1to2, migration2to3, migration3to4)
 
         private val migration1to2 = Migration(1,2) { db ->
             db.execSQL("PRAGMA foreign_keys=off")
@@ -120,7 +32,7 @@ abstract class SoundAuraDatabase : RoomDatabase() {
                 `uriString` TEXT NOT NULL PRIMARY KEY,
                 `name` TEXT NOT NULL,
                 `isActive` INTEGER NOT NULL DEFAULT 0,
-                `volume` FLOAT NOT NULL DEFAULT 1.0)""")
+                `volume` REAL NOT NULL DEFAULT 1.0)""")
             db.execSQL("""INSERT INTO temp_table (uriString, name, isActive, volume)
                           SELECT uriString, name, playing, volume FROM track;""")
             db.execSQL("DROP TABLE track;")
@@ -133,6 +45,16 @@ abstract class SoundAuraDatabase : RoomDatabase() {
             db.execSQL("ALTER TABLE track ADD COLUMN `hasError` INTEGER NOT NULL DEFAULT 0")
         }
 
+        private val migration3to4 = Migration(3,4) { db ->
+            db.execSQL("CREATE TABLE preset (`name` TEXT NOT NULL PRIMARY KEY)")
+            db.execSQL("""CREATE TABLE presetTrack (
+                    `presetName` TEXT NOT NULL,
+                    `trackUriString` TEXT NOT NULL,
+                    `trackVolume` REAL NOT NULL,
+                PRIMARY KEY (presetName, trackUriString),
+                FOREIGN KEY(`presetName`) REFERENCES `preset`(`name`) ON UPDATE CASCADE ON DELETE CASCADE,
+                FOREIGN KEY(`trackUriString`) REFERENCES `track`(`uriString`) ON UPDATE CASCADE ON DELETE CASCADE)""")
+        }
     }
 }
 
@@ -152,4 +74,5 @@ class DatabaseModule {
             .also(::addAllMigrations).build()
 
     @Provides fun provideTrackDao(db: SoundAuraDatabase) = db.trackDao()
+    @Provides fun providePresetDao(db: SoundAuraDatabase) = db.presetDao()
 }

@@ -5,22 +5,24 @@ package com.cliffracertech.soundaura
 import android.content.Context
 import android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
 import android.net.Uri
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -32,8 +34,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundaura.SoundAura.pref_key_showActiveTracksFirst
 import com.cliffracertech.soundaura.SoundAura.pref_key_trackSort
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -44,7 +51,10 @@ import javax.inject.Inject
  * @param state The [LazyListState] used for the TrackList's scrolling state.
  * @param contentPadding The [PaddingValues] instance that will be used as
  *     the content padding for the TrackList's items.
- * @param tracks The list of Tracks that will be displayed by the TrackList.
+ * @param trackListProvider A method that will return the [ImmutableList] of
+ *     [Track]s that will be displayed by the TrackList. If the provided list
+ *     is empty, an empty list message will be displayed instead. A null value
+ *     is interpreted as a loading state.
  * @param trackViewCallback The instance of [TrackViewCallback] that will
  *     be used for responses to individual TrackView interactions.
  */
@@ -52,17 +62,32 @@ import javax.inject.Inject
     modifier: Modifier = Modifier,
     state: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues,
-    tracks: List<Track>,
+    trackListProvider: () -> ImmutableList<Track>?,
     trackViewCallback: TrackViewCallback
-) = LazyColumn(
-    modifier = modifier,
-    state = state,
-    contentPadding = contentPadding,
-    verticalArrangement = Arrangement.spacedBy(8.dp)
 ) {
-    items(items = tracks, key = { it.uriString }) {
-        TrackView(it, trackViewCallback, Modifier.animateItemPlacement())
-    }
+    val trackList = trackListProvider()
+    Crossfade(trackList?.isEmpty()) { when(it) {
+        null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+            CircularProgressIndicator(Modifier.size(50.dp))
+        } true -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+            Text(stringResource(R.string.empty_track_list_message),
+                 modifier = Modifier.width(300.dp),
+                 textAlign = TextAlign.Justify)
+        } else -> LazyColumn(
+            modifier = modifier,
+            state = state,
+            contentPadding = contentPadding,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(
+                items = trackList ?: emptyList(),
+                key = Track::uriString::get
+            ) { track ->
+                TrackView(track, trackViewCallback,
+                          Modifier.animateItemPlacement())
+            }
+        }
+    }}
 }
 
 @HiltViewModel
@@ -85,16 +110,11 @@ class TrackListViewModel(
     private val trackSortKey = intPreferencesKey(pref_key_trackSort)
     private val trackSort = dataStore.enumPreferenceFlow<Track.Sort>(trackSortKey)
 
-    var tracks by mutableStateOf<List<Track>>(emptyList())
-        private set
-
-    init {
-        val searchQueryFlow = snapshotFlow { searchQueryState.query.value }
-        combine(trackSort, showActiveTracksFirst, searchQueryFlow, trackDao::getAllTracks)
-            .transformLatest { emitAll(it) }
-            .onEach { tracks = it }
-            .launchIn(scope)
-    }
+    private val searchQueryFlow = snapshotFlow { searchQueryState.query.value }
+    val tracks by combine(trackSort, showActiveTracksFirst, searchQueryFlow, trackDao::getAllTracks)
+        .transformLatest { emitAll(it) }
+        .map { it.toImmutableList() }
+        .collectAsState(null, scope)
 
     fun onDeleteTrackDialogConfirm(context: Context, uriString: String) {
         scope.launch {
@@ -102,7 +122,7 @@ class TrackListViewModel(
             try {
                 context.contentResolver.releasePersistableUriPermission(
                     uri, FLAG_GRANT_READ_URI_PERMISSION)
-            } catch (e: SecurityException) {}
+            } catch (_: SecurityException) {}
             trackDao.delete(uriString)
         }
     }
@@ -143,20 +163,18 @@ class TrackListViewModel(
 ) = Surface(modifier, color = MaterialTheme.colors.background) {
     val viewModel: TrackListViewModel = viewModel()
     val context = LocalContext.current
-    val itemCallback = remember {
-        TrackViewCallback(
-            onAddRemoveButtonClick = viewModel::onTrackAddRemoveButtonClick,
-            onVolumeChange = onVolumeChange,
-            onVolumeChangeFinished = viewModel::onTrackVolumeChangeRequest,
-            onRenameRequest = viewModel::onTrackRenameDialogConfirm,
-            onDeleteRequest = {
-                viewModel.onDeleteTrackDialogConfirm(context, it)
-            })
-    }
+    val itemCallback = rememberTrackViewCallback(
+        onAddRemoveButtonClick = viewModel::onTrackAddRemoveButtonClick,
+        onVolumeChange = onVolumeChange,
+        onVolumeChangeFinished = viewModel::onTrackVolumeChangeRequest,
+        onRenameRequest = viewModel::onTrackRenameDialogConfirm,
+        onDeleteRequest = {
+            viewModel.onDeleteTrackDialogConfirm(context, it)
+        })
     TrackList(
         modifier = modifier,
-        tracks = viewModel.tracks,
         state = state,
         contentPadding = padding,
+        trackListProvider = viewModel::tracks::get,
         trackViewCallback = itemCallback)
 }

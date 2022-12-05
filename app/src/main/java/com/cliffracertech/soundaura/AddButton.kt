@@ -10,10 +10,7 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -35,13 +32,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 // The stored context object here is the application
 // context, and therefore does not present a problem.
 @HiltViewModel @SuppressLint("StaticFieldLeak")
-class AddLocalFilesButtonViewModel(
+class AddTrackButtonViewModel(
     @ApplicationContext
     private val context: Context,
     private val trackDao: TrackDao,
@@ -107,35 +105,121 @@ class AddLocalFilesButtonViewModel(
                         string = null,
                         stringResId = R.string.over_file_permission_limit_warning,
                         args = arrayListOf(failedTracks.size, persistedPermissionAllowance)))
-                trackDao.delete(failedTracks.map { it.uriString })
+                trackDao.delete(failedTracks.map(Track::uriString::get))
             }
         }
     }
 }
 
+@HiltViewModel
+class AddPresetButtonViewModel(
+    private val presetDao: PresetDao,
+    private val messageHandler: MessageHandler,
+    private val activePresetState: ActivePresetState,
+    trackDao: TrackDao,
+    coroutineScope: CoroutineScope?,
+) : ViewModel() {
+
+    @Inject constructor(
+        presetDao: PresetDao,
+        messageHandler: MessageHandler,
+        activePresetState: ActivePresetState,
+        trackDao: TrackDao,
+    ) : this(presetDao, messageHandler, activePresetState, trackDao, null)
+
+    private val scope = coroutineScope ?: viewModelScope
+
+    var showingAddPresetDialog by mutableStateOf(false)
+        private set
+
+    private val activeTracksIsEmpty by trackDao.getActiveTracks()
+        .map { it.isEmpty() }
+        .collectAsState(true, scope)
+
+    fun onClick() { when {
+        activeTracksIsEmpty -> messageHandler.postMessage(
+            StringResource(R.string.preset_cannot_be_empty_warning_message))
+        else -> showingAddPresetDialog = true
+    }}
+
+    private val nameValidator = PresetNameValidator(presetDao)
+    val proposedNewPresetName by nameValidator.proposedName.collectAsState(null, scope)
+    val newPresetNameValidatorMessage by nameValidator.errorMessage.collectAsState(null, scope)
+
+    fun onAddPresetDialogDismiss() {
+        showingAddPresetDialog = false
+        nameValidator.clearProposedName()
+    }
+
+    fun onNewPresetNameChange(newName: String) =
+        nameValidator.setProposedName(newName)
+
+    fun onAddPresetDialogConfirm() {
+         scope.launch {
+             val name = nameValidator.proposedName.value ?: ""
+             if (nameValidator.onNameConfirm(name)) {
+                 showingAddPresetDialog = false
+                 presetDao.savePreset(name)
+                 activePresetState.setName(name)
+             }
+        }
+    }
+}
+
+/** An enum class whose values describe the entities that can be added by the [AddButton]. */
+enum class AddButtonTarget { Track, Preset }
+
 /**
- * Compose a button to add local files with state provided by an
- * instance of [AddLocalFilesButtonViewModel].
+ * A button to add local files or presets, with state provided by instances
+ * of [AddTrackButtonViewModel] and [AddPresetButtonViewModel].
  *
- * @param backgroundColor The color to use for the button's background.
+ * @param target The [AddButtonTarget] that should be added when the button is clicked
+ * @param backgroundColor The color to use for the button's background
+ * @param modifier The [Modifier] to use for the button
  */
-@Composable fun AddLocalFilesButton(backgroundColor: Color) {
-    val viewModel: AddLocalFilesButtonViewModel = viewModel()
+@Composable fun AddButton(
+    target: AddButtonTarget,
+    backgroundColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val addTrackViewModel: AddTrackButtonViewModel = viewModel()
+    val addPresetViewModel: AddPresetButtonViewModel = viewModel()
 
     FloatingActionButton(
-        onClick = viewModel::onClick,
+        onClick = { when(target) {
+            AddButtonTarget.Track -> addTrackViewModel.onClick()
+            AddButtonTarget.Preset -> addPresetViewModel.onClick()
+        }},
+        modifier = modifier,
         backgroundColor = backgroundColor,
         elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
     ) {
         Icon(imageVector = Icons.Default.Add,
-            contentDescription = stringResource(R.string.add_button_description),
+            contentDescription = stringResource(when(target) {
+                AddButtonTarget.Track -> R.string.add_track_button_description
+                AddButtonTarget.Preset -> R.string.add_preset_button_description
+            }),
             tint = MaterialTheme.colors.onPrimary)
     }
 
-    if (viewModel.showingDialog)
+    if (addTrackViewModel.showingDialog)
         AddTracksFromLocalFilesDialog(
-            onDismissRequest = viewModel::onDialogDismiss,
-            onConfirmRequest = viewModel::onDialogConfirm)
+            onDismissRequest = addTrackViewModel::onDialogDismiss,
+            onConfirmRequest = addTrackViewModel::onDialogConfirm)
+
+    val context = LocalContext.current
+    val nameValidatorMessage = remember { derivedStateOf {
+        addPresetViewModel.newPresetNameValidatorMessage?.resolve(context)
+    }}
+    if (addPresetViewModel.showingAddPresetDialog)
+        RenameDialog(
+            title = stringResource(R.string.create_new_preset_dialog_title),
+            initialName = "",
+            proposedNameProvider = addPresetViewModel::proposedNewPresetName,
+            onProposedNameChange = addPresetViewModel::onNewPresetNameChange,
+            errorMessageProvider = nameValidatorMessage::value::get,
+            onDismissRequest = addPresetViewModel::onAddPresetDialogDismiss,
+            onConfirm = addPresetViewModel::onAddPresetDialogConfirm)
 }
 
 /**

@@ -5,7 +5,7 @@
 <resources
     xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">SoundAura</string>
-    <string name="app_version">v1.3.1</string>
+    <string name="app_version">v1.4.0</string>
 
     <string name="app_player_service_description">A service to play the user\'s sound mix.</string>
     <string name="player_notification_channel_name">Player controls</string>
@@ -21,6 +21,8 @@
     <string name="search">Search</string>
     <string name="sort_options_description">Open sorting options</string>
 
+    <string name="empty_track_list_message">Your library is empty. Tap
+        the add button below to add local files to your library.</string>
     <string name="add_track_to_mix_description">Add %1$s to sound mix</string>
     <string name="remove_track_from_mix_description">Remove %1$s from sound mix</string>
     <string name="file_error_message">File missing/corrupt</string>
@@ -28,20 +30,15 @@
     <string name="remove_item_description">Remove %1$s</string>
 
     <string name="rename">Rename</string>
-    <string name="rename_dialog_title">Rename %1$s</string>
+    <string name="default_rename_dialog_title">Enter new name</string>
+    <string name="track_name_cannot_be_blank_error_message">The track\'s name cannot be blank.</string>
 
     <string name="remove">Remove</string>
     <string name="confirm_remove_title">Remove %1$s?</string>
-    <string name="confirm_remove_message">
-        This will remove the track from your library,
-        but will not delete the file from your device.</string>
+    <string name="confirm_remove_message">This will remove the track from your library
+        and any presets it is a part of, but will not delete the file from your device.</string>
 
-    <string name="add_button_description">Add track</string>
-    <string name="add_button_expanded_description">Cancel add track</string>
-    <string name="download">Download</string>
-    <string name="local_files">Local files</string>
-    <string name="download_button_message">
-        The download button is non-functional at this time</string>
+    <string name="add_track_button_description">Add track</string>
     <string name="add_local_files_dialog_title">Confirm track name(s)</string>
     <string name="track_already_exists_error_message">
         This file is already in the library.</string>
@@ -52,6 +49,44 @@
         Android\'s file permission limit of %2$d. You must
         remove some tracks in order to add any more.
     </string>
+
+    <string name="preset_button_click_label">Change active preset</string>
+    <string name="unsaved_preset_description">Unsaved preset</string>
+    <string name="playing_preset_description">Playing preset</string>
+    <string name="preset_selector_title">Select a preset</string>
+    <string name="empty_preset_list_message">You don\'t have any saved presets.
+        Tap the add button below to save the current sound mix as a preset.</string>
+    <string name="preset_click_label">Load preset %1$s</string>
+    <string name="close_preset_selector_description">Close preset selector</string>
+
+    <string name="overwrite">Overwrite</string>
+    <string name="overwrite_no_active_tracks_error_message">
+        Presets must have at least one active track. Tap a track\'s add button first.</string>
+    <string name="confirm_overwrite_preset_dialog_title">Confirm overwrite preset</string>
+    <string name="confirm_overwrite_preset_dialog_message">
+        This will overwrite the preset %1$s. Are you sure?</string>
+
+    <string name="delete">Delete</string>
+    <string name="confirm_delete_preset_title">Delete %1$s?</string>
+    <string name="confirm_delete_preset_message">
+        This will not remove the tracks in the preset from your library.</string>
+
+    <string name="preset_cannot_be_empty_warning_message">
+        There are no active tracks to add to the preset.
+        Tap a track\'s add button first.</string>
+
+    <string name="add_preset_button_description">Create new preset</string>
+    <string name="create_new_preset_dialog_title">Enter new preset name</string>
+    <string name="preset_name_cannot_be_blank_error_message">
+        The preset\'s name cannot be blank</string>
+    <string name="preset_name_already_in_use_error_message">
+        Another preset with the same name already exists.</string>
+
+    <string name="unsaved_preset_changes_warning_title">Unsaved changes</string>
+    <string name="unsaved_preset_changes_warning_message">The preset %1$s has unsaved changes.
+        If you load a new preset now, you will lose any changes made since it was last saved.</string>
+    <string name="unsaved_preset_changes_warning_save_first_option">Save changes first</string>
+    <string name="unsaved_preset_changes_warning_load_anyways_option">Load anyways</string>
 
     <string name="play">Play</string>
     <string name="pause">Pause</string>
@@ -168,8 +203,7 @@
     <string name="tile_tutorial_add_tile_help_text">
         The button to edit your quick settings tiles might appear
         differently depending on your device manufacturer and
-        Android version. If you can\'t figure out how to add quick
-        settings tiles, try searching \'edit quick settings tiles\'
+        Android version. Try searching \'edit quick settings tiles\'
         along with your device manufacturer on an internet search
         engine.</string>
     <string name="tile_tutorial_add_tile_button_text">Add tile</string>

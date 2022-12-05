@@ -304,19 +304,21 @@ class DatabaseTests {
     @Test fun getAllActiveTracks() = runBlocking {
         addingTracks()
         var allTracks = getAllTracks()
-        var activeTracks = dao.getAllActiveTracks().first()
+        var activeTracks = dao.getActiveTracks().first()
         assertThat(activeTracks).isEmpty()
 
         dao.toggleIsActive(allTracks[0].uriString)
         dao.toggleIsActive(allTracks[2].uriString)
         allTracks = getAllTracks()
-        activeTracks = dao.getAllActiveTracks().first()
-        assertThat(activeTracks).containsExactly(allTracks[0], allTracks[2])
+        activeTracks = dao.getActiveTracks().first()
+        assertThat(activeTracks).containsExactly(
+            allTracks[0].toActiveTrack(),
+            allTracks[2].toActiveTrack())
 
         dao.toggleIsActive(allTracks[0].uriString)
         allTracks = getAllTracks()
-        activeTracks = dao.getAllActiveTracks().first()
-        assertThat(activeTracks).containsExactly(allTracks[2])
+        activeTracks = dao.getActiveTracks().first()
+        assertThat(activeTracks).containsExactly(allTracks[2].toActiveTrack())
         Unit
     }
 

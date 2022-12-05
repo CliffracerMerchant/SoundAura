@@ -21,10 +21,10 @@ import java.io.IOException
 
 @Config(sdk=[30])
 @RunWith(RobolectricTestRunner::class)
-class AddLocalFilesButtonViewModelTests {
+class AddTrackButtonViewModelTests {
     private val coroutineDispatcher = StandardTestDispatcher()
     private val coroutineScope = TestScope(coroutineDispatcher + Job())
-    private lateinit var instance: AddLocalFilesButtonViewModel
+    private lateinit var instance: AddTrackButtonViewModel
     private lateinit var db: SoundAuraDatabase
     private lateinit var trackDao: TrackDao
     private lateinit var messageHandler: MessageHandler
@@ -34,7 +34,7 @@ class AddLocalFilesButtonViewModelTests {
         db = Room.inMemoryDatabaseBuilder(context, SoundAuraDatabase::class.java).build()
         trackDao = db.trackDao()
         messageHandler = MessageHandler()
-        instance = AddLocalFilesButtonViewModel(context, trackDao, messageHandler, coroutineScope)
+        instance = AddTrackButtonViewModel(context, trackDao, messageHandler, coroutineScope)
         Dispatchers.setMain(coroutineDispatcher)
     }
 

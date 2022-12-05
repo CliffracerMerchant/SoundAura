@@ -2,14 +2,19 @@
  * License 2.0. See license.md in the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import android.support.v4.media.session.PlaybackStateCompat
-import androidx.compose.foundation.layout.widthIn
+import android.view.ViewTreeObserver
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.Lifecycle
@@ -31,6 +36,14 @@ fun LifecycleOwner.repeatWhenStarted(onStarted: suspend CoroutineScope.() -> Uni
     lifecycleScope.launch {
         repeatOnLifecycle(Lifecycle.State.STARTED, onStarted)
     }
+}
+
+/** Return a State<T> object that is updated with the latest values of the receiver flow,
+ * with an initial value of [initialValue]. [scope] is used for the collection of the flow. */
+fun <T> Flow<T>.collectAsState(initialValue: T, scope: CoroutineScope): State<T> {
+    val state = mutableStateOf(initialValue)
+    onEach { state.value = it }.launchIn(scope)
+    return state
 }
 
 /** Return a [State]`<T>` that contains the most recent value for the [DataStore]
@@ -122,35 +135,90 @@ inline fun <reified T: Enum<T>> DataStore<Preferences>.enumPreferenceFlow(
 /**
  * Restrict the horizontal width as a percentage of the screen width according
  * to the [LocalWindowSizeClass] value. When the [WindowWidthSizeClass] is
- * equal to [WindowWidthSizeClass.Compact], the width restriction will be equal
- * to 95% of the screen width; with [WindowWidthSizeClass.Medium] the width
- * restriction is equal to 80% of the screen width; with [WindowWidthSizeClass.Expanded]
- * the width restriction is equal to 60% of the screen width. This modifier can
- * be used to prevent top level UI elements that don't need to be very wide
- * from becoming too stretched out in situations with a large [WindowWidthSizeClass].
+ * equal to [WindowWidthSizeClass.Compact], there will be no width restriction;
+ * with [WindowWidthSizeClass.Medium] the width restriction is equal to 80% of
+ * the screen width; with [WindowWidthSizeClass.Expanded] the width restriction
+ * is equal to 60% of the screen width. This modifier can be used to prevent
+ * top level UI elements that don't need to be very wide from becoming too
+ * stretched out in configurations with a large [WindowWidthSizeClass]. The
+ * parameter [compactPadding] allows the specification of a minimum amount of
+ * horizontal padding that will only be added when the [WindowWidthSizeClass]
+ * is equal to [WindowWidthSizeClass.Compact].
  */
-fun Modifier.restrictWidthAccordingToSizeClass() = composed {
+fun Modifier.restrictWidthAccordingToSizeClass(
+    compactPadding: Dp = 16.dp
+) = composed {
     val config = LocalConfiguration.current
     val widthSizeClass = LocalWindowSizeClass.current.widthSizeClass
     val modifier = remember(config, widthSizeClass) {
-        val screenWidth = config.screenWidthDp
-        val maxWidth = when (widthSizeClass) {
-            WindowWidthSizeClass.Compact ->
-                (screenWidth * 19f / 20f).toInt().dp
-            WindowWidthSizeClass.Medium ->
-                (screenWidth * 4f / 5f).toInt().dp
-            WindowWidthSizeClass.Expanded ->
-                (screenWidth * 3f / 5f).toInt().dp
-            else -> screenWidth.dp
+        if (widthSizeClass == WindowWidthSizeClass.Compact)
+            Modifier.padding(horizontal = compactPadding)
+        else {
+            val widthDp = config.screenWidthDp.dp
+            val maxWidth = when (widthSizeClass) {
+                WindowWidthSizeClass.Medium ->   widthDp * 0.8f
+                WindowWidthSizeClass.Expanded -> widthDp * 0.6f
+                else ->                          widthDp
+            }
+            Modifier.widthIn(max = maxWidth)
         }
-        Modifier.widthIn(max = maxWidth)
     }
     this.then(modifier)
 }
 
-fun Int.toPlaybackStateString() = when (this) {
-    PlaybackStateCompat.STATE_STOPPED -> "stopped"
-    PlaybackStateCompat.STATE_PLAYING -> "playing"
-    PlaybackStateCompat.STATE_PAUSED -> "paused"
-    else -> "unsupported state (int value = $this)"
+/** Returns a [State]`<Boolean>` that indicates whether or not the soft keyboard is open. */
+@Composable fun imeIsOpen(): State<Boolean> {
+    val imeIsOpen = remember { mutableStateOf(false) }
+    val view = LocalView.current
+    DisposableEffect(view) {
+        val listener = ViewTreeObserver.OnGlobalLayoutListener {
+            imeIsOpen.value = ViewCompat.getRootWindowInsets(view)
+                ?.isVisible(WindowInsetsCompat.Type.ime()) ?: true
+        }
+        view.viewTreeObserver.addOnGlobalLayoutListener(listener)
+        onDispose { view.viewTreeObserver.removeOnGlobalLayoutListener(listener) }
+    }
+    return imeIsOpen
+}
+
+/** Return a [PaddingValues] created from adding [additionalStart], [additionalTop],
+ * [additionalEnd], and [additionalBottom] to the [original] [PaddingValues] instance. */
+fun paddingValues(
+    original: PaddingValues,
+    layoutDirection: LayoutDirection,
+    additionalStart: Dp = 0.dp,
+    additionalTop: Dp = 0.dp,
+    additionalEnd: Dp = 0.dp,
+    additionalBottom: Dp = 0.dp,
+): PaddingValues {
+    return PaddingValues(
+        start = original.calculateStartPadding(layoutDirection) + additionalStart,
+        top = original.calculateTopPadding() + additionalTop,
+        end = original.calculateEndPadding(layoutDirection) + additionalEnd,
+        bottom = original.calculateBottomPadding() + additionalBottom)
+}
+
+suspend fun <T> Flow<T>.waitUntil(
+    timeOut: Long = 2000L,
+    condition: (T) -> Boolean
+): T {
+    val start = System.currentTimeMillis()
+    var value = first()
+    while (!condition(value) && System.currentTimeMillis() - start < timeOut) {
+        Thread.sleep(50L)
+        value = first()
+    }
+    return value
+}
+
+suspend fun waitUntil(
+    timeOut: Long = 1000L,
+    condition: suspend () -> Boolean,
+) {
+    val start = System.currentTimeMillis()
+    while (!condition()) {
+        if (System.currentTimeMillis() - start >= timeOut)
+            return
+        Thread.sleep(50L)
+    }
 }
