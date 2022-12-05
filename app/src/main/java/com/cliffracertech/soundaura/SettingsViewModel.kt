@@ -185,10 +185,9 @@ class SettingsViewModel(
         }
     }
 
-    val playInBackground by dataStore.preferenceState(
-        key = playInBackgroundKey,
-        initialValue = false,
-        scope = scope)
+    val playInBackground by dataStore
+        .preferenceFlow(playInBackgroundKey, false)
+        .collectAsState(false, scope)
 
     var showingPlayInBackgroundExplanation by mutableStateOf(false)
         private set

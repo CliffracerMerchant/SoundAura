@@ -1,5 +1,6 @@
-/* This file is part of SoundAura, which is released under the terms of the Apache
- * License 2.0. See license.md in the project's root directory to see the full license. */
+/* This file is part of SoundAura, which is released under
+ * the terms of the Apache License 2.0. See license.md in
+ * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
 import android.Manifest.permission.READ_PHONE_STATE
@@ -17,7 +18,6 @@ import com.cliffracertech.soundaura.SoundAura.pref_key_autoPauseDuringCalls
 import com.cliffracertech.soundaura.SoundAura.pref_key_onZeroVolumeAudioDeviceBehavior
 import com.cliffracertech.soundaura.SoundAura.pref_key_playInBackground
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.*
@@ -39,12 +39,10 @@ import org.junit.runner.RunWith
  */
 class SettingsViewModelTests {
     private val context = ApplicationProvider.getApplicationContext<Context>()
-    private val coroutineDispatcher = StandardTestDispatcher()
     private val coroutineScope = TestCoroutineScope()
     private val dataStore = PreferenceDataStoreFactory.create(scope = coroutineScope) {
         context.preferencesDataStoreFile("testDatastore")
     }
-
     private val appThemeKey = intPreferencesKey(pref_key_appTheme)
     private val playInBackgroundKey = booleanPreferencesKey(pref_key_playInBackground)
     private val autoPauseDuringCallKey = booleanPreferencesKey(pref_key_autoPauseDuringCalls)
@@ -58,11 +56,9 @@ class SettingsViewModelTests {
 
     @Before fun init() {
         instance = SettingsViewModel(context, dataStore, coroutineScope)
-        Dispatchers.setMain(coroutineDispatcher)
     }
 
     @After fun cleanUp() {
-        Dispatchers.resetMain()
         coroutineScope.runTest {
             dataStore.edit { it.clear() }
         }
