@@ -301,8 +301,6 @@ class DatabaseTests {
         ).inOrder()
     }
 
-    private fun Track.toActiveTrack() = ActiveTrack(uriString, volume)
-
     @Test fun getAllActiveTracks() = runBlocking {
         addingTracks()
         var allTracks = getAllTracks()

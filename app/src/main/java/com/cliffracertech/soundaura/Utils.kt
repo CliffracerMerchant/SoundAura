@@ -210,3 +210,15 @@ suspend fun <T> Flow<T>.waitUntil(
     }
     return value
 }
+
+suspend fun waitUntil(
+    timeOut: Long = 1000L,
+    condition: suspend () -> Boolean,
+) {
+    val start = System.currentTimeMillis()
+    while (!condition()) {
+        if (System.currentTimeMillis() - start >= timeOut)
+            return
+        Thread.sleep(50L)
+    }
+}

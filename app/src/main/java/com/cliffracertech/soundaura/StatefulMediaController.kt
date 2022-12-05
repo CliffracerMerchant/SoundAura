@@ -143,7 +143,7 @@ class MediaControllerViewModel(
             activePresetIsModified -> {
                 newPresetAfterUnsavedChangesWarning = preset
             } preset.isActive ->
-                // This skips a pointless saving of the unmodified active preset
+                // This skips a pointless loading of the unmodified active preset
                 onCloseButtonClick()
             else -> loadPreset(preset)
         }

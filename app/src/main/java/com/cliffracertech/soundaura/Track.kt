@@ -40,6 +40,8 @@ data class ActiveTrack(
     val uriString: String,
     val volume: Float)
 
+fun Track.toActiveTrack() = ActiveTrack(uriString, volume)
+
 @Dao abstract class TrackDao {
     @Insert abstract suspend fun insert(track: Track): Long
 
