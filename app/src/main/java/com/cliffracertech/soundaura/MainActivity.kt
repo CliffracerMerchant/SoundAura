@@ -50,6 +50,8 @@ import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.scopes.ActivityRetainedScoped
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 @ActivityRetainedScoped
@@ -347,6 +349,7 @@ class MainActivity : ComponentActivity() {
                 expandedSize = expandedSize,
                 alignment = alignment,
                 padding = padding,
+                autoStopTime = Instant.now().plus(3, ChronoUnit.HOURS),
                 isPlaying = boundPlayerService?.isPlaying ?: false,
                 onPlayPauseClick = ::onPlayPauseClick)
         }

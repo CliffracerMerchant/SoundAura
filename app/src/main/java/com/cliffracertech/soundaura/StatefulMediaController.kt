@@ -28,6 +28,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import java.time.Instant
 import javax.inject.Inject
 
 @HiltViewModel
@@ -181,6 +182,7 @@ class MediaControllerViewModel(
     alignment: BiasAlignment,
     padding: PaddingValues,
     isPlaying: Boolean,
+    autoStopTime: Instant?,
     onPlayPauseClick: () -> Unit,
 ) {
     val viewModel: MediaControllerViewModel = viewModel()
@@ -213,6 +215,7 @@ class MediaControllerViewModel(
         alignment = alignment,
         padding = padding,
         playing = isPlaying,
+        autoStopTime = autoStopTime,
         onPlayPauseClick = onPlayPauseClick,
         activePresetNameProvider = viewModel::activePresetName::get,
         activePresetIsModified = viewModel.activePresetIsModified,

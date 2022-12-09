@@ -24,6 +24,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.*
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import java.time.Duration
+import java.time.Instant
 
 private const val tweenDuration = 250
 
@@ -110,6 +114,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
     expandTransition: Transition<Boolean>,
     transitionProgressProvider: () -> Float,
     playing: Boolean,
+    autoStopTime: Instant?,
     onActivePresetClick: () -> Unit,
     onPlayPauseClick: () -> Unit,
     onCloseButtonClick: () -> Unit,
@@ -164,15 +169,43 @@ val Orientation.isVertical get() = this == Orientation.Vertical
         }
     }
 
-    // This extra  when the view is expanded makes the close
-    // button align with the more options buttons for each listed preset
-    val closeButtonXOffset = remember { with (density) { 4.dp.toPx() } }
-    MediaControllerPlayPauseStopButton(
-        expandTransition, playing, onPlayPauseClick, onCloseButtonClick,
-        Modifier.align(Alignment.BottomEnd).size(56.dp).graphicsLayer {
-            translationX = -closeButtonXOffset * transitionProgressProvider()
-        })
+    Row(Modifier.align(Alignment.BottomEnd)) {
+        // This extra x offset when the view is expanded makes the close
+        // button align with the more options buttons for each listed preset
+        val closeButtonXOffset = remember { with (density) { 4.dp.toPx() } }
+        MediaControllerPlayPauseStopButton(
+            expandTransition, playing, onPlayPauseClick, onCloseButtonClick,
+            Modifier.size(56.dp).graphicsLayer {
+                translationX = -closeButtonXOffset * transitionProgressProvider()
+            })
+        if (autoStopTime != null && !isFullyExpanded)
+            Column(Modifier.height(56.dp).graphicsLayer {
+                alpha = 1f - transitionProgressProvider()
+            }, Arrangement.Center, Alignment.CenterHorizontally) {
+                val totalDuration = remember(autoStopTime) {
+                    Duration.between(Instant.now(), autoStopTime)
+                }
+                var durationRemaining by remember(totalDuration) {
+                    mutableStateOf(totalDuration)
+                }
+                LaunchedEffect(autoStopTime) {
+                    while(isActive) {
+                        delay(1000)
+                        durationRemaining = durationRemaining.minusSeconds(1)
+                    }
+                }
+                val durationRemainingString = durationRemaining.toHHMMSSstring()
+                val style = MaterialTheme.typography.caption
+
+                Text("for", style = style)
+                Text(durationRemainingString, style = style)
+            }
+    }
+
 }
+
+private fun Duration.toHHMMSSstring() = String.format(
+    "%2d:%02d:%02d", toHoursPart(), toMinutesPart(), toSecondsPart())
 
 /**
  * A floating button that shows information about the currently playing [Preset]
@@ -197,6 +230,9 @@ val Orientation.isVertical get() = this == Orientation.Vertical
  *     expanded to show the preset selector
  * @param playing The media play/pause state that the play/pause button should
  *     use to determine its icon, which will be the opposite of the current state
+ * @param autoStopTime The java.time.Instant at which playback will be automatically
+ *     stopped. MediaController does not use this information to affect playback; the
+ *     value of autoStopTime is only used to display this information to the user.
  * @param onPlayPauseClick The callback that will be invoked when the play/pause button is clicked
  * @param activePresetNameProvider A function that returns the actively
  *     playing [Preset]'s name, or null if there isn't one, when invoked
@@ -217,6 +253,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
     alignment: BiasAlignment,
     padding: PaddingValues,
     playing: Boolean,
+    autoStopTime: Instant?,
     onPlayPauseClick: () -> Unit,
     activePresetNameProvider: () -> String?,
     activePresetIsModified: Boolean,
@@ -274,6 +311,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
                 }, expandTransition = expandTransition,
                 transitionProgressProvider = { transitionProgress },
                 playing = playing,
+                autoStopTime = autoStopTime,
                 onActivePresetClick = onActivePresetClick,
                 onPlayPauseClick = onPlayPauseClick,
                 onCloseButtonClick = onCloseButtonClick,
@@ -352,6 +390,7 @@ fun MediaControllerPreview() = SoundAuraTheme {
                 padding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 8.dp),
                 showingPresetSelector = expanded,
                 playing = playing,
+                autoStopTime = null,
                 onPlayPauseClick = { playing = !playing },
                 activePresetNameProvider = activePresetName::value::get,
                 activePresetIsModified = true,
