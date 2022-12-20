@@ -233,47 +233,27 @@ class MainActivity : ComponentActivity() {
         ) { showingAppSettingsScreen ->
             if (showingAppSettingsScreen)
                 AppSettings(padding)
-            else {
-                // The track list's padding must be adjusted depending on the placement of the FABs.
-                val trackListPadding = remember(padding, widthIsConstrained) {
-                    paddingValues(padding, ld,
+            else StatefulTrackList(
+                // The track list's padding must be adjusted
+                // depending on the placement of the FABs.
+                padding = remember(padding, widthIsConstrained) {
+                    PaddingValues(padding, ld,
                         additionalEnd = if (widthIsConstrained) 0.dp else 64.dp,
                         additionalBottom = if (widthIsConstrained) 64.dp else 0.dp)
-                }
-                StatefulTrackList(
-                    padding = trackListPadding,
-                    state = trackListState,
-                    onVolumeChange = { uri, volume ->
-                        boundPlayerService?.setTrackVolume(uri, volume)
-                    })
-            }
+                }, state = trackListState,
+                onVolumeChange = { uri, volume ->
+                    boundPlayerService?.setTrackVolume(uri, volume)
+                })
         }
 
-        val showingPresetSelector = viewModel.showingPresetSelector
         MediaController(
             visible = !showingAppSettings,
             padding = padding,
             alignToEnd = !widthIsConstrained)
 
-        val density = LocalDensity.current
-        // Different stiffnesses are used so that the add button
-        // moves in a swooping movement instead of a linear one
-        val addPresetButtonXOffset by animateFloatAsState(
-            targetValue = if (!showingPresetSelector) 0f
-                          else with(density) { (-16).dp.toPx() },
-            animationSpec = tween(250))
-        val addPresetButtonYOffset by animateFloatAsState(
-            targetValue = if (!showingPresetSelector) 0f
-                          else with(density) { (-16).dp.toPx() },
-            animationSpec = tween(350))
         AddTrackButton(
             visible = !showingAppSettings,
-            modifier = Modifier.padding(padding).graphicsLayer {
-                translationX = addPresetButtonXOffset
-                translationY = addPresetButtonYOffset
-            }, target = if (showingPresetSelector)
-                            AddButtonTarget.Preset
-                        else AddButtonTarget.Track)
+            modifier = Modifier.padding(padding))
     }
 
     @Composable private fun BoxWithConstraintsScope.MediaController(
@@ -281,50 +261,54 @@ class MainActivity : ComponentActivity() {
         padding: PaddingValues,
         alignToEnd: Boolean
     ) {
-        val density = LocalDensity.current
         val ld = LocalLayoutDirection.current
-
         val contentAreaSize = remember(padding) {
-            val screenWidthDp = with(density) { constraints.maxWidth.toDp() }
             val startPadding = padding.calculateStartPadding(ld)
             val endPadding = padding.calculateEndPadding(ld)
-            val width = screenWidthDp - startPadding - endPadding
+            val width = maxWidth - startPadding - endPadding
 
-            val screenHeightDp = with(density) { constraints.maxHeight.toDp() }
             val topPadding = padding.calculateTopPadding()
             val bottomPadding = padding.calculateBottomPadding()
-            val height = screenHeightDp - topPadding - bottomPadding
+            val height = maxHeight - topPadding - bottomPadding
 
             DpSize(width, height)
         }
-        val collapsedSize = remember(padding, alignToEnd) {
-            // The goal is to have the media controller bar have such a
-            // width/height that the play/pause icon is centered in the
-            // content area's width in portrait mode, or centered in the
-            // content area's height in landscape mode. The main content
-            // area's width/height is divided by two, then 28dp is added
-            // to account for the media controller bar's rounded corner
-            // radius. The min value between this calculated width/height
-            // and the full content area width/height minus 64dp (i.e.
-            // the add button's 56dp size plus an 8dp margin) is then
-            // used to ensure that for small screen sizes the media
-            // controller can't overlap the add button.
-            DpSize(width = if (alignToEnd) 56.dp else minOf(
-                               contentAreaSize.width / 2f + 28.dp,
-                               contentAreaSize.width - 64.dp),
-                   height = if (!alignToEnd) 56.dp else minOf(
-                               contentAreaSize.height / 2f + 28.dp,
-                               contentAreaSize.height - 64.dp))
+
+        val mediaControllerSizes = remember(padding, alignToEnd) {
+            // The goal is to have the media controller have such a width/
+            // height that the play/pause icon is centered in the content area's
+            // width in portrait mode, or centered in the content area's height
+            // in landscape mode. This preferred width/height is found by adding
+            // half of the play/pause button's width to half of the width/height
+            // of the content area. The min value between this preferred width/
+            // height and the full content area width/ height minus 64dp (i.e.
+            // the add button's 56dp size plus an 8dp margin) is then used to
+            // ensure that for small screen sizes the media controller can't
+            // overlap the add track button.
+            val buttonSize = MediaControllerSizes.defaultHeightDp.dp
+            val extraWidth = buttonSize / 2f
+            val minWidth = if (alignToEnd) contentAreaSize.height / 2f + extraWidth
+                           else            contentAreaSize.width / 2f + extraWidth
+            val maxWidth = if (alignToEnd) contentAreaSize.height - 64.dp
+                           else            contentAreaSize.width - 64.dp
+            MediaControllerSizes(
+                activePresetWidth = minWidth - buttonSize,
+                maxCollapsedWidth = maxWidth,
+                presetSelectorSize = DpSize(
+                    width = contentAreaSize.width * if (alignToEnd) 0.6f
+                                                    else            1.0f,
+                    height = if (!alignToEnd) 350.dp
+                             else contentAreaSize.height))
         }
-        val expandedSize = remember(padding, alignToEnd) {
-            val widthFraction = if (alignToEnd) 0.6f else 1.0f
-            DpSize(width = contentAreaSize.width * widthFraction,
-                   height = if (!alignToEnd) 350.dp
-                            else contentAreaSize.height)
-        }
+
         val alignment = if (alignToEnd) Alignment.TopEnd as BiasAlignment
                         else            Alignment.BottomStart as BiasAlignment
-        val transformOrigin = rememberClippedBrushBoxTransformOrigin(collapsedSize, alignment, padding)
+        var autoStopTime by remember { mutableStateOf<Instant?>(null) }
+
+        val transformOrigin = rememberClippedBrushBoxTransformOrigin(
+            DpSize(height = 56.dp / 2, width =
+                mediaControllerSizes.collapsedWidth(autoStopTime != null) / 2),
+            alignment, padding)
 
         AnimatedVisibility(
             visible = visible,
@@ -341,36 +325,58 @@ class MainActivity : ComponentActivity() {
                 Brush.horizontalGradient(colors = listOf(startColor, endColor))
             }
             StatefulMediaController(
+                sizes = mediaControllerSizes,
                 orientation = if (alignToEnd) Orientation.Vertical
                               else            Orientation.Horizontal,
                 backgroundBrush = backgroundBrush,
                 contentColor = MaterialTheme.colors.onPrimary,
-                collapsedSize = collapsedSize,
-                expandedSize = expandedSize,
                 alignment = alignment,
                 padding = padding,
-                autoStopTime = Instant.now().plus(3, ChronoUnit.HOURS),
+                autoStopTime = autoStopTime,
                 isPlaying = boundPlayerService?.isPlaying ?: false,
-                onPlayPauseClick = ::onPlayPauseClick)
+                onPlayPauseClick = ::onPlayPauseClick,
+                onPlayPauseLongClick = {
+                    autoStopTime = if (autoStopTime != null) null
+                                   else Instant.now().plus(3, ChronoUnit.HOURS)
+                })
         }
     }
 
     /** Compose an add button at the bottom end edge of the screen that is
-     * conditionally visible depending on the value of [visible]. [target]
-     * defines the value of [AddButtonTarget] that describes the type of
-     * entity that will be added.*/
+     * conditionally visible depending on the value of [visible]. */
     @Composable private fun BoxScope.AddTrackButton(
         visible: Boolean,
-        target: AddButtonTarget,
         modifier: Modifier = Modifier,
     ) {
+        val density = LocalDensity.current
+        val showingPresetSelector = viewModel.showingPresetSelector
+        // Different stiffnesses are used so that the add button
+        // moves in a swooping movement instead of a linear one
+        val addPresetButtonXOffset by animateFloatAsState(
+            targetValue = if (!showingPresetSelector) 0f
+            else with(density) { (-16).dp.toPx() },
+            animationSpec = tween(250))
+        val addPresetButtonYOffset by animateFloatAsState(
+            targetValue = if (!showingPresetSelector) 0f
+            else with(density) { (-16).dp.toPx() },
+            animationSpec = tween(350))
+
         AnimatedVisibility( // add track button
             visible = visible,
-            modifier = modifier.align(Alignment.BottomEnd),
+            modifier = modifier
+                .align(Alignment.BottomEnd)
+                .graphicsLayer {
+                    translationX = addPresetButtonXOffset
+                    translationY = addPresetButtonYOffset
+                },
             enter = fadeIn(tween()) + scaleIn(overshootTween()),
             exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTween()),
         ) {
-            AddButton(target, MaterialTheme.colors.secondaryVariant)
+            AddButton(
+                target = if (showingPresetSelector)
+                             AddButtonTarget.Preset
+                         else AddButtonTarget.Track,
+                backgroundColor = MaterialTheme.colors.secondaryVariant)
         }
     }
 

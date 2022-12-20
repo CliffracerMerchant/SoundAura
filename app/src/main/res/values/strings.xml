@@ -92,6 +92,7 @@
     <string name="pause">Pause</string>
     <string name="play_button_description">Play SoundAura audio</string>
     <string name="pause_button_description">Pause SoundAura audio</string>
+    <string name="play_pause_button_long_click_description">Set auto stop time</string>
     <string name="playing">Playing</string>
     <string name="paused">Paused</string>
     <string name="stopped">Stopped</string>

@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -40,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
@@ -120,11 +122,12 @@ fun Modifier.minTouchTargetSize() =
  * @param isPlaying The playing state that the icon should represent when
  *     [showClose] is false. The icon will be a pause icon when [isPlaying]
  *     is true, or a play icon when [isPlaying] is false.
- * @param closeToPlayPause Whether or not the icon should be transitioning
- *     from the close icon back to the play / pause icon. This parameter
- *     will have no effect when [showClose] is true, but is necessary when
- *     showClose is false for the correct animations to play.
- * @param contentDescriptionProvider A lambda that will return the correct
+ * @param exitingClose Whether or not the icon should be transitioning
+ *     from the close icon back to the play / pause icon (as opposed to
+ *     transitioning between the play and pause icons). This parameter
+ *     will have no effect when [showClose] is true, but is necessary
+ *     when showClose is false for the correct animations to play.
+ * @param contentDescriptionProvider A method that will return the correct
  *     contentDescription for the icon provided the showClose and isPlaying
  *     states
  * @param tint The tint to use for the icon
@@ -132,8 +135,9 @@ fun Modifier.minTouchTargetSize() =
 @Composable fun PlayPauseCloseIcon(
     showClose: Boolean,
     isPlaying: Boolean,
-    closeToPlayPause: Boolean,
-    contentDescriptionProvider: @Composable (Boolean, Boolean) -> String,
+    exitingClose: Boolean,
+    contentDescriptionProvider:
+        @Composable (showClose: Boolean, isPlaying: Boolean) -> String,
     tint: Color = LocalContentColor.current
 ) {
     val playToPause = AnimatedImageVector.animatedVectorResource(R.drawable.play_to_pause)
@@ -148,12 +152,11 @@ fun Modifier.minTouchTargetSize() =
 
     Icon(contentDescription = contentDescriptionProvider(showClose, isPlaying),
          tint = tint, painter = when {
-            showClose ->        if (isPlaying) pauseToClosePainter
-                                else           playToClosePainter
-            closeToPlayPause -> if (isPlaying) pauseToClosePainter
-                                else           playToClosePainter
-            else ->             if (isPlaying) playToPausePainter
-                                else           pauseToPlayPainter
+             showClose || exitingClose ->
+                     if (isPlaying) pauseToClosePainter
+                     else           playToClosePainter
+             else -> if (isPlaying) playToPausePainter
+                     else           pauseToPlayPainter
          })
 }
 
@@ -288,16 +291,16 @@ fun Modifier.minTouchTargetSize() =
  * whole line from being visible, automatically scrolls to its end, springs
  * back to its beginning, and repeats this cycle indefinitely. The parameters
  * mirror those of [Text], except that the maxLines and the softWrap parameters
- * are unable to be changed, and the additional [maxWidthPx] parameter. If the
+ * are unable to be changed, and the additional [maxWidth] parameter. If the
  * available horizontal space is known at the composition site, this can be
- * passed in as the value of [maxWidthPx] to prevent [MarqueeText] from
+ * passed in as the value of [maxWidth] to prevent [MarqueeText] from
  * needing to calculate this itself.
  */
 @Composable fun MarqueeText(
     text: String,
     modifier: Modifier = Modifier,
     color: Color = Color.Unspecified,
-    maxWidthPx: Int? = null,
+    maxWidth: Dp? = null,
     fontSize: TextUnit = TextUnit.Unspecified,
     fontStyle: FontStyle? = null,
     fontWeight: FontWeight? = null,
@@ -310,7 +313,7 @@ fun Modifier.minTouchTargetSize() =
     onTextLayout: (TextLayoutResult) -> Unit = {},
     style: TextStyle = LocalTextStyle.current,
 ) {
-    val content = @Composable { maxWidthPx: Int ->
+    val content = @Composable { maxWidth: Dp ->
         val scrollState = rememberScrollState()
         var shouldAnimate by remember { mutableStateOf(true) }
         var animationDuration by remember { mutableStateOf(0) }
@@ -322,20 +325,22 @@ fun Modifier.minTouchTargetSize() =
                 scrollState.animateScrollTo(0)
                 shouldAnimate = !shouldAnimate
             }
+        val density = LocalDensity.current
         Text(text, Modifier.horizontalScroll(scrollState, false),
             color, fontSize, fontStyle, fontWeight, fontFamily, letterSpacing,
             textDecoration, textAlign, lineHeight, overflow, maxLines = 1,
             onTextLayout = {
                 onTextLayout(it)
-                val overflowAmount = it.size.width - maxWidthPx
+                val overflowAmount = it.size.width -
+                    with(density) { maxWidth.roundToPx() }
                 animationDuration = overflowAmount.coerceAtLeast(0) * 10
             }, style = style)
     }
-    if (maxWidthPx != null)
+    if (maxWidth != null)
         Box(modifier, Alignment.Center) {
-            content(maxWidthPx)
+            content(maxWidth)
         }
     else BoxWithConstraints(modifier, Alignment.Center) {
-        content(constraints.maxWidth)
+        content(this.maxWidth)
     }
 }

@@ -18,7 +18,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -174,16 +173,16 @@ class MediaControllerViewModel(
 /** A [MediaController] with state provided by an instance of [MediaControllerViewModel]. */
 @Composable fun StatefulMediaController(
     modifier: Modifier = Modifier,
+    sizes: MediaControllerSizes,
     orientation: Orientation,
     backgroundBrush: Brush,
     contentColor: Color,
-    collapsedSize: DpSize,
-    expandedSize: DpSize,
     alignment: BiasAlignment,
     padding: PaddingValues,
     isPlaying: Boolean,
     autoStopTime: Instant?,
     onPlayPauseClick: () -> Unit,
+    onPlayPauseLongClick: () -> Unit,
 ) {
     val viewModel: MediaControllerViewModel = viewModel()
     val context = LocalContext.current
@@ -207,16 +206,16 @@ class MediaControllerViewModel(
 
     MediaController(
         modifier = modifier,
+        sizes = sizes,
         orientation = orientation,
         backgroundBrush = backgroundBrush,
         contentColor = contentColor,
-        collapsedSize = collapsedSize,
-        expandedSize = expandedSize,
         alignment = alignment,
         padding = padding,
         playing = isPlaying,
         autoStopTime = autoStopTime,
         onPlayPauseClick = onPlayPauseClick,
+        onPlayPauseLongClick = onPlayPauseLongClick,
         activePresetNameProvider = viewModel::activePresetName::get,
         activePresetIsModified = viewModel.activePresetIsModified,
         onActivePresetClick = viewModel::onActivePresetClick,

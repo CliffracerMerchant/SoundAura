@@ -6,15 +6,17 @@ package com.cliffracertech.soundaura
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
@@ -25,11 +27,80 @@ import androidx.compose.ui.unit.*
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import java.time.Duration
 import java.time.Instant
 
-private const val tweenDuration = 250
+const val tweenDuration = 250
+
+/**
+ * A collection of sizes that the composable [MediaController] uses to
+ * determine its overall size. The method [collapsedWidth] can be used to
+ * obtain the width of a [MediaController] given the provided sizes and whether
+ * or not the [MediaController] is showing an auto stop time. The method
+ * [rememberCurrentSize]
+ *
+ * @param collapsedHeight The height of the [MediaController] in its collapsed
+ *     state. This value will also be used as the width of the play/pause/stop
+ *     button.
+ * @param activePresetWidth The width of the active preset indicator
+ *     in the [MediaController]'s collapsed state. Because the active preset
+ *     indicator is given a weight of 1 within the layout, the value passed
+ *     here is not guaranteed if the width of the layout would exceed
+ *     [maxTotalCollapsedWidth].
+ * @param autoStopTimeWidth The width of the auto stop time indicator
+ * @param
+ */
+data class MediaControllerSizes(
+    val collapsedHeight: Dp = defaultHeightDp.dp,
+    val activePresetWidth: Dp,
+    val autoStopTimeWidth: Dp = defaultAutoStopTimeWidthDp.dp,
+    val maxCollapsedWidth: Dp = Dp.Infinity,
+    val presetSelectorSize: DpSize,
+) {
+    val playPauseButtonSize get() = collapsedHeight
+
+    /** Return the size of a collapsed [MediaController] (i.e. when its
+     * showingPresetSelector parameter is false) given whether or not the
+     * auto stop time is being shown or not. */
+    fun collapsedWidth(showingAutoStopTime: Boolean): Dp {
+        val buttonWidth = collapsedHeight
+        val stopTimeActualWidth = if (!showingAutoStopTime) 0.dp
+                                  else autoStopTimeWidth
+        return (activePresetWidth + buttonWidth + stopTimeActualWidth)
+                .coerceAtMost(maxCollapsedWidth)
+    }
+
+    /** Return the [DpSize] that the active preset indicator should match. This
+     * value's width might be different than the [activePresetWidth] parameter
+     * due to the [maxCollapsedWidth] restriction. */
+    fun activePresetSize(showingAutoStopTime: Boolean): DpSize {
+        val collapsedWidth = collapsedWidth(showingAutoStopTime)
+        val stopTimeActualWidth = if (!showingAutoStopTime) 0.dp
+                                  else autoStopTimeWidth
+        val width = collapsedWidth - playPauseButtonSize - stopTimeActualWidth
+        return DpSize(width, collapsedHeight)
+    }
+
+    /** Return the [DpSize] that the auto stop time indicator should match. */
+    fun autoStopTimeSize() = DpSize(autoStopTimeWidth, collapsedHeight)
+
+    /** Return a remembered current size of a [MediaController] instance given
+     * whether or not the preset selector is being shown and whether an auto
+     * stop time is being displayed. */
+    @Composable fun rememberCurrentSize(
+        showingPresetSelector: Boolean,
+        showingAutoStopTime: Boolean,
+    ) = remember(showingPresetSelector, showingAutoStopTime) {
+        if (showingPresetSelector)
+            presetSelectorSize
+        else DpSize(collapsedWidth(showingAutoStopTime), collapsedHeight)
+    }
+
+    companion object {
+        const val defaultHeightDp = 56
+        const val defaultAutoStopTimeWidthDp = 66
+    }
+}
 
 fun Modifier.rotateClockwise() = layout { measurable, constraints ->
     val placeable = measurable.measure(constraints.copy(
@@ -48,7 +119,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
 @Composable private fun ActivePresetIndicator(
     modifier: Modifier = Modifier,
     orientation: Orientation,
-    maxWidthPx: Int,
+    width: Dp,
     activePresetNameProvider: () -> String?,
     activeIsModified: Boolean,
     onClick: () -> Unit,
@@ -73,7 +144,7 @@ val Orientation.isVertical get() = this == Orientation.Vertical
             MarqueeText(
                 text = activePresetName ?:
                     stringResource(R.string.unsaved_preset_description),
-                maxWidthPx = maxWidthPx,
+                maxWidth = width,
                 modifier = Modifier.weight(1f, false),
                 style = style)
             if (activeIsModified)
@@ -82,22 +153,34 @@ val Orientation.isVertical get() = this == Orientation.Vertical
     }
 }
 
-@Composable private fun MediaControllerPlayPauseStopButton(
-    expandTransition: Transition<Boolean>,
+@Composable private fun PlayPauseCloseButton(
+    modifier: Modifier = Modifier,
+    showClose: Boolean,
+    exitingClose: Boolean,
     isPlaying: Boolean,
     onPlayPauseClick: () -> Unit,
+    onPlayPauseLongClick: () -> Unit,
     onCloseButtonClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) = IconButton(modifier = modifier, onClick = {
-    if (expandTransition.targetState)
-        onCloseButtonClick()
-    else onPlayPauseClick()
-}) {
+) = Box(
+    contentAlignment = Alignment.Center,
+    modifier = modifier.clip(CircleShape).combinedClickable(
+        onLongClickLabel = stringResource(
+            R.string.play_pause_button_long_click_description),
+        onLongClick = {
+            if (!showClose) onPlayPauseLongClick()
+        }, onClickLabel = stringResource(when {
+            showClose -> R.string.close_preset_selector_description
+            isPlaying -> R.string.pause_button_description
+            else ->      R.string.play_button_description
+        }), onClick = {
+            if (showClose) onCloseButtonClick()
+            else           onPlayPauseClick()
+        }),
+) {
     PlayPauseCloseIcon(
-        showClose = expandTransition.targetState,
+        showClose = showClose,
         isPlaying = isPlaying,
-        closeToPlayPause = !expandTransition.targetState &&
-                           expandTransition.currentState,
+        exitingClose = exitingClose,
         contentDescriptionProvider = { showClose, isPlaying ->
             stringResource(when {
                 showClose -> R.string.close_preset_selector_description
@@ -107,23 +190,85 @@ val Orientation.isVertical get() = this == Orientation.Vertical
         })
 }
 
+fun Duration.toHMMSSstring() = String.format(
+    "%2d:%02d:%02d", toHoursPart(), toMinutesPart(), toSecondsPart())
+
+@Composable fun AutoStopTimeDisplay(
+    autoStopTime: Instant?,
+    modifier: Modifier = Modifier,
+) = Column(
+    modifier = modifier,
+    horizontalAlignment = Alignment.CenterHorizontally,
+    verticalArrangement = Arrangement.Center
+) {
+    var durationRemaining by remember(autoStopTime) {
+        mutableStateOf(autoStopTime?.let {
+            Duration.between(Instant.now(), it)
+        })
+    }
+    var durationRemainingString by remember {
+        mutableStateOf(durationRemaining?.toHMMSSstring())
+    }
+    LaunchedEffect(autoStopTime) {
+        while (durationRemaining != null) {
+            delay(1000)
+            durationRemaining?.minusSeconds(1)?.let {
+                durationRemaining = it
+                durationRemainingString = it.toHMMSSstring()
+            }
+        }
+    }
+    val style = MaterialTheme.typography.caption
+    Text("for", style = style)
+    Text(durationRemainingString ?: "", style = style)
+}
+
+/**
+ * Show either the active [Preset] information and the play/pause button,
+ * or the title and close button of the preset selector.
+ *
+ * @param modifier The [Modifier] to use for the composable
+ * @param orientation The [Orientation] value that determines whether the
+ *     composable will be shown horizontally or vertically
+ * @param transition The [Transition]`<Boolean>` whose state indicates
+ *     the current showing / not showing preset selector state
+ * @param transitionProgressProvider A method that returns the current
+ *     progress of the transition when invoked
+ * @param playing Whether or not media is playing, used to determine the
+ *     icon displayed in the play/pause button
+ * @param autoStopTime The [Instant] at which media will automatically
+ *     stop playing, if any. This value is only used for informational
+ *     display; playback is not affected by this value
+ * @param onActivePresetClick The method that will be invoked when the
+ *     active preset display to the left/top of the play/pause button
+ *     is clicked
+ * @param onPlayPauseClick The method that will be invoked when the
+ *     play/pause button is clicked
+ * @param onCloseButtonClick The method that will be invoked when the
+ *     close button of the preset selector title is clicked
+ * @param activePresetNameProvider A method that will return the active
+ *     preset's name when invoked, if any
+ * @param activePresetIsModified Whether or not the active preset is modified
+ */
 @Composable private fun MediaControllerAndPresetSelectorTitle(
     modifier: Modifier = Modifier,
     orientation: Orientation,
-    maxWidthPx: Int,
-    expandTransition: Transition<Boolean>,
+    transition: Transition<Boolean>,
     transitionProgressProvider: () -> Float,
+    sizes: MediaControllerSizes,
     playing: Boolean,
     autoStopTime: Instant?,
     onActivePresetClick: () -> Unit,
     onPlayPauseClick: () -> Unit,
+    onPlayPauseLongClick: () -> Unit,
     onCloseButtonClick: () -> Unit,
     activePresetNameProvider: () -> String?,
     activePresetIsModified: Boolean,
 ) = Box(modifier = modifier.fillMaxWidth()) {
-    val isFullyCollapsed = !expandTransition.targetState &&
-                           !expandTransition.currentState
-    if (!isFullyCollapsed)
+    val fullyCollapsed = !transition.currentState && !transition.targetState
+    val fullyExpanded = transition.currentState && transition.targetState
+
+    if (!fullyCollapsed)
         Text(stringResource(R.string.preset_selector_title),
             modifier = Modifier
                 .align(Alignment.Center)
@@ -131,81 +276,70 @@ val Orientation.isVertical get() = this == Orientation.Vertical
             maxLines = 1, softWrap = false,
             style = MaterialTheme.typography.h6)
 
-    val isFullyExpanded = expandTransition.targetState &&
-                          expandTransition.currentState
+    val stopTimeAppearanceTransition = updateTransition(
+        targetState = !transition.targetState && autoStopTime != null,
+        label = "AUto stop time appearance transition")
+    val showingAutoStopTime = stopTimeAppearanceTransition.targetState
+    val autoStopTimeWidth = if (!showingAutoStopTime) 0.dp
+                            else sizes.autoStopTimeWidth
     val density = LocalDensity.current
-    if (!isFullyExpanded) {
-        val maxWidth = maxWidthPx - with (density) { 56.dp.roundToPx() }
-        if (orientation == Orientation.Horizontal)
-            Row(modifier = Modifier
-                .align(Alignment.CenterStart)
-                .height(56.dp)
-                .padding(end = 52.dp)
-                .graphicsLayer { alpha = 1f - transitionProgressProvider() },
-            ) {
-                ActivePresetIndicator(
-                    modifier = Modifier.weight(1f),
-                    orientation = Orientation.Horizontal,
-                    maxWidthPx = maxWidth,
-                    activePresetNameProvider = activePresetNameProvider,
-                    activeIsModified = activePresetIsModified,
-                    onClick = onActivePresetClick)
-                VerticalDivider(heightFraction = 0.8f)
-            }
-        else Column(modifier = Modifier
-            .align(Alignment.CenterEnd)
-            .width(56.dp)
-            .padding(bottom = 52.dp)
-            .graphicsLayer { alpha = 1f - transitionProgressProvider() }
+
+    if (!fullyExpanded) {
+        val size = sizes.activePresetSize(showingAutoStopTime)
+        Row(modifier = Modifier
+            .align(Alignment.CenterStart)
+            .size(size)
+            .graphicsLayer { alpha = 1f - transitionProgressProvider() },
         ) {
             ActivePresetIndicator(
                 modifier = Modifier.weight(1f),
-                orientation = Orientation.Vertical,
-                maxWidthPx = maxWidth,
+                orientation = Orientation.Horizontal,
+                width = size.width - (1.5).dp,
                 activePresetNameProvider = activePresetNameProvider,
                 activeIsModified = activePresetIsModified,
                 onClick = onActivePresetClick)
-            HorizontalDivider(widthFraction = 0.8f)
+            VerticalDivider(heightFraction = 0.8f)
         }
     }
 
-    Row(Modifier.align(Alignment.BottomEnd)) {
-        // This extra x offset when the view is expanded makes the close
-        // button align with the more options buttons for each listed preset
-        val closeButtonXOffset = remember { with (density) { 4.dp.toPx() } }
-        MediaControllerPlayPauseStopButton(
-            expandTransition, playing, onPlayPauseClick, onCloseButtonClick,
-            Modifier.size(56.dp).graphicsLayer {
-                translationX = -closeButtonXOffset * transitionProgressProvider()
-            })
-        if (autoStopTime != null && !isFullyExpanded)
-            Column(Modifier.height(56.dp).graphicsLayer {
-                alpha = 1f - transitionProgressProvider()
-            }, Arrangement.Center, Alignment.CenterHorizontally) {
-                val totalDuration = remember(autoStopTime) {
-                    Duration.between(Instant.now(), autoStopTime)
-                }
-                var durationRemaining by remember(totalDuration) {
-                    mutableStateOf(totalDuration)
-                }
-                LaunchedEffect(autoStopTime) {
-                    while(isActive) {
-                        delay(1000)
-                        durationRemaining = durationRemaining.minusSeconds(1)
-                    }
-                }
-                val durationRemainingString = durationRemaining.toHHMMSSstring()
-                val style = MaterialTheme.typography.caption
+    val buttonXOffset by animateFloatAsState(
+        animationSpec = tween(tweenDuration),
+        targetValue = when {
+            transition.targetState ->
+                // This extra x offset when the view is expanded makes the close
+                // button align with the more options buttons for each listed preset
+                with(density) { 4.dp.toPx() }
+            stopTimeAppearanceTransition.targetState ->
+                with(density) { autoStopTimeWidth.toPx() }
+            else -> 0f
+        }, label = "Preset selector close button x offset animation")
 
-                Text("for", style = style)
-                Text(durationRemainingString, style = style)
-            }
+    PlayPauseCloseButton(
+        modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .size(sizes.collapsedHeight)
+            .graphicsLayer { translationX = -buttonXOffset },
+        showClose = transition.targetState,
+        exitingClose = !transition.targetState && transition.currentState,
+        playing, onPlayPauseClick, onPlayPauseLongClick, onCloseButtonClick)
+
+    val stopTimeAlpha by stopTimeAppearanceTransition.animateFloat(
+        transitionSpec = { tween(tweenDuration) },
+        targetValueByState = { if (it) 1f else 0f },
+        label = "Auto stop time fade in/out animation")
+    if (stopTimeAlpha > 0f) {
+        Row(modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .requiredSize(sizes.autoStopTimeSize())
+                .graphicsLayer { alpha = stopTimeAlpha },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            VerticalDivider(heightFraction = 0.8f)
+            AutoStopTimeDisplay(autoStopTime,
+                Modifier.weight(1f).padding(end = 6.dp))
+        }
     }
-
 }
-
-private fun Duration.toHHMMSSstring() = String.format(
-    "%2d:%02d:%02d", toHoursPart(), toMinutesPart(), toSecondsPart())
 
 /**
  * A floating button that shows information about the currently playing [Preset]
@@ -216,12 +350,12 @@ private fun Duration.toHHMMSSstring() = String.format(
  * @param modifier The [Modifier] to use for the button / popup
  * @param orientation An [Orientation] value that indicates how the media
  *     controller should orient itself
+ * @param sizes The [MediaControllerSizes] instance that describes the sizes
+ *     of [MediaController]'s internal elements.
  * @param backgroundBrush A [Brush] to use as the background. This is passed
  *     as a separate parameter instead of allowing the caller to accomplish
  *     this through a [Modifier] so that the [Brush] can be applied across the
  *     whole parent size, and then clipped down to the size of the contents.
- * @param collapsedSize The size of the media controller when [showingPresetSelector] is false
- * @param expandedSize The size of the media controller when [showingPresetSelector] is true
  * @param alignment The [BiasAlignment] to use for placement. This alignment should
  *     not be applied through the [modifier] parameter or it will be applied twice.
  * @param padding The [PaddingValues] to use for placement. This padding should not
@@ -234,6 +368,8 @@ private fun Duration.toHHMMSSstring() = String.format(
  *     stopped. MediaController does not use this information to affect playback; the
  *     value of autoStopTime is only used to display this information to the user.
  * @param onPlayPauseClick The callback that will be invoked when the play/pause button is clicked
+ * @param onPlayPauseLongClick The callback that will be invoked the the
+ *     play/pause button is long clicked
  * @param activePresetNameProvider A function that returns the actively
  *     playing [Preset]'s name, or null if there isn't one, when invoked
  * @param activePresetIsModified Whether or not the active preset has unsaved changes
@@ -246,15 +382,15 @@ private fun Duration.toHHMMSSstring() = String.format(
 @Composable fun MediaController(
     modifier: Modifier = Modifier,
     orientation: Orientation,
+    sizes: MediaControllerSizes,
     backgroundBrush: Brush,
     contentColor: Color,
-    collapsedSize: DpSize,
-    expandedSize: DpSize,
     alignment: BiasAlignment,
     padding: PaddingValues,
     playing: Boolean,
     autoStopTime: Instant?,
     onPlayPauseClick: () -> Unit,
+    onPlayPauseLongClick: () -> Unit,
     activePresetNameProvider: () -> String?,
     activePresetIsModified: Boolean,
     onActivePresetClick: () -> Unit,
@@ -262,84 +398,71 @@ private fun Duration.toHHMMSSstring() = String.format(
     presetListCallback: PresetListCallback,
     onCloseButtonClick: () -> Unit,
 ) = CompositionLocalProvider(LocalContentColor provides contentColor) {
-    val expandTransition = updateTransition(
-        targetState = showingPresetSelector,
-        label = "FloatingMediaController transition")
-    val transitionProgress by expandTransition.animateFloat(
-        transitionSpec = { tween(tweenDuration) },
-        label = "FloatingMediaController transition progress",
-        targetValueByState = { if (it) 1f else 0f })
-    val animatedWidth by expandTransition.animateDp(
-        transitionSpec = { tween(tweenDuration) },
-        label = "FloatingMediaController width transition",
-        targetValueByState = { if (it) expandedSize.width
-                               else    collapsedSize.width })
-    val animatedHeight by expandTransition.animateDp(
-        transitionSpec = { tween(tweenDuration) },
-        label = "FloatingMediaController height transition",
-        targetValueByState = { if (it) expandedSize.height
-                               else    collapsedSize.height })
+    val isExpanded = remember { MutableTransitionState(showingPresetSelector) }
+    isExpanded.targetState = showingPresetSelector
 
-    val density = LocalDensity.current
-    val cornerRadius = remember {
-        val radius = with (density) { 28.dp.toPx() }
-        CornerRadius(radius, radius)
-    }
+    val expandTransition = updateTransition(
+        isExpanded, "FloatingMediaController transition")
+    val expandTransitionProgress by expandTransition.animateFloat(
+        transitionSpec = { tween(tweenDuration) },
+        label = "FloatingMediaController expand transition progress",
+        targetValueByState = { if (it) 1f else 0f })
+
     ClippedBrushBox(
         modifier = modifier,
         brush = backgroundBrush,
-        width = animatedWidth,
-        height = animatedHeight,
-        cornerRadius = cornerRadius,
+        size = sizes.rememberCurrentSize(
+            showingPresetSelector = showingPresetSelector,
+            showingAutoStopTime = autoStopTime != null),
+        cornerRadius = 28.dp,
         padding = padding,
         alignment = alignment,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            val showingAutoStopTime = autoStopTime != null
             val titleHeight by expandTransition.animateDp(
                 transitionSpec = { tween(tweenDuration) },
                 label = "FloatingMediaController title height transition",
             ) { expanded ->
-                if (expanded && orientation.isVertical)
-                    collapsedSize.width
-                else collapsedSize.height
+                if (!expanded && orientation.isVertical)
+                    sizes.collapsedWidth(showingAutoStopTime)
+                else sizes.collapsedHeight
             }
             MediaControllerAndPresetSelectorTitle(
                 modifier = Modifier.height(titleHeight),
                 orientation = orientation,
-                maxWidthPx = with(LocalDensity.current) {
-                    collapsedSize.width.roundToPx()
-                }, expandTransition = expandTransition,
-                transitionProgressProvider = { transitionProgress },
+                transition = expandTransition,
+                transitionProgressProvider = { expandTransitionProgress },
+                sizes = sizes,
                 playing = playing,
                 autoStopTime = autoStopTime,
                 onActivePresetClick = onActivePresetClick,
                 onPlayPauseClick = onPlayPauseClick,
+                onPlayPauseLongClick = onPlayPauseLongClick,
                 onCloseButtonClick = onCloseButtonClick,
                 activePresetNameProvider = activePresetNameProvider,
                 activePresetIsModified = activePresetIsModified)
 
             val listPadding = 8.dp
-            val shape = MaterialTheme.shapes.large
-            val presetListSize = remember {
-                val expandedTitleHeight =
-                    if (orientation.isVertical) collapsedSize.width
-                    else                        collapsedSize.height
-                DpSize(expandedSize.width - listPadding * 2,
-                       expandedSize.height - expandedTitleHeight - listPadding)
+            val presetListSize = remember(sizes) {
+                val expandedTitleHeight = sizes.collapsedHeight
+                DpSize(sizes.presetSelectorSize.width - listPadding * 2,
+                       sizes.presetSelectorSize.height - expandedTitleHeight - listPadding)
             }
-            val minScaleX = remember {
-                (collapsedSize.width - listPadding * 2) /
-                (expandedSize.width - listPadding * 2)
+            val minScaleX = remember(sizes, autoStopTime == null) {
+                val collapsedWidth = sizes.collapsedWidth(autoStopTime != null)
+                (collapsedWidth - listPadding * 2) / presetListSize.width
             }
-            if (expandTransition.run { currentState || isRunning })
+            if (expandTransitionProgress > 0f)
                 PresetList(
                     modifier = Modifier
                         .requiredSize(presetListSize)
                         .graphicsLayer {
-                            alpha = transitionProgress
-                            scaleY = transitionProgress
-                            scaleX = minScaleX + (1f - minScaleX) * transitionProgress
-                        }.background(MaterialTheme.colors.surface, shape),
+                            alpha = expandTransitionProgress
+                            scaleY = expandTransitionProgress
+                            scaleX = minScaleX + (1f - minScaleX) * expandTransitionProgress
+                        }.background(MaterialTheme.colors.surface,
+                                     MaterialTheme.shapes.large),
                     contentPadding = PaddingValues(bottom = 64.dp),
                     activePresetNameProvider = activePresetNameProvider,
                     activePresetIsModified = activePresetIsModified,
@@ -384,14 +507,16 @@ fun MediaControllerPreview() = SoundAuraTheme {
                     listOf(MaterialTheme.colors.primaryVariant,
                            MaterialTheme.colors.secondaryVariant)),
                 contentColor = MaterialTheme.colors.onPrimary,
-                collapsedSize = DpSize(220.dp, 56.dp),
-                expandedSize = DpSize(388.dp, 250.dp),
+                sizes = MediaControllerSizes(
+                    activePresetWidth = 200.dp - 56.dp,
+                    presetSelectorSize = DpSize(388.dp, 250.dp)),
                 alignment = Alignment.BottomStart as BiasAlignment,
                 padding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 8.dp),
                 showingPresetSelector = expanded,
                 playing = playing,
                 autoStopTime = null,
                 onPlayPauseClick = { playing = !playing },
+                onPlayPauseLongClick = {},
                 activePresetNameProvider = activePresetName::value::get,
                 activePresetIsModified = true,
                 onActivePresetClick = { expanded = true },
