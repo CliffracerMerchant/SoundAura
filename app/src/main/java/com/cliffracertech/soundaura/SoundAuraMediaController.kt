@@ -3,7 +3,6 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,7 +13,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -171,12 +169,9 @@ class MediaControllerViewModel(
 }
 
 /** A [MediaController] with state provided by an instance of [MediaControllerViewModel]. */
-@Composable fun StatefulMediaController(
+@Composable fun SoundAuraMediaController(
     modifier: Modifier = Modifier,
     sizes: MediaControllerSizes,
-    orientation: Orientation,
-    backgroundBrush: Brush,
-    contentColor: Color,
     alignment: BiasAlignment,
     padding: PaddingValues,
     isPlaying: Boolean,
@@ -186,10 +181,16 @@ class MediaControllerViewModel(
 ) {
     val viewModel: MediaControllerViewModel = viewModel()
     val context = LocalContext.current
+
+    val startColor = MaterialTheme.colors.primaryVariant
+    val endColor = MaterialTheme.colors.secondaryVariant
+    val backgroundBrush = remember(startColor, endColor) {
+        Brush.horizontalGradient(colors = listOf(startColor, endColor))
+    }
+
     val renameErrorMessage = remember { derivedStateOf {
         viewModel.proposedPresetNameErrorMessage?.resolve(context)
     }}
-
     val presetListCallback = remember { object: PresetListCallback {
         override val listProvider = viewModel::presetList::get
         override val renameTargetProvider = viewModel::renameDialogTarget::get
@@ -207,9 +208,8 @@ class MediaControllerViewModel(
     MediaController(
         modifier = modifier,
         sizes = sizes,
-        orientation = orientation,
         backgroundBrush = backgroundBrush,
-        contentColor = contentColor,
+        contentColor = MaterialTheme.colors.onPrimary,
         alignment = alignment,
         padding = padding,
         playing = isPlaying,

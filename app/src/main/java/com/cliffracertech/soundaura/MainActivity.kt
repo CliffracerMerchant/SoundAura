@@ -14,8 +14,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.animation.*
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -31,12 +30,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModel
@@ -215,6 +212,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun mainContentAdditionalEndMargin(widthIsConstrained: Boolean) =
+        if (widthIsConstrained) 0.dp
+        else MediaControllerSizes.defaultAutoStopTimeWidthDp.dp + 8.dp
+
     @Composable private fun MainContent(
         widthIsConstrained: Boolean,
         padding: PaddingValues,
@@ -233,12 +234,12 @@ class MainActivity : ComponentActivity() {
         ) { showingAppSettingsScreen ->
             if (showingAppSettingsScreen)
                 AppSettings(padding)
-            else StatefulTrackList(
+            else SoundAuraTrackList(
                 // The track list's padding must be adjusted
                 // depending on the placement of the FABs.
                 padding = remember(padding, widthIsConstrained) {
                     PaddingValues(padding, ld,
-                        additionalEnd = if (widthIsConstrained) 0.dp else 64.dp,
+                        additionalEnd = mainContentAdditionalEndMargin(widthIsConstrained),
                         additionalBottom = if (widthIsConstrained) 64.dp else 0.dp)
                 }, state = trackListState,
                 onVolumeChange = { uri, volume ->
@@ -253,6 +254,7 @@ class MainActivity : ComponentActivity() {
 
         AddTrackButton(
             visible = !showingAppSettings,
+            widthIsConstrained = widthIsConstrained,
             modifier = Modifier.padding(padding))
     }
 
@@ -265,35 +267,39 @@ class MainActivity : ComponentActivity() {
         val contentAreaSize = remember(padding) {
             val startPadding = padding.calculateStartPadding(ld)
             val endPadding = padding.calculateEndPadding(ld)
-            val width = maxWidth - startPadding - endPadding
-
             val topPadding = padding.calculateTopPadding()
             val bottomPadding = padding.calculateBottomPadding()
-            val height = maxHeight - topPadding - bottomPadding
-
-            DpSize(width, height)
+            DpSize(maxWidth - startPadding - endPadding,
+                   maxHeight - topPadding - bottomPadding)
         }
 
         val mediaControllerSizes = remember(padding, alignToEnd) {
-            // The goal is to have the media controller have such a width/
-            // height that the play/pause icon is centered in the content area's
-            // width in portrait mode, or centered in the content area's height
-            // in landscape mode. This preferred width/height is found by adding
-            // half of the play/pause button's width to half of the width/height
-            // of the content area. The min value between this preferred width/
-            // height and the full content area width/ height minus 64dp (i.e.
-            // the add button's 56dp size plus an 8dp margin) is then used to
-            // ensure that for small screen sizes the media controller can't
-            // overlap the add track button.
-            val buttonSize = MediaControllerSizes.defaultHeightDp.dp
-            val extraWidth = buttonSize / 2f
-            val minWidth = if (alignToEnd) contentAreaSize.height / 2f + extraWidth
-                           else            contentAreaSize.width / 2f + extraWidth
-            val maxWidth = if (alignToEnd) contentAreaSize.height - 64.dp
-                           else            contentAreaSize.width - 64.dp
+            // The goal is to have the media controller have such a length that
+            // the play/pause icon is centered in the content area's width in
+            // portrait mode, or centered in the content area's height in
+            // landscape mode. This preferred length is found by adding half of
+            // the play/pause button's size and the auto stop time indicator's
+            // length (in case it needs to be displayed) to half of the length of
+            // the content area. The min value between this preferred length and
+            // the full content area length minus 64dp (i.e. the add button's 56dp
+            // size plus an 8dp margin) is then used to ensure that for small
+            // screen sizes the media controller can't overlap the add button.
+            val buttonLength = MediaControllerSizes.defaultButtonLengthDp.dp
+            val dividerThickness = MediaControllerSizes.dividerThicknessDp.dp
+            val autoStopTimeLength =
+                if (alignToEnd) MediaControllerSizes.defaultAutoStopTimeHeightDp.dp
+                else            MediaControllerSizes.defaultAutoStopTimeWidthDp.dp
+            val extraLength = buttonLength / 2f + autoStopTimeLength
+            val length = if (alignToEnd) contentAreaSize.height / 2f + extraLength
+                         else            contentAreaSize.width / 2f + extraLength
+            val maxLength = if (alignToEnd) contentAreaSize.height - 64.dp
+                             else            contentAreaSize.width - 64.dp
+            val activePresetLength = minOf(length, maxLength) - buttonLength -
+                                     dividerThickness - autoStopTimeLength
             MediaControllerSizes(
-                activePresetWidth = minWidth - buttonSize,
-                maxCollapsedWidth = maxWidth,
+                orientation = if (alignToEnd) Orientation.Vertical
+                              else            Orientation.Horizontal,
+                activePresetLength = activePresetLength,
                 presetSelectorSize = DpSize(
                     width = contentAreaSize.width * if (alignToEnd) 0.6f
                                                     else            1.0f,
@@ -319,17 +325,8 @@ class MainActivity : ComponentActivity() {
                    scaleOut(anticipateTween(delay = 75),
                             transformOrigin = transformOrigin)
         ) {
-            val startColor = MaterialTheme.colors.primaryVariant
-            val endColor = MaterialTheme.colors.secondaryVariant
-            val backgroundBrush = remember(startColor, endColor) {
-                Brush.horizontalGradient(colors = listOf(startColor, endColor))
-            }
-            StatefulMediaController(
+            SoundAuraMediaController(
                 sizes = mediaControllerSizes,
-                orientation = if (alignToEnd) Orientation.Vertical
-                              else            Orientation.Horizontal,
-                backgroundBrush = backgroundBrush,
-                contentColor = MaterialTheme.colors.onPrimary,
                 alignment = alignment,
                 padding = padding,
                 autoStopTime = autoStopTime,
@@ -346,29 +343,38 @@ class MainActivity : ComponentActivity() {
      * conditionally visible depending on the value of [visible]. */
     @Composable private fun BoxScope.AddTrackButton(
         visible: Boolean,
+        widthIsConstrained: Boolean,
         modifier: Modifier = Modifier,
     ) {
-        val density = LocalDensity.current
         val showingPresetSelector = viewModel.showingPresetSelector
-        // Different stiffnesses are used so that the add button
-        // moves in a swooping movement instead of a linear one
-        val addPresetButtonXOffset by animateFloatAsState(
-            targetValue = if (!showingPresetSelector) 0f
-            else with(density) { (-16).dp.toPx() },
-            animationSpec = tween(250))
-        val addPresetButtonYOffset by animateFloatAsState(
-            targetValue = if (!showingPresetSelector) 0f
-            else with(density) { (-16).dp.toPx() },
-            animationSpec = tween(350))
-
+        // Different stiffnesses are used for the x and y offsets so that the
+        // add button moves in a swooping movement instead of a linear one
+        val addButtonXDpOffset by animateDpAsState(
+            targetValue = when {
+                showingPresetSelector -> (-16).dp
+                widthIsConstrained -> 0.dp
+                else -> {
+                    // We want the x offset to be half of the difference between the
+                    // total end margin and the button size, so that the button appears
+                    // centered within the end margin
+                    val margin = mainContentAdditionalEndMargin(widthIsConstrained)
+                    val buttonSize = 56.dp
+                    (margin - 8.dp - buttonSize) / -2f
+                }
+            }, label = "Add button x offset animation")
+        val addButtonYDpOffset by animateDpAsState(
+            targetValue = if (!showingPresetSelector) 0.dp
+                          else (-16).dp,
+            label = "Add button y offset animation",
+            animationSpec = spring(stiffness = springStiffness))
         AnimatedVisibility( // add track button
             visible = visible,
             modifier = modifier
                 .align(Alignment.BottomEnd)
-                .graphicsLayer {
-                    translationX = addPresetButtonXOffset
-                    translationY = addPresetButtonYOffset
-                },
+                .offset { IntOffset(
+                    addButtonXDpOffset.roundToPx(),
+                    addButtonYDpOffset.roundToPx()
+                )},
             enter = fadeIn(tween()) + scaleIn(overshootTween()),
             exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTween()),
         ) {

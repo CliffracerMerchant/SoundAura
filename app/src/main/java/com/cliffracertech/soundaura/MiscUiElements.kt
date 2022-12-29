@@ -11,6 +11,7 @@ import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -100,9 +101,9 @@ fun Modifier.minTouchTargetSize() =
     // The combination of the two angles allows the icon to always
     // rotate clockwise, instead of alternating between clockwise
     // and counterclockwise.
-    val cwAngle by animateFloatAsState(if (added) 0f else 90f)
-    val ccwAngle by animateFloatAsState(if (added) 180f else 90f)
-    val angle = if (added) ccwAngle else cwAngle
+    val angleMod by animateFloatAsState(if (added) 90f else 0f)
+    val angle = if (added) 90f + angleMod
+                else       90f - angleMod
 
     val iconTint by animateColorAsState(
         if (added) backgroundColor else tint)
@@ -116,48 +117,26 @@ fun Modifier.minTouchTargetSize() =
 }
 
 /**
- * A tri-state animated play / pause / close icon.
+ * A two-state animated play/pause icon.
  *
- * @param showClose Whether the icon should show itself as a close icon
- * @param isPlaying The playing state that the icon should represent when
- *     [showClose] is false. The icon will be a pause icon when [isPlaying]
+ * @param isPlaying The playing state of the media that the icon is
+ *     representing. The icon will be a pause icon when [isPlaying]
  *     is true, or a play icon when [isPlaying] is false.
- * @param exitingClose Whether or not the icon should be transitioning
- *     from the close icon back to the play / pause icon (as opposed to
- *     transitioning between the play and pause icons). This parameter
- *     will have no effect when [showClose] is true, but is necessary
- *     when showClose is false for the correct animations to play.
- * @param contentDescriptionProvider A method that will return the correct
- *     contentDescription for the icon provided the showClose and isPlaying
- *     states
+ * @param contentDescription The contentDescription of the icon
  * @param tint The tint to use for the icon
  */
-@Composable fun PlayPauseCloseIcon(
-    showClose: Boolean,
+@Composable fun PlayPauseIcon(
     isPlaying: Boolean,
-    exitingClose: Boolean,
-    contentDescriptionProvider:
-        @Composable (showClose: Boolean, isPlaying: Boolean) -> String,
+    contentDescription: String,
     tint: Color = LocalContentColor.current
 ) {
     val playToPause = AnimatedImageVector.animatedVectorResource(R.drawable.play_to_pause)
     val playToPausePainter = rememberAnimatedVectorPainter(playToPause, atEnd = isPlaying)
     val pauseToPlay = AnimatedImageVector.animatedVectorResource(R.drawable.pause_to_play)
     val pauseToPlayPainter = rememberAnimatedVectorPainter(pauseToPlay, atEnd = !isPlaying)
-
-    val playToClose = AnimatedImageVector.animatedVectorResource(R.drawable.play_to_close)
-    val playToClosePainter = rememberAnimatedVectorPainter(playToClose, atEnd = showClose)
-    val pauseToClose = AnimatedImageVector.animatedVectorResource(R.drawable.pause_to_close)
-    val pauseToClosePainter = rememberAnimatedVectorPainter(pauseToClose, atEnd = showClose)
-
-    Icon(contentDescription = contentDescriptionProvider(showClose, isPlaying),
-         tint = tint, painter = when {
-             showClose || exitingClose ->
-                     if (isPlaying) pauseToClosePainter
-                     else           playToClosePainter
-             else -> if (isPlaying) playToPausePainter
-                     else           pauseToPlayPainter
-         })
+    val painter = if (isPlaying) playToPausePainter
+                  else           pauseToPlayPainter
+    Icon(painter, contentDescription, tint = tint)
 }
 
 /** A simple back arrow [IconButton] for when only the onClick needs changed. */
@@ -230,6 +209,16 @@ fun Modifier.minTouchTargetSize() =
     .fillMaxWidth(widthFraction).height((1.5).dp)
     .align(Alignment.CenterHorizontally)
     .background(LocalContentColor.current.copy(alpha = 0.2f)))
+
+@Composable fun Divider(
+    orientation: Orientation,
+    modifier: Modifier = Modifier,
+    sizeFraction: Float = 1f,
+) = Box(modifier
+    .background(LocalContentColor.current.copy(alpha = 0.2f))
+    .then(if (orientation.isHorizontal)
+        Modifier.width((1.5).dp).fillMaxHeight(sizeFraction)
+    else Modifier.fillMaxWidth(sizeFraction).height((1.5).dp)))
 
 /**
  * Compose a bulleted list of [String]s.
@@ -343,4 +332,17 @@ fun Modifier.minTouchTargetSize() =
     else BoxWithConstraints(modifier, Alignment.Center) {
         content(this.maxWidth)
     }
+}
+
+@Composable fun LinearLayout(
+    orientation: Orientation,
+    modifier: Modifier = Modifier,
+    content: @Composable (divider: @Composable () -> Unit) -> Unit
+) {
+    val divider = @Composable {
+        Divider(orientation, sizeFraction = 0.8f)
+    }
+    if (orientation.isHorizontal)
+        Row(modifier) { content(divider) }
+    else Column(modifier) { content(divider) }
 }
