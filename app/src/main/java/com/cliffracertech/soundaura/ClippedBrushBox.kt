@@ -4,7 +4,7 @@
 package com.cliffracertech.soundaura
 
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -51,11 +51,11 @@ val LayoutDirection.isLtr get() = this == LayoutDirection.Ltr
     val animatedWidth by animateDpAsState(
         targetValue = size.width,
         label = "ClippedBrushBox width animation",
-        animationSpec = tween(tweenDuration))
+        animationSpec = spring(stiffness = springStiffness))
     val animatedHeight by animateDpAsState(
         targetValue = size.height,
         label = "ClippedBrushBox height animation",
-        animationSpec = tween(tweenDuration))
+        animationSpec = spring(stiffness = springStiffness))
 
     BoxWithConstraints(Modifier
         .fillMaxSize()
@@ -94,13 +94,13 @@ val LayoutDirection.isLtr get() = this == LayoutDirection.Ltr
  */
 @Composable
 fun BoxWithConstraintsScope.rememberClippedBrushBoxTransformOrigin(
-    dpSize: DpSize,
     alignment: BiasAlignment,
     padding: PaddingValues,
+    dpSize: DpSize,
 ): TransformOrigin {
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
-    return remember {
+    return remember(dpSize, alignment, padding) {
         val size = with(density) { dpSize.toSize() }
         val maxWidth = constraints.maxWidth.toFloat()
         val maxHeight = constraints.maxHeight.toFloat()
@@ -109,8 +109,8 @@ fun BoxWithConstraintsScope.rememberClippedBrushBoxTransformOrigin(
         val yAlignment = alignment.verticalBias / 2f + 0.5f
         val alignmentOffset = Offset(
             x = if (layoutDirection.isLtr)
-                (maxWidth - size.width) * xAlignment
-            else size.width - (maxWidth - size.width) * xAlignment,
+                    (maxWidth - size.width) * xAlignment
+                else size.width - (maxWidth - size.width) * xAlignment,
             y = (maxHeight - size.height) * yAlignment)
 
         val halfSizeOffset = Offset(size.width / 2, size.height / 2)

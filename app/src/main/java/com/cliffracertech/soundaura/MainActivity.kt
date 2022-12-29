@@ -312,9 +312,8 @@ class MainActivity : ComponentActivity() {
         var autoStopTime by remember { mutableStateOf<Instant?>(null) }
 
         val transformOrigin = rememberClippedBrushBoxTransformOrigin(
-            DpSize(height = 56.dp / 2, width =
-                mediaControllerSizes.collapsedWidth(autoStopTime != null) / 2),
-            alignment, padding)
+            alignment, padding,
+            dpSize = mediaControllerSizes.collapsedSize(autoStopTime != null))
 
         AnimatedVisibility(
             visible = visible,
