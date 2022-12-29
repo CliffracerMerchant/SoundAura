@@ -3,6 +3,7 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -170,8 +171,9 @@ val Orientation.isVertical get() = this == Orientation.Vertical
                 maxWidth = sizes.activePresetLength,
                 modifier = Modifier.weight(1f, false),
                 style = style)
-            if (activeIsModified)
-                Text(" *", maxLines = 1, softWrap = false, style = style)
+            AnimatedVisibility(activeIsModified) {
+                Text(" *", style = style)
+            }
         }
     }
 }
