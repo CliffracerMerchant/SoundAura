@@ -98,8 +98,9 @@ data class MediaControllerSizes(
      * showingPresetSelector parameter is false) given whether or not the
      * auto stop time is being shown or not and the orientation. */
     fun collapsedSize(showingAutoStopTime: Boolean): DpSize {
+        // TODO: Figure out why this extra 8.dp is necessary
         val stopTimeLength = if (!showingAutoStopTime) 0.dp
-                             else dividerSize * 5 + autoStopTimeLength
+                             else dividerSize + autoStopTimeLength + 8.dp
         val length = activePresetLength + dividerSize + buttonLength + stopTimeLength
         return DpSize(if (orientation.isHorizontal) length else collapsedThickness,
                       if (orientation.isVertical) length else collapsedThickness)
@@ -441,7 +442,7 @@ fun Duration.toHMMSSstring() = String.format(
                 else sizes.minThickness
             }
 
-            BoxWithConstraints(modifier.height(titleHeight)) {
+            Box(modifier.height(titleHeight)) {
                 if (expandTransitionProgress > 0f)
                     PresetSelectorTitle(
                         sizes, { expandTransitionProgress }, onCloseButtonClick)
