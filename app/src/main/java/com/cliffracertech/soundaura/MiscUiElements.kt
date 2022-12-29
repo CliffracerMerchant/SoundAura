@@ -217,8 +217,8 @@ fun Modifier.minTouchTargetSize() =
 ) = Box(modifier
     .background(LocalContentColor.current.copy(alpha = 0.2f))
     .then(if (orientation.isHorizontal)
-        Modifier.width((1.5).dp).fillMaxHeight(sizeFraction)
-    else Modifier.fillMaxWidth(sizeFraction).height((1.5).dp)))
+              Modifier.width((1.5).dp).fillMaxHeight(sizeFraction)
+          else Modifier.fillMaxWidth(sizeFraction).height((1.5).dp)))
 
 /**
  * Compose a bulleted list of [String]s.
@@ -334,6 +334,13 @@ fun Modifier.minTouchTargetSize() =
     }
 }
 
+/** A layout that acts as either a [Row] (when [orientation] is
+ * [Orientation.Horizontal] or a [Column] (when [orientation] is
+ * [Orientation.Vertical]. A divider within the linear layout can
+ * be created within the [content] lambda with the Composable
+ * lambda divider that is passed into it. The row/column's
+ * alignment will always be Alignment.CenterVertically or
+ * Alignment.CenterHorizontally, respectively.*/
 @Composable fun LinearLayout(
     orientation: Orientation,
     modifier: Modifier = Modifier,
@@ -343,6 +350,6 @@ fun Modifier.minTouchTargetSize() =
         Divider(orientation, sizeFraction = 0.8f)
     }
     if (orientation.isHorizontal)
-        Row(modifier) { content(divider) }
-    else Column(modifier) { content(divider) }
+        Row(modifier, verticalAlignment = Alignment.CenterVertically) { content(divider) }
+    else Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) { content(divider) }
 }

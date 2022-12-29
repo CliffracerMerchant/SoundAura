@@ -247,31 +247,25 @@ fun Duration.toHMMSSstring() = String.format(
     if (progress == 0f) return
 
     val size = sizes.autoStopTimeSize
-
-    if (sizes.orientation.isHorizontal)
-        Row(modifier = modifier
-            .padding(end = 8.dp)
-            .graphicsLayer {
-                alpha = progress
-                translationX = (progress - 1f) * size.height.toPx() / 2
-            }.requiredSize(size),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            VerticalDivider(heightFraction = 0.8f)
-            AutoStopTimeDisplay(autoStopTime, Modifier.weight(1f))
-        }
-    else Column(
-            modifier = modifier
-                .padding(bottom = 8.dp)
-                .graphicsLayer {
-                    alpha = progress
-                    translationY = (progress - 1f) * size.height.toPx() / 2
-                }.requiredSize(size),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            HorizontalDivider(widthFraction = 0.8f)
-            AutoStopTimeDisplay(autoStopTime, Modifier.weight(1f))
-        }
+    val resolvedModifier =
+        if (sizes.orientation.isHorizontal)
+            modifier.padding(end = 8.dp)
+                    .graphicsLayer {
+                        alpha = progress
+                        translationX = (progress - 1f) * size.height.toPx() / 2
+                    }.requiredSize(size)
+        else modifier.padding(bottom = 8.dp)
+                     .graphicsLayer {
+                         alpha = progress
+                         translationY = (progress - 1f) * size.height.toPx() / 2
+                     }.requiredSize(size)
+    LinearLayout(
+        orientation = sizes.orientation,
+        modifier = resolvedModifier,
+    ) { divider ->
+        divider()
+        AutoStopTimeDisplay(autoStopTime, Modifier.fillMaxSize())
+    }
 }
 
 /**
@@ -314,34 +308,20 @@ fun Duration.toHMMSSstring() = String.format(
     onPlayPauseClick: () -> Unit,
     onPlayPauseLongClick: () -> Unit,
     modifier: Modifier = Modifier,
-) = if (sizes.orientation.isHorizontal)
-    Row(modifier.graphicsLayer { alpha = 1f - transitionProgressProvider() },
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        ActivePresetIndicator(sizes, activePresetNameProvider,
-                              activePresetIsModified,
-                              onClick = onActivePresetClick)
-        VerticalDivider(heightFraction = 0.8f)
-        PlayPauseButton(
-            modifier = Modifier.size(sizes.buttonSize),
-            playing, onPlayPauseClick, onPlayPauseLongClick)
-        AutoStopTimeDisplayWithDivider(
-            showAutoStopTime, sizes, autoStopTime)
-    }
-else Column(
-        Modifier.graphicsLayer { alpha = 1f - transitionProgressProvider() },
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        ActivePresetIndicator(sizes, activePresetNameProvider,
-                              activePresetIsModified,
-                              onClick = onActivePresetClick)
-        HorizontalDivider(widthFraction = 0.8f)
-        PlayPauseButton(
-            modifier = Modifier.size(sizes.buttonSize),
-            playing, onPlayPauseClick, onPlayPauseLongClick)
-        AutoStopTimeDisplayWithDivider(
-            showAutoStopTime, sizes, autoStopTime)
-    }
+) = LinearLayout(
+    orientation = sizes.orientation,
+    modifier = modifier.graphicsLayer { alpha = 1f - transitionProgressProvider() }
+) { divider ->
+    ActivePresetIndicator(sizes, activePresetNameProvider,
+                          activePresetIsModified,
+                          onClick = onActivePresetClick)
+    divider()
+    PlayPauseButton(
+        modifier = Modifier.size(sizes.buttonSize),
+        playing, onPlayPauseClick, onPlayPauseLongClick)
+    AutoStopTimeDisplayWithDivider(
+        showAutoStopTime, sizes, autoStopTime)
+}
 
 /**
  * The content of a [MediaController] instance when it is expanded
