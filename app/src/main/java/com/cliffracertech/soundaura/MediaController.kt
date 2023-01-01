@@ -10,7 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -118,6 +118,22 @@ data class MediaControllerSizes(
         else collapsedSize(showingStopTime)
     }
 
+    val activePresetShape =
+        if (orientation.isHorizontal)
+            RoundedCornerShape(28.dp, 0.dp, 0.dp, 28.dp)
+        else RoundedCornerShape(28.dp, 28.dp, 0.dp, 0.dp)
+
+    fun playPauseButtonShape(showingStopTime: Boolean) =
+        if (showingStopTime) RectangleShape
+        else if (orientation.isHorizontal)
+            RoundedCornerShape(0.dp, 28.dp, 28.dp, 0.dp)
+        else RoundedCornerShape(0.dp, 0.dp, 28.dp, 28.dp)
+
+    val stopTimeShape =
+        if (orientation.isHorizontal)
+            RoundedCornerShape(0.dp, 28.dp, 28.dp, 0.dp)
+        else RoundedCornerShape(0.dp, 0.dp, 28.dp, 28.dp)
+
     companion object {
         const val defaultButtonLengthDp = 56
         const val defaultStopTimeWidthDp = 66
@@ -151,11 +167,12 @@ val Orientation.isVertical get() = this == Orientation.Vertical
     val onClickLabel = stringResource(R.string.preset_button_click_label)
     val columnModifier = remember(modifier, sizes.orientation) {
         modifier.size(sizes.activePresetSize)
-            .clickable(true, onClickLabel, Role.Button, onClick)
-            .then(if (sizes.orientation.isHorizontal)
-                      Modifier.padding(start = 12.dp, end = 8.dp)
-                  else Modifier.padding(top = 12.dp, bottom = 8.dp)
-                               .rotateClockwise())
+                .clip(sizes.activePresetShape)
+                .clickable(true, onClickLabel, Role.Button, onClick)
+                .then(if (sizes.orientation.isHorizontal)
+                          Modifier.padding(start = 12.dp, end = 8.dp)
+                    else Modifier.padding(top = 12.dp, bottom = 8.dp)
+                                   .rotateClockwise())
     }
     Column(columnModifier, Arrangement.Center, Alignment.CenterHorizontally) {
         val style = MaterialTheme.typography.caption
@@ -186,7 +203,6 @@ val Orientation.isVertical get() = this == Orientation.Vertical
 ) = Box(
     contentAlignment = Alignment.Center,
     modifier = modifier
-        .clip(CircleShape)
         .combinedClickable(
             onLongClickLabel = stringResource(
                 R.string.play_pause_button_long_click_description),
@@ -244,27 +260,26 @@ fun Duration.toHMMSSstring() = "%d:%02d:%02d".format(
     modifier: Modifier = Modifier,
 ) {
     val progress by animateFloatAsState(
-        targetValue = if (showing) 0f else -1f,
+        targetValue = if (showing) 1f else 0f,
         animationSpec = spring(stiffness = springStiffness),
         label = "Auto stop time appearance transition")
-    if (progress == -1f) return
+    if (progress == 0f) return
 
+    val translationPercent = (1f - progress) / 2f
     val size = sizes.stopTimeSize
-    val resolvedModifier = modifier
-        .requiredSize(size)
-        .then(
-            if (sizes.orientation.isHorizontal)
-                modifier.graphicsLayer {
-                            alpha = progress
-                            translationX = progress * size.width.toPx() / 2
-                        }.padding(end = 8.dp)
-            else modifier.graphicsLayer {
-                             alpha = progress
-                             translationY = progress * size.height.toPx() / 2
-                         }.padding(bottom = 8.dp))
+
     LinearLayout(
         orientation = sizes.orientation,
-        modifier = resolvedModifier,
+        modifier = modifier
+            .requiredSize(size)
+            .clip(sizes.stopTimeShape)
+            .graphicsLayer {
+                alpha = progress
+                translationX = if (sizes.orientation.isVertical) 0f else
+                                   translationPercent * size.width.toPx()
+                translationY = if (sizes.orientation.isHorizontal) 0f else
+                                   translationPercent * size.height.toPx()
+            },
     ) { divider ->
         divider()
         StopTimeDisplay(stopTime, Modifier.fillMaxSize())
@@ -320,7 +335,9 @@ fun Duration.toHMMSSstring() = "%d:%02d:%02d".format(
                           onClick = onActivePresetClick)
     divider()
     PlayPauseButton(
-        modifier = Modifier.size(sizes.buttonSize),
+        modifier = Modifier
+            .size(sizes.buttonSize)
+            .clip(sizes.playPauseButtonShape(showStopTime)) ,
         playing, onPlayPauseClick, onPlayPauseLongClick)
     StopTimeDisplayWithDivider(
         showStopTime, sizes, stopTime)
