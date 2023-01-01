@@ -4,15 +4,13 @@
 package com.cliffracertech.soundaura
 
 import android.util.Range
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
@@ -21,7 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import java.time.Duration
 
@@ -44,27 +44,50 @@ import java.time.Duration
     onAmountChangeRequest: (Int) -> Unit,
 ) {
     val density = LocalDensity.current
-    var valueOnDragStart by remember { mutableStateOf(0) }
-    Column(
-        modifier = modifier
-            .draggable(
-                orientation = Orientation.Vertical,
-                state = rememberDraggableState {
-                    val dp = with (density) { it.toDp() }
-                    val amountChange = -(dp.value.toInt() / 20)
-                    onAmountChangeRequest(valueOnDragStart + amountChange)
-                }, onDragStarted = {
-                    valueOnDragStart = currentValue
-                }),
-        Arrangement.SpaceBetween,
-        Alignment.CenterHorizontally
+    var dragPx by remember { mutableStateOf(0f) }
+    var lastRequestedValue by remember { mutableStateOf(currentValue) }
+    val pxThreshold = remember { with (density) { 20.dp.roundToPx() }}
+
+    Box(modifier
+        .widthIn(min = 48.dp)
+        .heightIn(min = 96.dp)
+        .draggable(
+            orientation = Orientation.Vertical,
+            state = rememberDraggableState {
+                dragPx += it
+                val steps = dragPx.toInt() / pxThreshold
+                // steps is subtracted instead of added so that negative
+                // drag amounts (i.e. upward drags) increase the value
+                // and positive drags (i.e. downward drags) decrease it.
+                val targetValue = currentValue - steps
+                if (lastRequestedValue != targetValue) {
+                    lastRequestedValue = targetValue
+                    onAmountChangeRequest(targetValue)
+                    dragPx -= steps * pxThreshold
+                }
+            }, onDragStarted = { dragPx = 0f }),
     ) {
-        IconButton({ onAmountChangeRequest(currentValue + 1) }) {
-            Icon(Icons.Default.ArrowDropUp, null)
+        IconButton(
+            onClick = { onAmountChangeRequest(currentValue + 1) },
+            modifier = Modifier.align(Alignment.TopCenter)
+        ) {
+            // The icons use asymmetrical padding to give
+            // the text display of the value more room
+            Icon(imageVector = Icons.Default.ArrowDropUp,
+                 contentDescription = null,
+                 modifier = Modifier.padding(bottom = 16.dp))
         }
-        Text(formatString.format(currentValue))
-        IconButton({ onAmountChangeRequest(currentValue - 1) }) {
-            Icon(Icons.Default.ArrowDropDown, null)
+
+        Text(text = formatString.format(currentValue),
+             modifier = Modifier.align(Alignment.Center))
+
+        IconButton(
+            onClick = { onAmountChangeRequest(currentValue - 1) },
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            Icon(imageVector = Icons.Default.ArrowDropDown,
+                 contentDescription = null,
+                 modifier = Modifier.padding(top = 16.dp))
         }
     }
 }
@@ -84,8 +107,15 @@ import java.time.Duration
     currentDuration: Duration,
     bounds: Range<Duration>? = null,
     onDurationChange: (Duration) -> Unit,
-) = Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-
+) = Row(
+    modifier = modifier
+        .border(width = 1.5.dp,
+                color = LocalContentColor.current.copy(alpha = 0.2f),
+                shape = MaterialTheme.shapes.medium)
+        .padding(horizontal = 6.dp),
+    horizontalArrangement = Arrangement.spacedBy(6.dp),
+    verticalAlignment = Alignment.CenterVertically
+) {
     fun Duration.setHours(hours: Int, bounds: Range<Duration>? = null): Duration {
         val result = plusHours(hours.toLong() - toHours().toInt())
         return if (bounds?.contains(result) != false)
@@ -101,16 +131,21 @@ import java.time.Duration
         return if (bounds?.contains(result) != false)
             result else this
     }
-    val hours = currentDuration.toHours().toInt()
-    NumberDial(hours, formatString = "%02d") {
+    val dividerColor = LocalContentColor.current.copy(alpha = 0.2f)
+
+    NumberDial( currentDuration.toHours().toInt(), formatString = "%02d h") {
         onDurationChange(currentDuration.setHours(it, bounds))
     }
-    Text(":")
-    NumberDial(currentDuration.toMinutesPart(), formatString = "%02d") {
+
+    Box(Modifier.size(1.5.dp, 96.dp).background(dividerColor))
+
+    NumberDial(currentDuration.toMinutesPart(), formatString = "%02d m") {
         onDurationChange(currentDuration.setMinutes(it, bounds))
     }
-    Text(":")
-    NumberDial(currentDuration.toSecondsPart(), formatString = "%02d") {
+
+    Box(Modifier.size(1.5.dp, 96.dp).background(dividerColor))
+
+    NumberDial(currentDuration.toSecondsPart(), formatString = "%02d s") {
         onDurationChange(currentDuration.setSeconds(it, bounds))
     }
 }
@@ -159,9 +194,16 @@ fun DurationPickerPreview() = SoundAuraTheme {
                 onConfirm(currentDuration)
         }
     ) {
-        if (description != null)
-            Text(description)
+        if (description != null) {
+            Text(text = description,
+                modifier = Modifier.padding(horizontal = 16.dp),
+                textAlign = TextAlign.Justify)
+            Spacer(Modifier.height(12.dp))
+        }
         DurationPicker(
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .align(Alignment.CenterHorizontally),
             currentDuration = currentDuration,
             onDurationChange = { currentDuration = it },
             bounds = bounds)

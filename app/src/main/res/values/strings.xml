@@ -105,7 +105,9 @@
 
     <string name="set_auto_stop_time_dialog_title">"Set auto stop time</string>
     <string name="set_auto_stop_time_dialog_description">
-        Set the duration in hh:mm:ss after which playback will automatically be stopped.</string>
+        Set the duration after which playback will automatically be stopped.
+        You can change the amounts using the up or down buttons, or by
+        dragging the amount up or down.</string>
 
     <string name="show_active_tracks_first">Show active tracks first</string>
     <string name="name_ascending">Name ascending</string>
