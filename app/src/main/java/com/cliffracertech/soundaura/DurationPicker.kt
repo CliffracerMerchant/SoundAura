@@ -220,7 +220,7 @@ fun DurationPickerPreview() = SoundAuraTheme {
  * @param onConfirm The callback that will be invoked when the user taps the ok
  *     button with a [Duration] that is valid (i.e. within the provided [bounds]
  */
-@Composable fun SetAutoStopTimeDialog(
+@Composable fun SetStopTimeDialog(
     modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
     onConfirm: (Duration) -> Unit,

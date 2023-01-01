@@ -177,9 +177,9 @@ class MediaControllerViewModel(
     alignment: BiasAlignment,
     padding: PaddingValues,
     isPlaying: Boolean,
-    autoStopTime: Instant?,
+    stopTime: Instant?,
     onPlayPauseClick: () -> Unit,
-    onNewAutoStopTimeRequest: (Duration) -> Unit,
+    onNewStopTimeRequest: (Duration) -> Unit,
 ) {
     val viewModel: MediaControllerViewModel = viewModel()
     val context = LocalContext.current
@@ -207,7 +207,7 @@ class MediaControllerViewModel(
         override fun onPresetClick(preset: Preset) = viewModel.onPresetSelectorPresetClick(preset)
     }}
 
-    var showingSetAutoStopTimeDialog by rememberSaveable { mutableStateOf(false) }
+    var showingSetStopTimeDialog by rememberSaveable { mutableStateOf(false) }
 
     MediaController(
         modifier = modifier,
@@ -217,9 +217,9 @@ class MediaControllerViewModel(
         alignment = alignment,
         padding = padding,
         playing = isPlaying,
-        autoStopTime = autoStopTime,
+        stopTime = stopTime,
         onPlayPauseClick = onPlayPauseClick,
-        onPlayPauseLongClick = { showingSetAutoStopTimeDialog = true },
+        onPlayPauseLongClick = { showingSetStopTimeDialog = true },
         activePresetNameProvider = viewModel::activePresetName::get,
         activePresetIsModified = viewModel.activePresetIsModified,
         onActivePresetClick = viewModel::onActivePresetClick,
@@ -236,12 +236,13 @@ class MediaControllerViewModel(
         }
     }
 
-    if (showingSetAutoStopTimeDialog) {
-        SetAutoStopTimeDialog(
-            onDismissRequest = { showingSetAutoStopTimeDialog = false },
-            onConfirm = {
-                onNewAutoStopTimeRequest(it)
-                showingSetAutoStopTimeDialog = false
+    if (showingSetStopTimeDialog) {
+        SetStopTimeDialog(
+            onDismissRequest = {
+                showingSetStopTimeDialog = false
+            }, onConfirm = {
+                onNewStopTimeRequest(it)
+                showingSetStopTimeDialog = false
             })
     }
 }

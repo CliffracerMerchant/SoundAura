@@ -214,7 +214,7 @@ class MainActivity : ComponentActivity() {
 
     private fun mainContentAdditionalEndMargin(widthIsConstrained: Boolean) =
         if (widthIsConstrained) 0.dp
-        else MediaControllerSizes.defaultAutoStopTimeWidthDp.dp + 8.dp
+        else MediaControllerSizes.defaultStopTimeWidthDp.dp + 8.dp
 
     @Composable private fun MainContent(
         widthIsConstrained: Boolean,
@@ -286,16 +286,16 @@ class MainActivity : ComponentActivity() {
             // screen sizes the media controller can't overlap the add button.
             val buttonLength = MediaControllerSizes.defaultButtonLengthDp.dp
             val dividerThickness = MediaControllerSizes.dividerThicknessDp.dp
-            val autoStopTimeLength =
-                if (alignToEnd) MediaControllerSizes.defaultAutoStopTimeHeightDp.dp
-                else            MediaControllerSizes.defaultAutoStopTimeWidthDp.dp
-            val extraLength = buttonLength / 2f + autoStopTimeLength
+            val stopTimeLength =
+                if (alignToEnd) MediaControllerSizes.defaultStopTimeHeightDp.dp
+                else            MediaControllerSizes.defaultStopTimeWidthDp.dp
+            val extraLength = buttonLength / 2f + stopTimeLength
             val length = if (alignToEnd) contentAreaSize.height / 2f + extraLength
                          else            contentAreaSize.width / 2f + extraLength
             val maxLength = if (alignToEnd) contentAreaSize.height - 64.dp
                              else            contentAreaSize.width - 64.dp
             val activePresetLength = minOf(length, maxLength) - buttonLength -
-                                     dividerThickness - autoStopTimeLength
+                                     dividerThickness - stopTimeLength
             MediaControllerSizes(
                 orientation = if (alignToEnd) Orientation.Vertical
                               else            Orientation.Horizontal,
@@ -327,10 +327,10 @@ class MainActivity : ComponentActivity() {
                 sizes = mediaControllerSizes,
                 alignment = alignment,
                 padding = padding,
-                autoStopTime = boundPlayerService?.stopTime,
+                stopTime = boundPlayerService?.stopTime,
                 isPlaying = boundPlayerService?.isPlaying ?: false,
                 onPlayPauseClick = ::onPlayPauseClick,
-                onNewAutoStopTimeRequest = ::onSetTimer)
+                onNewStopTimeRequest = ::onSetTimer)
         }
     }
 
