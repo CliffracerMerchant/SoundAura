@@ -10,6 +10,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -25,6 +26,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
@@ -177,7 +179,7 @@ class MediaControllerViewModel(
     isPlaying: Boolean,
     autoStopTime: Instant?,
     onPlayPauseClick: () -> Unit,
-    onPlayPauseLongClick: () -> Unit,
+    onNewAutoStopTimeRequest: (Duration) -> Unit,
 ) {
     val viewModel: MediaControllerViewModel = viewModel()
     val context = LocalContext.current
@@ -205,6 +207,8 @@ class MediaControllerViewModel(
         override fun onPresetClick(preset: Preset) = viewModel.onPresetSelectorPresetClick(preset)
     }}
 
+    var showingSetAutoStopTimeDialog by rememberSaveable { mutableStateOf(false) }
+
     MediaController(
         modifier = modifier,
         sizes = sizes,
@@ -215,7 +219,7 @@ class MediaControllerViewModel(
         playing = isPlaying,
         autoStopTime = autoStopTime,
         onPlayPauseClick = onPlayPauseClick,
-        onPlayPauseLongClick = onPlayPauseLongClick,
+        onPlayPauseLongClick = { showingSetAutoStopTimeDialog = true },
         activePresetNameProvider = viewModel::activePresetName::get,
         activePresetIsModified = viewModel.activePresetIsModified,
         onActivePresetClick = viewModel::onActivePresetClick,
@@ -230,6 +234,15 @@ class MediaControllerViewModel(
                 onDismissRequest = viewModel::onUnsavedChangesWarningCancel,
                 onConfirm = viewModel::onUnsavedChangesWarningConfirm)
         }
+    }
+
+    if (showingSetAutoStopTimeDialog) {
+        SetAutoStopTimeDialog(
+            onDismissRequest = { showingSetAutoStopTimeDialog = false },
+            onConfirm = {
+                onNewAutoStopTimeRequest(it)
+                showingSetAutoStopTimeDialog = false
+            })
     }
 }
 

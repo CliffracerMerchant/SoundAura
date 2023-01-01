@@ -47,8 +47,8 @@ import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.scopes.ActivityRetainedScoped
+import java.time.Duration
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 @ActivityRetainedScoped
@@ -309,11 +309,10 @@ class MainActivity : ComponentActivity() {
 
         val alignment = if (alignToEnd) Alignment.TopEnd as BiasAlignment
                         else            Alignment.BottomStart as BiasAlignment
-        var autoStopTime by remember { mutableStateOf<Instant?>(null) }
 
         val transformOrigin = rememberClippedBrushBoxTransformOrigin(
             alignment, padding,
-            dpSize = mediaControllerSizes.collapsedSize(autoStopTime != null))
+            dpSize = mediaControllerSizes.collapsedSize(boundPlayerService?.stopTime != null))
 
         AnimatedVisibility(
             visible = visible,
@@ -328,13 +327,10 @@ class MainActivity : ComponentActivity() {
                 sizes = mediaControllerSizes,
                 alignment = alignment,
                 padding = padding,
-                autoStopTime = autoStopTime,
+                autoStopTime = boundPlayerService?.stopTime,
                 isPlaying = boundPlayerService?.isPlaying ?: false,
                 onPlayPauseClick = ::onPlayPauseClick,
-                onPlayPauseLongClick = {
-                    autoStopTime = if (autoStopTime != null) null
-                                   else Instant.now().plus(3, ChronoUnit.HOURS)
-                })
+                onNewAutoStopTimeRequest = ::onSetTimer)
         }
     }
 
@@ -387,6 +383,12 @@ class MainActivity : ComponentActivity() {
 
     private fun onPlayPauseClick() {
         boundPlayerService?.toggleIsPlaying()
+    }
+
+    private fun onSetTimer(duration: Duration) {
+        val stopTimeInstant = Instant.now().plus(duration)
+        val intent = PlayerService.setTimerIntent(this, stopTimeInstant)
+        startService(intent)
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?) =
