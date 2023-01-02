@@ -3,7 +3,7 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import androidx.compose.foundation.gestures.Orientation
+import android.util.Range
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -11,14 +11,13 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -28,6 +27,8 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import java.time.Duration
+import java.time.Instant
 import javax.inject.Inject
 
 @HiltViewModel
@@ -171,24 +172,29 @@ class MediaControllerViewModel(
 }
 
 /** A [MediaController] with state provided by an instance of [MediaControllerViewModel]. */
-@Composable fun StatefulMediaController(
+@Composable fun SoundAuraMediaController(
     modifier: Modifier = Modifier,
-    orientation: Orientation,
-    backgroundBrush: Brush,
-    contentColor: Color,
-    collapsedSize: DpSize,
-    expandedSize: DpSize,
+    sizes: MediaControllerSizes,
     alignment: BiasAlignment,
     padding: PaddingValues,
     isPlaying: Boolean,
+    stopTime: Instant?,
     onPlayPauseClick: () -> Unit,
+    onNewStopTimeRequest: (Duration) -> Unit,
+    onCancelStopTimeRequest: () -> Unit,
 ) {
     val viewModel: MediaControllerViewModel = viewModel()
     val context = LocalContext.current
+
+    val startColor = MaterialTheme.colors.primaryVariant
+    val endColor = MaterialTheme.colors.secondaryVariant
+    val backgroundBrush = remember(startColor, endColor) {
+        Brush.horizontalGradient(colors = listOf(startColor, endColor))
+    }
+
     val renameErrorMessage = remember { derivedStateOf {
         viewModel.proposedPresetNameErrorMessage?.resolve(context)
     }}
-
     val presetListCallback = remember { object: PresetListCallback {
         override val listProvider = viewModel::presetList::get
         override val renameTargetProvider = viewModel::renameDialogTarget::get
@@ -203,32 +209,53 @@ class MediaControllerViewModel(
         override fun onPresetClick(preset: Preset) = viewModel.onPresetSelectorPresetClick(preset)
     }}
 
+    var showingSetStopTimeDialog by rememberSaveable { mutableStateOf(false) }
+    var showingCancelStopTimeDialog by rememberSaveable { mutableStateOf(false) }
+
     MediaController(
         modifier = modifier,
-        orientation = orientation,
+        sizes = sizes,
         backgroundBrush = backgroundBrush,
-        contentColor = contentColor,
-        collapsedSize = collapsedSize,
-        expandedSize = expandedSize,
+        contentColor = MaterialTheme.colors.onPrimary,
         alignment = alignment,
         padding = padding,
-        playing = isPlaying,
-        onPlayPauseClick = onPlayPauseClick,
         activePresetNameProvider = viewModel::activePresetName::get,
         activePresetIsModified = viewModel.activePresetIsModified,
         onActivePresetClick = viewModel::onActivePresetClick,
+        playing = isPlaying,
+        onPlayPauseClick = onPlayPauseClick,
+        onPlayPauseLongClick = { showingSetStopTimeDialog = true },
+        stopTime = stopTime,
+        onStopTimeClick = { showingCancelStopTimeDialog = true },
         showingPresetSelector = viewModel.showingPresetSelector,
         presetListCallback = presetListCallback,
         onCloseButtonClick = viewModel::onCloseButtonClick)
 
-    if (viewModel.showingUnsavedChangesWarning) {
+    if (viewModel.showingUnsavedChangesWarning)
         viewModel.activePresetName?.let { unsavedPresetName ->
             UnsavedPresetChangesWarningDialog(
                 unsavedPresetName = unsavedPresetName,
                 onDismissRequest = viewModel::onUnsavedChangesWarningCancel,
                 onConfirm = viewModel::onUnsavedChangesWarningConfirm)
         }
-    }
+
+    if (showingSetStopTimeDialog)
+        SetStopTimeDialog(
+            onDismissRequest = {
+                showingSetStopTimeDialog = false
+            }, onConfirm = {
+                onNewStopTimeRequest(it)
+                showingSetStopTimeDialog = false
+            })
+
+    if (showingCancelStopTimeDialog)
+        CancelStopTimeDialog(
+            onDismissRequest = {
+                showingCancelStopTimeDialog = false
+            }, onConfirm = {
+                onCancelStopTimeRequest()
+                showingCancelStopTimeDialog = false
+            })
 }
 
 /**
@@ -252,21 +279,61 @@ class MediaControllerViewModel(
         HorizontalDivider(Modifier.padding(top = 12.dp))
         TextButton(
             onClick = onDismissRequest,
-            modifier = Modifier.minTouchTargetSize().fillMaxWidth(),
+            modifier = Modifier
+                .minTouchTargetSize()
+                .fillMaxWidth(),
             shape = RectangleShape,
         ) { Text(stringResource(R.string.cancel)) }
 
         HorizontalDivider()
         TextButton(
             onClick = { onConfirm(true) },
-            modifier = Modifier.minTouchTargetSize().fillMaxWidth(),
+            modifier = Modifier
+                .minTouchTargetSize()
+                .fillMaxWidth(),
             shape = RectangleShape,
         ) { Text(stringResource(R.string.unsaved_preset_changes_warning_save_first_option)) }
 
         HorizontalDivider()
         TextButton(
             onClick = { onConfirm(false) },
-            modifier = Modifier.minTouchTargetSize().fillMaxWidth(),
+            modifier = Modifier
+                .minTouchTargetSize()
+                .fillMaxWidth(),
             shape = MaterialTheme.shapes.medium.bottomShape(),
         ) { Text(stringResource(R.string.unsaved_preset_changes_warning_load_anyways_option)) }
     })
+
+/**
+ * A dialog to pick a [Duration] after which the user's sound mix will
+ * automatically stop playing.
+ *
+ * @param modifier The [Modifier] to use for the dialog
+ * @param onDismissRequest The callback that will be invoked when the user
+ *     attempts to dismiss or cancel the dialog
+ * @param onConfirm The callback that will be invoked when the user taps the ok
+ *     button with a [Duration] that is valid (i.e. within the provided [bounds]
+ */
+@Composable fun SetStopTimeDialog(
+    modifier: Modifier = Modifier,
+    onDismissRequest: () -> Unit,
+    onConfirm: (Duration) -> Unit,
+) = DurationPickerDialog(
+    modifier,
+    title = stringResource(R.string.set_stop_timer_dialog_title),
+    description = stringResource(R.string.set_stop_timer_dialog_description),
+    bounds = Range(Duration.ZERO, Duration.ofHours(100).minusSeconds(1)),
+    onDismissRequest, onConfirm)
+
+/** A dialog that asks the user to confirm that they would
+ * like to cancel the previously set auto stop timer. */
+@Composable fun CancelStopTimeDialog(
+    modifier: Modifier = Modifier,
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit,
+) = SoundAuraDialog(
+    modifier = modifier,
+    title = stringResource(R.string.cancel_stop_timer_dialog_title),
+    text = stringResource(R.string.cancel_stop_timer_dialog_text),
+    onDismissRequest = onDismissRequest,
+    onConfirm = onConfirm)

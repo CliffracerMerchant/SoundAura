@@ -7,8 +7,10 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
 import android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED
-import android.support.v4.media.session.PlaybackStateCompat.*
+import android.os.Handler
+import android.os.Looper
 import android.support.v4.media.session.PlaybackStateCompat
+import android.support.v4.media.session.PlaybackStateCompat.*
 import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,11 +25,18 @@ import androidx.media.AudioAttributesCompat.USAGE_MEDIA
 import androidx.media.AudioFocusRequestCompat
 import androidx.media.AudioManagerCompat
 import androidx.media.AudioManagerCompat.AUDIOFOCUS_GAIN
+import com.cliffracertech.soundaura.PlayerService.Binder
+import com.cliffracertech.soundaura.PlayerService.Companion.PlaybackChangeListener
+import com.cliffracertech.soundaura.PlayerService.Companion.addPlaybackChangeListener
 import com.cliffracertech.soundaura.SoundAura.pref_key_playInBackground
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 /**
@@ -37,7 +46,7 @@ import javax.inject.Inject
  * PlayerService can either be started independently of an activity with a
  * [startService] call, or can be started bound to an activity if the activity
  * calls [bindService]. In the latter case, PlayerService will call [startService]
- * on itself so that it outlives the binding activity. In either case,
+ * on itself so that it outlives the binding activity. In ither case,
  * PlayerService presents a foreground notification to the user that displays
  * its current play/pause state in string form, along with actions to toggle
  * the play/pause state and to close the service. The play/pause action will
@@ -46,6 +55,16 @@ import javax.inject.Inject
  *
  * Changes in the playback state can be listened to by calling the static
  * function [addPlaybackChangeListener] with a [PlaybackChangeListener].
+ * Playback state can be affected by calling startService with an [Intent]
+ * with an action value of [PlayerService.setPlaybackAction], an extra key the
+ * same as the action, and an extra value of the desired [PlaybackStateCompat]
+ * value. A stop timer can be set with an [Intent] with an action value of
+ * [PlayerService.setTimerAction], an extra key the same as the action, and an
+ * extra value that is the milliseconds since 1/01/1970 when playback should be
+ * stopped. A null or zero value can also be passed in for the duration to
+ * cancel a current stop timer. Both of the actions can be accomplished more
+ * easily with the static methods [PlayerService.setPlaybackIntent] and
+ * [PlayerService.setTimerIntent].
  *
  * To ensure that the volume for already playing tracks is changed without
  * perceptible lag, PlayerService will not respond to track volume changes made
@@ -71,7 +90,8 @@ class PlayerService: LifecycleService() {
     private lateinit var audioManager: AudioManager
     private lateinit var notificationManager: PlayerNotification
 
-
+    private val handler = Handler(Looper.getMainLooper())
+    private var stopTime by mutableStateOf<Instant?>(null)
 
     private val playerSet = TrackPlayerSet(this) { uriString ->
         lifecycleScope.launch { trackDao.notifyOfError(uriString) }
@@ -158,9 +178,13 @@ class PlayerService: LifecycleService() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == setPlaybackAction) {
-            val targetState = intent.extras?.getInt(setPlaybackAction)
-            targetState?.let(::setPlaybackState)
+        when (intent?.action) {
+            setPlaybackAction -> {
+                val targetState = intent.extras?.getInt(setPlaybackAction)
+                targetState?.let(::setPlaybackState)
+            } setTimerAction -> {
+                setStopTime(intent.extras?.getLong(setTimerAction))
+            }
         }
         return super.onStartCommand(intent, flags, startId)
     }
@@ -229,6 +253,23 @@ class PlayerService: LifecycleService() {
                 abandonAudioFocus()
             stopSelf()
         }
+    }
+
+    private fun setStopTime(epochTimeMillis: Long?) {
+        if (epochTimeMillis == null || epochTimeMillis == 0L) {
+            stopTime = null
+            handler.removeCallbacks(::autoStop)
+        } else {
+            stopTime = Instant.ofEpochMilli(epochTimeMillis)
+            val countDown = Instant.now()
+                .until(stopTime, ChronoUnit.MILLIS)
+            handler.postDelayed(::autoStop, countDown)
+        }
+    }
+
+    private fun autoStop() {
+        stopTime = null
+        setPlaybackState(STATE_STOPPED)
     }
 
     private fun updatePlayers(tracks: List<ActiveTrack>) {
@@ -313,6 +354,7 @@ class PlayerService: LifecycleService() {
 
     inner class Binder: android.os.Binder() {
         val isPlaying get() = this@PlayerService.isPlaying
+        val stopTime get() = this@PlayerService.stopTime
 
         fun toggleIsPlaying() {
             setPlaybackState(if (isPlaying) STATE_PAUSED
@@ -351,6 +393,7 @@ class PlayerService: LifecycleService() {
     companion object {
         private const val autoPauseAudioFocusLossKey = "auto_pause_audio_focus_loss"
         private const val setPlaybackAction = "com.cliffracertech.soundaura.action.setPlayback"
+        private const val setTimerAction = "com.cliffracertech.soundaura.action.setTimer"
 
         private fun setPlaybackIntent(context: Context, state: Int) =
             Intent(context, PlayerService::class.java)
@@ -360,6 +403,11 @@ class PlayerService: LifecycleService() {
         fun playIntent(context: Context) = setPlaybackIntent(context, STATE_PLAYING)
         fun pauseIntent(context: Context) = setPlaybackIntent(context, STATE_PAUSED)
         fun stopIntent(context: Context) = setPlaybackIntent(context, STATE_STOPPED)
+
+        fun setTimerIntent(context: Context, stopTime: Instant?) =
+            Intent(context, PlayerService::class.java)
+                .setAction(setTimerAction)
+                .putExtra(setTimerAction, stopTime?.toEpochMilli())
 
         fun interface PlaybackChangeListener {
             fun onPlaybackStateChange(newState: Int)

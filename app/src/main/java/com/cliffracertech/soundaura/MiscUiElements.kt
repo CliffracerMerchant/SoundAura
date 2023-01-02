@@ -11,6 +11,7 @@ import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -28,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -40,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
@@ -98,9 +101,9 @@ fun Modifier.minTouchTargetSize() =
     // The combination of the two angles allows the icon to always
     // rotate clockwise, instead of alternating between clockwise
     // and counterclockwise.
-    val cwAngle by animateFloatAsState(if (added) 0f else 90f)
-    val ccwAngle by animateFloatAsState(if (added) 180f else 90f)
-    val angle = if (added) ccwAngle else cwAngle
+    val angleMod by animateFloatAsState(if (added) 90f else 0f)
+    val angle = if (added) 90f + angleMod
+                else       90f - angleMod
 
     val iconTint by animateColorAsState(
         if (added) backgroundColor else tint)
@@ -114,47 +117,26 @@ fun Modifier.minTouchTargetSize() =
 }
 
 /**
- * A tri-state animated play / pause / close icon.
+ * A two-state animated play/pause icon.
  *
- * @param showClose Whether the icon should show itself as a close icon
- * @param isPlaying The playing state that the icon should represent when
- *     [showClose] is false. The icon will be a pause icon when [isPlaying]
+ * @param isPlaying The playing state of the media that the icon is
+ *     representing. The icon will be a pause icon when [isPlaying]
  *     is true, or a play icon when [isPlaying] is false.
- * @param closeToPlayPause Whether or not the icon should be transitioning
- *     from the close icon back to the play / pause icon. This parameter
- *     will have no effect when [showClose] is true, but is necessary when
- *     showClose is false for the correct animations to play.
- * @param contentDescriptionProvider A lambda that will return the correct
- *     contentDescription for the icon provided the showClose and isPlaying
- *     states
+ * @param contentDescription The contentDescription of the icon
  * @param tint The tint to use for the icon
  */
-@Composable fun PlayPauseCloseIcon(
-    showClose: Boolean,
+@Composable fun PlayPauseIcon(
     isPlaying: Boolean,
-    closeToPlayPause: Boolean,
-    contentDescriptionProvider: @Composable (Boolean, Boolean) -> String,
+    contentDescription: String,
     tint: Color = LocalContentColor.current
 ) {
     val playToPause = AnimatedImageVector.animatedVectorResource(R.drawable.play_to_pause)
     val playToPausePainter = rememberAnimatedVectorPainter(playToPause, atEnd = isPlaying)
     val pauseToPlay = AnimatedImageVector.animatedVectorResource(R.drawable.pause_to_play)
     val pauseToPlayPainter = rememberAnimatedVectorPainter(pauseToPlay, atEnd = !isPlaying)
-
-    val playToClose = AnimatedImageVector.animatedVectorResource(R.drawable.play_to_close)
-    val playToClosePainter = rememberAnimatedVectorPainter(playToClose, atEnd = showClose)
-    val pauseToClose = AnimatedImageVector.animatedVectorResource(R.drawable.pause_to_close)
-    val pauseToClosePainter = rememberAnimatedVectorPainter(pauseToClose, atEnd = showClose)
-
-    Icon(contentDescription = contentDescriptionProvider(showClose, isPlaying),
-         tint = tint, painter = when {
-            showClose ->        if (isPlaying) pauseToClosePainter
-                                else           playToClosePainter
-            closeToPlayPause -> if (isPlaying) pauseToClosePainter
-                                else           playToClosePainter
-            else ->             if (isPlaying) playToPausePainter
-                                else           pauseToPlayPainter
-         })
+    val painter = if (isPlaying) playToPausePainter
+                  else           pauseToPlayPainter
+    Icon(painter, contentDescription, tint = tint)
 }
 
 /** A simple back arrow [IconButton] for when only the onClick needs changed. */
@@ -228,6 +210,16 @@ fun Modifier.minTouchTargetSize() =
     .align(Alignment.CenterHorizontally)
     .background(LocalContentColor.current.copy(alpha = 0.2f)))
 
+@Composable fun Divider(
+    orientation: Orientation,
+    modifier: Modifier = Modifier,
+    sizeFraction: Float = 1f,
+) = Box(modifier
+    .background(LocalContentColor.current.copy(alpha = 0.2f))
+    .then(if (orientation.isHorizontal)
+              Modifier.width((1.5).dp).fillMaxHeight(sizeFraction)
+          else Modifier.fillMaxWidth(sizeFraction).height((1.5).dp)))
+
 /**
  * Compose a bulleted list of [String]s.
  *
@@ -288,16 +280,16 @@ fun Modifier.minTouchTargetSize() =
  * whole line from being visible, automatically scrolls to its end, springs
  * back to its beginning, and repeats this cycle indefinitely. The parameters
  * mirror those of [Text], except that the maxLines and the softWrap parameters
- * are unable to be changed, and the additional [maxWidthPx] parameter. If the
+ * are unable to be changed, and the additional [maxWidth] parameter. If the
  * available horizontal space is known at the composition site, this can be
- * passed in as the value of [maxWidthPx] to prevent [MarqueeText] from
+ * passed in as the value of [maxWidth] to prevent [MarqueeText] from
  * needing to calculate this itself.
  */
 @Composable fun MarqueeText(
     text: String,
     modifier: Modifier = Modifier,
     color: Color = Color.Unspecified,
-    maxWidthPx: Int? = null,
+    maxWidth: Dp? = null,
     fontSize: TextUnit = TextUnit.Unspecified,
     fontStyle: FontStyle? = null,
     fontWeight: FontWeight? = null,
@@ -310,7 +302,7 @@ fun Modifier.minTouchTargetSize() =
     onTextLayout: (TextLayoutResult) -> Unit = {},
     style: TextStyle = LocalTextStyle.current,
 ) {
-    val content = @Composable { maxWidthPx: Int ->
+    val content = @Composable { maxWidth: Dp ->
         val scrollState = rememberScrollState()
         var shouldAnimate by remember { mutableStateOf(true) }
         var animationDuration by remember { mutableStateOf(0) }
@@ -322,20 +314,42 @@ fun Modifier.minTouchTargetSize() =
                 scrollState.animateScrollTo(0)
                 shouldAnimate = !shouldAnimate
             }
+        val density = LocalDensity.current
         Text(text, Modifier.horizontalScroll(scrollState, false),
             color, fontSize, fontStyle, fontWeight, fontFamily, letterSpacing,
             textDecoration, textAlign, lineHeight, overflow, maxLines = 1,
             onTextLayout = {
                 onTextLayout(it)
-                val overflowAmount = it.size.width - maxWidthPx
+                val overflowAmount = it.size.width -
+                    with(density) { maxWidth.roundToPx() }
                 animationDuration = overflowAmount.coerceAtLeast(0) * 10
             }, style = style)
     }
-    if (maxWidthPx != null)
+    if (maxWidth != null)
         Box(modifier, Alignment.Center) {
-            content(maxWidthPx)
+            content(maxWidth)
         }
     else BoxWithConstraints(modifier, Alignment.Center) {
-        content(constraints.maxWidth)
+        content(this.maxWidth)
     }
+}
+
+/** A layout that acts as either a [Row] (when [orientation] is
+ * [Orientation.Horizontal] or a [Column] (when [orientation] is
+ * [Orientation.Vertical]. A divider within the linear layout can
+ * be created within the [content] lambda with the Composable
+ * lambda divider that is passed into it. The row/column's
+ * alignment will always be Alignment.CenterVertically or
+ * Alignment.CenterHorizontally, respectively.*/
+@Composable fun LinearLayout(
+    orientation: Orientation,
+    modifier: Modifier = Modifier,
+    content: @Composable (divider: @Composable () -> Unit) -> Unit
+) {
+    val divider = @Composable {
+        Divider(orientation, sizeFraction = 0.8f)
+    }
+    if (orientation.isHorizontal)
+        Row(modifier, verticalAlignment = Alignment.CenterVertically) { content(divider) }
+    else Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) { content(divider) }
 }

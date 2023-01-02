@@ -151,11 +151,11 @@ class TrackListViewModel(
  *     defaults to an instance of LazyListState returned from a
  *     [rememberLazyListState] call, but can be overridden here in
  *     case, e.g., the scrolling position needs to be remembered
- *     even when the StatefulTrackList leaves the composition.
+ *     even when the SoundAuraTrackList leaves the composition.
  * @param onVolumeChange The callback that will be invoked when
  *     a TrackView's volume slider is moved.
  */
-@Composable fun StatefulTrackList(
+@Composable fun SoundAuraTrackList(
     modifier: Modifier = Modifier,
     padding: PaddingValues,
     state: LazyListState = rememberLazyListState(),

@@ -183,7 +183,7 @@ fun Modifier.restrictWidthAccordingToSizeClass(
 
 /** Return a [PaddingValues] created from adding [additionalStart], [additionalTop],
  * [additionalEnd], and [additionalBottom] to the [original] [PaddingValues] instance. */
-fun paddingValues(
+fun PaddingValues(
     original: PaddingValues,
     layoutDirection: LayoutDirection,
     additionalStart: Dp = 0.dp,
