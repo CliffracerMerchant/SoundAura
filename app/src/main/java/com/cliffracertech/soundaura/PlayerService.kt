@@ -173,8 +173,7 @@ class PlayerService: LifecycleService() {
                 val targetState = intent.extras?.getInt(setPlaybackAction)
                 targetState?.let(::setPlaybackState)
             } setTimerAction -> {
-                val stopTime = intent.extras?.getLong(setTimerAction)
-                stopTime?.let(::setStopTime)
+                setStopTime(intent.extras?.getLong(setTimerAction))
             }
         }
         return super.onStartCommand(intent, flags, startId)
@@ -246,18 +245,23 @@ class PlayerService: LifecycleService() {
         }
     }
 
-    private fun setStopTime(epochTimeMillis: Long) {
-        stopTime = Instant.ofEpochMilli(epochTimeMillis)
+    private fun setStopTime(epochTimeMillis: Long?) {
+        stopTime = if (epochTimeMillis == null) null
+                   else Instant.ofEpochMilli(epochTimeMillis)
         if (stopTime == null)
-            handler.removeCallbacks(::stop)
+            handler.removeCallbacks(::autoStop)
         else {
             val countDown = Instant.now()
                 .until(stopTime, ChronoUnit.MILLIS)
-            handler.postDelayed(::stop, countDown)
+            handler.postDelayed(::autoStop, countDown)
         }
     }
 
-    private fun stop() = setPlaybackState(STATE_STOPPED)
+    private fun autoStop() {
+        //TODO: Figure out why cancelling stop timer instantly pauses
+        stopTime = null
+        setPlaybackState(STATE_STOPPED)
+    }
 
     private fun updatePlayers(tracks: List<ActiveTrack>) {
         val firstUpdate = !playerSet.isInitialized
@@ -391,10 +395,10 @@ class PlayerService: LifecycleService() {
         fun pauseIntent(context: Context) = setPlaybackIntent(context, STATE_PAUSED)
         fun stopIntent(context: Context) = setPlaybackIntent(context, STATE_STOPPED)
 
-        fun setTimerIntent(context: Context, stopTime: Instant) =
+        fun setTimerIntent(context: Context, stopTime: Instant?) =
             Intent(context, PlayerService::class.java)
                 .setAction(setTimerAction)
-                .putExtra(setTimerAction, stopTime.toEpochMilli())
+                .putExtra(setTimerAction, stopTime?.toEpochMilli())
 
         fun interface PlaybackChangeListener {
             fun onPlaybackStateChange(newState: Int)

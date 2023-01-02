@@ -99,9 +99,8 @@ data class MediaControllerSizes(
      * showingPresetSelector parameter is false) given whether or not the
      * auto stop time is being shown or not and the orientation. */
     fun collapsedSize(showingStopTime: Boolean): DpSize {
-        // TODO: Figure out why this extra 8.dp is necessary
         val stopTimeLength = if (!showingStopTime) 0.dp
-                             else dividerSize + stopTimeLength + 8.dp
+                             else dividerSize + stopTimeLength
         val length = activePresetLength + dividerSize + buttonLength + stopTimeLength
         return DpSize(if (orientation.isHorizontal) length else collapsedThickness,
                       if (orientation.isVertical) length else collapsedThickness)
@@ -219,8 +218,18 @@ val Orientation.isVertical get() = this == Orientation.Vertical
             else           R.string.play_button_description))
 }
 
-fun Duration.toHMMSSstring() = "%d:%02d:%02d".format(
-    toHours(), toMinutesPart(), toSecondsPart())
+fun Duration.toHMMSSstring(): String {
+    val hours = toHours()
+    val minutes = toMinutesPart()
+    return when {
+        hours == 0L && minutes == 0 ->
+            toSecondsPart().toString()
+        hours == 0L ->
+            "%2d:%02d".format(minutes, toSecondsPart())
+        else ->
+            "%d:%02d:%02d".format(hours, minutes, toSecondsPart())
+    }
+}
 
 @Composable private fun StopTimeDisplay(
     stopTime: Instant?,
@@ -258,6 +267,7 @@ fun Duration.toHMMSSstring() = "%d:%02d:%02d".format(
     sizes: MediaControllerSizes,
     stopTime: Instant?,
     modifier: Modifier = Modifier,
+    onClick: () -> Unit,
 ) {
     val progress by animateFloatAsState(
         targetValue = if (showing) 1f else 0f,
@@ -267,12 +277,14 @@ fun Duration.toHMMSSstring() = "%d:%02d:%02d".format(
 
     val translationPercent = (1f - progress) / 2f
     val size = sizes.stopTimeSize
+    val clickLabel = stringResource(R.string.stop_timer_click_label)
 
     LinearLayout(
         orientation = sizes.orientation,
         modifier = modifier
             .requiredSize(size)
             .clip(sizes.stopTimeShape)
+            .clickable(true, clickLabel, Role.Button, onClick)
             .graphicsLayer {
                 alpha = progress
                 translationX = if (sizes.orientation.isVertical) 0f else
@@ -292,11 +304,6 @@ fun Duration.toHMMSSstring() = "%d:%02d:%02d".format(
  *
  * @param sizes The [MediaControllerSizes] instance that describes
  *     the sizes of [MediaController]'s internal elements.
- * @param stopTime The [Instant] at which media will automatically
- *     stop playing, if any. This value is only used for informational
- *     display; playback is not affected by this value
- * @param showStopTime Whether or not the auto stop time should
- *     be shown if it is not null
  * @param transitionProgressProvider A method that returns the
  *     current progress of the [MediaController]'s show/hide
  *     preset selector transition when invoked
@@ -312,12 +319,17 @@ fun Duration.toHMMSSstring() = "%d:%02d:%02d".format(
  *     play/pause button is clicked
  * @param onPlayPauseLongClick The callback that will be invoked when
  *     the play/pause button is long clicked
+ * @param stopTime The [Instant] at which media will automatically
+ *     stop playing, if any. This value is only used for informational
+ *     display; playback is not affected by this value
+ * @param onStopTimeClick The callback that will be invoked when
+ *     the display of the stop time is clicked
+ * @param showStopTime Whether or not the auto stop time should
+ *     be shown if it is not null
  * @param modifier The [Modifier] to use for the composable
  */
 @Composable fun MediaControllerCollapsedContent(
     sizes: MediaControllerSizes,
-    stopTime: Instant?,
-    showStopTime: Boolean,
     transitionProgressProvider: () -> Float,
     activePresetNameProvider: () -> String?,
     activePresetIsModified: Boolean,
@@ -325,6 +337,9 @@ fun Duration.toHMMSSstring() = "%d:%02d:%02d".format(
     playing: Boolean,
     onPlayPauseClick: () -> Unit,
     onPlayPauseLongClick: () -> Unit,
+    stopTime: Instant?,
+    onStopTimeClick: () -> Unit,
+    showStopTime: Boolean,
     modifier: Modifier = Modifier,
 ) = LinearLayout(
     orientation = sizes.orientation,
@@ -340,7 +355,7 @@ fun Duration.toHMMSSstring() = "%d:%02d:%02d".format(
             .clip(sizes.playPauseButtonShape(showStopTime)) ,
         playing, onPlayPauseClick, onPlayPauseLongClick)
     StopTimeDisplayWithDivider(
-        showStopTime, sizes, stopTime)
+        showStopTime, sizes, stopTime, onClick = onStopTimeClick)
 }
 
 /**
@@ -393,20 +408,22 @@ fun Duration.toHMMSSstring() = "%d:%02d:%02d".format(
  *     not be applied through the [modifier] parameter or it will be applied twice.
  * @param padding The [PaddingValues] to use for placement. This padding should not
  *     be applied through the [modifier] parameter or it will be applied twice.
- * @param showingPresetSelector Whether or not the floating button should be
- *     expanded to show the preset selector
- * @param playing The media play/pause state that the play/pause button should
- *     use to determine its icon, which will be the opposite of the current state
- * @param stopTime The java.time.Instant at which playback will be automatically
- *     stopped. MediaController does not use this information to affect playback;
- *     the value of stopTime is only used to display this information to the user.
- * @param onPlayPauseClick The callback that will be invoked when the play/pause button is clicked
- * @param onPlayPauseLongClick The callback that will be invoked the the
- *     play/pause button is long clicked
  * @param activePresetNameProvider A function that returns the actively
  *     playing [Preset]'s name, or null if there isn't one, when invoked
  * @param activePresetIsModified Whether or not the active preset has unsaved changes
  * @param onActivePresetClick The callback that will be invoked when the active preset is clicked
+ * @param playing The media play/pause state that the play/pause button should
+ *     use to determine its icon, which will be the opposite of the current state
+ * @param onPlayPauseClick The callback that will be invoked when the play/pause button is clicked
+ * @param onPlayPauseLongClick The callback that will be invoked the the
+ *     play/pause button is long clicked
+ * @param stopTime The java.time.Instant at which playback will be automatically
+ *     stopped. MediaController does not use this information to affect playback;
+ *     the value of stopTime is only used to display this information to the user.
+ * @param onStopTimeClick The callback that will be invoked when
+ *     the display of the stop time is clicked
+ * @param showingPresetSelector Whether or not the floating button should be
+ *     expanded to show the preset selector
  * @param presetListCallback The [PresetListCallback] that will be used for user
  *     interactions with the [Preset]s displayed when [showingPresetSelector] is true
  * @param onCloseButtonClick The callback that will be invoked when
@@ -419,14 +436,15 @@ fun Duration.toHMMSSstring() = "%d:%02d:%02d".format(
     contentColor: Color,
     alignment: BiasAlignment,
     padding: PaddingValues,
-    showingPresetSelector: Boolean,
-    playing: Boolean,
-    stopTime: Instant?,
-    onPlayPauseClick: () -> Unit,
-    onPlayPauseLongClick: () -> Unit,
     activePresetNameProvider: () -> String?,
     activePresetIsModified: Boolean,
     onActivePresetClick: () -> Unit,
+    playing: Boolean,
+    onPlayPauseClick: () -> Unit,
+    onPlayPauseLongClick: () -> Unit,
+    stopTime: Instant?,
+    onStopTimeClick: () -> Unit,
+    showingPresetSelector: Boolean,
     presetListCallback: PresetListCallback,
     onCloseButtonClick: () -> Unit,
 ) = CompositionLocalProvider(LocalContentColor provides contentColor) {
@@ -467,11 +485,12 @@ fun Duration.toHMMSSstring() = "%d:%02d:%02d".format(
                         sizes, { expandTransitionProgress }, onCloseButtonClick)
                 if (expandTransitionProgress < 1f)
                     MediaControllerCollapsedContent(
-                        sizes, stopTime,
-                        showStopTime = !expandTransition.targetState && showingStopTime,
+                        sizes,
                         transitionProgressProvider = { expandTransitionProgress },
                         activePresetNameProvider, activePresetIsModified, onActivePresetClick,
-                        playing, onPlayPauseClick, onPlayPauseLongClick)
+                        playing, onPlayPauseClick, onPlayPauseLongClick,
+                        stopTime, onStopTimeClick,
+                        showStopTime = !expandTransition.targetState && showingStopTime)
             }
 
             val listPadding = 8.dp
@@ -545,14 +564,15 @@ fun MediaControllerPreview() = SoundAuraTheme {
                 contentColor = MaterialTheme.colors.onPrimary,
                 alignment = Alignment.BottomStart as BiasAlignment,
                 padding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 8.dp),
-                showingPresetSelector = expanded,
-                playing = playing,
-                stopTime = null,
-                onPlayPauseClick = { playing = !playing },
-                onPlayPauseLongClick = {},
                 activePresetNameProvider = activePresetName::value::get,
                 activePresetIsModified = true,
                 onActivePresetClick = { expanded = true },
+                playing = playing,
+                onPlayPauseClick = { playing = !playing },
+                onPlayPauseLongClick = {},
+                stopTime = null,
+                onStopTimeClick = {},
+                showingPresetSelector = expanded,
                 presetListCallback = callback,
                 onCloseButtonClick = { expanded = false })
         }

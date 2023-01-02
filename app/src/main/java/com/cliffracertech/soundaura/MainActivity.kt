@@ -330,7 +330,8 @@ class MainActivity : ComponentActivity() {
                 stopTime = boundPlayerService?.stopTime,
                 isPlaying = boundPlayerService?.isPlaying ?: false,
                 onPlayPauseClick = ::onPlayPauseClick,
-                onNewStopTimeRequest = ::onSetTimer)
+                onNewStopTimeRequest = ::onSetTimer,
+                onCancelStopTimeRequest = ::onClearTimer)
         }
     }
 
@@ -389,6 +390,10 @@ class MainActivity : ComponentActivity() {
         val stopTimeInstant = Instant.now().plus(duration)
         val intent = PlayerService.setTimerIntent(this, stopTimeInstant)
         startService(intent)
+    }
+
+    private fun onClearTimer() {
+        startService(PlayerService.setTimerIntent(this, null))
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?) =

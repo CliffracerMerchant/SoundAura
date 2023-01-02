@@ -18,7 +18,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -209,24 +208,3 @@ fun DurationPickerPreview() = SoundAuraTheme {
             bounds = bounds)
     }
 }
-
-/**
- * A dialog to pick a [Duration] after which the user's sound mix will
- * automatically stop playing.
- *
- * @param modifier The [Modifier] to use for the dialog
- * @param onDismissRequest The callback that will be invoked when the user
- *     attempts to dismiss or cancel the dialog
- * @param onConfirm The callback that will be invoked when the user taps the ok
- *     button with a [Duration] that is valid (i.e. within the provided [bounds]
- */
-@Composable fun SetStopTimeDialog(
-    modifier: Modifier = Modifier,
-    onDismissRequest: () -> Unit,
-    onConfirm: (Duration) -> Unit,
-) = DurationPickerDialog(
-    modifier,
-    title = stringResource(R.string.set_auto_stop_time_dialog_title),
-    description = stringResource(R.string.set_auto_stop_time_dialog_description),
-    bounds = Range(Duration.ZERO, Duration.ofHours(100).minusSeconds(1)),
-    onDismissRequest, onConfirm)

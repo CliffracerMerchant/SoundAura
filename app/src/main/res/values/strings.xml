@@ -92,7 +92,7 @@
     <string name="pause">Pause</string>
     <string name="play_button_description">Play SoundAura audio</string>
     <string name="pause_button_description">Pause SoundAura audio</string>
-    <string name="play_pause_button_long_click_description">Set auto stop time</string>
+    <string name="play_pause_button_long_click_description">Set auto stop timer</string>
     <string name="playing">Playing</string>
     <string name="paused">Paused</string>
     <string name="stopped">Stopped</string>
@@ -103,11 +103,16 @@
     <string name="ok" tools:ignore="Typos,ButtonCase">Ok</string>
     <string name="cancel">Cancel</string>
 
-    <string name="set_auto_stop_time_dialog_title">"Set auto stop time</string>
-    <string name="set_auto_stop_time_dialog_description">
+    <string name="set_stop_timer_dialog_title">"Set auto stop timer</string>
+    <string name="set_stop_timer_dialog_description">
         Set the duration after which playback will automatically be stopped.
         You can change the amounts using the up or down buttons, or by
         dragging the amount up or down.</string>
+
+    <string name="stop_timer_click_label">Cancel auto stop timer</string>
+    <string name="cancel_stop_timer_dialog_title">Confirm stop timer cancellation</string>
+    <string name="cancel_stop_timer_dialog_text">
+        Are you sure you would like to cancel the auto stop timer?</string>
 
     <string name="show_active_tracks_first">Show active tracks first</string>
     <string name="name_ascending">Name ascending</string>
