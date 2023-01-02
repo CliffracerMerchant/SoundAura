@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
@@ -135,7 +136,7 @@ data class MediaControllerSizes(
 
     companion object {
         const val defaultButtonLengthDp = 56
-        const val defaultStopTimeWidthDp = 66
+        const val defaultStopTimeWidthDp = 72
         const val defaultStopTimeHeightDp = 56
         const val dividerThicknessDp = 1.5f
         const val defaultMinThicknessDp = 56
@@ -258,7 +259,10 @@ fun Duration.toHMMSSstring(): String {
         }
     }
     val style = MaterialTheme.typography.caption
-    Text("for", style = style)
+    Row(Modifier, Arrangement.spacedBy(-1.dp), Alignment.CenterVertically) {
+        Icon(Icons.Default.Stop, null, Modifier.size(16.dp))
+        Text(stringResource(R.string.stop_timer_text), style = style)
+    }
     Text(durationRemainingString ?: "", style = style)
 }
 
@@ -550,31 +554,26 @@ fun MediaControllerPreview() = SoundAuraTheme {
             activePresetName.value = preset.name
         }
     }}
-
-    Surface(Modifier.size(400.dp, 600.dp), RectangleShape, Color.White) {
-        BoxWithConstraints(Modifier.fillMaxSize()) {
-            MediaController(
-                sizes = MediaControllerSizes(
-                    activePresetLength = 200.dp - 56.dp,
-                    orientation = Orientation.Horizontal,
-                    presetSelectorSize = DpSize(388.dp, 250.dp)),
-                backgroundBrush = Brush.horizontalGradient(
-                    listOf(MaterialTheme.colors.primaryVariant,
-                           MaterialTheme.colors.secondaryVariant)),
-                contentColor = MaterialTheme.colors.onPrimary,
-                alignment = Alignment.BottomStart as BiasAlignment,
-                padding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 8.dp),
-                activePresetNameProvider = activePresetName::value::get,
-                activePresetIsModified = true,
-                onActivePresetClick = { expanded = true },
-                playing = playing,
-                onPlayPauseClick = { playing = !playing },
-                onPlayPauseLongClick = {},
-                stopTime = null,
-                onStopTimeClick = {},
-                showingPresetSelector = expanded,
-                presetListCallback = callback,
-                onCloseButtonClick = { expanded = false })
-        }
-    }
+    MediaController(
+        sizes = MediaControllerSizes(
+            activePresetLength = 200.dp - 56.dp,
+            orientation = Orientation.Horizontal,
+            presetSelectorSize = DpSize(0.dp, 0.dp)),
+        backgroundBrush = Brush.horizontalGradient(
+            listOf(MaterialTheme.colors.primaryVariant,
+                   MaterialTheme.colors.secondaryVariant)),
+        contentColor = MaterialTheme.colors.onPrimary,
+        alignment = Alignment.BottomStart as BiasAlignment,
+        padding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 8.dp),
+        activePresetNameProvider = activePresetName::value::get,
+        activePresetIsModified = true,
+        onActivePresetClick = { expanded = true },
+        playing = playing,
+        onPlayPauseClick = { playing = !playing },
+        onPlayPauseLongClick = {},
+        stopTime = null,
+        onStopTimeClick = {},
+        showingPresetSelector = expanded,
+        presetListCallback = callback,
+        onCloseButtonClick = { expanded = false })
 }
