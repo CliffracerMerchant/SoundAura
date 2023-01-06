@@ -116,7 +116,6 @@ class PlayerNotification(
         NotificationCompat.Builder(service, channelId)
             .setOngoing(true)
             .setSmallIcon(R.drawable.tile_and_notification_icon)
-            .setContentTitle(service.getString(R.string.app_name))
             .setContentIntent(PendingIntent.getActivity(service, 0,
                 Intent(service, MainActivity::class.java).apply {
                     action = Intent.ACTION_MAIN
@@ -204,8 +203,10 @@ class PlayerNotification(
         stopTime: Instant?,
         showStopAction: Boolean,
     ) {
-        timeUntilStop = stopTime
-            ?.let { Duration.between(Instant.now(), it) }
+        this.playbackState = playbackState
+        this.showStopAction = showStopAction
+
+        timeUntilStop = stopTime?.let { Duration.between(Instant.now(), it) }
         updateTimeLeftJob?.cancel()
         if (stopTime != null)
             updateTimeLeftJob = service.lifecycleScope.launch {
@@ -213,9 +214,8 @@ class PlayerNotification(
                     delay(1000)
                     timeUntilStop?.minusSeconds(1)?.let {
                         timeUntilStop = it
-                        val description = descriptionText(playbackState, timeUntilStop)
                         val notification = notificationBuilder
-                            .setContentText(description).build()
+                            .updateText(timeUntilStop).build()
                         notificationManager.notify(notificationId, notification)
                     }
                 }
@@ -226,34 +226,31 @@ class PlayerNotification(
         notificationManager.notify(notificationId, notification)
         mediaSession?.setPlaybackState(
             updatedPlaybackState(playbackState, showStopAction))
-        this.playbackState = playbackState
-        this.showStopAction = showStopAction
     }
 
-    private fun descriptionText(
-        playbackState: Int,
+    private fun NotificationCompat.Builder.updateText(
         timeUntilStop: Duration?
-    ): String =
-        if (timeUntilStop != null && playbackState != STATE_STOPPED) {
-            val resId = if (playbackState == STATE_PLAYING)
-                            R.string.playing_until_stop_time
-                        else R.string.paused_with_stop_time
-            val time = timeUntilStop.toHMMSSstring()
-            service.getString(resId, time)
-        } else service.getString(when(playbackState) {
+    ): NotificationCompat.Builder = apply {
+        val stateString = service.getString(when(playbackState) {
             STATE_PLAYING -> R.string.playing
             STATE_PAUSED ->  R.string.paused
             else ->          R.string.stopped
         })
+        setContentTitle(stateString)
+
+        if (timeUntilStop == null)
+            setContentText(null)
+        else setContentText(service.getString(
+            R.string.stop_timer_description, timeUntilStop.toHMMSSstring()))
+    }
 
     private fun updatedNotification(
         playbackState: Int = this.playbackState,
         timeUntilStop: Duration? = this.timeUntilStop,
         showStopAction: Boolean = this.showStopAction
     ): Notification {
-        val description = descriptionText(playbackState, timeUntilStop)
         val builder = notificationBuilder
-            .setContentText(description)
+            .updateText(timeUntilStop)
             .clearActions()
 
         builder.addAction(togglePlayPauseAction(
@@ -263,9 +260,9 @@ class PlayerNotification(
         if (timeUntilStop != null)
             builder.addAction(cancelTimerAction)
 
-        if (showStopAction && timeUntilStop != null)
-            notificationStyle.setShowActionsInCompactView(0, 1, 2)
-        else if (showStopAction || timeUntilStop != null)
+        // We only show a maximum of two actions in the compact
+        // view to prevent the actions from clipping the text
+        if (showStopAction || timeUntilStop != null)
             notificationStyle.setShowActionsInCompactView(0, 1)
         else notificationStyle.setShowActionsInCompactView(0)
 

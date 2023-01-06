@@ -106,8 +106,7 @@
     <string name="playing">Playing</string>
     <string name="paused">Paused</string>
     <string name="stopped">Stopped</string>
-    <string name="playing_until_stop_time">Playing; stopping in %1$s</string>
-    <string name="paused_with_stop_time">Paused; stopping in %1$s</string>
+    <string name="stop_timer_description">Stopping in %1$s</string>
     <string name="cancel_stop_timer_action">Cancel stop timer</string>
 
     <string name="play">Play</string>
