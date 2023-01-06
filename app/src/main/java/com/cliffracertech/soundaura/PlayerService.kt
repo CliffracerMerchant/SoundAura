@@ -151,6 +151,7 @@ class PlayerService: LifecycleService() {
             playIntent = playIntent(this),
             pauseIntent = pauseIntent(this),
             stopIntent = stopIntent(this),
+            cancelTimerIntent = setTimerIntent(this, null),
             playbackState = playbackState,
             showStopAction = !boundToActivity,
             stopTime = stopTime,
