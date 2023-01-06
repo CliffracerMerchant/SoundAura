@@ -28,12 +28,13 @@ import java.time.Instant
  * PlayerNotification can post a notification for a foreground media playing
  * service that contains a string describing a playback state (e.g. playing,
  * paused), a toggle play/pause action, and an optional stop action. Using the
- * values of [playbackState] and [showStopAction] that are passed in its
- * constructor, PlayerNotification will automatically call [Service.startForeground]
- * for the client service during creation. PlayerNotification should be notified
- * of changes to the playback state or the visibility of the stop action
- * afterwards via the function [update]. The notification can be cleared when the
- * service is stopping with the function [remove].
+ * values of [playbackState], [stopTime], and [showStopAction] that are
+ * provided in its constructor, PlayerNotification will automatically call
+ * [Service.startForeground] for the client service during creation.
+ * PlayerNotification should be notified of changes to the playback state, the
+ * auto stop time, or the visibility of the stop action afterwards via the
+ * function [update]. The notification can be cleared when the service is
+ * stopping with the function [remove].
 
  * @param service The foreground media playing service that PlayerNotification
  *     is serving. Note that this reference to the service is held onto for
@@ -79,27 +80,9 @@ class PlayerNotification(
     private val playbackStateBuilder = PlaybackStateCompat.Builder()
     private lateinit var notificationStyle: androidx.media.app.NotificationCompat.MediaStyle
 
+    private var updateTimeLeftJob: Job? = null
     private var timeUntilStop: Duration? =
         stopTime?.let { Duration.between(Instant.now(), it) }
-
-    private var updateTimeLeftJob: Job? = null
-    fun setStopTime(stopTime: Instant?) {
-        timeUntilStop = stopTime
-            ?.let { Duration.between(Instant.now(), it) }
-        updateTimeLeftJob?.cancel()
-        updateTimerText()
-        if (stopTime == null) return
-
-        updateTimeLeftJob = service.lifecycleScope.launch {
-            while(timeUntilStop != null) {
-                delay(1000)
-                timeUntilStop?.minusSeconds(1)?.let {
-                    timeUntilStop = it
-                    updateTimerText()
-                }
-            }
-        }
-    }
 
     private var mediaSession: MediaSessionCompat? = null
     var useMediaSession: Boolean = useMediaSession
@@ -197,23 +180,34 @@ class PlayerNotification(
         service.startForeground(notificationId, updatedNotification())
     }
 
-    private fun startForeground(playbackState: Int, showStopAction: Boolean) {
-        val notification = updatedNotification(
-            playbackState, timeUntilStop, showStopAction)
-        service.startForeground(notificationId, notification)
-        mediaSession?.setPlaybackState(
-            updatedPlaybackState(playbackState, showStopAction))
-        this.playbackState = playbackState
-        this.showStopAction = showStopAction
-    }
-
     fun remove() {
         service.stopForeground(STOP_FOREGROUND_REMOVE)
         mediaSession?.isActive = false
         mediaSession?.release()
     }
 
-    fun update(playbackState: Int, showStopAction: Boolean) {
+    fun update(
+        playbackState: Int,
+        stopTime: Instant?,
+        showStopAction: Boolean,
+    ) {
+        timeUntilStop = stopTime
+            ?.let { Duration.between(Instant.now(), it) }
+        updateTimeLeftJob?.cancel()
+        if (stopTime != null)
+            updateTimeLeftJob = service.lifecycleScope.launch {
+                while (timeUntilStop != null) {
+                    delay(1000)
+                    timeUntilStop?.minusSeconds(1)?.let {
+                        timeUntilStop = it
+                        val description = descriptionText(playbackState, timeUntilStop)
+                        val notification = notificationBuilder
+                            .setContentText(description).build()
+                        notificationManager.notify(notificationId, notification)
+                    }
+                }
+            }
+
         val notification = updatedNotification(
             playbackState, timeUntilStop, showStopAction)
         notificationManager.notify(notificationId, notification)
@@ -238,13 +232,6 @@ class PlayerNotification(
             STATE_PAUSED ->  R.string.paused
             else ->          R.string.stopped
         })
-
-    private fun updateTimerText() {
-        val description = descriptionText(playbackState, timeUntilStop)
-        val notification = notificationBuilder
-            .setContentText(description).build()
-        notificationManager.notify(notificationId, notification)
-    }
 
     private fun updatedNotification(
         playbackState: Int = this.playbackState,

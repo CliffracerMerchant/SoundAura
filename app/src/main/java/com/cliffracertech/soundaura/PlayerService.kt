@@ -98,7 +98,9 @@ class PlayerService: LifecycleService() {
     }
 
     private fun updateNotification() =
-        notificationManager.update(playbackState, showStopAction = !boundToActivity)
+        notificationManager.update(
+            playbackState, stopTime,
+            showStopAction = !boundToActivity)
 
     private var boundToActivity = false
         set(value) {
@@ -259,20 +261,19 @@ class PlayerService: LifecycleService() {
     private fun setStopTime(epochTimeMillis: Long?) {
         if (epochTimeMillis == null || epochTimeMillis == 0L) {
             stopTime = null
-            notificationManager.setStopTime(null)
+            updateNotification()
             handler.removeCallbacks(::autoStop)
         } else {
             stopTime = Instant.ofEpochMilli(epochTimeMillis)
-            notificationManager.setStopTime(stopTime)
-            val countDown = Instant.now()
+            val delayMillis = Instant.now()
                 .until(stopTime, ChronoUnit.MILLIS)
-            handler.postDelayed(::autoStop, countDown)
+            handler.postDelayed(::autoStop, delayMillis)
         }
+        updateNotification()
     }
 
     private fun autoStop() {
         stopTime = null
-        notificationManager.setStopTime(null)
         setPlaybackState(STATE_STOPPED)
     }
 
@@ -309,9 +310,9 @@ class PlayerService: LifecycleService() {
      */
     private fun showAutoPausePlaybackExplanation() {
         val stringResId = R.string.player_no_tracks_warning_message
-        if (boundToActivity) {
+        if (boundToActivity)
             messageHandler.postMessage(StringResource(stringResId))
-        } else Toast.makeText(this, stringResId, Toast.LENGTH_SHORT).show()
+        else Toast.makeText(this, stringResId, Toast.LENGTH_SHORT).show()
     }
 
     fun setTrackVolume(uriString: String, volume: Float) =
