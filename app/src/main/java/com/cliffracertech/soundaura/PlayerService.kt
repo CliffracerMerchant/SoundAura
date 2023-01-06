@@ -46,7 +46,7 @@ import javax.inject.Inject
  * PlayerService can either be started independently of an activity with a
  * [startService] call, or can be started bound to an activity if the activity
  * calls [bindService]. In the latter case, PlayerService will call [startService]
- * on itself so that it outlives the binding activity. In ither case,
+ * on itself so that it outlives the binding activity. In either case,
  * PlayerService presents a foreground notification to the user that displays
  * its current play/pause state in string form, along with actions to toggle
  * the play/pause state and to close the service. The play/pause action will
@@ -151,6 +151,7 @@ class PlayerService: LifecycleService() {
             stopIntent = stopIntent(this),
             playbackState = playbackState,
             showStopAction = !boundToActivity,
+            stopTime = stopTime,
             useMediaSession = !playInBackgroundFirstValue)
         playInBackground = playInBackgroundFirstValue
 
@@ -258,9 +259,11 @@ class PlayerService: LifecycleService() {
     private fun setStopTime(epochTimeMillis: Long?) {
         if (epochTimeMillis == null || epochTimeMillis == 0L) {
             stopTime = null
+            notificationManager.setStopTime(null)
             handler.removeCallbacks(::autoStop)
         } else {
             stopTime = Instant.ofEpochMilli(epochTimeMillis)
+            notificationManager.setStopTime(stopTime)
             val countDown = Instant.now()
                 .until(stopTime, ChronoUnit.MILLIS)
             handler.postDelayed(::autoStop, countDown)
@@ -269,6 +272,7 @@ class PlayerService: LifecycleService() {
 
     private fun autoStop() {
         stopTime = null
+        notificationManager.setStopTime(null)
         setPlaybackState(STATE_STOPPED)
     }
 

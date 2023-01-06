@@ -14,6 +14,13 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.support.v4.media.session.PlaybackStateCompat.*
 import androidx.core.app.NotificationCompat
+import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.time.Duration
+import java.time.Instant
 
 /**
  * A manager for a notification for a foreground media playing service.
@@ -44,6 +51,9 @@ import androidx.core.app.NotificationCompat
  * @param showStopAction Whether or not the stop action will be shown in the
  *     notification. showStopAction can be changed after creation by passing
  *     the new value to method update.
+ * @param stopTime The time at which playback will be automatically stopped,
+ *     if any. The duration between now and the stop time will be calculated
+ *     and displayed in the notification.
  * @param useMediaSession Whether or not a [MediaSessionCompat] instance should
  *     be tied to the notification. If true, the notification will appear in
  *     the media session section of the status bar. If false, the notification
@@ -51,12 +61,13 @@ import androidx.core.app.NotificationCompat
  *     property of the same name can be used to change this after creation.
  */
 class PlayerNotification(
-    private val service: Service,
+    private val service: LifecycleService,
     private val playIntent: Intent,
     private val pauseIntent: Intent,
     private val stopIntent: Intent,
     private var playbackState: Int,
     private var showStopAction: Boolean,
+    stopTime: Instant?,
     useMediaSession: Boolean
 ) {
     private val playActionRequestCode = 1
@@ -67,6 +78,28 @@ class PlayerNotification(
         service.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
     private val playbackStateBuilder = PlaybackStateCompat.Builder()
     private lateinit var notificationStyle: androidx.media.app.NotificationCompat.MediaStyle
+
+    private var timeUntilStop: Duration? =
+        stopTime?.let { Duration.between(Instant.now(), it) }
+
+    private var updateTimeLeftJob: Job? = null
+    fun setStopTime(stopTime: Instant?) {
+        timeUntilStop = stopTime
+            ?.let { Duration.between(Instant.now(), it) }
+        updateTimeLeftJob?.cancel()
+        updateTimerText()
+        if (stopTime == null) return
+
+        updateTimeLeftJob = service.lifecycleScope.launch {
+            while(timeUntilStop != null) {
+                delay(1000)
+                timeUntilStop?.minusSeconds(1)?.let {
+                    timeUntilStop = it
+                    updateTimerText()
+                }
+            }
+        }
+    }
 
     private var mediaSession: MediaSessionCompat? = null
     var useMediaSession: Boolean = useMediaSession
@@ -165,7 +198,8 @@ class PlayerNotification(
     }
 
     private fun startForeground(playbackState: Int, showStopAction: Boolean) {
-        val notification = updatedNotification(playbackState, showStopAction)
+        val notification = updatedNotification(
+            playbackState, timeUntilStop, showStopAction)
         service.startForeground(notificationId, notification)
         mediaSession?.setPlaybackState(
             updatedPlaybackState(playbackState, showStopAction))
@@ -180,7 +214,8 @@ class PlayerNotification(
     }
 
     fun update(playbackState: Int, showStopAction: Boolean) {
-        val notification = updatedNotification(playbackState, showStopAction)
+        val notification = updatedNotification(
+            playbackState, timeUntilStop, showStopAction)
         notificationManager.notify(notificationId, notification)
         mediaSession?.setPlaybackState(
             updatedPlaybackState(playbackState, showStopAction))
@@ -188,17 +223,35 @@ class PlayerNotification(
         this.showStopAction = showStopAction
     }
 
-    private fun updatedNotification(
-        playbackState: Int = this.playbackState,
-        showStopAction: Boolean = this.showStopAction
-    ): Notification {
-        val description = service.getString(when(playbackState) {
+    private fun descriptionText(
+        playbackState: Int,
+        timeUntilStop: Duration?
+    ): String =
+        if (timeUntilStop != null && playbackState != STATE_STOPPED) {
+            val resId = if (playbackState == STATE_PLAYING)
+                            R.string.playing_until_stop_time
+                        else R.string.paused_with_stop_time
+            val time = timeUntilStop.toHMMSSstring()
+            service.getString(resId, time)
+        } else service.getString(when(playbackState) {
             STATE_PLAYING -> R.string.playing
             STATE_PAUSED ->  R.string.paused
             else ->          R.string.stopped
         })
-        val playPauseAction = togglePlayPauseAction(
-            isPlaying = playbackState == STATE_PLAYING)
+
+    private fun updateTimerText() {
+        val description = descriptionText(playbackState, timeUntilStop)
+        val notification = notificationBuilder
+            .setContentText(description).build()
+        notificationManager.notify(notificationId, notification)
+    }
+
+    private fun updatedNotification(
+        playbackState: Int = this.playbackState,
+        timeUntilStop: Duration? = this.timeUntilStop,
+        showStopAction: Boolean = this.showStopAction
+    ): Notification {
+        val description = descriptionText(playbackState, timeUntilStop)
         val builder = notificationBuilder
             .setContentText(description)
             .clearActions()

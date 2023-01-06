@@ -103,11 +103,15 @@
     <string name="unsaved_preset_changes_warning_save_first_option">Save changes first</string>
     <string name="unsaved_preset_changes_warning_load_anyways_option">Load anyways</string>
 
-    <string name="play">Play</string>
-    <string name="pause">Pause</string>
     <string name="playing">Playing</string>
     <string name="paused">Paused</string>
     <string name="stopped">Stopped</string>
+    <string name="playing_until_stop_time">Playing; stopping in %1$s</string>
+    <string name="paused_with_stop_time">Paused; stopping in %1$s</string>
+    <string name="cancel_stop_timer_action">Cancel stop timer</string>
+
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
     <string name="close">Close</string>
     <string name="checked">Checked</string>
     <string name="unchecked">Unchecked</string>
