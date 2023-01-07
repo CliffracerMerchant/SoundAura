@@ -7,8 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
 import android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED
-import android.os.Handler
-import android.os.Looper
 import android.support.v4.media.session.PlaybackStateCompat
 import android.support.v4.media.session.PlaybackStateCompat.*
 import android.widget.Toast
@@ -30,6 +28,8 @@ import com.cliffracertech.soundaura.PlayerService.Companion.PlaybackChangeListen
 import com.cliffracertech.soundaura.PlayerService.Companion.addPlaybackChangeListener
 import com.cliffracertech.soundaura.SoundAura.pref_key_playInBackground
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -90,7 +90,7 @@ class PlayerService: LifecycleService() {
     private lateinit var audioManager: AudioManager
     private lateinit var notificationManager: PlayerNotification
 
-    private val handler = Handler(Looper.getMainLooper())
+    private var autoStopJob: Job? = null
     private var stopTime by mutableStateOf<Instant?>(null)
 
     private val playerSet = TrackPlayerSet(this) { uriString ->
@@ -260,22 +260,23 @@ class PlayerService: LifecycleService() {
     }
 
     private fun setStopTime(epochTimeMillis: Long?) {
+        autoStopJob?.cancel()
         if (epochTimeMillis == null || epochTimeMillis == 0L) {
             stopTime = null
+            autoStopJob = null
             updateNotification()
-            handler.removeCallbacks(::autoStop)
         } else {
             stopTime = Instant.ofEpochMilli(epochTimeMillis)
-            val delayMillis = Instant.now()
-                .until(stopTime, ChronoUnit.MILLIS)
-            handler.postDelayed(::autoStop, delayMillis)
+            val delayMillis = Instant.now().until(stopTime, ChronoUnit.MILLIS)
+            autoStopJob = lifecycleScope.launch {
+                delay(delayMillis)
+                stopTime = null
+                autoStopJob = null
+                // updateNotification() is not needed because setPlaybackState will call it
+                setPlaybackState(STATE_STOPPED)
+            }
         }
         updateNotification()
-    }
-
-    private fun autoStop() {
-        stopTime = null
-        setPlaybackState(STATE_STOPPED)
     }
 
     private fun updatePlayers(tracks: List<ActiveTrack>) {
