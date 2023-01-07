@@ -7,8 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
 import android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED
-import android.os.Handler
-import android.os.Looper
 import android.support.v4.media.session.PlaybackStateCompat
 import android.support.v4.media.session.PlaybackStateCompat.*
 import android.widget.Toast
@@ -30,6 +28,8 @@ import com.cliffracertech.soundaura.PlayerService.Companion.PlaybackChangeListen
 import com.cliffracertech.soundaura.PlayerService.Companion.addPlaybackChangeListener
 import com.cliffracertech.soundaura.SoundAura.pref_key_playInBackground
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -46,7 +46,7 @@ import javax.inject.Inject
  * PlayerService can either be started independently of an activity with a
  * [startService] call, or can be started bound to an activity if the activity
  * calls [bindService]. In the latter case, PlayerService will call [startService]
- * on itself so that it outlives the binding activity. In ither case,
+ * on itself so that it outlives the binding activity. In either case,
  * PlayerService presents a foreground notification to the user that displays
  * its current play/pause state in string form, along with actions to toggle
  * the play/pause state and to close the service. The play/pause action will
@@ -90,7 +90,7 @@ class PlayerService: LifecycleService() {
     private lateinit var audioManager: AudioManager
     private lateinit var notificationManager: PlayerNotification
 
-    private val handler = Handler(Looper.getMainLooper())
+    private var autoStopJob: Job? = null
     private var stopTime by mutableStateOf<Instant?>(null)
 
     private val playerSet = TrackPlayerSet(this) { uriString ->
@@ -98,7 +98,9 @@ class PlayerService: LifecycleService() {
     }
 
     private fun updateNotification() =
-        notificationManager.update(playbackState, showStopAction = !boundToActivity)
+        notificationManager.update(
+            playbackState, stopTime,
+            showStopAction = !boundToActivity)
 
     private var boundToActivity = false
         set(value) {
@@ -149,8 +151,10 @@ class PlayerService: LifecycleService() {
             playIntent = playIntent(this),
             pauseIntent = pauseIntent(this),
             stopIntent = stopIntent(this),
+            cancelTimerIntent = setTimerIntent(this, null),
             playbackState = playbackState,
             showStopAction = !boundToActivity,
+            stopTime = stopTime,
             useMediaSession = !playInBackgroundFirstValue)
         playInBackground = playInBackgroundFirstValue
 
@@ -256,20 +260,23 @@ class PlayerService: LifecycleService() {
     }
 
     private fun setStopTime(epochTimeMillis: Long?) {
+        autoStopJob?.cancel()
         if (epochTimeMillis == null || epochTimeMillis == 0L) {
             stopTime = null
-            handler.removeCallbacks(::autoStop)
+            autoStopJob = null
+            updateNotification()
         } else {
             stopTime = Instant.ofEpochMilli(epochTimeMillis)
-            val countDown = Instant.now()
-                .until(stopTime, ChronoUnit.MILLIS)
-            handler.postDelayed(::autoStop, countDown)
+            val delayMillis = Instant.now().until(stopTime, ChronoUnit.MILLIS)
+            autoStopJob = lifecycleScope.launch {
+                delay(delayMillis)
+                stopTime = null
+                autoStopJob = null
+                // updateNotification() is not needed because setPlaybackState will call it
+                setPlaybackState(STATE_STOPPED)
+            }
         }
-    }
-
-    private fun autoStop() {
-        stopTime = null
-        setPlaybackState(STATE_STOPPED)
+        updateNotification()
     }
 
     private fun updatePlayers(tracks: List<ActiveTrack>) {
@@ -305,9 +312,9 @@ class PlayerService: LifecycleService() {
      */
     private fun showAutoPausePlaybackExplanation() {
         val stringResId = R.string.player_no_tracks_warning_message
-        if (boundToActivity) {
+        if (boundToActivity)
             messageHandler.postMessage(StringResource(stringResId))
-        } else Toast.makeText(this, stringResId, Toast.LENGTH_SHORT).show()
+        else Toast.makeText(this, stringResId, Toast.LENGTH_SHORT).show()
     }
 
     fun setTrackVolume(uriString: String, volume: Float) =
