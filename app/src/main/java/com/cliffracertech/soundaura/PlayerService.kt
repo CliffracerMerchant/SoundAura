@@ -250,9 +250,10 @@ class PlayerService: LifecycleService() {
         playbackState = newState
         isPlaying = newState == STATE_PLAYING
         updateNotification()
-        if (newState != STATE_STOPPED)
-            playerSet.setIsPlaying(isPlaying)
-        else {
+        if (newState != STATE_STOPPED) {
+            if (isPlaying) playerSet.play()
+            else playerSet.pause()
+        } else {
             if (!playInBackground && hasAudioFocus)
                 abandonAudioFocus()
             stopSelf()

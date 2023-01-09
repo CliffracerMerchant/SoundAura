@@ -10,9 +10,9 @@ import android.net.Uri
 /**
  * A [MediaPlayer] wrapper that allows for seamless looping of the provided uri.
  * If there is a problem with the provided uri, then the inner MediaPlayer
- * instance creation can fail. In this case, [isPlaying] will always return false
- * and setting isPlaying will have no effect. The current volume for both audio
- * channels can also be retrieved or set via the property [volume].
+ * instance creation can fail. In this case, calling [play] will have no effect.
+ * The current volume for both audio channels can also be retrieved or set via
+ * the property [volume].
  *
  * @param context A [Context] instance. Note that the provided context instance
  *     is held onto for the lifetime of the Player instance, and so should not
@@ -47,29 +47,26 @@ class Player(
             nextPlayer?.setVolume(volume, volume)
         }
 
-    /** The isPlaying state of the player. Setting the property
-     * to false will pause the player rather than stopping it. */
-    var isPlaying
-        get() = currentPlayer?.isPlaying ?: false
-        set(value) {
-            try {
-                if (value) currentPlayer?.start()
-                else       currentPlayer?.pause()
-            } catch(e: IllegalStateException) {
-                // An IllegalStateException can be thrown here if the pause is called
-                // immediately after creation when the player is still initializing
-                currentPlayer?.setOnPreparedListener {
-                    if (value) currentPlayer?.start()
-                    else       currentPlayer?.pause()
-                    currentPlayer?.setOnPreparedListener(null)
-                }
+    private fun MediaPlayer.attempt(action: MediaPlayer.() -> Unit) {
+        try { action() }
+        // An IllegalStateException can be thrown here if the pause is called
+        // immediately after creation when the player is still initializing
+        catch(e: java.lang.IllegalStateException) {
+            setOnPreparedListener {
+                action()
+                setOnPreparedListener(null)
             }
         }
+    }
+
+    fun play() { currentPlayer?.attempt(MediaPlayer::start) }
+    fun pause() { currentPlayer?.attempt(MediaPlayer::pause) }
+    fun stop() { currentPlayer?.attempt(MediaPlayer::stop) }
 
     init {
         prepareNextPlayer()
         if (startPlaying)
-            isPlaying = true
+            play()
         volume = initialVolume
     }
 
@@ -134,10 +131,9 @@ class TrackPlayerSet(
 
     val isEmpty get() = uriPlayerMap.isEmpty()
 
-    fun setIsPlaying(isPlaying: Boolean) =
-        uriPlayerMap.values.forEach {
-            it.isPlaying = isPlaying
-        }
+    fun play() = uriPlayerMap.values.forEach(Player::play)
+    fun pause() = uriPlayerMap.values.forEach(Player::pause)
+    fun stop() = uriPlayerMap.values.forEach(Player::stop)
 
     fun setPlayerVolume(uriString: String, volume: Float) =
         uriPlayerMap[uriString]?.run {
