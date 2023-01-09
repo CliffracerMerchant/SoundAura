@@ -93,7 +93,7 @@ class PlayerService: LifecycleService() {
     private var autoStopJob: Job? = null
     private var stopTime by mutableStateOf<Instant?>(null)
 
-    private val playerSet = TrackPlayerSet(this) { uriString ->
+    private val playerSet = PlayerSet(this) { uriString ->
         lifecycleScope.launch { trackDao.notifyOfError(uriString) }
     }
 
