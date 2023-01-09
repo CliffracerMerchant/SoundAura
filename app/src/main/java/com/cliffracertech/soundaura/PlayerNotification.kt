@@ -10,10 +10,14 @@ import android.app.Service.STOP_FOREGROUND_REMOVE
 import android.content.Context.NOTIFICATION_SERVICE
 import android.content.Intent
 import android.os.Build
+import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.MediaMetadataCompat.*
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.support.v4.media.session.PlaybackStateCompat.*
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Job
@@ -95,6 +99,8 @@ class PlayerNotification(
             field = value
             rebuildMediaStyleAndNotificationBuilder()
         }
+    private val usingTiramisuMediaControls get() = useMediaSession &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
 
     private val channelId = service.getString(
             R.string.player_notification_channel_id
@@ -115,6 +121,7 @@ class PlayerNotification(
     private val notificationBuilder: NotificationCompat.Builder =
         NotificationCompat.Builder(service, channelId)
             .setOngoing(true)
+            .setColorized(true)
             .setSmallIcon(R.drawable.tile_and_notification_icon)
             .setContentIntent(PendingIntent.getActivity(service, 0,
                 Intent(service, MainActivity::class.java).apply {
@@ -180,6 +187,18 @@ class PlayerNotification(
         notificationStyle = androidx.media.app.NotificationCompat.MediaStyle()
         mediaSession = if (!useMediaSession) null else
             MediaSessionCompat(service, PlayerNotification::class.toString()).apply {
+                // We use an off center zoomed out app icon for the API 33+
+                // media notification because it is used as the background
+                // for the media controls card. For pre-API 33 media controls
+                // we use the standard app icon because it is displayed in a
+                // box at the starting edge of the media controls .
+                val background = ContextCompat.getDrawable(service,
+                    if (usingTiramisuMediaControls)
+                        R.drawable.media_controls_background
+                    else R.drawable.ic_launcher_foreground)?.toBitmap()
+                setMetadata(MediaMetadataCompat.Builder()
+                    .putBitmap(METADATA_KEY_ART, background)
+                    .build())
                 isActive = true
                 notificationStyle.setMediaSession(sessionToken)
                 setCallback(object: MediaSessionCompat.Callback() {
@@ -238,7 +257,11 @@ class PlayerNotification(
         })
         setContentTitle(stateString)
 
-        if (timeUntilStop == null)
+        // Starting with API level 33, the media controls use a text
+        // animation that looks really bad with the timer countdown.
+        // It also doesn't allow custom actions like the cancel timer
+        // action, so we just don't show the timer in this case.
+        if (timeUntilStop == null || usingTiramisuMediaControls)
             setContentText(null)
         else setContentText(service.getString(
             R.string.stop_timer_description, timeUntilStop.toHMMSSstring()))
