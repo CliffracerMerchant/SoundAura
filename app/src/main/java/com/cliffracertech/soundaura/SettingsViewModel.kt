@@ -22,6 +22,7 @@ import com.cliffracertech.soundaura.SoundAura.pref_key_autoPauseDuringCalls
 import com.cliffracertech.soundaura.SoundAura.pref_key_notificationPermissionRequested
 import com.cliffracertech.soundaura.SoundAura.pref_key_onZeroVolumeAudioDeviceBehavior
 import com.cliffracertech.soundaura.SoundAura.pref_key_playInBackground
+import com.cliffracertech.soundaura.SoundAura.pref_key_stopInsteadOfPause
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -97,6 +98,10 @@ object SoundAura {
      * leading to a media volume of zero. See OnZeroVolumeAudioDeviceBehavior's
      * documentation for descriptions of each value. */
     const val pref_key_onZeroVolumeAudioDeviceBehavior = "on_zero_volume_audio_device_behavior"
+
+    /** A boolean value that indicates whether tracks will be stopped instead
+     * of paused when the pause button is clicked. */
+    const val pref_key_stopInsteadOfPause = "stop_instead_of_pause"
 }
 
 enum class AppTheme { UseSystem, Light, Dark;
@@ -171,6 +176,7 @@ class SettingsViewModel(
     private val autoPauseDuringCallKey = booleanPreferencesKey(pref_key_autoPauseDuringCalls)
     private val onZeroVolumeAudioDeviceBehaviorKey =
         intPreferencesKey(pref_key_onZeroVolumeAudioDeviceBehavior)
+    private val stopInsteadOfPauseKey = booleanPreferencesKey(pref_key_stopInsteadOfPause)
 
     // The thread must be blocked when reading the first value
     // of the app theme from the DataStore or else the screen
@@ -312,6 +318,16 @@ class SettingsViewModel(
         scope.launch {
             dataStore.edit {
                 it[onZeroVolumeAudioDeviceBehaviorKey] = behavior.ordinal
+            }
+        }
+    }
+
+    val stopInsteadOfPause by dataStore.preferenceState(stopInsteadOfPauseKey, false, scope)
+
+    fun onStopInsteadOfPauseClick() {
+        scope.launch {
+            dataStore.edit {
+                it[stopInsteadOfPauseKey] = !stopInsteadOfPause
             }
         }
     }
