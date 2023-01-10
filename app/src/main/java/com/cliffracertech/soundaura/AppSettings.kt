@@ -149,6 +149,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
             onShowRequest = { showingTileTutorialDialog = true },
             onDismissRequest = { showingTileTutorialDialog = false },
             content = { TileTutorialDialog(onDismissRequest = it) })
+        Divider()
+        Setting(
+            title = stringResource(R.string.stop_instead_of_pause_setting_title),
+            subtitle = stringResource(R.string.stop_instead_of_pause_setting_description),
+            onClick = viewModel::onStopInsteadOfPauseClick
+        ) {
+            Switch(checked = viewModel.stopInsteadOfPause,
+                onCheckedChange = { viewModel.onStopInsteadOfPauseClick() })
+        }
     }
 
 @Composable private fun AboutSettingsCategory() =
