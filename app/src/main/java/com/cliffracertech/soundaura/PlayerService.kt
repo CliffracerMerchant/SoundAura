@@ -27,6 +27,7 @@ import com.cliffracertech.soundaura.PlayerService.Binder
 import com.cliffracertech.soundaura.PlayerService.Companion.PlaybackChangeListener
 import com.cliffracertech.soundaura.PlayerService.Companion.addPlaybackChangeListener
 import com.cliffracertech.soundaura.SoundAura.pref_key_playInBackground
+import com.cliffracertech.soundaura.SoundAura.pref_key_stopInsteadOfPause
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -75,15 +76,17 @@ import javax.inject.Inject
  * therefore call [Binder.setTrackVolume].
  *
  * PlayerService reads the values of and changes its behavior depending on the
- * app preference pointed to by the key [pref_key_playInBackground].
- * Read the documentation for [pref_key_playInBackground] for more information
- * about how PlayerService responds to each value of these settings.
+ * app preferences pointed to by the keys [pref_key_playInBackground] and
+ * [pref_key_stopInsteadOfPause]. Read the documentation for these preferences
+ * for more information about how PlayerService responds to each value of these
+ * settings.
  */
 @AndroidEntryPoint
 class PlayerService: LifecycleService() {
     private val unpauseLocks = mutableSetOf<String>()
     private val playbackModules = mutableListOf(
-        OnAudioDeviceChangePlaybackModule(unpauseLocks, ::autoPauseIf, ::setPlaybackState),
+        OnAudioDeviceChangePlaybackModule(
+            unpauseLocks, ::autoPauseIf, ::setPlaybackState),
         PhoneStateAwarePlaybackModule(::autoPauseIf))
     @Inject lateinit var trackDao: TrackDao
     @Inject lateinit var messageHandler: MessageHandler
@@ -93,7 +96,7 @@ class PlayerService: LifecycleService() {
     private var autoStopJob: Job? = null
     private var stopTime by mutableStateOf<Instant?>(null)
 
-    private val playerSet = PlayerSet(this) { uriString ->
+    private val playerSet = PlayerSet(this) { uriString -> //onCreatePlayerFailure = {
         lifecycleScope.launch { trackDao.notifyOfError(uriString) }
     }
 
@@ -134,6 +137,12 @@ class PlayerService: LifecycleService() {
      * that mismatched state does not occur.*/
     private var isPlaying by mutableStateOf(false)
 
+    private var stopInsteadOfPause = false
+        set(value) {
+            field = value
+            if (value && !isPlaying)
+                playerSet.stop()
+        }
 
     override fun onCreate() {
         super.onCreate()
@@ -144,8 +153,8 @@ class PlayerService: LifecycleService() {
         val playInBackgroundFlow = dataStore.preferenceFlow(playInBackgroundKey, false)
         // playInBackground needs to be set before playback starts so that
         // PlayerService knows whether it needs to request audio focus or not.
-        // As such, there is no alternative but to wait for the first value.
         val playInBackgroundFirstValue = runBlocking { playInBackgroundFlow.first() }
+
         notificationManager = PlayerNotification(
             service = this,
             playIntent = playIntent(this),
@@ -161,6 +170,11 @@ class PlayerService: LifecycleService() {
         repeatWhenStarted {
             playInBackgroundFlow
                 .onEach { playInBackground = it }
+                .launchIn(this)
+
+            val stopInsteadOfPauseKey = booleanPreferencesKey(pref_key_stopInsteadOfPause)
+            dataStore.preferenceFlow(stopInsteadOfPauseKey, false)
+                .onEach { stopInsteadOfPause = it }
                 .launchIn(this)
 
             trackDao.getActiveTracks()
@@ -250,9 +264,10 @@ class PlayerService: LifecycleService() {
         playbackState = newState
         isPlaying = newState == STATE_PLAYING
         updateNotification()
-        if (newState != STATE_STOPPED) {
-            if (isPlaying) playerSet.play()
-            else playerSet.pause()
+        if (newState != STATE_STOPPED) when {
+            isPlaying ->          playerSet.play()
+            stopInsteadOfPause -> playerSet.stop()
+            else ->               playerSet.pause()
         } else {
             if (!playInBackground && hasAudioFocus)
                 abandonAudioFocus()
