@@ -10,9 +10,14 @@ import android.net.Uri
 /**
  * A [MediaPlayer] wrapper that allows for seamless looping of the provided uri.
  * If there is a problem with the provided uri, then the inner MediaPlayer
- * instance creation can fail. In this case, [isPlaying] will always return false
- * and setting isPlaying will have no effect. The current volume for both audio
- * channels can also be retrieved or set via the property [volume].
+ * instance creation can fail. In this case, calling [play] will have no effect.
+ * The current volume for both audio channels can also be retrieved or set via
+ * the property [volume].
+ *
+ * The methods [play], [pause], and [stop] can be used to control playback of
+ * the [Player]. These methods correspond to the [MediaPlayer] methods of the
+ * same name, except for [stop]. [Player]'s [stop] method is functionally the
+ * same as pausing while seeking to the start of the media.
  *
  * @param context A [Context] instance. Note that the provided context instance
  *     is held onto for the lifetime of the Player instance, and so should not
@@ -47,29 +52,26 @@ class Player(
             nextPlayer?.setVolume(volume, volume)
         }
 
-    /** The isPlaying state of the player. Setting the property
-     * to false will pause the player rather than stopping it. */
-    var isPlaying
-        get() = currentPlayer?.isPlaying ?: false
-        set(value) {
-            try {
-                if (value) currentPlayer?.start()
-                else       currentPlayer?.pause()
-            } catch(e: IllegalStateException) {
-                // An IllegalStateException can be thrown here if the pause is called
-                // immediately after creation when the player is still initializing
-                currentPlayer?.setOnPreparedListener {
-                    if (value) currentPlayer?.start()
-                    else       currentPlayer?.pause()
-                    currentPlayer?.setOnPreparedListener(null)
-                }
+    private fun MediaPlayer.attempt(action: MediaPlayer.() -> Unit) {
+        try { action() }
+        // An IllegalStateException can be thrown here if the pause is called
+        // immediately after creation when the player is still initializing
+        catch(e: java.lang.IllegalStateException) {
+            setOnPreparedListener {
+                action()
+                setOnPreparedListener(null)
             }
         }
+    }
+
+    fun play() { currentPlayer?.attempt(MediaPlayer::start) }
+    fun pause() { currentPlayer?.attempt(MediaPlayer::pause) }
+    fun stop() { currentPlayer?.attempt { pause(); seekTo(0) }}
 
     init {
         prepareNextPlayer()
         if (startPlaying)
-            isPlaying = true
+            play()
         volume = initialVolume
     }
 
@@ -100,31 +102,32 @@ class Player(
 /**
  * A collection of [Player] instances.
  *
- * TrackPlayerSet manages a collection of Player instances for a list of
+ * [PlayerSet] manages a collection of [Player] instances for a list of
  * [Track]s. The collection of players is updated by calling the function [update]
- * with the new List<Track> instance and a boolean value indicating whether
+ * with the new [List]`<Track>` instance and a boolean value indicating whether
  * newly added tracks should start playing immediately.
  *
  * Whether or not the collection of players is empty can be queried with the
- * property isEmpty. The property [isInitialized], which will start as false but
+ * property [isEmpty]. The property [isInitialized], which will start as false but
  * will be set to true after the first call to update, is also provided so that
- * the TrackPlayerSet being empty because the provided List<Track> is empty can
- * be differentiated from the TrackPlayerSet being empty because update hasn't
+ * the [PlayerSet] being empty because the provided [List]`<Track>` is empty can
+ * be differentiated from the [PlayerSet] being empty because update hasn't
  * been called yet (this might happen for instance if update is called in
  * response to a asynchronous database access method).
  *
- * The isPlaying state can be set for all players at once with the method
- * [setIsPlaying], while the volume for individual tracks can be set with the
- * method [setPlayerVolume]. The function [releaseAll] should be called before the
- * TrackPlayerSet is destroyed so that all Player instances can be released first.
+ * The playing/paused/stopped state can be set for all players at once with the
+ * methods [play], [pause], and [stop], respectively. The volume for individual
+ * tracks can be set with the method [setPlayerVolume]. The function [releaseAll]
+ * should be called before the PlayerSet is destroyed so that all Player
+ * instances can be released first.
  *
  * @param context A [Context] instance. Note that the context instance will be
- *     held onto for the lifetime of the TrackPlayerSet.
+ *     held onto for the lifetime of the [PlayerSet].
  * @param onCreatePlayerFailure The callback that will be invoked when the
- *     Player creation for a particular Track fails. The single string
- *     parameter is the uri string of the Track whose Player creation failed.
+ *     [Player] creation for a particular [Track] fails. The single string
+ *     parameter is the uri string of the [Track] whose [Player] creation failed.
  */
-class TrackPlayerSet(
+class PlayerSet(
     private val context: Context,
     private val onCreatePlayerFailure: (String) -> Unit
 ) {
@@ -134,10 +137,9 @@ class TrackPlayerSet(
 
     val isEmpty get() = uriPlayerMap.isEmpty()
 
-    fun setIsPlaying(isPlaying: Boolean) =
-        uriPlayerMap.values.forEach {
-            it.isPlaying = isPlaying
-        }
+    fun play() = uriPlayerMap.values.forEach(Player::play)
+    fun pause() = uriPlayerMap.values.forEach(Player::pause)
+    fun stop() = uriPlayerMap.values.forEach(Player::stop)
 
     fun setPlayerVolume(uriString: String, volume: Float) =
         uriPlayerMap[uriString]?.run {

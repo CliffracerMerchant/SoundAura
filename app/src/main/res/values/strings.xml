@@ -234,6 +234,10 @@
     <string name="tile_tutorial_hide_notification_link_text">
         system settings page for SoundAura</string>
 
+    <string name="stop_instead_of_pause_setting_title">Stop instead of pause</string>
+    <string name="stop_instead_of_pause_setting_description">
+        Tracks will restart from the beginning instead of resuming</string>
+
     <string name="about">About</string>
     <string name="privacy_policy_setting_title">Privacy policy</string>
     <string name="privacy_policy_setting_body">
