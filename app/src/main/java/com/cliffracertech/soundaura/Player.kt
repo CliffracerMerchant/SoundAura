@@ -14,6 +14,11 @@ import android.net.Uri
  * The current volume for both audio channels can also be retrieved or set via
  * the property [volume].
  *
+ * The methods [play], [pause], and [stop] can be used to control playback of
+ * the [Player]. These methods correspond to the [MediaPlayer] methods of the
+ * same name, except for [stop]. [Player]'s [stop] method is functionally the
+ * same as pausing while seeking to the start of the media.
+ *
  * @param context A [Context] instance. Note that the provided context instance
  *     is held onto for the lifetime of the Player instance, and so should not
  *     be a component that the Player might outlive.
@@ -61,7 +66,7 @@ class Player(
 
     fun play() { currentPlayer?.attempt(MediaPlayer::start) }
     fun pause() { currentPlayer?.attempt(MediaPlayer::pause) }
-    fun stop() { currentPlayer?.attempt(MediaPlayer::stop) }
+    fun stop() { currentPlayer?.attempt { pause(); seekTo(0) }}
 
     init {
         prepareNextPlayer()
