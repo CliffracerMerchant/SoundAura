@@ -256,7 +256,7 @@ fun Duration.toHMMSSstring(): String {
         }
     }
     val style = MaterialTheme.typography.caption
-    Row(Modifier, Arrangement.spacedBy(-1.dp), Alignment.CenterVertically) {
+    Row(Modifier, Arrangement.spacedBy((-1).dp), Alignment.CenterVertically) {
         Icon(Icons.Default.Stop, null, Modifier.size(16.dp))
         Text(stringResource(R.string.stop_timer_text), style = style)
     }
@@ -300,25 +300,17 @@ fun Duration.toHMMSSstring(): String {
 
 /**
  * The content of a [MediaController] instance when it is collapsed
- * (i.e. not showing the preset selector.
+ * (i.e. not showing the preset selector).
  *
  * @param sizes The [MediaControllerSizes] instance that describes
  *     the sizes of [MediaController]'s internal elements.
  * @param transitionProgressProvider A method that returns the
  *     current progress of the [MediaController]'s show/hide
  *     preset selector transition when invoked
- * @param activePresetNameProvider A method that will return the active
- *     preset's name when invoked, if any
- * @param activePresetIsModified Whether or not the active preset is modified
- * @param onActivePresetClick The method that will be invoked when the
- *     active preset display to the left/top of the play/pause button
- *     is clicked
- * @param playing Whether or not media is playing, used to determine
- *     the icon displayed in the play/pause button
- * @param onPlayPauseClick The method that will be invoked when the
- *     play/pause button is clicked
- * @param onPlayPauseLongClick The callback that will be invoked when
- *     the play/pause button is long clicked
+ * @param activePresetCallback The [ActivePresetCallback] that will be used
+ *     to determine the display and function of the active preset indicator
+ * @param playPauseButtonCallback The [PlayPauseButtonCallback] that will be
+ *     used to determine the display and function of the play/pause button
  * @param stopTime The [Instant] at which media will automatically
  *     stop playing, if any. This value is only used for informational
  *     display; playback is not affected by this value
@@ -387,16 +379,41 @@ fun Duration.toHMMSSstring(): String {
     }
 }
 
+/**
+ * A collection of callbacks related to the display of an active preset.
+ *
+ * @param nameProvider A function that returns the actively playing
+ *     [Preset]'s name, or null if there isn't one, when invoked
+ * @param isModifiedProvider A function that returns whether or
+ *     not the active preset has unsaved changes when invoked
+ * @param onClick The callback that will be invoked when the display
+ *     of the active preset is clicked
+ */
 data class ActivePresetCallback(
     val nameProvider: () -> String?,
     val isModifiedProvider: () -> Boolean,
     val onClick: () -> Unit)
 
+/**
+ * A collection of callbacks replayed to the display and function
+ * of a combination play/pause button with a long click action.
+ *
+ * @param isPlayingProvider A function that returns the media play/pause
+ *     state that the play/pause button should use to determine its icon,
+ *     which will be the opposite of the current state
+ * @param onClick The callback that will be invoked when the pla/pause button is clicked
+ * @param onLongClick The callback that will be invoked when the pla/pause button is long clicked
+ * @param longClickHintProvider A function that returns a nullable [String]
+ *     message that should be displayed in a popup tooltip when the button
+ *     is clicked. If null is returned, no tooltip will be shown. This long
+ *     click hint is provided due to the low discoverability nature of long
+ *     click actions.
+ */
 data class PlayPauseButtonCallback(
     val isPlayingProvider: () -> Boolean,
     val onClick: () -> Unit,
     val onLongClick: () -> Unit,
-    val showLongClickHintProvider: () -> Boolean)
+    val longClickHintProvider: () -> String?)
 
 /**
  * A floating button that shows information about the currently playing [Preset]
@@ -415,15 +432,10 @@ data class PlayPauseButtonCallback(
  *     not be applied through the [modifier] parameter or it will be applied twice.
  * @param padding The [PaddingValues] to use for placement. This padding should not
  *     be applied through the [modifier] parameter or it will be applied twice.
- * @param activePresetNameProvider A function that returns the actively
- *     playing [Preset]'s name, or null if there isn't one, when invoked
- * @param activePresetIsModified Whether or not the active preset has unsaved changes
- * @param onActivePresetClick The callback that will be invoked when the active preset is clicked
- * @param playing The media play/pause state that the play/pause button should
- *     use to determine its icon, which will be the opposite of the current state
- * @param onPlayPauseClick The callback that will be invoked when the play/pause button is clicked
- * @param onPlayPauseLongClick The callback that will be invoked the the
- *     play/pause button is long clicked
+ * @param activePresetCallback The [ActivePresetCallback] that will be used
+ *     to determine the display and function of the active preset indicator
+ * @param playPauseButtonCallback The [PlayPauseButtonCallback] that will be
+ *     used to determine the display and function of the play/pause button
  * @param stopTime The java.time.Instant at which playback will be automatically
  *     stopped. MediaController does not use this information to affect playback;
  *     the value of stopTime is only used to display this information to the user.
@@ -570,7 +582,7 @@ fun MediaControllerPreview() = SoundAuraTheme {
             isPlayingProvider = { playing },
             onClick = { playing = !playing },
             onLongClick = {},
-            showLongClickHintProvider = { false }),
+            longClickHintProvider = { null }),
         stopTime = null,
         onStopTimeClick = {},
         showingPresetSelector = expanded,

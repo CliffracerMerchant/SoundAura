@@ -212,20 +212,6 @@ class MediaControllerViewModel(
     var showingSetStopTimeDialog by rememberSaveable { mutableStateOf(false) }
     var showingCancelStopTimeDialog by rememberSaveable { mutableStateOf(false) }
 
-    val activePresetCallback = remember {
-        ActivePresetCallback(
-            nameProvider = viewModel::activePresetName::get,
-            isModifiedProvider = viewModel::activePresetIsModified::get,
-            onClick = viewModel::onActivePresetClick)
-    }
-
-    val playPauseButtonCallback = remember(isPlayingProvider, onPlayPauseClick) {
-        PlayPauseButtonCallback(
-            isPlayingProvider, onPlayPauseClick,
-            onLongClick = { showingSetStopTimeDialog = true },
-            showLongClickHintProvider = { false })
-    }
-
     MediaController(
         modifier = modifier,
         sizes = sizes,
@@ -233,9 +219,17 @@ class MediaControllerViewModel(
         contentColor = MaterialTheme.colors.onPrimary,
         alignment = alignment,
         padding = padding,
-        activePresetCallback = activePresetCallback,
-        playPauseButtonCallback = playPauseButtonCallback,
-        stopTime = stopTime,
+        activePresetCallback = remember {
+            ActivePresetCallback(
+                nameProvider = viewModel::activePresetName::get,
+                isModifiedProvider = viewModel::activePresetIsModified::get,
+                onClick = viewModel::onActivePresetClick)
+        }, playPauseButtonCallback = remember(isPlayingProvider, onPlayPauseClick) {
+            PlayPauseButtonCallback(
+                isPlayingProvider, onPlayPauseClick,
+                onLongClick = { showingSetStopTimeDialog = true },
+                longClickHintProvider = { null })
+        }, stopTime = stopTime,
         onStopTimeClick = { showingCancelStopTimeDialog = true },
         showingPresetSelector = viewModel.showingPresetSelector,
         presetListCallback = presetListCallback,
