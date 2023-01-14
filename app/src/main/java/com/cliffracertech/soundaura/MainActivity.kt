@@ -327,9 +327,9 @@ class MainActivity : ComponentActivity() {
                 sizes = mediaControllerSizes,
                 alignment = alignment,
                 padding = padding,
-                stopTime = boundPlayerService?.stopTime,
-                isPlaying = boundPlayerService?.isPlaying ?: false,
+                isPlayingProvider = { boundPlayerService?.isPlaying ?: false },
                 onPlayPauseClick = ::onPlayPauseClick,
+                stopTime = boundPlayerService?.stopTime,
                 onNewStopTimeRequest = ::onSetTimer,
                 onCancelStopTimeRequest = ::onClearTimer)
         }

@@ -177,9 +177,9 @@ class MediaControllerViewModel(
     sizes: MediaControllerSizes,
     alignment: BiasAlignment,
     padding: PaddingValues,
-    isPlaying: Boolean,
-    stopTime: Instant?,
+    isPlayingProvider: () -> Boolean,
     onPlayPauseClick: () -> Unit,
+    stopTime: Instant?,
     onNewStopTimeRequest: (Duration) -> Unit,
     onCancelStopTimeRequest: () -> Unit,
 ) {
@@ -212,6 +212,20 @@ class MediaControllerViewModel(
     var showingSetStopTimeDialog by rememberSaveable { mutableStateOf(false) }
     var showingCancelStopTimeDialog by rememberSaveable { mutableStateOf(false) }
 
+    val activePresetCallback = remember {
+        ActivePresetCallback(
+            nameProvider = viewModel::activePresetName::get,
+            isModifiedProvider = viewModel::activePresetIsModified::get,
+            onClick = viewModel::onActivePresetClick)
+    }
+
+    val playPauseButtonCallback = remember(isPlayingProvider, onPlayPauseClick) {
+        PlayPauseButtonCallback(
+            isPlayingProvider, onPlayPauseClick,
+            onLongClick = { showingSetStopTimeDialog = true },
+            showLongClickHintProvider = { false })
+    }
+
     MediaController(
         modifier = modifier,
         sizes = sizes,
@@ -219,12 +233,8 @@ class MediaControllerViewModel(
         contentColor = MaterialTheme.colors.onPrimary,
         alignment = alignment,
         padding = padding,
-        activePresetNameProvider = viewModel::activePresetName::get,
-        activePresetIsModified = viewModel.activePresetIsModified,
-        onActivePresetClick = viewModel::onActivePresetClick,
-        playing = isPlaying,
-        onPlayPauseClick = onPlayPauseClick,
-        onPlayPauseLongClick = { showingSetStopTimeDialog = true },
+        activePresetCallback = activePresetCallback,
+        playPauseButtonCallback = playPauseButtonCallback,
         stopTime = stopTime,
         onStopTimeClick = { showingCancelStopTimeDialog = true },
         showingPresetSelector = viewModel.showingPresetSelector,
