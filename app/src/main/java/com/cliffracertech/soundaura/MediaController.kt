@@ -34,20 +34,26 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
+import com.github.skgmn.composetooltip.AnchorEdge
+import com.github.skgmn.composetooltip.Tooltip
+import com.github.skgmn.composetooltip.rememberTooltipStyle
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.Instant
 
-const val tweenDuration = 250
-const val springStiffness = 600f
+internal const val tweenDuration = 250
+internal const val springStiffness = 600f
+
+val Orientation.isHorizontal get() = this == Orientation.Horizontal
+val Orientation.isVertical get() = this == Orientation.Vertical
 
 /**
- * A collection of sizes that the composable [MediaController] uses to
- * determine its overall size. Because these sizes can be used for
- * horizontal and vertical orientations, the terms length and thickness
- * refer to the width and height, respectively, in horizontal orientation,
- * and vice versa for a vertical orientation.
+ * A collection of sizes that a [MediaController] uses to determine its
+ * overall size. Because these sizes can be used for horizontal and
+ * vertical orientations, the terms length and thickness refer to the
+ * width and height, respectively, in horizontal orientation, and vice
+ * versa for a vertical orientation.
  *
  * The method [collapsedSize] can be used to obtain the size of a
  * [MediaController] given the provided sizes and whether or not the
@@ -62,81 +68,84 @@ const val springStiffness = 600f
  *                           in the [MediaController]'s collapsed state
  * @param buttonLength The length of the button. The button's other
  *     dimension will match the derived thickness of the [MediaController].
- * @param stopTimeSize The [DpSize] of the auto stop time indicator. This
+ * @param stopTimerSize The [DpSize] of the stop timer indicator. This
  *     value is described as a [DpSize] instead of a [Dp] length because the
  *     auto stop time indicator does not change its orientation depending on
  *     the orientation of the [MediaController].
- * @param presetSelectorSize The [DpSize] of the [MediaController] when its
- *     parameter showingPresetSelector is true. Like the auto stop time
- *     indicator, the preset selector does not change its orientation with
- *     the rest of the [MediaController].
+ * @param presetSelectorSize The [DpSize] of the [MediaController] when
+ *     its parameter showingPresetSelector is true. Like the stop timer
+ *     indicator, the preset selector does not change its orientation
+ *     with the rest of the [MediaController].
  */
 data class MediaControllerSizes(
     val orientation: Orientation,
     val minThickness: Dp = defaultMinThicknessDp.dp,
     val activePresetLength: Dp,
     val buttonLength: Dp = defaultButtonLengthDp.dp,
-    val stopTimeSize: DpSize = DpSize(defaultStopTimeWidthDp.dp,
-                                      defaultStopTimeHeightDp.dp),
+    val stopTimerSize: DpSize = DpSize(
+        width = defaultStopTimerWidthDp.dp,
+        height = defaultStopTimerHeightDp.dp),
     val presetSelectorSize: DpSize,
 ) {
     val dividerSize get() = dividerThicknessDp.dp
-    val stopTimeLength get() = if (orientation.isHorizontal)
-                                   stopTimeSize.width
-                               else stopTimeSize.height
+    val stopTimerLength get() =
+        if (orientation.isVertical) stopTimerSize.height
+        else                        stopTimerSize.width
 
     val collapsedThickness = maxOf(minThickness,
-        if (orientation.isHorizontal) stopTimeSize.height
-        else                          stopTimeSize.width)
+        if (orientation.isVertical) stopTimerSize.width
+        else                        stopTimerSize.height)
 
     val activePresetSize = DpSize(
         width = if (orientation.isVertical) collapsedThickness else activePresetLength,
-        height = if (orientation.isHorizontal) collapsedThickness else activePresetLength)
+        height = if (orientation.isVertical) activePresetLength else collapsedThickness)
 
     val buttonSize = DpSize(
         width = if (orientation.isVertical) collapsedThickness else buttonLength,
-        height = if (orientation.isHorizontal) collapsedThickness else buttonLength)
+        height = if (orientation.isVertical) buttonLength else collapsedThickness)
 
     /** Return the size of a collapsed [MediaController] (i.e. when its
      * showingPresetSelector parameter is false) given whether or not the
      * auto stop time is being shown and the orientation. */
-    fun collapsedSize(showingStopTime: Boolean): DpSize {
-        val stopTimeLength = if (!showingStopTime) 0.dp
-                             else dividerSize + stopTimeLength
-        val length = activePresetLength + dividerSize + buttonLength + stopTimeLength
-        return DpSize(if (orientation.isHorizontal) length else collapsedThickness,
-                      if (orientation.isVertical) length else collapsedThickness)
+    fun collapsedSize(showingStopTimer: Boolean): DpSize {
+        val stopTimerLength = if (!showingStopTimer) 0.dp
+        else dividerSize + stopTimerLength
+        val length = activePresetLength + dividerSize +
+                buttonLength + stopTimerLength
+        return DpSize(
+            width = if (orientation.isVertical) collapsedThickness else length,
+            height = if (orientation.isVertical) length else collapsedThickness)
     }
 
     /** Return a remembered current size of a [MediaController] instance given
      * whether or not the preset selector is being shown and whether an auto
-     * stop time is being displayed. */
+     * stop timer is being displayed. */
     @Composable fun rememberCurrentSize(
         showingPresetSelector: Boolean,
-        showingStopTime: Boolean,
-    ) = remember(showingPresetSelector, showingStopTime) {
+        showingStopTimer: Boolean,
+    ) = remember(showingPresetSelector, showingStopTimer) {
         if (showingPresetSelector) presetSelectorSize
-        else collapsedSize(showingStopTime)
+        else                       collapsedSize(showingStopTimer)
     }
 
     val shape = RoundedCornerShape(28.dp)
 
     val activePresetShape =
-        if (orientation.isHorizontal) shape.startShape()
-        else                          shape.topShape()
+        if (orientation.isVertical) shape.topShape()
+        else                        shape.startShape()
 
-    val stopTimeShape =
-        if (orientation.isHorizontal) shape.endShape()
-        else                          shape.bottomShape()
+    val stopTimerShape =
+        if (orientation.isVertical) shape.bottomShape()
+        else                        shape.endShape()
 
-    fun playPauseButtonShape(showingStopTime: Boolean) =
-        if (showingStopTime) RectangleShape
-        else                 stopTimeShape
+    fun playPauseButtonShape(showingStopTimer: Boolean) =
+        if (showingStopTimer) RectangleShape
+        else                  stopTimerShape
 
     companion object {
         const val defaultButtonLengthDp = 56
-        const val defaultStopTimeWidthDp = 72
-        const val defaultStopTimeHeightDp = 56
+        const val defaultStopTimerWidthDp = 72
+        const val defaultStopTimerHeightDp = 56
         const val dividerThicknessDp = 1.5f
         const val defaultMinThicknessDp = 56
     }
@@ -153,8 +162,20 @@ fun Modifier.rotateClockwise() = layout { measurable, constraints ->
     }
 }.rotate(90f)
 
-val Orientation.isHorizontal get() = this == Orientation.Horizontal
-val Orientation.isVertical get() = this == Orientation.Vertical
+/**
+ * A collection of callbacks related to the display of an active preset.
+ *
+ * @param nameProvider A function that returns the actively playing
+ *     [Preset]'s name, or null if there isn't one, when invoked
+ * @param isModifiedProvider A function that returns whether or
+ *     not the active preset has unsaved changes when invoked
+ * @param onClick The callback that will be invoked when the display
+ *     of the active preset is clicked
+ */
+data class ActivePresetCallback(
+    val nameProvider: () -> String?,
+    val isModifiedProvider: () -> Boolean,
+    val onClick: () -> Unit)
 
 @Composable private fun ActivePresetIndicator(
     sizes: MediaControllerSizes,
@@ -192,11 +213,35 @@ val Orientation.isVertical get() = this == Orientation.Vertical
     }
 }
 
+
+/**
+ * A collection of callbacks replayed to the display and function
+ * of a combination play/pause button with a long click action.
+ *
+ * @param isPlayingProvider A function that returns the media play/pause
+ *     state that the play/pause button should use to determine its icon,
+ *     which will be the opposite of the current state
+ * @param onClick The callback that will be invoked when the pla/pause button is clicked
+ * @param onLongClick The callback that will be invoked when the pla/pause button is long clicked
+ * @param longClickHintProvider A function that returns a nullable [String]
+ *     message that should be displayed in a popup tooltip when the button
+ *     is clicked. If null is returned, no tooltip will be shown. This long
+ *     click hint is provided due to the low discoverability nature of long
+ *     click actions.
+ */
+data class PlayPauseButtonCallback(
+    val isPlayingProvider: () -> Boolean,
+    val onClick: () -> Unit,
+    val onLongClick: () -> Unit,
+    val longClickHintProvider: () -> String?)
+
 @Composable private fun PlayPauseButton(
     callback: PlayPauseButtonCallback,
     modifier: Modifier = Modifier,
 ) {
     val isPlaying = callback.isPlayingProvider()
+    var longClickHint by remember { mutableStateOf<String?>(null) }
+
     Box(contentAlignment = Alignment.Center,
         modifier = modifier
             .combinedClickable(
@@ -206,13 +251,24 @@ val Orientation.isVertical get() = this == Orientation.Vertical
                 onClickLabel = stringResource(
                     if (isPlaying) R.string.pause_button_description
                     else           R.string.play_button_description),
-                onClick = callback.onClick),
+                onClick = {
+                    callback.onClick()
+                    longClickHint = callback.longClickHintProvider()
+                }),
     ) {
         PlayPauseIcon(
             isPlaying = isPlaying,
             contentDescription = stringResource(
                 if (isPlaying) R.string.pause_button_description
                 else           R.string.play_button_description))
+        longClickHint?.let {
+            Tooltip(
+                anchorEdge = AnchorEdge.Top,
+                tooltipStyle = rememberTooltipStyle(
+                    cornerRadius = 16.dp,
+                    tipHeight = 12.dp),
+                content = { Text(it) })
+        }
     }
 }
 
@@ -229,7 +285,7 @@ fun Duration.toHMMSSstring(): String {
     }
 }
 
-@Composable private fun StopTimeDisplay(
+@Composable private fun StopTimerDisplay(
     stopTime: Instant?,
     modifier: Modifier = Modifier,
 ) = Column(
@@ -241,7 +297,7 @@ fun Duration.toHMMSSstring(): String {
         stopTime?.let { Duration.between(Instant.now(), it) }
     }
     // durationRemainingString is used so that when the stopTime
-    // becomes null, the StopTimeDisplay can fade out with the
+    // becomes null, the StopTimerDisplay can fade out with the
     // last non-null value of stopTime
     var durationRemainingString by remember {
         mutableStateOf(durationRemaining?.toHMMSSstring())
@@ -263,7 +319,7 @@ fun Duration.toHMMSSstring(): String {
     Text(durationRemainingString ?: "", style = style)
 }
 
-@Composable private fun StopTimeDisplayWithDivider(
+@Composable private fun HideableStopTimerDisplay(
     showing: Boolean,
     sizes: MediaControllerSizes,
     stopTime: Instant?,
@@ -277,7 +333,7 @@ fun Duration.toHMMSSstring(): String {
     if (progress == 0f) return
 
     val translationPercent = (1f - progress) / -2f
-    val size = sizes.stopTimeSize
+    val size = sizes.stopTimerSize
     val clickLabel = stringResource(R.string.stop_timer_click_label)
 
     LinearLayout(
@@ -290,11 +346,11 @@ fun Duration.toHMMSSstring(): String {
                                    translationPercent * size.width.toPx()
                 translationY = if (sizes.orientation.isHorizontal) 0f else
                                    translationPercent * size.height.toPx()
-            }.clip(sizes.stopTimeShape)
+            }.clip(sizes.stopTimerShape)
             .clickable(true, clickLabel, Role.Button, onClick),
     ) {
         Divider(sizes.orientation, sizeFraction = 0.8f)
-        StopTimeDisplay(stopTime, Modifier.fillMaxSize())
+        StopTimerDisplay(stopTime, Modifier.fillMaxSize())
     }
 }
 
@@ -314,10 +370,10 @@ fun Duration.toHMMSSstring(): String {
  * @param stopTime The [Instant] at which media will automatically
  *     stop playing, if any. This value is only used for informational
  *     display; playback is not affected by this value
- * @param onStopTimeClick The callback that will be invoked when
+ * @param showStopTimer Whether or not the stop timer should be shown
+ *     if the stop time is not null
+ * @param onStopTimerClick The callback that will be invoked when
  *     the display of the stop time is clicked
- * @param showStopTime Whether or not the auto stop time should
- *     be shown if it is not null
  * @param modifier The [Modifier] to use for the composable
  */
 @Composable fun MediaControllerCollapsedContent(
@@ -326,8 +382,8 @@ fun Duration.toHMMSSstring(): String {
     activePresetCallback: ActivePresetCallback,
     playPauseButtonCallback: PlayPauseButtonCallback,
     stopTime: Instant?,
-    onStopTimeClick: () -> Unit,
-    showStopTime: Boolean,
+    showStopTimer: Boolean,
+    onStopTimerClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) = LinearLayout(
     orientation = sizes.orientation,
@@ -339,9 +395,11 @@ fun Duration.toHMMSSstring(): String {
         callback = playPauseButtonCallback,
         modifier = Modifier
             .size(sizes.buttonSize)
-            .clip(sizes.playPauseButtonShape(showStopTime)))
-    StopTimeDisplayWithDivider(
-        showStopTime, sizes, stopTime, onClick = onStopTimeClick)
+            .clip(sizes.playPauseButtonShape(showStopTimer)))
+    HideableStopTimerDisplay(
+        showing = showStopTimer,
+        sizes, stopTime,
+        onClick = onStopTimerClick)
 }
 
 /**
@@ -380,42 +438,6 @@ fun Duration.toHMMSSstring(): String {
 }
 
 /**
- * A collection of callbacks related to the display of an active preset.
- *
- * @param nameProvider A function that returns the actively playing
- *     [Preset]'s name, or null if there isn't one, when invoked
- * @param isModifiedProvider A function that returns whether or
- *     not the active preset has unsaved changes when invoked
- * @param onClick The callback that will be invoked when the display
- *     of the active preset is clicked
- */
-data class ActivePresetCallback(
-    val nameProvider: () -> String?,
-    val isModifiedProvider: () -> Boolean,
-    val onClick: () -> Unit)
-
-/**
- * A collection of callbacks replayed to the display and function
- * of a combination play/pause button with a long click action.
- *
- * @param isPlayingProvider A function that returns the media play/pause
- *     state that the play/pause button should use to determine its icon,
- *     which will be the opposite of the current state
- * @param onClick The callback that will be invoked when the pla/pause button is clicked
- * @param onLongClick The callback that will be invoked when the pla/pause button is long clicked
- * @param longClickHintProvider A function that returns a nullable [String]
- *     message that should be displayed in a popup tooltip when the button
- *     is clicked. If null is returned, no tooltip will be shown. This long
- *     click hint is provided due to the low discoverability nature of long
- *     click actions.
- */
-data class PlayPauseButtonCallback(
-    val isPlayingProvider: () -> Boolean,
-    val onClick: () -> Unit,
-    val onLongClick: () -> Unit,
-    val longClickHintProvider: () -> String?)
-
-/**
  * A floating button that shows information about the currently playing [Preset]
  * and a play/pause button. When the parameter [showingPresetSelector] is true,
  * the button will animate its transformation into a preset selector. In this
@@ -439,8 +461,8 @@ data class PlayPauseButtonCallback(
  * @param stopTime The java.time.Instant at which playback will be automatically
  *     stopped. MediaController does not use this information to affect playback;
  *     the value of stopTime is only used to display this information to the user.
- * @param onStopTimeClick The callback that will be invoked when
- *     the display of the stop time is clicked
+ * @param onStopTimerClick The callback that will be invoked when
+ *     the display of the stop timer is clicked
  * @param showingPresetSelector Whether or not the floating button should be
  *     expanded to show the preset selector
  * @param presetListCallback The [PresetListCallback] that will be used for user
@@ -458,7 +480,7 @@ data class PlayPauseButtonCallback(
     activePresetCallback: ActivePresetCallback,
     playPauseButtonCallback: PlayPauseButtonCallback,
     stopTime: Instant?,
-    onStopTimeClick: () -> Unit,
+    onStopTimerClick: () -> Unit,
     showingPresetSelector: Boolean,
     presetListCallback: PresetListCallback,
     onCloseButtonClick: () -> Unit,
@@ -472,39 +494,38 @@ data class PlayPauseButtonCallback(
         transitionSpec = { spring(stiffness = springStiffness) },
         label = "FloatingMediaController expand transition progress",
         targetValueByState = { if (it) 1f else 0f })
+    val transitionProgressProvider = remember {{ expandTransitionProgress }}
 
     ClippedBrushBox(
         modifier = modifier,
         brush = backgroundBrush,
         size = sizes.rememberCurrentSize(
             showingPresetSelector = showingPresetSelector,
-            showingStopTime = stopTime != null),
+            showingStopTimer = stopTime != null),
         cornerRadius = 28.dp,
         padding = padding,
         alignment = alignment,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            val showingStopTime = stopTime != null
             val titleHeight by expandTransition.animateDp(
                 transitionSpec = { spring(stiffness = springStiffness) },
                 label = "FloatingMediaController title height transition",
             ) { expanded ->
                 if (!expanded && sizes.orientation.isVertical)
-                    sizes.collapsedSize(showingStopTime).height
+                    sizes.collapsedSize(stopTime != null).height
                 else sizes.minThickness
             }
 
             Box(modifier.height(titleHeight)) {
                 if (expandTransitionProgress > 0f)
-                    PresetSelectorTitle(
-                        sizes, { expandTransitionProgress }, onCloseButtonClick)
+                    PresetSelectorTitle(sizes, transitionProgressProvider, onCloseButtonClick)
+
+                val showStopTimer = !expandTransition.targetState && stopTime != null
                 if (expandTransitionProgress < 1f)
                     MediaControllerCollapsedContent(
-                        sizes,
-                        transitionProgressProvider = { expandTransitionProgress },
+                        sizes, transitionProgressProvider,
                         activePresetCallback, playPauseButtonCallback,
-                        stopTime, onStopTimeClick,
-                        showStopTime = !expandTransition.targetState && showingStopTime)
+                        stopTime, showStopTimer, onStopTimerClick)
             }
 
             val listPadding = 8.dp
@@ -584,7 +605,7 @@ fun MediaControllerPreview() = SoundAuraTheme {
             onLongClick = {},
             longClickHintProvider = { null }),
         stopTime = null,
-        onStopTimeClick = {},
+        onStopTimerClick = {},
         showingPresetSelector = expanded,
         presetListCallback = callback,
         onCloseButtonClick = { expanded = false })

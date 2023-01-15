@@ -180,8 +180,8 @@ class MediaControllerViewModel(
     isPlayingProvider: () -> Boolean,
     onPlayPauseClick: () -> Unit,
     stopTime: Instant?,
-    onNewStopTimeRequest: (Duration) -> Unit,
-    onCancelStopTimeRequest: () -> Unit,
+    onNewStopTimerRequest: (Duration) -> Unit,
+    onCancelStopTimerRequest: () -> Unit,
 ) {
     val viewModel: MediaControllerViewModel = viewModel()
     val context = LocalContext.current
@@ -209,8 +209,8 @@ class MediaControllerViewModel(
         override fun onPresetClick(preset: Preset) = viewModel.onPresetSelectorPresetClick(preset)
     }}
 
-    var showingSetStopTimeDialog by rememberSaveable { mutableStateOf(false) }
-    var showingCancelStopTimeDialog by rememberSaveable { mutableStateOf(false) }
+    var showingSetStopTimerDialog by rememberSaveable { mutableStateOf(false) }
+    var showingCancelStopTimerDialog by rememberSaveable { mutableStateOf(false) }
 
     MediaController(
         modifier = modifier,
@@ -227,10 +227,10 @@ class MediaControllerViewModel(
         }, playPauseButtonCallback = remember(isPlayingProvider, onPlayPauseClick) {
             PlayPauseButtonCallback(
                 isPlayingProvider, onPlayPauseClick,
-                onLongClick = { showingSetStopTimeDialog = true },
+                onLongClick = { showingSetStopTimerDialog = true },
                 longClickHintProvider = { null })
         }, stopTime = stopTime,
-        onStopTimeClick = { showingCancelStopTimeDialog = true },
+        onStopTimerClick = { showingCancelStopTimerDialog = true },
         showingPresetSelector = viewModel.showingPresetSelector,
         presetListCallback = presetListCallback,
         onCloseButtonClick = viewModel::onCloseButtonClick)
@@ -243,22 +243,22 @@ class MediaControllerViewModel(
                 onConfirm = viewModel::onUnsavedChangesWarningConfirm)
         }
 
-    if (showingSetStopTimeDialog)
-        SetStopTimeDialog(
+    if (showingSetStopTimerDialog)
+        SetStopTimerDialog(
             onDismissRequest = {
-                showingSetStopTimeDialog = false
+                showingSetStopTimerDialog = false
             }, onConfirm = {
-                onNewStopTimeRequest(it)
-                showingSetStopTimeDialog = false
+                onNewStopTimerRequest(it)
+                showingSetStopTimerDialog = false
             })
 
-    if (showingCancelStopTimeDialog)
-        CancelStopTimeDialog(
+    if (showingCancelStopTimerDialog)
+        CancelStopTimerDialog(
             onDismissRequest = {
-                showingCancelStopTimeDialog = false
+                showingCancelStopTimerDialog = false
             }, onConfirm = {
-                onCancelStopTimeRequest()
-                showingCancelStopTimeDialog = false
+                onCancelStopTimerRequest()
+                showingCancelStopTimerDialog = false
             })
 }
 
@@ -318,7 +318,7 @@ class MediaControllerViewModel(
  * @param onConfirm The callback that will be invoked when the user taps the ok
  *     button with a [Duration] that is valid (i.e. within the provided [bounds]
  */
-@Composable fun SetStopTimeDialog(
+@Composable fun SetStopTimerDialog(
     modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
     onConfirm: (Duration) -> Unit,
@@ -331,7 +331,7 @@ class MediaControllerViewModel(
 
 /** A dialog that asks the user to confirm that they would
  * like to cancel the previously set auto stop timer. */
-@Composable fun CancelStopTimeDialog(
+@Composable fun CancelStopTimerDialog(
     modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
