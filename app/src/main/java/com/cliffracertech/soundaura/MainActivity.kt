@@ -284,17 +284,17 @@ class MainActivity : ComponentActivity() {
             // full content area length minus 64dp (i.e. the add button's 56dp
             // size plus an 8dp margin) is then used to ensure that for small
             // screen sizes the media controller can't overlap the add button.
-            val buttonLength = MediaControllerSizes.defaultButtonLengthDp.dp
+            val playButtonLength = MediaControllerSizes.defaultPlayButtonLengthDp.dp
             val dividerThickness = MediaControllerSizes.dividerThicknessDp.dp
             val stopTimerLength =
                 if (alignToEnd) MediaControllerSizes.defaultStopTimerHeightDp.dp
                 else            MediaControllerSizes.defaultStopTimerWidthDp.dp
-            val extraLength = buttonLength / 2f + stopTimerLength
+            val extraLength = playButtonLength / 2f + stopTimerLength
             val length = if (alignToEnd) contentAreaSize.height / 2f + extraLength
                          else            contentAreaSize.width / 2f + extraLength
             val maxLength = if (alignToEnd) contentAreaSize.height - 64.dp
                              else            contentAreaSize.width - 64.dp
-            val activePresetLength = minOf(length, maxLength) - buttonLength -
+            val activePresetLength = minOf(length, maxLength) - playButtonLength -
                                      dividerThickness - stopTimerLength
             MediaControllerSizes(
                 orientation = if (alignToEnd) Orientation.Vertical
@@ -329,7 +329,7 @@ class MainActivity : ComponentActivity() {
                 alignment = alignment,
                 padding = padding,
                 isPlayingProvider = { boundPlayerService?.isPlaying ?: false },
-                onPlayPauseClick = ::onPlayPauseClick,
+                onPlayButtonClick = ::onPlayButtonClick,
                 stopTime = boundPlayerService?.stopTime,
                 onNewStopTimerRequest = ::onSetTimer,
                 onCancelStopTimerRequest = ::onClearTimer)
@@ -383,7 +383,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun onPlayPauseClick() {
+    private fun onPlayButtonClick() {
         boundPlayerService?.toggleIsPlaying()
     }
 

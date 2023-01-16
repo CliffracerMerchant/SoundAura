@@ -207,7 +207,7 @@ class MediaControllerViewModel(
     alignment: BiasAlignment,
     padding: PaddingValues,
     isPlayingProvider: () -> Boolean,
-    onPlayPauseClick: () -> Unit,
+    onPlayButtonClick: () -> Unit,
     stopTime: Instant?,
     onNewStopTimerRequest: (Duration) -> Unit,
     onCancelStopTimerRequest: () -> Unit,
@@ -253,12 +253,12 @@ class MediaControllerViewModel(
                 nameProvider = viewModel::activePresetName::get,
                 isModifiedProvider = viewModel::activePresetIsModified::get,
                 onClick = viewModel::onActivePresetClick)
-        }, playPauseButtonCallback = remember(isPlayingProvider, onPlayPauseClick) {
-            PlayPauseButtonCallback(
+        }, playButtonCallback = remember(isPlayingProvider, onPlayButtonClick) {
+            PlayButtonCallback(
                 isPlayingProvider,
                 onClick = {
                     viewModel.onPlayButtonClick()
-                    onPlayPauseClick()
+                    onPlayButtonClick()
                 }, onLongClick = {
                     showingSetStopTimerDialog = true
                 })

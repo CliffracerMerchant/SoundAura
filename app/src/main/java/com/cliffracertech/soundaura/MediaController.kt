@@ -63,8 +63,8 @@ val Orientation.isVertical get() = this == Orientation.Vertical
  *     orientation or width (in vertical orientation).
  * @param activePresetLength The length of the active preset indicator
  *                           in the [MediaController]'s collapsed state
- * @param buttonLength The length of the button. The button's other
- *     dimension will match the derived thickness of the [MediaController].
+ * @param playButtonLength The length of the play/pause button. The button's
+ *     other dimension will match the derived thickness of the [MediaController].
  * @param stopTimerSize The [DpSize] of the stop timer indicator. This
  *     value is described as a [DpSize] instead of a [Dp] length because the
  *     auto stop time indicator does not change its orientation depending on
@@ -78,7 +78,7 @@ data class MediaControllerSizes(
     val orientation: Orientation,
     val minThickness: Dp = defaultMinThicknessDp.dp,
     val activePresetLength: Dp,
-    val buttonLength: Dp = defaultButtonLengthDp.dp,
+    val playButtonLength: Dp = defaultPlayButtonLengthDp.dp,
     val stopTimerSize: DpSize = DpSize(
         width = defaultStopTimerWidthDp.dp,
         height = defaultStopTimerHeightDp.dp),
@@ -98,8 +98,8 @@ data class MediaControllerSizes(
         height = if (orientation.isVertical) activePresetLength else collapsedThickness)
 
     val buttonSize = DpSize(
-        width = if (orientation.isVertical) collapsedThickness else buttonLength,
-        height = if (orientation.isVertical) buttonLength else collapsedThickness)
+        width = if (orientation.isVertical) collapsedThickness else playButtonLength,
+        height = if (orientation.isVertical) playButtonLength else collapsedThickness)
 
     /** Return the size of a collapsed [MediaController] (i.e. when its
      * showingPresetSelector parameter is false) given whether or not the
@@ -108,7 +108,7 @@ data class MediaControllerSizes(
         val stopTimerLength = if (!showingStopTimer) 0.dp
         else dividerSize + stopTimerLength
         val length = activePresetLength + dividerSize +
-                buttonLength + stopTimerLength
+                playButtonLength + stopTimerLength
         return DpSize(
             width = if (orientation.isVertical) collapsedThickness else length,
             height = if (orientation.isVertical) length else collapsedThickness)
@@ -135,12 +135,12 @@ data class MediaControllerSizes(
         if (orientation.isVertical) shape.bottomShape()
         else                        shape.endShape()
 
-    fun playPauseButtonShape(showingStopTimer: Boolean) =
+    fun playButtonShape(showingStopTimer: Boolean) =
         if (showingStopTimer) RectangleShape
         else                  stopTimerShape
 
     companion object {
-        const val defaultButtonLengthDp = 56
+        const val defaultPlayButtonLengthDp = 56
         const val defaultStopTimerWidthDp = 72
         const val defaultStopTimerHeightDp = 56
         const val dividerThicknessDp = 1.5f
@@ -221,13 +221,13 @@ data class ActivePresetCallback(
  * @param onClick The callback that will be invoked when the pla/pause button is clicked
  * @param onLongClick The callback that will be invoked when the pla/pause button is long clicked
  */
-data class PlayPauseButtonCallback(
+data class PlayButtonCallback(
     val isPlayingProvider: () -> Boolean,
     val onClick: () -> Unit,
     val onLongClick: () -> Unit)
 
-@Composable private fun PlayPauseButton(
-    callback: PlayPauseButtonCallback,
+@Composable private fun PlayButton(
+    callback: PlayButtonCallback,
     modifier: Modifier = Modifier,
 ) {
     val isPlaying = callback.isPlayingProvider()
@@ -344,7 +344,7 @@ fun Duration.toHMMSSstring(): String {
  *     preset selector transition when invoked
  * @param activePresetCallback The [ActivePresetCallback] that will be used
  *     to determine the display and function of the active preset indicator
- * @param playPauseButtonCallback The [PlayPauseButtonCallback] that will be
+ * @param playButtonCallback The [PlayButtonCallback] that will be
  *     used to determine the display and function of the play/pause button
  * @param stopTime The [Instant] at which media will automatically
  *     stop playing, if any. This value is only used for informational
@@ -359,7 +359,7 @@ fun Duration.toHMMSSstring(): String {
     sizes: MediaControllerSizes,
     transitionProgressProvider: () -> Float,
     activePresetCallback: ActivePresetCallback,
-    playPauseButtonCallback: PlayPauseButtonCallback,
+    playButtonCallback: PlayButtonCallback,
     stopTime: Instant?,
     showStopTimer: Boolean,
     onStopTimerClick: () -> Unit,
@@ -370,11 +370,11 @@ fun Duration.toHMMSSstring(): String {
 ) {
     ActivePresetIndicator(sizes, activePresetCallback)
     Divider(sizes.orientation, sizeFraction = 0.8f)
-    PlayPauseButton(
-        callback = playPauseButtonCallback,
+    PlayButton(
+        callback = playButtonCallback,
         modifier = Modifier
             .size(sizes.buttonSize)
-            .clip(sizes.playPauseButtonShape(showStopTimer)))
+            .clip(sizes.playButtonShape(showStopTimer)))
     HideableStopTimerDisplay(
         showing = showStopTimer,
         sizes, stopTime,
@@ -435,8 +435,8 @@ fun Duration.toHMMSSstring(): String {
  *     be applied through the [modifier] parameter or it will be applied twice.
  * @param activePresetCallback The [ActivePresetCallback] that will be used
  *     to determine the display and function of the active preset indicator
- * @param playPauseButtonCallback The [PlayPauseButtonCallback] that will be
- *     used to determine the display and function of the play/pause button
+ * @param playButtonCallback The [PlayButtonCallback] that will be used
+ *     to determine the display and function of the play/pause button
  * @param stopTime The java.time.Instant at which playback will be automatically
  *     stopped. MediaController does not use this information to affect playback;
  *     the value of stopTime is only used to display this information to the user.
@@ -457,7 +457,7 @@ fun Duration.toHMMSSstring(): String {
     alignment: BiasAlignment,
     padding: PaddingValues,
     activePresetCallback: ActivePresetCallback,
-    playPauseButtonCallback: PlayPauseButtonCallback,
+    playButtonCallback: PlayButtonCallback,
     stopTime: Instant?,
     onStopTimerClick: () -> Unit,
     showingPresetSelector: Boolean,
@@ -503,7 +503,7 @@ fun Duration.toHMMSSstring(): String {
                 if (expandTransitionProgress < 1f)
                     MediaControllerCollapsedContent(
                         sizes, transitionProgressProvider,
-                        activePresetCallback, playPauseButtonCallback,
+                        activePresetCallback, playButtonCallback,
                         stopTime, showStopTimer, onStopTimerClick)
             }
 
@@ -578,7 +578,7 @@ fun MediaControllerPreview() = SoundAuraTheme {
             nameProvider = activePresetName::value::get,
             isModifiedProvider = { true },
             onClick = { expanded = true }),
-        playPauseButtonCallback = PlayPauseButtonCallback(
+        playButtonCallback = PlayButtonCallback(
             isPlayingProvider = { playing },
             onClick = { playing = !playing },
             onLongClick = {}),
