@@ -19,9 +19,14 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.cliffracertech.soundaura.SoundAura.pref_key_playButtonLongClickHintShown
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
@@ -37,6 +42,7 @@ class MediaControllerViewModel(
     private val navigationState: MainActivityNavigationState,
     private val activePresetState: ActivePresetState,
     private val messageHandler: MessageHandler,
+    private val dataStore: DataStore<Preferences>,
     trackDao: TrackDao,
     coroutineScope: CoroutineScope?
 ) : ViewModel() {
@@ -46,9 +52,10 @@ class MediaControllerViewModel(
         navigationState: MainActivityNavigationState,
         activePresetState: ActivePresetState,
         messageHandler: MessageHandler,
+        dataStore: DataStore<Preferences>,
         trackDao: TrackDao,
     ) : this(dao, navigationState, activePresetState,
-             messageHandler, trackDao, null)
+             messageHandler, dataStore, trackDao, null)
 
     private val scope = coroutineScope ?: viewModelScope
 
@@ -59,6 +66,28 @@ class MediaControllerViewModel(
     val activePresetName by activePresetState.name.collectAsState(null, scope)
     val activePresetIsModified by activePresetState.isModified.collectAsState(false, scope)
     val Preset.isActive get() = name == activePresetName
+
+    private val playButtonLongClickHintShownKey =
+        booleanPreferencesKey(pref_key_playButtonLongClickHintShown)
+    private val playButtonLongClickHintShown by
+        dataStore.preferenceState(playButtonLongClickHintShownKey, false, scope)
+
+    var showingPlayButtonLongClickHint by mutableStateOf(false)
+        private set
+
+    fun onPlayButtonClick() {
+        if (!playButtonLongClickHintShown)
+            showingPlayButtonLongClickHint = true
+    }
+
+    fun onPlayButtonLongClickHintDismiss() {
+        showingPlayButtonLongClickHint = false
+        scope.launch {
+            dataStore.edit {
+                it[playButtonLongClickHintShownKey] = true
+            }
+        }
+    }
 
     val showingPresetSelector get() = navigationState.showingPresetSelector
 
@@ -177,11 +206,11 @@ class MediaControllerViewModel(
     sizes: MediaControllerSizes,
     alignment: BiasAlignment,
     padding: PaddingValues,
-    isPlaying: Boolean,
+    isPlayingProvider: () -> Boolean,
+    onPlayButtonClick: () -> Unit,
     stopTime: Instant?,
-    onPlayPauseClick: () -> Unit,
-    onNewStopTimeRequest: (Duration) -> Unit,
-    onCancelStopTimeRequest: () -> Unit,
+    onNewStopTimerRequest: (Duration) -> Unit,
+    onCancelStopTimerRequest: () -> Unit,
 ) {
     val viewModel: MediaControllerViewModel = viewModel()
     val context = LocalContext.current
@@ -209,8 +238,8 @@ class MediaControllerViewModel(
         override fun onPresetClick(preset: Preset) = viewModel.onPresetSelectorPresetClick(preset)
     }}
 
-    var showingSetStopTimeDialog by rememberSaveable { mutableStateOf(false) }
-    var showingCancelStopTimeDialog by rememberSaveable { mutableStateOf(false) }
+    var showingSetStopTimerDialog by rememberSaveable { mutableStateOf(false) }
+    var showingCancelStopTimerDialog by rememberSaveable { mutableStateOf(false) }
 
     MediaController(
         modifier = modifier,
@@ -219,14 +248,22 @@ class MediaControllerViewModel(
         contentColor = MaterialTheme.colors.onPrimary,
         alignment = alignment,
         padding = padding,
-        activePresetNameProvider = viewModel::activePresetName::get,
-        activePresetIsModified = viewModel.activePresetIsModified,
-        onActivePresetClick = viewModel::onActivePresetClick,
-        playing = isPlaying,
-        onPlayPauseClick = onPlayPauseClick,
-        onPlayPauseLongClick = { showingSetStopTimeDialog = true },
-        stopTime = stopTime,
-        onStopTimeClick = { showingCancelStopTimeDialog = true },
+        activePresetCallback = remember {
+            ActivePresetCallback(
+                nameProvider = viewModel::activePresetName::get,
+                isModifiedProvider = viewModel::activePresetIsModified::get,
+                onClick = viewModel::onActivePresetClick)
+        }, playButtonCallback = remember(isPlayingProvider, onPlayButtonClick) {
+            PlayButtonCallback(
+                isPlayingProvider,
+                onClick = {
+                    viewModel.onPlayButtonClick()
+                    onPlayButtonClick()
+                }, onLongClick = {
+                    showingSetStopTimerDialog = true
+                })
+        }, stopTime = stopTime,
+        onStopTimerClick = { showingCancelStopTimerDialog = true },
         showingPresetSelector = viewModel.showingPresetSelector,
         presetListCallback = presetListCallback,
         onCloseButtonClick = viewModel::onCloseButtonClick)
@@ -239,23 +276,30 @@ class MediaControllerViewModel(
                 onConfirm = viewModel::onUnsavedChangesWarningConfirm)
         }
 
-    if (showingSetStopTimeDialog)
-        SetStopTimeDialog(
+    if (showingSetStopTimerDialog)
+        SetStopTimerDialog(
             onDismissRequest = {
-                showingSetStopTimeDialog = false
+                showingSetStopTimerDialog = false
             }, onConfirm = {
-                onNewStopTimeRequest(it)
-                showingSetStopTimeDialog = false
+                onNewStopTimerRequest(it)
+                showingSetStopTimerDialog = false
             })
 
-    if (showingCancelStopTimeDialog)
-        CancelStopTimeDialog(
+    if (showingCancelStopTimerDialog)
+        CancelStopTimerDialog(
             onDismissRequest = {
-                showingCancelStopTimeDialog = false
+                showingCancelStopTimerDialog = false
             }, onConfirm = {
-                onCancelStopTimeRequest()
-                showingCancelStopTimeDialog = false
+                onCancelStopTimerRequest()
+                showingCancelStopTimerDialog = false
             })
+
+    if (viewModel.showingPlayButtonLongClickHint)
+        SoundAuraDialog(
+            title = stringResource(R.string.hint_description),
+            text = stringResource(R.string.play_button_long_click_hint_text),
+            onDismissRequest = viewModel::onPlayButtonLongClickHintDismiss,
+            showCancelButton = false)
 }
 
 /**
@@ -314,20 +358,20 @@ class MediaControllerViewModel(
  * @param onConfirm The callback that will be invoked when the user taps the ok
  *     button with a [Duration] that is valid (i.e. within the provided [bounds]
  */
-@Composable fun SetStopTimeDialog(
+@Composable fun SetStopTimerDialog(
     modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
     onConfirm: (Duration) -> Unit,
 ) = DurationPickerDialog(
     modifier,
-    title = stringResource(R.string.set_stop_timer_dialog_title),
+    title = stringResource(R.string.play_pause_button_long_click_description),
     description = stringResource(R.string.set_stop_timer_dialog_description),
     bounds = Range(Duration.ZERO, Duration.ofHours(100).minusSeconds(1)),
     onDismissRequest, onConfirm)
 
 /** A dialog that asks the user to confirm that they would
  * like to cancel the previously set auto stop timer. */
-@Composable fun CancelStopTimeDialog(
+@Composable fun CancelStopTimerDialog(
     modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,

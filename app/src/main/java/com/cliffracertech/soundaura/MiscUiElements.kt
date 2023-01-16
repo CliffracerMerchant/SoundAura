@@ -344,12 +344,7 @@ fun Modifier.minTouchTargetSize() =
 @Composable fun LinearLayout(
     orientation: Orientation,
     modifier: Modifier = Modifier,
-    content: @Composable (divider: @Composable () -> Unit) -> Unit
-) {
-    val divider = @Composable {
-        Divider(orientation, sizeFraction = 0.8f)
-    }
-    if (orientation.isHorizontal)
-        Row(modifier, verticalAlignment = Alignment.CenterVertically) { content(divider) }
-    else Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) { content(divider) }
-}
+    content: @Composable () -> Unit
+) = if (orientation.isHorizontal)
+        Row(modifier, verticalAlignment = Alignment.CenterVertically) { content() }
+    else Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) { content() }

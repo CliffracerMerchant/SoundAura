@@ -214,7 +214,7 @@ class MainActivity : ComponentActivity() {
 
     private fun mainContentAdditionalEndMargin(widthIsConstrained: Boolean) =
         if (widthIsConstrained) 0.dp
-        else MediaControllerSizes.defaultStopTimeWidthDp.dp + 8.dp
+        else MediaControllerSizes.defaultStopTimerWidthDp.dp + 8.dp
 
     @Composable private fun MainContent(
         widthIsConstrained: Boolean,
@@ -278,24 +278,24 @@ class MainActivity : ComponentActivity() {
             // the play/pause icon is centered in the content area's width in
             // portrait mode, or centered in the content area's height in
             // landscape mode. This preferred length is found by adding half of
-            // the play/pause button's size and the auto stop time indicator's
-            // length (in case it needs to be displayed) to half of the length of
-            // the content area. The min value between this preferred length and
-            // the full content area length minus 64dp (i.e. the add button's 56dp
+            // the play/pause button's size and the stop timer display's length
+            // (in case it needs to be displayed) to half of the length of the
+            // content area. The min value between this preferred length and the
+            // full content area length minus 64dp (i.e. the add button's 56dp
             // size plus an 8dp margin) is then used to ensure that for small
             // screen sizes the media controller can't overlap the add button.
-            val buttonLength = MediaControllerSizes.defaultButtonLengthDp.dp
+            val playButtonLength = MediaControllerSizes.defaultPlayButtonLengthDp.dp
             val dividerThickness = MediaControllerSizes.dividerThicknessDp.dp
-            val stopTimeLength =
-                if (alignToEnd) MediaControllerSizes.defaultStopTimeHeightDp.dp
-                else            MediaControllerSizes.defaultStopTimeWidthDp.dp
-            val extraLength = buttonLength / 2f + stopTimeLength
+            val stopTimerLength =
+                if (alignToEnd) MediaControllerSizes.defaultStopTimerHeightDp.dp
+                else            MediaControllerSizes.defaultStopTimerWidthDp.dp
+            val extraLength = playButtonLength / 2f + stopTimerLength
             val length = if (alignToEnd) contentAreaSize.height / 2f + extraLength
                          else            contentAreaSize.width / 2f + extraLength
             val maxLength = if (alignToEnd) contentAreaSize.height - 64.dp
                              else            contentAreaSize.width - 64.dp
-            val activePresetLength = minOf(length, maxLength) - buttonLength -
-                                     dividerThickness - stopTimeLength
+            val activePresetLength = minOf(length, maxLength) - playButtonLength -
+                                     dividerThickness - stopTimerLength
             MediaControllerSizes(
                 orientation = if (alignToEnd) Orientation.Vertical
                               else            Orientation.Horizontal,
@@ -312,7 +312,8 @@ class MainActivity : ComponentActivity() {
 
         val transformOrigin = rememberClippedBrushBoxTransformOrigin(
             alignment, padding,
-            dpSize = mediaControllerSizes.collapsedSize(boundPlayerService?.stopTime != null))
+            dpSize = mediaControllerSizes.collapsedSize(
+                boundPlayerService?.stopTime != null))
 
         AnimatedVisibility(
             visible = visible,
@@ -327,11 +328,11 @@ class MainActivity : ComponentActivity() {
                 sizes = mediaControllerSizes,
                 alignment = alignment,
                 padding = padding,
+                isPlayingProvider = { boundPlayerService?.isPlaying ?: false },
+                onPlayButtonClick = ::onPlayButtonClick,
                 stopTime = boundPlayerService?.stopTime,
-                isPlaying = boundPlayerService?.isPlaying ?: false,
-                onPlayPauseClick = ::onPlayPauseClick,
-                onNewStopTimeRequest = ::onSetTimer,
-                onCancelStopTimeRequest = ::onClearTimer)
+                onNewStopTimerRequest = ::onSetTimer,
+                onCancelStopTimerRequest = ::onClearTimer)
         }
     }
 
@@ -382,7 +383,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun onPlayPauseClick() {
+    private fun onPlayButtonClick() {
         boundPlayerService?.toggleIsPlaying()
     }
 

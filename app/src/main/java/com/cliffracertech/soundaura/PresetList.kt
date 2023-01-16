@@ -187,8 +187,7 @@ interface PresetListCallback {
 @Composable fun PresetList(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
-    activePresetNameProvider: () -> String?,
-    activePresetIsModified: Boolean,
+    activePresetCallback: ActivePresetCallback,
     selectionBrush: Brush,
     callback: PresetListCallback,
 ) = CompositionLocalProvider(LocalContentColor provides MaterialTheme.colors.onSurface) {
@@ -210,12 +209,15 @@ interface PresetListCallback {
             // need a simple yes/no confirmation, the rename dialog may be dismissed or not
             // on ok clicks depending on the validity of the proposed name).
 
+            val activePresetName = activePresetCallback.nameProvider()
+            val activePresetIsModified = activePresetCallback.isModifiedProvider()
+
             LazyColumn(Modifier, contentPadding = contentPadding) {
                 items(
                     items = presetList ?: emptyList(),
                     key = Preset::name::get
                 ) { preset ->
-                    val isActivePreset = preset.name == activePresetNameProvider()
+                    val isActivePreset = preset.name == activePresetName
                     PresetView(
                         modifier = if (!isActivePreset) Modifier
                                    else Modifier.background(selectionBrush, alpha = 0.5f),
@@ -284,8 +286,10 @@ fun PresetListPreview() = SoundAuraTheme {
     }}
 
     PresetList(
-        activePresetNameProvider = activePresetName::value::get,
-        activePresetIsModified = true,
+        activePresetCallback = ActivePresetCallback(
+            nameProvider = activePresetName::value::get,
+            isModifiedProvider = { true },
+            onClick = {}),
         selectionBrush = Brush.horizontalGradient(
             listOf(MaterialTheme.colors.primaryVariant,
                    MaterialTheme.colors.secondaryVariant)),

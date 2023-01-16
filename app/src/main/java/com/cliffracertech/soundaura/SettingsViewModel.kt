@@ -102,6 +102,10 @@ object SoundAura {
     /** A boolean value that indicates whether tracks will be stopped instead
      * of paused when the pause button is clicked. */
     const val pref_key_stopInsteadOfPause = "stop_instead_of_pause"
+
+    /** A boolean value that indicates whether the user has been shown the long
+     * click hint for the play/pause button. */
+    const val pref_key_playButtonLongClickHintShown = "play_button_long_click_hint_shown"
 }
 
 enum class AppTheme { UseSystem, Light, Dark;
