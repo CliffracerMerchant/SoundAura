@@ -227,8 +227,7 @@ class MediaControllerViewModel(
         }, playPauseButtonCallback = remember(isPlayingProvider, onPlayPauseClick) {
             PlayPauseButtonCallback(
                 isPlayingProvider, onPlayPauseClick,
-                onLongClick = { showingSetStopTimerDialog = true },
-                longClickHintProvider = { null })
+                onLongClick = { showingSetStopTimerDialog = true })
         }, stopTime = stopTime,
         onStopTimerClick = { showingCancelStopTimerDialog = true },
         showingPresetSelector = viewModel.showingPresetSelector,

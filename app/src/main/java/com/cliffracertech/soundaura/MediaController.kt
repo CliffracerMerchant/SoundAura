@@ -34,9 +34,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
-import com.github.skgmn.composetooltip.AnchorEdge
-import com.github.skgmn.composetooltip.Tooltip
-import com.github.skgmn.composetooltip.rememberTooltipStyle
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 import java.time.Duration
@@ -223,24 +220,17 @@ data class ActivePresetCallback(
  *     which will be the opposite of the current state
  * @param onClick The callback that will be invoked when the pla/pause button is clicked
  * @param onLongClick The callback that will be invoked when the pla/pause button is long clicked
- * @param longClickHintProvider A function that returns a nullable [String]
- *     message that should be displayed in a popup tooltip when the button
- *     is clicked. If null is returned, no tooltip will be shown. This long
- *     click hint is provided due to the low discoverability nature of long
- *     click actions.
  */
 data class PlayPauseButtonCallback(
     val isPlayingProvider: () -> Boolean,
     val onClick: () -> Unit,
-    val onLongClick: () -> Unit,
-    val longClickHintProvider: () -> String?)
+    val onLongClick: () -> Unit)
 
 @Composable private fun PlayPauseButton(
     callback: PlayPauseButtonCallback,
     modifier: Modifier = Modifier,
 ) {
     val isPlaying = callback.isPlayingProvider()
-    var longClickHint by remember { mutableStateOf<String?>(null) }
 
     Box(contentAlignment = Alignment.Center,
         modifier = modifier
@@ -251,24 +241,13 @@ data class PlayPauseButtonCallback(
                 onClickLabel = stringResource(
                     if (isPlaying) R.string.pause_button_description
                     else           R.string.play_button_description),
-                onClick = {
-                    callback.onClick()
-                    longClickHint = callback.longClickHintProvider()
-                }),
+                onClick = callback.onClick)
     ) {
         PlayPauseIcon(
             isPlaying = isPlaying,
             contentDescription = stringResource(
                 if (isPlaying) R.string.pause_button_description
                 else           R.string.play_button_description))
-        longClickHint?.let {
-            Tooltip(
-                anchorEdge = AnchorEdge.Top,
-                tooltipStyle = rememberTooltipStyle(
-                    cornerRadius = 16.dp,
-                    tipHeight = 12.dp),
-                content = { Text(it) })
-        }
     }
 }
 
@@ -602,8 +581,7 @@ fun MediaControllerPreview() = SoundAuraTheme {
         playPauseButtonCallback = PlayPauseButtonCallback(
             isPlayingProvider = { playing },
             onClick = { playing = !playing },
-            onLongClick = {},
-            longClickHintProvider = { null }),
+            onLongClick = {}),
         stopTime = null,
         onStopTimerClick = {},
         showingPresetSelector = expanded,
