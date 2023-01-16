@@ -58,7 +58,6 @@
     <string name="pause_button_description">Pause SoundAura audio</string>
 
     <string name="play_pause_button_long_click_description">Set auto stop timer</string>
-    <string name="set_stop_timer_dialog_title">"Set auto stop timer</string>
     <string name="set_stop_timer_dialog_description">
         Set the duration after which playback will automatically be stopped.
         You can change the amounts using the up or down buttons, or by
@@ -122,6 +121,10 @@
     <string name="name_ascending">Name ascending</string>
     <string name="name_descending">Name descending</string>
     <string name="order_added">Order added</string>
+
+    <string name="hint_description">Hint</string>
+    <string name="play_button_long_click_hint_text">
+        You can long press the play/pause button to set an automatic stop timer.</string>
 
     <string name="app_settings_description">SoundAura settings</string>
     <string name="settings">Settings</string>

@@ -19,9 +19,14 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.cliffracertech.soundaura.SoundAura.pref_key_playButtonLongClickHintShown
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
@@ -37,6 +42,7 @@ class MediaControllerViewModel(
     private val navigationState: MainActivityNavigationState,
     private val activePresetState: ActivePresetState,
     private val messageHandler: MessageHandler,
+    private val dataStore: DataStore<Preferences>,
     trackDao: TrackDao,
     coroutineScope: CoroutineScope?
 ) : ViewModel() {
@@ -46,9 +52,10 @@ class MediaControllerViewModel(
         navigationState: MainActivityNavigationState,
         activePresetState: ActivePresetState,
         messageHandler: MessageHandler,
+        dataStore: DataStore<Preferences>,
         trackDao: TrackDao,
     ) : this(dao, navigationState, activePresetState,
-             messageHandler, trackDao, null)
+             messageHandler, dataStore, trackDao, null)
 
     private val scope = coroutineScope ?: viewModelScope
 
@@ -59,6 +66,28 @@ class MediaControllerViewModel(
     val activePresetName by activePresetState.name.collectAsState(null, scope)
     val activePresetIsModified by activePresetState.isModified.collectAsState(false, scope)
     val Preset.isActive get() = name == activePresetName
+
+    private val playButtonLongClickHintShownKey =
+        booleanPreferencesKey(pref_key_playButtonLongClickHintShown)
+    private val playButtonLongClickHintShown by
+        dataStore.preferenceState(playButtonLongClickHintShownKey, false, scope)
+
+    var showingPlayButtonLongClickHint by mutableStateOf(false)
+        private set
+
+    fun onPlayButtonClick() {
+        if (!playButtonLongClickHintShown)
+            showingPlayButtonLongClickHint = true
+    }
+
+    fun onPlayButtonLongClickHintDismiss() {
+        showingPlayButtonLongClickHint = false
+        scope.launch {
+            dataStore.edit {
+                it[playButtonLongClickHintShownKey] = true
+            }
+        }
+    }
 
     val showingPresetSelector get() = navigationState.showingPresetSelector
 
@@ -226,8 +255,13 @@ class MediaControllerViewModel(
                 onClick = viewModel::onActivePresetClick)
         }, playPauseButtonCallback = remember(isPlayingProvider, onPlayPauseClick) {
             PlayPauseButtonCallback(
-                isPlayingProvider, onPlayPauseClick,
-                onLongClick = { showingSetStopTimerDialog = true })
+                isPlayingProvider,
+                onClick = {
+                    viewModel.onPlayButtonClick()
+                    onPlayPauseClick()
+                }, onLongClick = {
+                    showingSetStopTimerDialog = true
+                })
         }, stopTime = stopTime,
         onStopTimerClick = { showingCancelStopTimerDialog = true },
         showingPresetSelector = viewModel.showingPresetSelector,
@@ -259,6 +293,13 @@ class MediaControllerViewModel(
                 onCancelStopTimerRequest()
                 showingCancelStopTimerDialog = false
             })
+
+    if (viewModel.showingPlayButtonLongClickHint)
+        SoundAuraDialog(
+            title = stringResource(R.string.hint_description),
+            text = stringResource(R.string.play_button_long_click_hint_text),
+            onDismissRequest = viewModel::onPlayButtonLongClickHintDismiss,
+            showCancelButton = false)
 }
 
 /**
@@ -323,7 +364,7 @@ class MediaControllerViewModel(
     onConfirm: (Duration) -> Unit,
 ) = DurationPickerDialog(
     modifier,
-    title = stringResource(R.string.set_stop_timer_dialog_title),
+    title = stringResource(R.string.play_pause_button_long_click_description),
     description = stringResource(R.string.set_stop_timer_dialog_description),
     bounds = Range(Duration.ZERO, Duration.ofHours(100).minusSeconds(1)),
     onDismissRequest, onConfirm)
