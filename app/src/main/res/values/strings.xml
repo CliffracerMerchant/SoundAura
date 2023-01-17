@@ -122,9 +122,8 @@
     <string name="name_descending">Name descending</string>
     <string name="order_added">Order added</string>
 
-    <string name="hint_description">Hint</string>
     <string name="play_button_long_click_hint_text">
-        You can long press the play/pause button to set an automatic stop timer.</string>
+        Hint: You can long press the play/pause button to set an automatic stop timer</string>
 
     <string name="app_settings_description">SoundAura settings</string>
     <string name="settings">Settings</string>

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.SnackbarDuration
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.*
@@ -72,21 +73,15 @@ class MediaControllerViewModel(
     private val playButtonLongClickHintShown by
         dataStore.preferenceState(playButtonLongClickHintShownKey, false, scope)
 
-    var showingPlayButtonLongClickHint by mutableStateOf(false)
-        private set
-
     fun onPlayButtonClick() {
-        if (!playButtonLongClickHintShown)
-            showingPlayButtonLongClickHint = true
-    }
-
-    fun onPlayButtonLongClickHintDismiss() {
-        showingPlayButtonLongClickHint = false
-        scope.launch {
-            dataStore.edit {
-                it[playButtonLongClickHintShownKey] = true
-            }
-        }
+        if (playButtonLongClickHintShown)
+            return
+        messageHandler.postMessage(
+            StringResource(R.string.play_button_long_click_hint_text),
+            SnackbarDuration.Long)
+        scope.launch { dataStore.edit {
+            it[playButtonLongClickHintShownKey] = true
+        }}
     }
 
     val showingPresetSelector get() = navigationState.showingPresetSelector
@@ -293,13 +288,6 @@ class MediaControllerViewModel(
                 onCancelStopTimerRequest()
                 showingCancelStopTimerDialog = false
             })
-
-    if (viewModel.showingPlayButtonLongClickHint)
-        SoundAuraDialog(
-            title = stringResource(R.string.hint_description),
-            text = stringResource(R.string.play_button_long_click_hint_text),
-            onDismissRequest = viewModel::onPlayButtonLongClickHintDismiss,
-            showCancelButton = false)
 }
 
 /**
