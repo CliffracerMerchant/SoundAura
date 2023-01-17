@@ -19,10 +19,7 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.SnackbarDuration
-import androidx.compose.material.SnackbarHostState
-import androidx.compose.material.rememberScaffoldState
+import androidx.compose.material.*
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -44,6 +41,7 @@ import com.google.accompanist.insets.ProvideWindowInsets
 import com.google.accompanist.insets.navigationBarsHeight
 import com.google.accompanist.insets.rememberInsetsPaddingValues
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.google.android.material.snackbar.BaseTransientBottomBar
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.scopes.ActivityRetainedScoped
@@ -202,13 +200,19 @@ class MainActivity : ComponentActivity() {
     ) = LaunchedEffect(Unit) {
         viewModel.messages.collect { message ->
             val context = this@MainActivity
-            val messageText = message.stringResource.resolve(context)
-            val actionLabel = message.actionStringResource?.resolve(context) ?:
-                              context.getString(R.string.dismiss).uppercase()
-            snackbarHostState.showSnackbar(
-                message = messageText,
-                actionLabel = actionLabel,
+            val result = snackbarHostState.showSnackbar(
+                message = message.stringResource.resolve(context),
+                actionLabel = message.actionStringResource?.resolve(context) ?:
+                              context.getString(R.string.dismiss).uppercase(),
                 duration = SnackbarDuration.Short)
+            when (result) {
+                SnackbarResult.ActionPerformed -> message.onActionClick?.invoke()
+                // SnackBarHostState does not allow us to know the type of dismiss,
+                // so we'll use DISMISS_EVENT_SWIPE (the first type) for everything.
+                SnackbarResult.Dismissed -> message.onDismiss?.invoke(
+                    BaseTransientBottomBar.BaseCallback.DISMISS_EVENT_SWIPE)
+                else -> {}
+            }
         }
     }
 
