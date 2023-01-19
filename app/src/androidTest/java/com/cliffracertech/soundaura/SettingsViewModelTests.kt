@@ -59,9 +59,7 @@ class SettingsViewModelTests {
     }
 
     @After fun cleanUp() {
-        coroutineScope.runTest {
-            dataStore.edit { it.clear() }
-        }
+        coroutineScope.runTest { dataStore.edit { it.clear() } }
         coroutineScope.cancel()
     }
 
@@ -175,9 +173,7 @@ class SettingsViewModelTests {
 
     @Test fun autoPauseDuringCallAlwaysFalseWithoutPermissionAndIgnoreAudioFocus() = runTest {
         defaultValues()
-        dataStore.edit {
-            it[autoPauseDuringCallKey] = true
-        }
+        dataStore.edit { it[autoPauseDuringCallKey] = true }
         assertThat(updatedPreferences()[autoPauseDuringCallKey]).isTrue()
         assertThat(instance.autoPauseDuringCall).isFalse()
 

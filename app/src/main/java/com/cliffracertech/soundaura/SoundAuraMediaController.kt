@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -79,9 +78,7 @@ class MediaControllerViewModel(
         messageHandler.postMessage(
             StringResource(R.string.play_button_long_click_hint_text),
             SnackbarDuration.Long)
-        scope.launch { dataStore.edit {
-            it[playButtonLongClickHintShownKey] = true
-        }}
+        dataStore.edit(playButtonLongClickHintShownKey, true, scope)
     }
 
     val showingPresetSelector get() = navigationState.showingPresetSelector

@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -26,7 +25,6 @@ import com.cliffracertech.soundaura.SoundAura.pref_key_showActiveTracksFirst
 import com.cliffracertech.soundaura.SoundAura.pref_key_trackSort
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -57,20 +55,14 @@ class ActionBarViewModel(
     private val showActiveTracksFirstKey = booleanPreferencesKey(pref_key_showActiveTracksFirst)
     val showActiveTracksFirst by dataStore.preferenceState(showActiveTracksFirstKey, false, scope)
 
-    fun onShowActiveTracksFirstSwitchClick() {
-        scope.launch { dataStore.edit {
-            it[showActiveTracksFirstKey] = !showActiveTracksFirst
-        }}
-    }
+    fun onShowActiveTracksFirstSwitchClick() =
+        dataStore.edit(showActiveTracksFirstKey, !showActiveTracksFirst, scope)
 
     private val trackSortKey = intPreferencesKey(pref_key_trackSort)
     val trackSort by dataStore.enumPreferenceState<Track.Sort>(trackSortKey, scope)
 
-    fun onTrackSortOptionClick(newValue: Track.Sort) {
-        scope.launch { dataStore.edit {
-            it[trackSortKey] = newValue.ordinal
-        }}
-    }
+    fun onTrackSortOptionClick(newValue: Track.Sort) =
+        dataStore.edit(trackSortKey, newValue.ordinal, scope)
 
     fun onSearchButtonClick() {
         searchQuery = if (searchQuery == null) "" else null
