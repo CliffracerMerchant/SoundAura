@@ -14,7 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
@@ -174,7 +173,7 @@ data class ActivePresetCallback(
     val isModifiedProvider: () -> Boolean,
     val onClick: () -> Unit)
 
-@Composable private fun ActivePresetIndicator(
+@Composable private fun ActivePresetDisplay(
     sizes: MediaControllerSizes,
     callback: ActivePresetCallback,
     modifier: Modifier = Modifier,
@@ -192,9 +191,7 @@ data class ActivePresetCallback(
     Column(columnModifier, Arrangement.Center, Alignment.CenterHorizontally) {
         val style = MaterialTheme.typography.caption
         val activePresetName = callback.nameProvider()
-        Text(text = stringResource(
-                 if (activePresetName == null) R.string.playing
-                 else R.string.playing_preset_description),
+        Text(text = stringResource(R.string.playing),
              maxLines = 1, style = style, softWrap = false)
         Row {
             MarqueeText(
@@ -291,10 +288,7 @@ fun Duration.toHMMSSstring(): String {
         }
     }
     val style = MaterialTheme.typography.caption
-    Row(Modifier, Arrangement.spacedBy((-1).dp), Alignment.CenterVertically) {
-        Icon(Icons.Default.Stop, null, Modifier.size(16.dp))
-        Text(stringResource(R.string.stop_timer_text), style = style)
-    }
+    Text(stringResource(R.string.stop_timer_text), style = style)
     Text(durationRemainingString ?: "", style = style)
 }
 
@@ -368,7 +362,7 @@ fun Duration.toHMMSSstring(): String {
     orientation = sizes.orientation,
     modifier = modifier.graphicsLayer { alpha = 1f - transitionProgressProvider() }
 ) {
-    ActivePresetIndicator(sizes, activePresetCallback)
+    ActivePresetDisplay(sizes, activePresetCallback)
     Divider(sizes.orientation, sizeFraction = 0.8f)
     PlayButton(
         callback = playButtonCallback,

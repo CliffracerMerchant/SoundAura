@@ -52,7 +52,6 @@
 
     <string name="preset_button_click_label">Change active preset</string>
     <string name="unsaved_preset_description">Unsaved preset</string>
-    <string name="playing_preset_description">Playing preset</string>
 
     <string name="play_button_description">Play SoundAura audio</string>
     <string name="pause_button_description">Pause SoundAura audio</string>
@@ -63,7 +62,7 @@
         You can change the amounts using the up or down buttons, or by
         dragging the amount up or down.</string>
 
-    <string name="stop_timer_text">ing in</string>
+    <string name="stop_timer_text">for</string>
     <string name="stop_timer_click_label">Cancel auto stop timer</string>
     <string name="cancel_stop_timer_dialog_title">Confirm timer cancellation</string>
     <string name="cancel_stop_timer_dialog_text">
