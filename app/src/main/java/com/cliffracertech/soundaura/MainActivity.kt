@@ -320,7 +320,7 @@ class MainActivity : ComponentActivity() {
                 padding = padding,
                 isPlayingProvider = { boundPlayerService?.isPlaying ?: false },
                 onPlayButtonClick = ::onPlayButtonClick,
-                stopTime = boundPlayerService?.stopTime,
+                stopTimeProvider = { boundPlayerService?.stopTime },
                 onNewStopTimerRequest = ::onSetTimer,
                 onCancelStopTimerRequest = ::onClearTimer)
         }

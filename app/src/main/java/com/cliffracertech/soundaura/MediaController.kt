@@ -115,13 +115,13 @@ data class MediaControllerSizes(
 
     /** Return a remembered current size of a [MediaController] instance given
      * whether or not the preset selector is being shown and whether an auto
-     * stop timer is being displayed. */
+     * stop timer is set. */
     @Composable fun rememberCurrentSize(
         showingPresetSelector: Boolean,
-        showingStopTimer: Boolean,
-    ) = remember(showingPresetSelector, showingStopTimer) {
+        hasStopTime: Boolean,
+    ) = remember(showingPresetSelector, hasStopTime) {
         if (showingPresetSelector) presetSelectorSize
-        else                       collapsedSize(showingStopTimer)
+        else                       collapsedSize(hasStopTime)
     }
 
     val shape = RoundedCornerShape(28.dp)
@@ -262,13 +262,14 @@ fun Duration.toHMMSSstring(): String {
 }
 
 @Composable private fun StopTimerDisplay(
-    stopTime: Instant?,
+    stopTimeProvider: () -> Instant?,
     modifier: Modifier = Modifier,
 ) = Column(
     modifier = modifier,
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.Center
 ) {
+    val stopTime = stopTimeProvider()
     var durationRemaining = remember(stopTime) {
         stopTime?.let { Duration.between(Instant.now(), it) }
     }
@@ -295,7 +296,7 @@ fun Duration.toHMMSSstring(): String {
 @Composable private fun HideableStopTimerDisplay(
     showing: Boolean,
     sizes: MediaControllerSizes,
-    stopTime: Instant?,
+    stopTimeProvider: () -> Instant?,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
@@ -323,7 +324,7 @@ fun Duration.toHMMSSstring(): String {
             .clickable(true, clickLabel, Role.Button, onClick),
     ) {
         Divider(sizes.orientation, sizeFraction = 0.8f)
-        StopTimerDisplay(stopTime, Modifier.fillMaxSize())
+        StopTimerDisplay(stopTimeProvider, Modifier.fillMaxSize())
     }
 }
 
@@ -340,9 +341,10 @@ fun Duration.toHMMSSstring(): String {
  *     to determine the display and function of the active preset indicator
  * @param playButtonCallback The [PlayButtonCallback] that will be
  *     used to determine the display and function of the play/pause button
- * @param stopTime The [Instant] at which media will automatically
- *     stop playing, if any. This value is only used for informational
- *     display; playback is not affected by this value
+ * @param stopTimeProvider A method that will return the [Instant] at which
+ *     media will automatically stop playing, if any, when invoked. This value
+ *     is only used for informational display; playback is not affected by
+ *     this value.
  * @param showStopTimer Whether or not the stop timer should be shown
  *     if the stop time is not null
  * @param onStopTimerClick The callback that will be invoked when
@@ -354,7 +356,7 @@ fun Duration.toHMMSSstring(): String {
     transitionProgressProvider: () -> Float,
     activePresetCallback: ActivePresetCallback,
     playButtonCallback: PlayButtonCallback,
-    stopTime: Instant?,
+    stopTimeProvider: () -> Instant?,
     showStopTimer: Boolean,
     onStopTimerClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -371,7 +373,7 @@ fun Duration.toHMMSSstring(): String {
             .clip(sizes.playButtonShape(showStopTimer)))
     HideableStopTimerDisplay(
         showing = showStopTimer,
-        sizes, stopTime,
+        sizes, stopTimeProvider,
         onClick = onStopTimerClick)
 }
 
@@ -452,7 +454,7 @@ fun Duration.toHMMSSstring(): String {
     padding: PaddingValues,
     activePresetCallback: ActivePresetCallback,
     playButtonCallback: PlayButtonCallback,
-    stopTime: Instant?,
+    stopTimeProvider: () -> Instant?,
     onStopTimerClick: () -> Unit,
     showingPresetSelector: Boolean,
     presetListCallback: PresetListCallback,
@@ -468,13 +470,14 @@ fun Duration.toHMMSSstring(): String {
         label = "FloatingMediaController expand transition progress",
         targetValueByState = { if (it) 1f else 0f })
     val transitionProgressProvider = remember {{ expandTransitionProgress }}
+    val hasStopTime by remember { derivedStateOf {
+        stopTimeProvider() != null
+    }}
 
     ClippedBrushBox(
         modifier = modifier,
         brush = backgroundBrush,
-        size = sizes.rememberCurrentSize(
-            showingPresetSelector = showingPresetSelector,
-            showingStopTimer = stopTime != null),
+        size = sizes.rememberCurrentSize(showingPresetSelector, hasStopTime),
         cornerRadius = 28.dp,
         padding = padding,
         alignment = alignment,
@@ -485,7 +488,7 @@ fun Duration.toHMMSSstring(): String {
                 label = "FloatingMediaController title height transition",
             ) { expanded ->
                 if (!expanded && sizes.orientation.isVertical)
-                    sizes.collapsedSize(stopTime != null).height
+                    sizes.collapsedSize(hasStopTime).height
                 else sizes.minThickness
             }
 
@@ -493,12 +496,12 @@ fun Duration.toHMMSSstring(): String {
                 if (expandTransitionProgress > 0f)
                     PresetSelectorTitle(sizes, transitionProgressProvider, onCloseButtonClick)
 
-                val showStopTimer = !expandTransition.targetState && stopTime != null
+                val showStopTimer = !expandTransition.targetState && hasStopTime
                 if (expandTransitionProgress < 1f)
                     MediaControllerCollapsedContent(
                         sizes, transitionProgressProvider,
                         activePresetCallback, playButtonCallback,
-                        stopTime, showStopTimer, onStopTimerClick)
+                        stopTimeProvider, showStopTimer, onStopTimerClick)
             }
 
             val listPadding = 8.dp
@@ -576,7 +579,7 @@ fun MediaControllerPreview() = SoundAuraTheme {
             isPlayingProvider = { playing },
             onClick = { playing = !playing },
             onLongClick = {}),
-        stopTime = null,
+        stopTimeProvider = { null },
         onStopTimerClick = {},
         showingPresetSelector = expanded,
         presetListCallback = callback,

@@ -200,7 +200,7 @@ class MediaControllerViewModel(
     padding: PaddingValues,
     isPlayingProvider: () -> Boolean,
     onPlayButtonClick: () -> Unit,
-    stopTime: Instant?,
+    stopTimeProvider: () -> Instant?,
     onNewStopTimerRequest: (Duration) -> Unit,
     onCancelStopTimerRequest: () -> Unit,
 ) {
@@ -254,8 +254,8 @@ class MediaControllerViewModel(
                 }, onLongClick = {
                     showingSetStopTimerDialog = true
                 })
-        }, stopTime = stopTime,
-        onStopTimerClick = { showingCancelStopTimerDialog = true },
+        }, stopTimeProvider = stopTimeProvider,
+        onStopTimerClick = remember {{ showingCancelStopTimerDialog = true }},
         showingPresetSelector = viewModel.showingPresetSelector,
         presetListCallback = presetListCallback,
         onCloseButtonClick = viewModel::onCloseButtonClick)
