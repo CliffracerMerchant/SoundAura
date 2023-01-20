@@ -4,6 +4,10 @@
 package com.cliffracertech.soundaura
 
 import android.util.Range
+import androidx.compose.animation.*
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -81,6 +85,7 @@ class MediaControllerViewModel(
         dataStore.edit(playButtonLongClickHintShownKey, true, scope)
     }
 
+    val showingMediaController get() = !navigationState.showingAppSettings
     val showingPresetSelector get() = navigationState.showingPresetSelector
 
     fun onActivePresetClick() {
@@ -193,7 +198,7 @@ class MediaControllerViewModel(
 }
 
 /** A [MediaController] with state provided by an instance of [MediaControllerViewModel]. */
-@Composable fun SoundAuraMediaController(
+@Composable fun BoxWithConstraintsScope.SoundAuraMediaController(
     modifier: Modifier = Modifier,
     sizes: MediaControllerSizes,
     alignment: BiasAlignment,
@@ -206,6 +211,9 @@ class MediaControllerViewModel(
 ) {
     val viewModel: MediaControllerViewModel = viewModel()
     val context = LocalContext.current
+
+    var showingSetStopTimerDialog by rememberSaveable { mutableStateOf(false) }
+    var showingCancelStopTimerDialog by rememberSaveable { mutableStateOf(false) }
 
     val startColor = MaterialTheme.colors.primaryVariant
     val endColor = MaterialTheme.colors.secondaryVariant
@@ -230,9 +238,6 @@ class MediaControllerViewModel(
         override fun onPresetClick(preset: Preset) = viewModel.onPresetSelectorPresetClick(preset)
     }}
 
-    var showingSetStopTimerDialog by rememberSaveable { mutableStateOf(false) }
-    var showingCancelStopTimerDialog by rememberSaveable { mutableStateOf(false) }
-
     val playButtonCallback = remember(isPlayingProvider, onPlayButtonClick) {
         PlayButtonCallback(
             isPlayingProvider,
@@ -247,24 +252,38 @@ class MediaControllerViewModel(
             }, longClickLabelResId = R.string.play_pause_button_long_click_description)
     }
 
-    MediaController(
-        modifier = modifier,
-        sizes = sizes,
-        backgroundBrush = backgroundBrush,
-        contentColor = MaterialTheme.colors.onPrimary,
-        alignment = alignment,
-        padding = padding,
-        activePresetCallback = remember {
-            ActivePresetCallback(
-                nameProvider = viewModel::activePresetName::get,
-                isModifiedProvider = viewModel::activePresetIsModified::get,
-                onClick = viewModel::onActivePresetClick)
-        }, playButtonCallback = playButtonCallback,
-        stopTimeProvider = stopTimeProvider,
-        onStopTimerClick = remember {{ showingCancelStopTimerDialog = true }},
-        showingPresetSelector = viewModel.showingPresetSelector,
-        presetListCallback = presetListCallback,
-        onCloseButtonClick = viewModel::onCloseButtonClick)
+    val tweenSpec = tween<Float>(
+        durationMillis = tweenDuration,
+        delayMillis = tweenDuration / 3,
+        easing = LinearOutSlowInEasing)
+    val transformOrigin = rememberClippedBrushBoxTransformOrigin(
+        alignment, padding,
+        dpSize = sizes.collapsedSize(stopTimeProvider() != null))
+
+    AnimatedVisibility(
+        visible = viewModel.showingMediaController,
+        enter = fadeIn(tweenSpec) + scaleIn(tweenSpec, 0.8f, transformOrigin),
+        exit = fadeOut(tweenSpec) + scaleOut(tweenSpec, 0.8f, transformOrigin)
+    ) {
+        MediaController(
+            modifier = modifier,
+            sizes = sizes,
+            backgroundBrush = backgroundBrush,
+            contentColor = MaterialTheme.colors.onPrimary,
+            alignment = alignment,
+            padding = padding,
+            activePresetCallback = remember {
+                ActivePresetCallback(
+                    nameProvider = viewModel::activePresetName::get,
+                    isModifiedProvider = viewModel::activePresetIsModified::get,
+                    onClick = viewModel::onActivePresetClick)
+            }, playButtonCallback = playButtonCallback,
+            stopTimeProvider = stopTimeProvider,
+            onStopTimerClick = { showingCancelStopTimerDialog = true },
+            showingPresetSelector = viewModel.showingPresetSelector,
+            presetListCallback = presetListCallback,
+            onCloseButtonClick = viewModel::onCloseButtonClick)
+    }
 
     if (viewModel.showingUnsavedChangesWarning)
         viewModel.activePresetName?.let { unsavedPresetName ->

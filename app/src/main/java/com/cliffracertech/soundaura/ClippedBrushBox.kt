@@ -29,10 +29,11 @@ val LayoutDirection.isLtr get() = this == LayoutDirection.Ltr
  * across the maximum allowed size, but then clipped down to [size] with a
  * corner radius matching [cornerRadius]. The parameters [alignment] and
  * [padding] will also be utilized in determining the placement of the box.
- * ClippedBrushBox can be used to, e.g., create a box with a gradient that
- * matches a background screen spanning gradient without having to manually
- * adjust the startX and endX of the gradient depending on the position of
- * the box. Changes to the [size] parameter will automatically be animated.
+ * ClippedBrushBox can be used to, e.g., create a box with a gradient smaller
+ * than the entire screen that matches a background screen spanning gradient
+ * without having to manually adjust the startX and endX of the gradient
+ * depending on the position of the box. Changes to the [size] parameter will
+ * automatically be animated.
  *
  * Note that desired padding should only be provided through the [padding]
  * parameter; adding padding to the provided [modifier] will cause it to be

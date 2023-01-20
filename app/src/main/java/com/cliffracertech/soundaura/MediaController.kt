@@ -35,9 +35,6 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlinx.collections.immutable.toImmutableList
 import java.time.Instant
 
-internal const val tweenDuration = 250
-internal const val springStiffness = 600f
-
 val Orientation.isHorizontal get() = this == Orientation.Horizontal
 val Orientation.isVertical get() = this == Orientation.Vertical
 
@@ -297,17 +294,17 @@ data class ActivePresetCallback(
  *
  * @param sizes The [MediaControllerSizes] instance that describes
  *     the sizes of [MediaController]'s internal elements.
+ * @param onCloseButtonClick The method that will be invoked when
+ *     the close button of the preset selector title is clicked
  * @param transitionProgressProvider A method that returns the
  *     current progress of the [MediaController]'s show/hide
  *     preset selector transition when invoked
- * @param onCloseButtonClick The method that will be invoked when
- *     the close button of the preset selector title is clicked
  * @param modifier The [Modifier] to use for the composable
  */
 @Composable private fun PresetSelectorTitle(
     sizes: MediaControllerSizes,
-    transitionProgressProvider: () -> Float,
     onCloseButtonClick: () -> Unit,
+    transitionProgressProvider: () -> Float,
     modifier: Modifier = Modifier,
 ) = Box(modifier
     .height(sizes.minThickness)
@@ -326,6 +323,8 @@ data class ActivePresetCallback(
     }
 }
 
+/** A wrapper around [PresetList] that scales its size
+ * with the [MediaController]'s expansion progress */
 @Composable private fun MediaControllerPresetList(
     sizes: MediaControllerSizes,
     hasStopTimer: Boolean,
@@ -437,7 +436,7 @@ data class ActivePresetCallback(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             val titleHeight by expandTransition.animateDp(
                 transitionSpec = { spring(stiffness = springStiffness) },
-                label = "FloatingMediaController title height transition",
+                label = "MediaController / preset selector title height transition",
             ) { expanded ->
                 if (!expanded && sizes.orientation.isVertical)
                     sizes.collapsedSize(hasStopTimer).height
@@ -445,7 +444,9 @@ data class ActivePresetCallback(
             }
             Box(modifier.height(titleHeight)) {
                 if (expandTransitionProgress > 0f)
-                    PresetSelectorTitle(sizes, transitionProgressProvider, onCloseButtonClick)
+                    PresetSelectorTitle(
+                        sizes, onCloseButtonClick,
+                        transitionProgressProvider)
 
                 if (expandTransitionProgress < 1f)
                     MediaControllerCollapsedContent(
