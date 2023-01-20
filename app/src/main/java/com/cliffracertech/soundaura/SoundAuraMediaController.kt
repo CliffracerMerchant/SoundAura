@@ -233,6 +233,20 @@ class MediaControllerViewModel(
     var showingSetStopTimerDialog by rememberSaveable { mutableStateOf(false) }
     var showingCancelStopTimerDialog by rememberSaveable { mutableStateOf(false) }
 
+    val playButtonCallback = remember(isPlayingProvider, onPlayButtonClick) {
+        PlayButtonCallback(
+            isPlayingProvider,
+            onClick = {
+                viewModel.onPlayButtonClick()
+                onPlayButtonClick()
+            }, clickLabelResIdProvider = {isPlaying ->
+                if (isPlaying) R.string.pause_button_description
+                else           R.string.play_button_description
+            }, onLongClick = {
+                showingSetStopTimerDialog = true
+            }, longClickLabelResId = R.string.play_pause_button_long_click_description)
+    }
+
     MediaController(
         modifier = modifier,
         sizes = sizes,
@@ -245,16 +259,8 @@ class MediaControllerViewModel(
                 nameProvider = viewModel::activePresetName::get,
                 isModifiedProvider = viewModel::activePresetIsModified::get,
                 onClick = viewModel::onActivePresetClick)
-        }, playButtonCallback = remember(isPlayingProvider, onPlayButtonClick) {
-            PlayButtonCallback(
-                isPlayingProvider,
-                onClick = {
-                    viewModel.onPlayButtonClick()
-                    onPlayButtonClick()
-                }, onLongClick = {
-                    showingSetStopTimerDialog = true
-                })
-        }, stopTimeProvider = stopTimeProvider,
+        }, playButtonCallback = playButtonCallback,
+        stopTimeProvider = stopTimeProvider,
         onStopTimerClick = remember {{ showingCancelStopTimerDialog = true }},
         showingPresetSelector = viewModel.showingPresetSelector,
         presetListCallback = presetListCallback,

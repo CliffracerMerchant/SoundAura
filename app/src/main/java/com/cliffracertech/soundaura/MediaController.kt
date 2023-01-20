@@ -7,7 +7,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,8 +33,6 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.delay
-import java.time.Duration
 import java.time.Instant
 
 internal const val tweenDuration = 250
@@ -207,106 +204,27 @@ data class ActivePresetCallback(
     }
 }
 
-
-/**
- * A collection of callbacks replayed to the display and function
- * of a combination play/pause button with a long click action.
- *
- * @param isPlayingProvider A function that returns the media play/pause
- *     state that the play/pause button should use to determine its icon,
- *     which will be the opposite of the current state
- * @param onClick The callback that will be invoked when the pla/pause button is clicked
- * @param onLongClick The callback that will be invoked when the pla/pause button is long clicked
- */
-data class PlayButtonCallback(
-    val isPlayingProvider: () -> Boolean,
-    val onClick: () -> Unit,
-    val onLongClick: () -> Unit)
-
-@Composable private fun PlayButton(
-    callback: PlayButtonCallback,
-    modifier: Modifier = Modifier,
-) {
-    val isPlaying = callback.isPlayingProvider()
-
-    Box(contentAlignment = Alignment.Center,
-        modifier = modifier
-            .combinedClickable(
-                onLongClickLabel = stringResource(
-                    R.string.play_pause_button_long_click_description),
-                onLongClick = callback.onLongClick,
-                onClickLabel = stringResource(
-                    if (isPlaying) R.string.pause_button_description
-                    else           R.string.play_button_description),
-                onClick = callback.onClick)
-    ) {
-        PlayPauseIcon(
-            isPlaying = isPlaying,
-            contentDescription = stringResource(
-                if (isPlaying) R.string.pause_button_description
-                else           R.string.play_button_description))
-    }
-}
-
-fun Duration.toHMMSSstring(): String {
-    val hours = toHours()
-    val minutes = toMinutesPart()
-    return when {
-        hours == 0L && minutes == 0 ->
-            toSecondsPart().toString()
-        hours == 0L ->
-            "%2d:%02d".format(minutes, toSecondsPart())
-        else ->
-            "%d:%02d:%02d".format(hours, minutes, toSecondsPart())
-    }
-}
-
-@Composable private fun StopTimerDisplay(
-    stopTimeProvider: () -> Instant?,
-    modifier: Modifier = Modifier,
-) = Column(
-    modifier = modifier,
-    horizontalAlignment = Alignment.CenterHorizontally,
-    verticalArrangement = Arrangement.Center
-) {
-    val stopTime = stopTimeProvider()
-    var durationRemaining = remember(stopTime) {
-        stopTime?.let { Duration.between(Instant.now(), it) }
-    }
-    // durationRemainingString is used so that when the stopTime
-    // becomes null, the StopTimerDisplay can fade out with the
-    // last non-null value of stopTime
-    var durationRemainingString by remember {
-        mutableStateOf(durationRemaining?.toHMMSSstring())
-    }
-    LaunchedEffect(stopTime) {
-        while (durationRemaining != null) {
-            delay(1000)
-            durationRemaining?.minusSeconds(1)?.let {
-                durationRemaining = it
-                durationRemainingString = it.toHMMSSstring()
-            }
-        }
-    }
-    val style = MaterialTheme.typography.caption
-    Text(stringResource(R.string.stop_timer_text), style = style)
-    Text(durationRemainingString ?: "", style = style)
-}
-
-@Composable private fun HideableStopTimerDisplay(
-    showing: Boolean,
+/** A wrapper around [StopTimer] that animates its appearance and
+ * disappearance as it changes between null and non-null values. */
+@Composable private fun MediaControllerStopTimer(
     sizes: MediaControllerSizes,
     stopTimeProvider: () -> Instant?,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    val progress by animateFloatAsState(
-        targetValue = if (showing) 1f else 0f,
+    val stopTime = stopTimeProvider()
+    // lastNonNullStopTime is used so that the StopTimerDisplay will
+    // fade out with its last non-null value when it changes to null.
+    var lastNonNullStopTime by remember { mutableStateOf(Instant.MIN) }
+    stopTime?.let { lastNonNullStopTime = it }
+
+    val appearanceProgress by animateFloatAsState(
+        targetValue = if (stopTime != null) 1f else 0f,
         animationSpec = spring(stiffness = springStiffness),
         label = "Auto stop time appearance transition")
-    if (progress == 0f) return
+    if (appearanceProgress == 0f) return
 
-    val translationPercent = (1f - progress) / -2f
+    val translationPercent = (1f - appearanceProgress) / -2f
     val size = sizes.stopTimerSize
     val clickLabel = stringResource(R.string.stop_timer_click_label)
 
@@ -315,7 +233,7 @@ fun Duration.toHMMSSstring(): String {
         modifier = modifier
             .requiredSize(size)
             .graphicsLayer {
-                alpha = progress
+                alpha = appearanceProgress
                 translationX = if (sizes.orientation.isVertical) 0f else
                                    translationPercent * size.width.toPx()
                 translationY = if (sizes.orientation.isHorizontal) 0f else
@@ -324,7 +242,7 @@ fun Duration.toHMMSSstring(): String {
             .clickable(true, clickLabel, Role.Button, onClick),
     ) {
         Divider(sizes.orientation, sizeFraction = 0.8f)
-        StopTimerDisplay(stopTimeProvider, Modifier.fillMaxSize())
+        StopTimer(lastNonNullStopTime, Modifier.fillMaxSize())
     }
 }
 
@@ -345,24 +263,22 @@ fun Duration.toHMMSSstring(): String {
  *     media will automatically stop playing, if any, when invoked. This value
  *     is only used for informational display; playback is not affected by
  *     this value.
- * @param showStopTimer Whether or not the stop timer should be shown
- *     if the stop time is not null
  * @param onStopTimerClick The callback that will be invoked when
  *     the display of the stop time is clicked
  * @param modifier The [Modifier] to use for the composable
  */
-@Composable fun MediaControllerCollapsedContent(
+@Composable private fun MediaControllerCollapsedContent(
     sizes: MediaControllerSizes,
     transitionProgressProvider: () -> Float,
     activePresetCallback: ActivePresetCallback,
     playButtonCallback: PlayButtonCallback,
     stopTimeProvider: () -> Instant?,
-    showStopTimer: Boolean,
     onStopTimerClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) = LinearLayout(
     orientation = sizes.orientation,
-    modifier = modifier.graphicsLayer { alpha = 1f - transitionProgressProvider() }
+    modifier = modifier
+        .graphicsLayer { alpha = 1f - transitionProgressProvider() }
 ) {
     ActivePresetDisplay(sizes, activePresetCallback)
     Divider(sizes.orientation, sizeFraction = 0.8f)
@@ -370,11 +286,9 @@ fun Duration.toHMMSSstring(): String {
         callback = playButtonCallback,
         modifier = Modifier
             .size(sizes.buttonSize)
-            .clip(sizes.playButtonShape(showStopTimer)))
-    HideableStopTimerDisplay(
-        showing = showStopTimer,
-        sizes, stopTimeProvider,
-        onClick = onStopTimerClick)
+            .clip(sizes.playButtonShape(stopTimeProvider() != null)))
+    MediaControllerStopTimer(sizes, stopTimeProvider,
+                             onClick = onStopTimerClick)
 }
 
 /**
@@ -390,7 +304,7 @@ fun Duration.toHMMSSstring(): String {
  *     the close button of the preset selector title is clicked
  * @param modifier The [Modifier] to use for the composable
  */
-@Composable fun PresetSelectorTitle(
+@Composable private fun PresetSelectorTitle(
     sizes: MediaControllerSizes,
     transitionProgressProvider: () -> Float,
     onCloseButtonClick: () -> Unit,
@@ -410,6 +324,42 @@ fun Duration.toHMMSSstring(): String {
         Icon(Icons.Default.Close,
             stringResource(R.string.close_preset_selector_description))
     }
+}
+
+@Composable private fun MediaControllerPresetList(
+    sizes: MediaControllerSizes,
+    hasStopTimer: Boolean,
+    backgroundBrush: Brush,
+    transitionProgressProvider: () -> Float,
+    activePresetCallback: ActivePresetCallback,
+    presetListCallback: PresetListCallback,
+) {
+    val listPadding = 8.dp
+    val presetListSize = remember(sizes) {
+        val expandedTitleHeight = sizes.minThickness
+        val expandedWidth = sizes.presetSelectorSize.width
+        val expandedHeight = sizes.presetSelectorSize.height
+        DpSize(expandedWidth - listPadding * 2,
+            expandedHeight - expandedTitleHeight - listPadding)
+    }
+    val minScaleX = remember(sizes, hasStopTimer) {
+        val collapsedWidth = sizes.collapsedSize(hasStopTimer).width
+        (collapsedWidth - listPadding * 2) / presetListSize.width
+    }
+    if (transitionProgressProvider() > 0f)
+        PresetList(
+            modifier = Modifier
+                .requiredSize(presetListSize)
+                .graphicsLayer {
+                    alpha = transitionProgressProvider()
+                    scaleY = transitionProgressProvider()
+                    scaleX = minScaleX + (1f - minScaleX) * transitionProgressProvider()
+                }.background(MaterialTheme.colors.surface,
+                             MaterialTheme.shapes.large),
+            contentPadding = PaddingValues(bottom = 64.dp),
+            activePresetCallback = activePresetCallback,
+            selectionBrush = backgroundBrush,
+            callback = presetListCallback)
 }
 
 /**
@@ -433,9 +383,10 @@ fun Duration.toHMMSSstring(): String {
  *     to determine the display and function of the active preset indicator
  * @param playButtonCallback The [PlayButtonCallback] that will be used
  *     to determine the display and function of the play/pause button
- * @param stopTime The java.time.Instant at which playback will be automatically
- *     stopped. MediaController does not use this information to affect playback;
- *     the value of stopTime is only used to display this information to the user.
+ * @param stopTimeProvider A method that will return the java.time.Instant at
+ *     which playback will be automatically stopped when invoked. MediaController
+ *     does not use this information to affect playback; the returned value is
+ *     only used to display this information to the user.
  * @param onStopTimerClick The callback that will be invoked when
  *     the display of the stop timer is clicked
  * @param showingPresetSelector Whether or not the floating button should be
@@ -460,6 +411,7 @@ fun Duration.toHMMSSstring(): String {
     presetListCallback: PresetListCallback,
     onCloseButtonClick: () -> Unit,
 ) = CompositionLocalProvider(LocalContentColor provides contentColor) {
+
     val isExpanded = remember { MutableTransitionState(showingPresetSelector) }
     isExpanded.targetState = showingPresetSelector
 
@@ -470,14 +422,14 @@ fun Duration.toHMMSSstring(): String {
         label = "FloatingMediaController expand transition progress",
         targetValueByState = { if (it) 1f else 0f })
     val transitionProgressProvider = remember {{ expandTransitionProgress }}
-    val hasStopTime by remember { derivedStateOf {
+    val hasStopTimer by remember { derivedStateOf {
         stopTimeProvider() != null
     }}
 
     ClippedBrushBox(
         modifier = modifier,
         brush = backgroundBrush,
-        size = sizes.rememberCurrentSize(showingPresetSelector, hasStopTime),
+        size = sizes.rememberCurrentSize(showingPresetSelector, hasStopTimer),
         cornerRadius = 28.dp,
         padding = padding,
         alignment = alignment,
@@ -488,48 +440,23 @@ fun Duration.toHMMSSstring(): String {
                 label = "FloatingMediaController title height transition",
             ) { expanded ->
                 if (!expanded && sizes.orientation.isVertical)
-                    sizes.collapsedSize(hasStopTime).height
+                    sizes.collapsedSize(hasStopTimer).height
                 else sizes.minThickness
             }
-
             Box(modifier.height(titleHeight)) {
                 if (expandTransitionProgress > 0f)
                     PresetSelectorTitle(sizes, transitionProgressProvider, onCloseButtonClick)
 
-                val showStopTimer = !expandTransition.targetState && hasStopTime
                 if (expandTransitionProgress < 1f)
                     MediaControllerCollapsedContent(
                         sizes, transitionProgressProvider,
                         activePresetCallback, playButtonCallback,
-                        stopTimeProvider, showStopTimer, onStopTimerClick)
+                        stopTimeProvider, onStopTimerClick)
             }
-
-            val listPadding = 8.dp
-            val presetListSize = remember(sizes) {
-                val expandedTitleHeight = sizes.minThickness
-                val expandedWidth = sizes.presetSelectorSize.width
-                val expandedHeight = sizes.presetSelectorSize.height
-                DpSize(expandedWidth - listPadding * 2,
-                       expandedHeight - expandedTitleHeight - listPadding)
-            }
-            val minScaleX = remember(sizes, stopTime == null) {
-                val collapsedWidth = sizes.collapsedSize(stopTime != null).width
-                (collapsedWidth - listPadding * 2) / presetListSize.width
-            }
-            if (expandTransitionProgress > 0f)
-                PresetList(
-                    modifier = Modifier
-                        .requiredSize(presetListSize)
-                        .graphicsLayer {
-                            alpha = expandTransitionProgress
-                            scaleY = expandTransitionProgress
-                            scaleX = minScaleX + (1f - minScaleX) * expandTransitionProgress
-                        }.background(MaterialTheme.colors.surface,
-                                     MaterialTheme.shapes.large),
-                    contentPadding = PaddingValues(bottom = 64.dp),
-                    activePresetCallback = activePresetCallback,
-                    selectionBrush = backgroundBrush,
-                    callback = presetListCallback)
+            MediaControllerPresetList(
+                sizes, hasStopTimer, backgroundBrush,
+                transitionProgressProvider,
+                activePresetCallback, presetListCallback)
         }
     }
 }
@@ -578,7 +505,9 @@ fun MediaControllerPreview() = SoundAuraTheme {
         playButtonCallback = PlayButtonCallback(
             isPlayingProvider = { playing },
             onClick = { playing = !playing },
-            onLongClick = {}),
+            clickLabelResIdProvider = { 0 },
+            onLongClick = {},
+            longClickLabelResId = 0),
         stopTimeProvider = { null },
         onStopTimerClick = {},
         showingPresetSelector = expanded,

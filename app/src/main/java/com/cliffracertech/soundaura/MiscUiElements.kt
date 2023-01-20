@@ -127,7 +127,7 @@ fun Modifier.minTouchTargetSize() =
  */
 @Composable fun PlayPauseIcon(
     isPlaying: Boolean,
-    contentDescription: String,
+    contentDescription: String?,
     tint: Color = LocalContentColor.current
 ) {
     val playToPause = AnimatedImageVector.animatedVectorResource(R.drawable.play_to_pause)
