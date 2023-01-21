@@ -77,8 +77,10 @@ class MediaControllerViewModel(
         dataStore.preferenceState(playButtonLongClickHintShownKey, false, scope)
 
     fun onPlayButtonClick() {
-        if (playButtonLongClickHintShown)
-            return
+        if (playButtonLongClickHintShown || activeTracksIsEmpty)
+            return // We don't want to show the hint if there are no active tracks
+                   // because the PlayerService should show a message about there
+                   // being no active tracks
         messageHandler.postMessage(
             StringResource(R.string.play_button_long_click_hint_text),
             SnackbarDuration.Long)
@@ -126,7 +128,7 @@ class MediaControllerViewModel(
     }
 
     private val activeTracksIsEmpty by trackDao.getActiveTracks()
-        .map { it.isEmpty() }
+        .map(List<ActiveTrack>::isEmpty)
         .collectAsState(false, scope)
 
     private fun onPresetOverwriteRequest(presetName: String) {
