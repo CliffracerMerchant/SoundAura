@@ -62,7 +62,7 @@
         You can change the amounts using the up or down buttons, or by
         dragging the amount up or down.</string>
 
-    <string name="stop_timer_text">for</string>
+    <string name="stop_timer_text">ing in</string>
     <string name="stop_timer_click_label">Cancel auto stop timer</string>
     <string name="cancel_stop_timer_dialog_title">Confirm timer cancellation</string>
     <string name="cancel_stop_timer_dialog_text">

@@ -3,14 +3,17 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.Instant
@@ -57,6 +60,14 @@ fun Duration.toHMMSSstring(): String {
         }
     }
     val style = MaterialTheme.typography.caption
-    Text(stringResource(R.string.stop_timer_text), style = style)
+    // The -2.dp x offset prevents the first line of text from
+    // appearing off-center (probably due to the icon's padding?).
+    Row(modifier = Modifier.offset(x = (-2).dp),
+        horizontalArrangement = Arrangement.spacedBy((-1).dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(Icons.Default.Stop, null, Modifier.size(16.dp))
+        Text(stringResource(R.string.stop_timer_text), style = style)
+    }
     Text(durationRemainingString, style = style)
 }
