@@ -442,7 +442,7 @@ data class ActivePresetCallback(
                     sizes.collapsedSize(hasStopTimer).height
                 else sizes.minThickness
             }
-            Box(modifier.height(titleHeight)) {
+            Box(Modifier.height(titleHeight)) {
                 if (expandTransitionProgress > 0f)
                     PresetSelectorTitle(
                         sizes, onCloseButtonClick,
