@@ -252,9 +252,12 @@ class MediaControllerViewModel(
             }, longClickLabelResId = R.string.play_pause_button_long_click_description)
     }
 
-    val tweenSpec = tween<Float>(
+    val enterSpec = tween<Float>(
         durationMillis = tweenDuration,
         delayMillis = tweenDuration / 3,
+        easing = LinearOutSlowInEasing)
+    val exitSpec = tween<Float>(
+        durationMillis = tweenDuration,
         easing = LinearOutSlowInEasing)
     val transformOrigin = rememberClippedBrushBoxTransformOrigin(
         alignment, padding,
@@ -262,8 +265,8 @@ class MediaControllerViewModel(
 
     AnimatedVisibility(
         visible = viewModel.showingMediaController,
-        enter = fadeIn(tweenSpec) + scaleIn(tweenSpec, 0.8f, transformOrigin),
-        exit = fadeOut(tweenSpec) + scaleOut(tweenSpec, 0.8f, transformOrigin)
+        enter = fadeIn(enterSpec) + scaleIn(enterSpec, 0.8f, transformOrigin),
+        exit = fadeOut(exitSpec) + scaleOut(exitSpec, 0.8f, transformOrigin)
     ) {
         MediaController(
             modifier = modifier,

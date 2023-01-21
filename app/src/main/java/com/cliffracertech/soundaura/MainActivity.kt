@@ -336,10 +336,13 @@ class MainActivity : ComponentActivity() {
             label = "Add button y offset animation",
             animationSpec = spring(stiffness = springStiffness))
 
-        val tweenSpec = tween<Float>(
+        val enterSpec = tween<Float>(
             durationMillis = tweenDuration,
             easing = LinearOutSlowInEasing)
-
+        val exitSpec = tween<Float>(
+            durationMillis = tweenDuration,
+            delayMillis = tweenDuration / 3,
+            easing = LinearOutSlowInEasing)
         AnimatedVisibility( // add track button
             visible = visible,
             modifier = modifier
@@ -348,8 +351,8 @@ class MainActivity : ComponentActivity() {
                     addButtonXDpOffset.roundToPx(),
                     addButtonYDpOffset.roundToPx()
                 )},
-            enter = fadeIn(tweenSpec) + scaleIn(tweenSpec, initialScale = 0.8f),
-            exit = fadeOut(tweenSpec) + scaleOut(tweenSpec, targetScale = 0.8f),
+            enter = fadeIn(enterSpec) + scaleIn(enterSpec, initialScale = 0.8f),
+            exit = fadeOut(exitSpec) + scaleOut(exitSpec, targetScale = 0.8f),
         ) {
             AddButton(
                 target = if (showingPresetSelector)
