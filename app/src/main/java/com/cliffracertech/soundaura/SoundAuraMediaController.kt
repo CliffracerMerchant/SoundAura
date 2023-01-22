@@ -129,7 +129,7 @@ class MediaControllerViewModel(
 
     private val activeTracksIsEmpty by trackDao.getActiveTracks()
         .map(List<ActiveTrack>::isEmpty)
-        .collectAsState(false, scope)
+        .collectAsState(true, scope)
 
     private fun onPresetOverwriteRequest(presetName: String) {
         val isActive = presetName == activePresetName

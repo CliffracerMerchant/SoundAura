@@ -4,14 +4,18 @@
 package com.cliffracertech.soundaura
 
 import android.content.Context
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.cliffracertech.soundaura.SoundAura.pref_key_playButtonLongClickHintShown
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Before
@@ -25,6 +29,7 @@ class MediaControllerViewModelTests {
     private val dataStore = PreferenceDataStoreFactory.create(scope = coroutineScope) {
         context.preferencesDataStoreFile("testDatastore")
     }
+    private val messageHandler = MessageHandler()
 
     private val testTracks = List(5) { Track("uri $it", "track $it") }
     private val testPresets = List(3) { Preset("preset $it") }
@@ -58,18 +63,17 @@ class MediaControllerViewModelTests {
         trackDao = db.trackDao()
         navigationState = MainActivityNavigationState()
         activePresetState = ActivePresetState(dataStore, trackDao, presetDao)
-        val messageHandler = MessageHandler()
         instance = MediaControllerViewModel(presetDao, navigationState,
-                                            activePresetState,
-                                            messageHandler, trackDao)
+                                            activePresetState, messageHandler,
+                                            dataStore, trackDao)
     }
 
-    @After fun cleanUp() {
+    @After fun clean_up() {
         db.close()
         coroutineScope.cancel()
     }
 
-    @Test fun initialState() = runTest {
+    @Test fun initial_state() = runTest {
         assertThat(instance.presetList).isNull()
         assertThat(instance.activePresetIsModified).isFalse()
         assertThat(instance.showingPresetSelector).isFalse()
@@ -81,7 +85,7 @@ class MediaControllerViewModelTests {
         assertThat(instance.presetList).isEmpty()
     }
 
-    @Test fun presetListUpdates() = runTest {
+    @Test fun preset_list_updates() = runTest {
         presetDao.savePreset(testPresets[0].name)
         waitUntil { instance.presetList?.isEmpty() == false }
         assertThat(instance.presetList)
@@ -93,7 +97,7 @@ class MediaControllerViewModelTests {
             .containsExactlyElementsIn(testPresets).inOrder()
     }
 
-    @Test fun activePresetNameUpdates() = runTest {
+    @Test fun active_preset_name_updates() = runTest {
         addTestPresets()
         assertThat(instance.activePresetName).isNull()
         activePresetState.setName(testPresets[1].name)
@@ -101,7 +105,7 @@ class MediaControllerViewModelTests {
         assertThat(instance.activePresetName).isEqualTo(testPresets[1].name)
     }
 
-    @Test fun activePresetIsModifiedUpdates() = runTest {
+    @Test fun active_preset_is_modified_updates() = runTest {
         addTestPresets()
         activePresetState.setName(testPresets[2].name)
         waitUntil { instance.activePresetName != null }
@@ -120,7 +124,46 @@ class MediaControllerViewModelTests {
         assertThat(instance.activePresetIsModified).isFalse()
     }
 
-    @Test fun showingAndClosingPresetSelector() {
+    @Test fun play_button_long_click_hint_not_shown_with_no_active_tracks() = runTest {
+        dataStore.edit { it.remove(
+            booleanPreferencesKey(pref_key_playButtonLongClickHintShown)
+        )}
+        var latestMessage: MessageHandler.Message? = null
+        coroutineScope.launch {
+            latestMessage = messageHandler.messages.first()
+        }
+
+        instance.onPlayButtonClick()
+        waitUntil { latestMessage != null } // Should time out
+        assertThat(latestMessage).isNull()
+    }
+
+    @Test fun play_button_long_click_hint_shows_once() = runTest {
+        dataStore.edit { it.remove(
+            booleanPreferencesKey(pref_key_playButtonLongClickHintShown)
+        )}
+        var latestMessage: MessageHandler.Message? = null
+        coroutineScope.launch {
+            latestMessage = messageHandler.messages.first()
+        }
+
+        addTestPresets()
+        instance.onPlayButtonClick()
+        assertThat(latestMessage?.stringResource?.stringResId)
+            .isEqualTo(R.string.play_button_long_click_hint_text)
+
+        latestMessage = null
+        val job = coroutineScope.launch {
+            latestMessage = messageHandler.messages.first()
+        }
+        waitUntil { false } // To give the long click hint shown preference a chance to update
+        instance.onPlayButtonClick()
+        waitUntil { latestMessage != null } // Should time out
+        assertThat(latestMessage).isNull()
+        job.cancel()
+    }
+
+    @Test fun showing_and_closing_preset_selector() {
         instance.onActivePresetClick()
         assertThat(instance.showingPresetSelector).isTrue()
         instance.onCloseButtonClick()
@@ -132,7 +175,7 @@ class MediaControllerViewModelTests {
         assertThat(instance.showingPresetSelector).isFalse()
     }
 
-    @Test fun renamingPresets() = runTest {
+    @Test fun renaming_presets() = runTest {
         addTestPresets()
         instance.onPresetRenameClick(testPresets[1])
         assertThat(instance.renameDialogTarget).isEqualTo(testPresets[1])
@@ -158,7 +201,7 @@ class MediaControllerViewModelTests {
         assertThat(instance.activePresetName).isEqualTo(newName)
     }
 
-    @Test fun blankNamesAreRejected() = runTest {
+    @Test fun blank_names_are_rejected() = runTest {
         addTestPresets()
         instance.onPresetRenameClick(testPresets[1])
         assertThat(instance.renameDialogTarget).isEqualTo(testPresets[1])
@@ -181,7 +224,7 @@ class MediaControllerViewModelTests {
         assertThat(instance.proposedPresetNameErrorMessage).isNull()
     }
 
-    @Test fun duplicateNamesAreRejected() = runTest {
+    @Test fun duplicate_names_are_rejected() = runTest {
         addTestPresets()
         instance.onPresetRenameClick(testPresets[1])
         assertThat(instance.renameDialogTarget).isEqualTo(testPresets[1])
@@ -204,7 +247,7 @@ class MediaControllerViewModelTests {
         assertThat(instance.proposedPresetNameErrorMessage).isNull()
     }
 
-    @Test fun overwritingNotAllowedWithNoActiveTracks() = runTest {
+    @Test fun overwriting_not_allowed_with_no_active_tracks() = runTest {
         addTestPresets()
         activePresetState.setName(testPresets[2].name)
         trackDao.toggleIsActive(testTracks[3].uriString)
@@ -225,7 +268,7 @@ class MediaControllerViewModelTests {
             .containsExactly(testTracks[0].toActiveTrack())
     }
 
-    @Test fun overwritingPresets() = runTest {
+    @Test fun overwriting_presets() = runTest {
         addTestPresets()
         instance.onPresetOverwriteRequest(testPresets[2])
         waitUntil { instance.activePresetName == testPresets[2].name }
@@ -242,7 +285,7 @@ class MediaControllerViewModelTests {
             testTracks[3].toActiveTrack(), testTracks[4].toActiveTrack())
     }
 
-    @Test fun deletingPresets() = runTest {
+    @Test fun deleting_presets() = runTest {
         addTestPresets()
         var presets = presetDao.getPresetList().first()
         assertThat(presets).containsExactlyElementsIn(testPresets)
@@ -263,7 +306,7 @@ class MediaControllerViewModelTests {
         assertThat(instance.activePresetName).isNull()
     }
 
-    @Test fun clickingPresetsWithoutUnsavedChanges() = runTest {
+    @Test fun clicking_presets_without_unsaved_changes() = runTest {
         addTestPresets()
         instance.onActivePresetClick()
         instance.onPresetSelectorPresetClick(testPresets[1])
@@ -282,7 +325,7 @@ class MediaControllerViewModelTests {
         assertThat(instance.showingPresetSelector).isFalse()
     }
     // 310 showingPresetSelector still false
-    @Test fun unsavedChangesDialogShows() = runTest {
+    @Test fun unsaved_changes_dialog_shows() = runTest {
         addTestPresets()
         instance.onPresetSelectorPresetClick(testPresets[1])
         waitUntil { instance.activePresetName != null }
@@ -297,10 +340,12 @@ class MediaControllerViewModelTests {
         assertThat(instance.showingPresetSelector).isTrue()
         assertThat(instance.activePresetIsModified).isTrue()
         assertThat(trackDao.getActiveTracks().first()).containsExactly(
-            testTracks[1].toActiveTrack(), testTracks[2].toActiveTrack(), testTracks[3].toActiveTrack())
+            testTracks[1].toActiveTrack(),
+            testTracks[2].toActiveTrack(),
+            testTracks[3].toActiveTrack())
     }
 
-    @Test fun cancellingAfterClickingPresetWithUnsavedChanges() = runTest {
+    @Test fun canceling_after_clicking_preset_with_unsaved_changes() = runTest {
         addTestPresets()
         instance.onPresetSelectorPresetClick(testPresets[1])
         waitUntil { instance.activePresetName != null }
@@ -315,10 +360,12 @@ class MediaControllerViewModelTests {
         assertThat(instance.showingPresetSelector).isTrue()
         assertThat(instance.activePresetIsModified).isTrue()
         assertThat(trackDao.getActiveTracks().first()).containsExactly(
-            testTracks[1].toActiveTrack(), testTracks[2].toActiveTrack(), testTracks[3].toActiveTrack())
+            testTracks[1].toActiveTrack(),
+            testTracks[2].toActiveTrack(),
+            testTracks[3].toActiveTrack())
     }
 
-    @Test fun droppingChangesAfterClickingPresetWithUnsavedChanges() = runTest {
+    @Test fun dropping_changes_after_clicking_preset_with_unsaved_changes() = runTest {
         addTestPresets()
         instance.onPresetSelectorPresetClick(testPresets[1])
         waitUntil { instance.activePresetName != null }
@@ -343,7 +390,7 @@ class MediaControllerViewModelTests {
             .containsExactly(testTracks[1].toActiveTrack(), testTracks[2].toActiveTrack())
     }
 
-    @Test fun savingFirstAfterClickingPresetWithUnsavedChanges() = runTest {
+    @Test fun saving_first_after_clicking_preset_with_unsaved_changes() = runTest {
         addTestPresets()
         instance.onActivePresetClick()
         instance.onPresetSelectorPresetClick(testPresets[1])
