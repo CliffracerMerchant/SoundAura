@@ -37,35 +37,35 @@ class PlayerServiceTests {
     }
 
     @Test @Throws(TimeoutException::class)
-    fun playbackBeginsInPausedStateByDefault() {
+    fun playback_begins_in_paused_state_by_default() {
         val intent = Intent(context, PlayerService::class.java)
         serviceRule.startService(intent)
         assertThat(PlayerService.playbackState).isEqualTo(PlaybackStateCompat.STATE_PAUSED)
     }
 
     @Test @Throws(TimeoutException::class)
-    fun playIntent() {
+    fun play_intent() {
         val intent = PlayerService.playIntent(context)
         serviceRule.startService(intent)
         assertThat(PlayerService.playbackState).isEqualTo(PlaybackStateCompat.STATE_PLAYING)
     }
 
     @Test @Throws(TimeoutException::class)
-    fun pauseIntent() {
+    fun pause_intent() {
         val intent = PlayerService.pauseIntent(context)
         serviceRule.startService(intent)
         assertThat(PlayerService.playbackState).isEqualTo(PlaybackStateCompat.STATE_PAUSED)
     }
 
     @Test @Throws(TimeoutException::class)
-    fun stopIntent() {
+    fun stop_intent() {
         val intent = PlayerService.stopIntent(context)
         serviceRule.startService(intent)
         assertThat(PlayerService.playbackState).isEqualTo(PlaybackStateCompat.STATE_STOPPED)
     }
 
     @Test @Throws(TimeoutException::class)
-    fun bindingSucceeds() {
+    fun binding_succeeds() {
         val intent = Intent(context, PlayerService::class.java)
         val binder = serviceRule.bindService(intent)
         val service = binder as? PlayerService.Binder
@@ -73,7 +73,7 @@ class PlayerServiceTests {
     }
 
     @Test @Throws(TimeoutException::class)
-    fun binderIsPlayingState() {
+    fun binder_is_playing_state() {
         val intent = Intent(context, PlayerService::class.java)
         val binder = serviceRule.bindService(intent)
         val service = binder as PlayerService.Binder
@@ -93,7 +93,7 @@ class PlayerServiceTests {
     }
 
     @Test @Throws(TimeoutException::class)
-    fun binderToggleIsPlaying() {
+    fun binder_toggle_is_playing() {
         val intent = Intent(context, PlayerService::class.java)
         val binder = serviceRule.bindService(intent)
         val service = binder as PlayerService.Binder
@@ -105,7 +105,7 @@ class PlayerServiceTests {
     }
 
     @Test @Throws(TimeoutException::class)
-    fun servicePausesInsteadOfStoppingWhenBoundToActivity() {
+    fun service_pauses_instead_of_stopping_when_bound_to_activity() {
         val intent = Intent(context, PlayerService::class.java)
         serviceRule.bindService(intent)
         val stopIntent = PlayerService.stopIntent(context)
@@ -114,7 +114,7 @@ class PlayerServiceTests {
     }
 
     @Test @Throws(TimeoutException::class)
-    fun servicePreventsPlayingWithNoActiveTracks() {
+    fun service_prevents_playing_with_no_active_tracks() {
         val intent = Intent(context, PlayerService::class.java)
         val binder = serviceRule.bindService(intent)
         assertThat(PlayerService.playbackState).isEqualTo(PlaybackStateCompat.STATE_PAUSED)

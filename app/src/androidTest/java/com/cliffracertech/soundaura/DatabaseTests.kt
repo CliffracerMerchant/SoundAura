@@ -42,13 +42,13 @@ class DatabaseTests {
     private suspend fun getAllTracks() =
         dao.getAllTracks(Track.Sort.OrderAdded, false, null).first()
 
-    @Test fun initialState() = runBlocking {
+    @Test fun initial_state() = runBlocking {
         val items = getAllTracks()
         assertThat(items).isEmpty()
     }
 
-    @Test fun addingTracks() = runBlocking {
-        initialState()
+    @Test fun adding_tracks() = runBlocking {
+        initial_state()
         val testTracks = List(3) {
             Track(uriString = "uri$it", name = "track $it")
         }
@@ -63,8 +63,8 @@ class DatabaseTests {
         Unit
     }
 
-    @Test fun removingTracks() = runBlocking {
-        addingTracks()
+    @Test fun removing_tracks() = runBlocking {
+        adding_tracks()
         val testTracks = List(3) {
             Track(uriString = "uri$it", name = "track $it")
         }
@@ -77,8 +77,8 @@ class DatabaseTests {
         assertThat(items).isEmpty()
     }
 
-    @Test fun setName() = runBlocking {
-        addingTracks()
+    @Test fun set_name() = runBlocking {
+        adding_tracks()
         var tracks = getAllTracks()
         val oldTrack1Name = "track 1"
         assertThat(tracks[1].name).isEqualTo(oldTrack1Name)
@@ -93,8 +93,8 @@ class DatabaseTests {
         assertThat(tracks[1].name).isEqualTo(oldTrack1Name)
     }
 
-    @Test fun toggleIsActive() = runBlocking {
-        addingTracks()
+    @Test fun toggle_isActive() = runBlocking {
+        adding_tracks()
         var tracks = getAllTracks()
         assertThat(tracks[0].isActive || tracks[1].isActive || tracks[2].isActive).isFalse()
 
@@ -110,8 +110,8 @@ class DatabaseTests {
         assertThat(tracks[1].isActive).isTrue()
     }
 
-    @Test fun setVolume() = runBlocking {
-        addingTracks()
+    @Test fun set_volume() = runBlocking {
+        adding_tracks()
         var tracks = getAllTracks()
         assertThat(tracks[1].volume).isEqualTo(1f)
         assertThat(tracks[2].volume).isEqualTo(1f)
@@ -127,8 +127,8 @@ class DatabaseTests {
         assertThat(tracks[2].volume).isEqualTo(1f)
     }
 
-    @Test fun setHasError() = runBlocking {
-        addingTracks()
+    @Test fun set_hasError() = runBlocking {
+        adding_tracks()
         var tracks = getAllTracks()
         assertThat(tracks[0].hasError).isFalse()
         assertThat(tracks[1].hasError).isFalse()
@@ -147,7 +147,7 @@ class DatabaseTests {
         assertThat(tracks[2].hasError).isFalse()
     }
 
-    @Test fun getAllTracksSortedByNameAscWithActiveFirst() = runBlocking {
+    @Test fun get_all_tracks_sorted_by_name_asc_with_active_first() = runBlocking {
         val testTracks = listOf(
             Track("track0uri", "b track", isActive = false),
             Track("track1uri", "c track", isActive = true),
@@ -171,7 +171,7 @@ class DatabaseTests {
         ).inOrder()
     }
 
-    @Test fun getAllTracksSortedByNameDescWithActiveFirst() = runBlocking {
+    @Test fun get_all_tracks_sorted_by_name_desc_with_active_first() = runBlocking {
         val testTracks = listOf(
             Track("track0uri", "b track", isActive = false),
             Track("track1uri", "c track", isActive = true),
@@ -195,7 +195,7 @@ class DatabaseTests {
         ).inOrder()
     }
 
-    @Test fun getAllTracksSortedByOrderAddedWithActiveFirst() = runBlocking {
+    @Test fun get_all_tracks_sorted_by_order_added_with_active_first() = runBlocking {
         val testTracks = listOf(
             Track("track0uri", "b track", isActive = false),
             Track("track1uri", "c track", isActive = true),
@@ -219,7 +219,7 @@ class DatabaseTests {
         ).inOrder()
     }
 
-    @Test fun getAllTracksSortedByNameAsc() = runBlocking {
+    @Test fun get_all_tracks_sorted_by_name_asc() = runBlocking {
         val testTracks = listOf(
             Track("track0uri", "b track"),
             Track("track1uri", "c track"),
@@ -245,7 +245,7 @@ class DatabaseTests {
         ).inOrder()
     }
 
-    @Test fun getAllTracksSortedByNameDesc() = runBlocking {
+    @Test fun get_all_tracks_sorted_by_name_desc() = runBlocking {
         val testTracks = listOf(
             Track("track0uri", "b track"),
             Track("track1uri", "c track"),
@@ -271,7 +271,7 @@ class DatabaseTests {
         ).inOrder()
     }
 
-    @Test fun getAllTracksSortedByOrderAdded() = runBlocking {
+    @Test fun get_all_tracks_sorted_by_order_added() = runBlocking {
         val testTracks = listOf(
             Track("track0uri", "b track"),
             Track("track1uri", "c track"),
@@ -302,7 +302,7 @@ class DatabaseTests {
     }
 
     @Test fun getAllActiveTracks() = runBlocking {
-        addingTracks()
+        adding_tracks()
         var allTracks = getAllTracks()
         var activeTracks = dao.getActiveTracks().first()
         assertThat(activeTracks).isEmpty()
@@ -323,7 +323,7 @@ class DatabaseTests {
     }
 
     @Test @Throws(IOException::class)
-    fun allMigrations() {
+    fun all_migrations() {
         val dbName = "migration test database"
         val oldestDb = helper.createDatabase(dbName, 1)
         oldestDb.close()

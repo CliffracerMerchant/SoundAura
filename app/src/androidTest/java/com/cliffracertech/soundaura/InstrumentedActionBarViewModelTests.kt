@@ -49,7 +49,7 @@ class InstrumentedActionBarViewModelTests {
         Dispatchers.resetMain()
     }
 
-    @Test fun showActiveTracksFirst() {
+    @Test fun show_active_tracks_first() {
         assertThat(instance.showActiveTracksFirst).isFalse()
         runTest { dataStore.edit { it[showActiveTracksFirstKey] = true } }
         assertThat(instance.showActiveTracksFirst).isTrue()
@@ -57,7 +57,7 @@ class InstrumentedActionBarViewModelTests {
         assertThat(instance.showActiveTracksFirst).isFalse()
     }
 
-    @Test fun onShowActiveTracksFirstSwitchClick() {
+    @Test fun on_show_active_tracks_first_switch_click() {
         assertThat(instance.showActiveTracksFirst).isFalse()
         instance.onShowActiveTracksFirstSwitchClick()
         assertThat(instance.showActiveTracksFirst).isTrue()
@@ -65,7 +65,7 @@ class InstrumentedActionBarViewModelTests {
         assertThat(instance.showActiveTracksFirst).isFalse()
     }
 
-    @Test fun trackSort() {
+    @Test fun trackSort_value() {
         assertThat(instance.trackSort).isEqualTo(Track.Sort.values().first())
         runTest { dataStore.edit { it[trackSortKey] = Track.Sort.NameDesc.ordinal } }
         assertThat(instance.trackSort).isEqualTo(Track.Sort.NameDesc)
@@ -73,7 +73,7 @@ class InstrumentedActionBarViewModelTests {
         assertThat(instance.trackSort).isEqualTo(Track.Sort.NameAsc)
     }
 
-    @Test fun onTrackSortOptionClick() {
+    @Test fun on_trackSort_option_click() {
         assertThat(instance.trackSort).isEqualTo(Track.Sort.values().first())
         instance.onTrackSortOptionClick(Track.Sort.NameDesc)
         assertThat(instance.trackSort).isEqualTo(Track.Sort.NameDesc)

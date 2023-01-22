@@ -34,7 +34,7 @@ class ActionBarViewModelTests {
         assertThat(instance.title.stringResId).isEqualTo(R.string.app_name)
     }
 
-    @Test fun searchButtonClicks() {
+    @Test fun search_button_clicks() {
         assertThat(instance.searchQuery).isNull()
         instance.onSearchButtonClick()
         assertThat(instance.searchQuery).isEqualTo("")
@@ -46,7 +46,7 @@ class ActionBarViewModelTests {
         assertThat(instance.searchQuery).isNull()
     }
 
-    @Test fun searchQueryMatchesUnderlyingState() {
+    @Test fun search_query_property_updates() {
         assertThat(instance.searchQuery).isNull()
         assertThat(searchQueryState.query.value).isNull()
         instance.searchQuery = "test query"
@@ -59,7 +59,7 @@ class ActionBarViewModelTests {
         assertThat(instance.searchQuery).isEqualTo("test query")
     }
 
-    @Test fun settingsButtonAffectsUnderlyingState() {
+    @Test fun settings_button_affects_underlying_state() {
         assertThat(navigationState.showingAppSettings).isFalse()
         instance.onSettingsButtonClick()
         assertThat(navigationState.showingAppSettings).isTrue()
@@ -67,15 +67,15 @@ class ActionBarViewModelTests {
         assertThat(navigationState.showingAppSettings).isTrue()
     }
 
-    @Test fun backButtonExitsAppSettings() {
-        settingsButtonAffectsUnderlyingState()
+    @Test fun back_button_exits_app_settings() {
+        settings_button_affects_underlying_state()
         assertThat(instance.onBackButtonClick()).isTrue()
         assertThat(instance.showingAppSettings).isFalse()
         assertThat(instance.onBackButtonClick()).isFalse()
         assertThat(instance.showingAppSettings).isFalse()
     }
 
-    @Test fun settingsButtonClearsSearchQuery() {
+    @Test fun settings_button_clears_search_query() {
         searchQueryState.query.value = "test query"
         assertThat(instance.searchQuery).isEqualTo("test query")
         instance.onSettingsButtonClick()
