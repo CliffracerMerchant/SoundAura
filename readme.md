@@ -43,7 +43,7 @@ SoundAura is built using:
 
 ## Screenshots
 
-https://user-images.githubusercontent.com/42116365/192111969-21b03711-e844-47c2-a637-54f3917c5f9d.mp4
+https://user-images.githubusercontent.com/42116365/214144949-1600d19f-edbb-436d-a34f-b92cd376d829.mp4
 
 <p>
   <img src="metadata/en-US/images/phoneScreenshots/1.png" width="200" height="434">
