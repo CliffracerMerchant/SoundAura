@@ -49,17 +49,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
             valueNames = AppTheme.valueStrings(),
             currentValue = viewModel.appTheme,
             onValueClick = viewModel::onAppThemeClick)
-        HorizontalDivider(paddingModifier)
-        Setting(
-            title = stringResource(R.string.use_solid_navbar_setting_title),
-            modifier = paddingModifier,
-            subtitle = stringResource(R.string.use_solid_navbar_setting_description),
-            onClick = viewModel::onUseSolidNavBarClick
-        ) {
-            Switch(checked = viewModel.useSolidNavBar,
-                onCheckedChange = { viewModel.onUseSolidNavBarClick() },
-                modifier = Modifier.padding(start = 4.dp))
-        }
     }
 
 @Composable private fun PlayInBackgroundSetting(

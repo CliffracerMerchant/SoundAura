@@ -25,7 +25,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -54,15 +53,6 @@ object PrefKeys {
     /** An int value that represents the ordinal of the desired [AppTheme]
      * enum value to use as the application's light/dark theme. */
     const val appTheme = "app_theme"
-
-    /** A boolean value that represents whether or not the navigation bar should
-     * use a solid color for its background instead of being transparent. This
-     * setting acts as a workaround for some devices that disallow transparent
-     * navigation bar backgrounds. Attempting to make the nav bar transparent on
-     * these devices usually results in a white nav bar instead. While this
-     * might be relatively unnoticeable in the app's light theme, it looks very
-     * bad when using the dark theme. */
-    const val useSolidNavBar = "use_solid_navbar"
 
     /**
      * A boolean value that indicates whether playback should occur in the
@@ -177,7 +167,6 @@ class SettingsViewModel(
 
     private val scope = coroutineScope ?: viewModelScope
     private val appThemeKey = intPreferencesKey(PrefKeys.appTheme)
-    private val useSolidNavBarKey = booleanPreferencesKey(PrefKeys.useSolidNavBar)
     private val playInBackgroundKey = booleanPreferencesKey(PrefKeys.playInBackground)
     private val notificationPermissionRequestedKey =
         booleanPreferencesKey(PrefKeys.notificationPermissionRequested)
@@ -186,19 +175,10 @@ class SettingsViewModel(
         intPreferencesKey(PrefKeys.onZeroVolumeAudioDeviceBehavior)
     private val stopInsteadOfPauseKey = booleanPreferencesKey(PrefKeys.stopInsteadOfPause)
 
-    // The thread must be blocked when reading the first value
-    // of the app theme from the DataStore or else the screen
-    // can flicker between light and dark themes on startup.
-    val appTheme by runBlocking {
-        dataStore.awaitEnumPreferenceState<AppTheme>(appThemeKey, scope)
-    }
+    val appTheme by dataStore.enumPreferenceState<AppTheme>(appThemeKey, scope)
 
     fun onAppThemeClick(theme: AppTheme) =
         dataStore.edit(appThemeKey, theme.ordinal, scope)
-
-    val useSolidNavBar by dataStore.preferenceState(useSolidNavBarKey, false, scope)
-
-    fun onUseSolidNavBarClick() = dataStore.edit(useSolidNavBarKey, !useSolidNavBar, scope)
 
     val playInBackground by dataStore
         .preferenceFlow(playInBackgroundKey, false)
