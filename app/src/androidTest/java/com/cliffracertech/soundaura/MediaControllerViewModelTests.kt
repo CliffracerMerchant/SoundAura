@@ -4,9 +4,9 @@
 package com.cliffracertech.soundaura
 
 import android.content.Context
-import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -252,6 +252,7 @@ class MediaControllerViewModelTests {
         activePresetState.setName(testPresets[2].name)
         trackDao.toggleIsActive(testTracks[3].uriString)
         trackDao.toggleIsActive(testTracks[4].uriString)
+        waitUntil { instance.activePresetName != null }
         waitUntil { trackDao.getActiveTracks().first().isEmpty() }
         assertThat(instance.activePresetIsModified).isTrue()
 
