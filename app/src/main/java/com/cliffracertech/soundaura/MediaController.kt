@@ -217,7 +217,7 @@ data class ActivePresetCallback(
 
     val appearanceProgress by animateFloatAsState(
         targetValue = if (stopTime != null) 1f else 0f,
-        animationSpec = spring(stiffness = springStiffness),
+        animationSpec = tween(tweenDuration, 0, LinearOutSlowInEasing),
         label = "Auto stop time appearance transition")
     if (appearanceProgress == 0f) return
 
@@ -417,7 +417,7 @@ data class ActivePresetCallback(
     val expandTransition = updateTransition(
         isExpanded, "FloatingMediaController transition")
     val expandTransitionProgress by expandTransition.animateFloat(
-        transitionSpec = { spring(stiffness = springStiffness) },
+        transitionSpec = { tween(tweenDuration, 0, LinearOutSlowInEasing) },
         label = "FloatingMediaController expand transition progress",
         targetValueByState = { if (it) 1f else 0f })
     val transitionProgressProvider = remember {{ expandTransitionProgress }}
@@ -435,7 +435,7 @@ data class ActivePresetCallback(
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             val titleHeight by expandTransition.animateDp(
-                transitionSpec = { spring(stiffness = springStiffness) },
+                transitionSpec = { tween(tweenDuration, 0, LinearOutSlowInEasing) },
                 label = "MediaController / preset selector title height transition",
             ) { expanded ->
                 if (!expanded && sizes.orientation.isVertical)

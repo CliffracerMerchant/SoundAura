@@ -328,13 +328,13 @@ class MainActivity : ComponentActivity() {
                     (margin - 8.dp - buttonSize) / -2f
                 }
             }, label = "Add button x offset animation",
-            animationSpec = spring(stiffness = springStiffness * 1.5f))
+            animationSpec = tween(tweenDuration * 5 / 4, 0, LinearOutSlowInEasing))
 
         val addButtonYDpOffset by animateDpAsState(
             targetValue = if (!showingPresetSelector) 0.dp
                           else (-16).dp,
             label = "Add button y offset animation",
-            animationSpec = spring(stiffness = springStiffness))
+            animationSpec = tween(tweenDuration, 0, LinearOutSlowInEasing))
 
         val enterSpec = tween<Float>(
             durationMillis = tweenDuration,
