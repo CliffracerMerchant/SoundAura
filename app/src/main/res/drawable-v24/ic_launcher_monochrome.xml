@@ -1,0 +1,25 @@
+<!-- This file is part of SoundAura, which is released under
+   ~ the terms of the Apache License 2.0. See license.md in
+   ~ the project's root directory to see the full license. -->
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="30"
+    android:viewportHeight="30">
+    <group
+        android:scaleX="0.8"
+        android:scaleY="0.8"
+        android:translateX="3"
+        android:translateY="3" >
+        <path
+            android:pathData="M 15 13 A 2 2 0 0 0 15 17 A 2 2 0 0 0 15 13"
+            android:strokeLineCap="butt"
+            android:fillColor="#ffffff" />
+        <path
+            android:pathData="M 15 5.875 A 9.125 9.125 0 0 0 15 24.125 A 9.125 9.125 0 0 0 15 5.875 M 16.896 18.284 A 3.792 3.792 0 0 0 16.896 11.716 M 13.104 11.716 A 3.792 3.792 0 0 0 13.104 18.284 M 20.594 11.77 A 6.459 6.459 0 0 0 9.406 11.77 M 9.406 18.23 A 6.459 6.459 0 0 0 20.594 18.23"
+            android:strokeWidth="1.75"
+            android:strokeLineCap="round"
+            android:strokeColor="#ffffff" />
+    </group>
+</vector>
