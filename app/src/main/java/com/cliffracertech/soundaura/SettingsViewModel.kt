@@ -17,12 +17,6 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.cliffracertech.soundaura.SoundAura.pref_key_appTheme
-import com.cliffracertech.soundaura.SoundAura.pref_key_autoPauseDuringCalls
-import com.cliffracertech.soundaura.SoundAura.pref_key_notificationPermissionRequested
-import com.cliffracertech.soundaura.SoundAura.pref_key_onZeroVolumeAudioDeviceBehavior
-import com.cliffracertech.soundaura.SoundAura.pref_key_playInBackground
-import com.cliffracertech.soundaura.SoundAura.pref_key_stopInsteadOfPause
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -44,22 +38,31 @@ class PreferencesModule {
         app.dataStore
 }
 
-object SoundAura {
+object PrefKeys {
     /** A boolean value that indicates whether the list of tracks should
      * be sorted by tracks' active states (with active tracks appearing
      * before inactive ones) before being sorted by another sorting method. */
-    const val pref_key_showActiveTracksFirst = "show_active_tracks_first"
+    const val showActiveTracksFirst = "show_active_tracks_first"
 
     /** An int value that represents the ordinal of the desired [Track.Sort]
      * enum value to use for sorting tracks in the main activity. */
-    const val pref_key_trackSort = "track_sort"
+    const val trackSort = "track_sort"
+
+    /** A [String] value that represents the name of the currently active preset. */
+    const val activePresetName = "active_preset_name"
 
     /** An int value that represents the ordinal of the desired [AppTheme]
      * enum value to use as the application's light/dark theme. */
-    const val pref_key_appTheme = "app_theme"
+    const val appTheme = "app_theme"
 
-    /** A [String] value that represents the name of the currently active preset. */
-    const val pref_key_activePresetName = "active_preset_name"
+    /** A boolean value that represents whether or not the navigation bar should
+     * use a solid color for its background instead of being transparent. This
+     * setting acts as a workaround for some devices that disallow transparent
+     * navigation bar backgrounds. Attempting to make the nav bar transparent on
+     * these devices usually results in a white nav bar instead. While this
+     * might be relatively unnoticeable in the app's light theme, it looks very
+     * bad when using the dark theme. */
+    const val useSolidNavBar = "use_solid_navbar"
 
     /**
      * A boolean value that indicates whether playback should occur in the
@@ -79,11 +82,11 @@ object SoundAura {
      *   is true (due to the app having no other way to determine if a phone call
      *   is ongoing)
      */
-    const val pref_key_playInBackground = "play_in_background"
+    const val playInBackground = "play_in_background"
 
     /** A boolean value that indicates whether the user has been asked for notification
      * permission. Permission should only be asked once, to prevent annoying the user. */
-    const val pref_key_notificationPermissionRequested = "notification_permission_requested"
+    const val notificationPermissionRequested = "notification_permission_requested"
 
     /** A boolean value that indicates whether playback should automatically
      * pause when a phone call is ongoing. This setting will have no effect if
@@ -91,21 +94,21 @@ object SoundAura {
      * pause playback during calls due to losing audio focus. This setting also
      * has no effect if the app has not been granted the read phone state
      * permission, and should be prevented from being true in that case. */
-    const val pref_key_autoPauseDuringCalls = "auto_pause_during_calls"
+    const val autoPauseDuringCalls = "auto_pause_during_calls"
 
     /** An int value that represents the ordinal of the desired [OnZeroVolumeAudioDeviceBehavior]
      * enum value to use as the application's response to an audio device change
      * leading to a media volume of zero. See OnZeroVolumeAudioDeviceBehavior's
      * documentation for descriptions of each value. */
-    const val pref_key_onZeroVolumeAudioDeviceBehavior = "on_zero_volume_audio_device_behavior"
+    const val onZeroVolumeAudioDeviceBehavior = "on_zero_volume_audio_device_behavior"
 
     /** A boolean value that indicates whether tracks will be stopped instead
      * of paused when the pause button is clicked. */
-    const val pref_key_stopInsteadOfPause = "stop_instead_of_pause"
+    const val stopInsteadOfPause = "stop_instead_of_pause"
 
     /** A boolean value that indicates whether the user has been shown the long
      * click hint for the play/pause button. */
-    const val pref_key_playButtonLongClickHintShown = "play_button_long_click_hint_shown"
+    const val playButtonLongClickHintShown = "play_button_long_click_hint_shown"
 }
 
 enum class AppTheme { UseSystem, Light, Dark;
@@ -173,14 +176,15 @@ class SettingsViewModel(
     ) : this(context, dataStore, null)
 
     private val scope = coroutineScope ?: viewModelScope
-    private val appThemeKey = intPreferencesKey(pref_key_appTheme)
-    private val playInBackgroundKey = booleanPreferencesKey(pref_key_playInBackground)
+    private val appThemeKey = intPreferencesKey(PrefKeys.appTheme)
+    private val useSolidNavBarKey = booleanPreferencesKey(PrefKeys.useSolidNavBar)
+    private val playInBackgroundKey = booleanPreferencesKey(PrefKeys.playInBackground)
     private val notificationPermissionRequestedKey =
-        booleanPreferencesKey(pref_key_notificationPermissionRequested)
-    private val autoPauseDuringCallKey = booleanPreferencesKey(pref_key_autoPauseDuringCalls)
+        booleanPreferencesKey(PrefKeys.notificationPermissionRequested)
+    private val autoPauseDuringCallKey = booleanPreferencesKey(PrefKeys.autoPauseDuringCalls)
     private val onZeroVolumeAudioDeviceBehaviorKey =
-        intPreferencesKey(pref_key_onZeroVolumeAudioDeviceBehavior)
-    private val stopInsteadOfPauseKey = booleanPreferencesKey(pref_key_stopInsteadOfPause)
+        intPreferencesKey(PrefKeys.onZeroVolumeAudioDeviceBehavior)
+    private val stopInsteadOfPauseKey = booleanPreferencesKey(PrefKeys.stopInsteadOfPause)
 
     // The thread must be blocked when reading the first value
     // of the app theme from the DataStore or else the screen
@@ -191,6 +195,10 @@ class SettingsViewModel(
 
     fun onAppThemeClick(theme: AppTheme) =
         dataStore.edit(appThemeKey, theme.ordinal, scope)
+
+    val useSolidNavBar by dataStore.preferenceState(useSolidNavBarKey, false, scope)
+
+    fun onUseSolidNavBarClick() = dataStore.edit(useSolidNavBarKey, !useSolidNavBar, scope)
 
     val playInBackground by dataStore
         .preferenceFlow(playInBackgroundKey, false)

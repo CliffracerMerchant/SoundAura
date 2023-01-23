@@ -31,8 +31,6 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.cliffracertech.soundaura.SoundAura.pref_key_showActiveTracksFirst
-import com.cliffracertech.soundaura.SoundAura.pref_key_trackSort
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -105,9 +103,9 @@ class TrackListViewModel(
     ) : this(dataStore, trackDao, searchQueryState, null)
 
     private val scope = coroutineScope ?: viewModelScope
-    private val showActiveTracksFirstKey = booleanPreferencesKey(pref_key_showActiveTracksFirst)
+    private val showActiveTracksFirstKey = booleanPreferencesKey(PrefKeys.showActiveTracksFirst)
     private val showActiveTracksFirst = dataStore.preferenceFlow(showActiveTracksFirstKey, false)
-    private val trackSortKey = intPreferencesKey(pref_key_trackSort)
+    private val trackSortKey = intPreferencesKey(PrefKeys.trackSort)
     private val trackSort = dataStore.enumPreferenceFlow<Track.Sort>(trackSortKey)
 
     private val searchQueryFlow = snapshotFlow { searchQueryState.query.value }

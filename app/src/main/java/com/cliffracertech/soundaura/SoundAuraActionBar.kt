@@ -21,8 +21,6 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.cliffracertech.soundaura.SoundAura.pref_key_showActiveTracksFirst
-import com.cliffracertech.soundaura.SoundAura.pref_key_trackSort
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import javax.inject.Inject
@@ -52,13 +50,13 @@ class ActionBarViewModel(
             else R.string.app_name)
     }
 
-    private val showActiveTracksFirstKey = booleanPreferencesKey(pref_key_showActiveTracksFirst)
+    private val showActiveTracksFirstKey = booleanPreferencesKey(PrefKeys.showActiveTracksFirst)
     val showActiveTracksFirst by dataStore.preferenceState(showActiveTracksFirstKey, false, scope)
 
     fun onShowActiveTracksFirstSwitchClick() =
         dataStore.edit(showActiveTracksFirstKey, !showActiveTracksFirst, scope)
 
-    private val trackSortKey = intPreferencesKey(pref_key_trackSort)
+    private val trackSortKey = intPreferencesKey(PrefKeys.trackSort)
     val trackSort by dataStore.enumPreferenceState<Track.Sort>(trackSortKey, scope)
 
     fun onTrackSortOptionClick(newValue: Track.Sort) =

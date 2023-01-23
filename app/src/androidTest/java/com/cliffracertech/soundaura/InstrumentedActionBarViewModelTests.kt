@@ -11,8 +11,6 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.cliffracertech.soundaura.SoundAura.pref_key_showActiveTracksFirst
-import com.cliffracertech.soundaura.SoundAura.pref_key_trackSort
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -31,8 +29,9 @@ class InstrumentedActionBarViewModelTests {
     private val dataStore = PreferenceDataStoreFactory.create(scope = coroutineScope) {
         context.preferencesDataStoreFile("testDatastore")
     }
-    private val showActiveTracksFirstKey = booleanPreferencesKey(pref_key_showActiveTracksFirst)
-    private val trackSortKey = intPreferencesKey(pref_key_trackSort)
+    private val showActiveTracksFirstKey =
+        booleanPreferencesKey(PrefKeys.showActiveTracksFirst)
+    private val trackSortKey = intPreferencesKey(PrefKeys.trackSort)
     private lateinit var instance: ActionBarViewModel
 
     private suspend fun updatedPreferences() = dataStore.data.first().toPreferences()
