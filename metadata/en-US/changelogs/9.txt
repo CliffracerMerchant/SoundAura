@@ -1,1 +1,3 @@
-Fix crash when view open source library licenses
+Fix crash when viewing open source library licenses
+Fix the navigation bar being white when using the dark theme on some devices
+Add themed app icon
