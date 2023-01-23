@@ -21,8 +21,10 @@ SoundAura is built using:
      height="80">](https://f-droid.org/packages/com.cliffracertech.soundaura/)
 
 ## Features
-- A library of user-added tracks based on the device's local files.
-- Individual track volume control
+- A library of tracks added from the device's local files, with individual
+  volume controls for each track.
+- User created presets of tracks
+- An automatic stop timer set by long pressing the play/pause button.
 - A media notification to control playback when the app is in the background.
   These controls will appear with other media session controls if 'play in
   background' is turned off, or as a regular notification when 'play in
@@ -30,29 +32,20 @@ SoundAura is built using:
 - A quick settings tile to control playback. If the quick settings tile
   is in use, the notification can be manually hidden if desired to save
   notification space.
-- Auto-pause during calls. If SoundAura is respecting audio focus rules,
-  then auto-pausing during phone calls will happen automatically due to
-  the app losing audio focus. If audio focus is ignored due to 'play in
-  background' being turned on, SoundAura requires the read phone state
-  permission to be able to detect when a phone call is ongoing. Auto-pause
-  during calls is toggled on in the app settings if the 'play in
-  background' setting is turned on.
-- Auto-pause on audio device changes: If SoundAura is playing, and an
-  audio device change occurs that results in a system media volume of
-  zero (e.g. the user unplugs or disconnects their headphones and the
-  device's media volume is zero for its speaker), SoundAura will auto-pause
-  its playback since it can't be heard anyways. If another audio device
-  change occurs that makes the media volume go above zero, SoundAura
-  will also automatically unpause itself unless the user manually
-  affected the playback state in the mean time.
-- No permissions required, except the read phone state permission for the
-  optional auto-pause during calls when 'play in background' is turned on.
+- Auto-pausing during calls (if the 'play in background' setting is turned
+  on, this additionally requires the read phone state permission).
+- Automatic stopping or pausing when switching to a new audio device that
+  has a volume of zero (e.g. when switching from a headset to the device's
+  speaker when the speaker volume is zero).
+- No permissions required, except for the read phone state permission for 
+  the optional auto-pause during calls when 'play in background' is turned
+  on, and the notification permission for Android 13 and up.
 
 ## Screenshots
 
 https://user-images.githubusercontent.com/42116365/192111969-21b03711-e844-47c2-a637-54f3917c5f9d.mp4
 
-<p float="left">
+<p>
   <img src="metadata/en-US/images/phoneScreenshots/1.png" width="200" height="434">
   <img src="metadata/en-US/images/phoneScreenshots/2.png" width="200" height="434">
   <img src="metadata/en-US/images/phoneScreenshots/3.png" width="200" height="434">
