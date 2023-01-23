@@ -3,8 +3,9 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,10 +30,11 @@ val LayoutDirection.isLtr get() = this == LayoutDirection.Ltr
  * across the maximum allowed size, but then clipped down to [size] with a
  * corner radius matching [cornerRadius]. The parameters [alignment] and
  * [padding] will also be utilized in determining the placement of the box.
- * ClippedBrushBox can be used to, e.g., create a box with a gradient that
- * matches a background screen spanning gradient without having to manually
- * adjust the startX and endX of the gradient depending on the position of
- * the box. Changes to the [size] parameter will automatically be animated.
+ * ClippedBrushBox can be used to, e.g., create a box with a gradient smaller
+ * than the entire screen that matches a background screen spanning gradient
+ * without having to manually adjust the startX and endX of the gradient
+ * depending on the position of the box. Changes to the [size] parameter will
+ * automatically be animated.
  *
  * Note that desired padding should only be provided through the [padding]
  * parameter; adding padding to the provided [modifier] will cause it to be
@@ -51,11 +53,11 @@ val LayoutDirection.isLtr get() = this == LayoutDirection.Ltr
     val animatedWidth by animateDpAsState(
         targetValue = size.width,
         label = "ClippedBrushBox width animation",
-        animationSpec = spring(stiffness = springStiffness))
+        animationSpec = tween(tweenDuration, 0, LinearOutSlowInEasing))
     val animatedHeight by animateDpAsState(
         targetValue = size.height,
         label = "ClippedBrushBox height animation",
-        animationSpec = spring(stiffness = springStiffness))
+        animationSpec = tween(tweenDuration, 0, LinearOutSlowInEasing))
 
     BoxWithConstraints(Modifier
         .fillMaxSize()
@@ -99,24 +101,28 @@ fun BoxWithConstraintsScope.rememberClippedBrushBoxTransformOrigin(
     dpSize: DpSize,
 ): TransformOrigin {
     val density = LocalDensity.current
-    val layoutDirection = LocalLayoutDirection.current
+    val ld = LocalLayoutDirection.current
     return remember(dpSize, alignment, padding) {
-        val size = with(density) { dpSize.toSize() }
-        val maxWidth = constraints.maxWidth.toFloat()
-        val maxHeight = constraints.maxHeight.toFloat()
+        val startPadding = with (density) { padding.calculateStartPadding(ld).toPx() }
+        val topPadding = with (density) { padding.calculateTopPadding().toPx() }
+        val endPadding = with (density) { padding.calculateEndPadding(ld).toPx() }
+        val bottomPadding = with (density) { padding.calculateBottomPadding().toPx() }
+
+        val maxWidth = constraints.maxWidth.toFloat() - startPadding - endPadding
+        val maxHeight = constraints.maxHeight.toFloat() - topPadding - bottomPadding
 
         val xAlignment = alignment.horizontalBias / 2f + 0.5f
         val yAlignment = alignment.verticalBias / 2f + 0.5f
-        val alignmentOffset = Offset(
-            x = if (layoutDirection.isLtr)
-                    (maxWidth - size.width) * xAlignment
-                else size.width - (maxWidth - size.width) * xAlignment,
-            y = (maxHeight - size.height) * yAlignment)
 
-        val halfSizeOffset = Offset(size.width / 2, size.height / 2)
-        val bottomPadding = with(density) { padding.calculateBottomPadding().toPx() }
-        val paddingOffset = Offset(0f, bottomPadding)
-        val totalOffset = alignmentOffset + halfSizeOffset - paddingOffset
-        TransformOrigin(totalOffset.x / maxWidth, totalOffset.y / maxHeight)
+        val size = with(density) { dpSize.toSize() }
+        val topLeftOffset = Offset(
+            x = startPadding + if (ld.isLtr) (maxWidth - size.width) * xAlignment
+                               else size.width - (maxWidth - size.width) * xAlignment,
+            y = topPadding + (maxHeight - size.height) * yAlignment)
+        val centerOffset = Offset(size.width / 2, size.height / 2)
+        val totalOffset = topLeftOffset + centerOffset
+
+        TransformOrigin(totalOffset.x / constraints.maxWidth,
+                        totalOffset.y / constraints.maxHeight)
     }
 }

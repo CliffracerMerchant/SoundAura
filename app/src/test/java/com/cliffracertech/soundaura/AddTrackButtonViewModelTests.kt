@@ -24,16 +24,15 @@ import java.io.IOException
 class AddTrackButtonViewModelTests {
     private val coroutineDispatcher = StandardTestDispatcher()
     private val coroutineScope = TestScope(coroutineDispatcher + Job())
+    private val messageHandler = MessageHandler()
     private lateinit var instance: AddTrackButtonViewModel
     private lateinit var db: SoundAuraDatabase
     private lateinit var trackDao: TrackDao
-    private lateinit var messageHandler: MessageHandler
 
     @Before fun init() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         db = Room.inMemoryDatabaseBuilder(context, SoundAuraDatabase::class.java).build()
         trackDao = db.trackDao()
-        messageHandler = MessageHandler()
         instance = AddTrackButtonViewModel(context, trackDao, messageHandler, coroutineScope)
         Dispatchers.setMain(coroutineDispatcher)
     }

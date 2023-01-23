@@ -189,11 +189,8 @@ class SettingsViewModel(
         dataStore.awaitEnumPreferenceState<AppTheme>(appThemeKey, scope)
     }
 
-    fun onAppThemeClick(theme: AppTheme) {
-        scope.launch {
-            dataStore.edit { it[appThemeKey] = theme.ordinal }
-        }
-    }
+    fun onAppThemeClick(theme: AppTheme) =
+        dataStore.edit(appThemeKey, theme.ordinal, scope)
 
     val playInBackground by dataStore
         .preferenceFlow(playInBackgroundKey, false)
@@ -289,13 +286,11 @@ class SettingsViewModel(
         private set
 
     fun onAutoPauseDuringCallClick() {
-        if (!playInBackground)
-            return
+        if (!playInBackground) return
+
         if (!autoPauseDuringCall && !hasReadPhoneStatePermission)
             showingPhoneStatePermissionDialog = true
-        else scope.launch {
-            dataStore.edit { it[autoPauseDuringCallKey] = !autoPauseDuringCallPreference }
-        }
+        else dataStore.edit(autoPauseDuringCallKey, !autoPauseDuringCall, scope)
     }
 
     fun onPhoneStatePermissionDialogDismiss() {
@@ -303,10 +298,8 @@ class SettingsViewModel(
     }
 
     fun onPhoneStatePermissionDialogConfirm(permissionGranted: Boolean) {
-        if (permissionGranted) scope.launch {
-            dataStore.edit {
-                it[autoPauseDuringCallKey] = true
-            }
+        if (permissionGranted) {
+            dataStore.edit(autoPauseDuringCallKey, true, scope)
             hasReadPhoneStatePermission = true
         }
         onPhoneStatePermissionDialogDismiss()
@@ -318,21 +311,10 @@ class SettingsViewModel(
 
     fun onOnZeroVolumeAudioDeviceBehaviorClick(
         behavior: OnZeroVolumeAudioDeviceBehavior
-    ) {
-        scope.launch {
-            dataStore.edit {
-                it[onZeroVolumeAudioDeviceBehaviorKey] = behavior.ordinal
-            }
-        }
-    }
+    ) = dataStore.edit(onZeroVolumeAudioDeviceBehaviorKey, behavior.ordinal, scope)
 
     val stopInsteadOfPause by dataStore.preferenceState(stopInsteadOfPauseKey, false, scope)
 
-    fun onStopInsteadOfPauseClick() {
-        scope.launch {
-            dataStore.edit {
-                it[stopInsteadOfPauseKey] = !stopInsteadOfPause
-            }
-        }
-    }
+    fun onStopInsteadOfPauseClick() =
+        dataStore.edit(stopInsteadOfPauseKey, !stopInsteadOfPause, scope)
 }

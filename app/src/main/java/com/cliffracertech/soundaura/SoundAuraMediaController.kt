@@ -4,10 +4,15 @@
 package com.cliffracertech.soundaura
 
 import android.util.Range
+import androidx.compose.animation.*
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.SnackbarDuration
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.*
@@ -22,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -72,23 +76,18 @@ class MediaControllerViewModel(
     private val playButtonLongClickHintShown by
         dataStore.preferenceState(playButtonLongClickHintShownKey, false, scope)
 
-    var showingPlayButtonLongClickHint by mutableStateOf(false)
-        private set
-
     fun onPlayButtonClick() {
-        if (!playButtonLongClickHintShown)
-            showingPlayButtonLongClickHint = true
+        if (playButtonLongClickHintShown || activeTracksIsEmpty)
+            return // We don't want to show the hint if there are no active tracks
+                   // because the PlayerService should show a message about there
+                   // being no active tracks
+        messageHandler.postMessage(
+            StringResource(R.string.play_button_long_click_hint_text),
+            SnackbarDuration.Long)
+        dataStore.edit(playButtonLongClickHintShownKey, true, scope)
     }
 
-    fun onPlayButtonLongClickHintDismiss() {
-        showingPlayButtonLongClickHint = false
-        scope.launch {
-            dataStore.edit {
-                it[playButtonLongClickHintShownKey] = true
-            }
-        }
-    }
-
+    val showingMediaController get() = !navigationState.showingAppSettings
     val showingPresetSelector get() = navigationState.showingPresetSelector
 
     fun onActivePresetClick() {
@@ -129,8 +128,8 @@ class MediaControllerViewModel(
     }
 
     private val activeTracksIsEmpty by trackDao.getActiveTracks()
-        .map { it.isEmpty() }
-        .collectAsState(false, scope)
+        .map(List<ActiveTrack>::isEmpty)
+        .collectAsState(true, scope)
 
     private fun onPresetOverwriteRequest(presetName: String) {
         val isActive = presetName == activePresetName
@@ -201,19 +200,22 @@ class MediaControllerViewModel(
 }
 
 /** A [MediaController] with state provided by an instance of [MediaControllerViewModel]. */
-@Composable fun SoundAuraMediaController(
+@Composable fun BoxWithConstraintsScope.SoundAuraMediaController(
     modifier: Modifier = Modifier,
     sizes: MediaControllerSizes,
     alignment: BiasAlignment,
     padding: PaddingValues,
     isPlayingProvider: () -> Boolean,
     onPlayButtonClick: () -> Unit,
-    stopTime: Instant?,
+    stopTimeProvider: () -> Instant?,
     onNewStopTimerRequest: (Duration) -> Unit,
     onCancelStopTimerRequest: () -> Unit,
 ) {
     val viewModel: MediaControllerViewModel = viewModel()
     val context = LocalContext.current
+
+    var showingSetStopTimerDialog by rememberSaveable { mutableStateOf(false) }
+    var showingCancelStopTimerDialog by rememberSaveable { mutableStateOf(false) }
 
     val startColor = MaterialTheme.colors.primaryVariant
     val endColor = MaterialTheme.colors.secondaryVariant
@@ -238,35 +240,55 @@ class MediaControllerViewModel(
         override fun onPresetClick(preset: Preset) = viewModel.onPresetSelectorPresetClick(preset)
     }}
 
-    var showingSetStopTimerDialog by rememberSaveable { mutableStateOf(false) }
-    var showingCancelStopTimerDialog by rememberSaveable { mutableStateOf(false) }
+    val playButtonCallback = remember(isPlayingProvider, onPlayButtonClick) {
+        PlayButtonCallback(
+            isPlayingProvider,
+            onClick = {
+                viewModel.onPlayButtonClick()
+                onPlayButtonClick()
+            }, clickLabelResIdProvider = {isPlaying ->
+                if (isPlaying) R.string.pause_button_description
+                else           R.string.play_button_description
+            }, onLongClick = {
+                showingSetStopTimerDialog = true
+            }, longClickLabelResId = R.string.play_pause_button_long_click_description)
+    }
 
-    MediaController(
-        modifier = modifier,
-        sizes = sizes,
-        backgroundBrush = backgroundBrush,
-        contentColor = MaterialTheme.colors.onPrimary,
-        alignment = alignment,
-        padding = padding,
-        activePresetCallback = remember {
-            ActivePresetCallback(
-                nameProvider = viewModel::activePresetName::get,
-                isModifiedProvider = viewModel::activePresetIsModified::get,
-                onClick = viewModel::onActivePresetClick)
-        }, playButtonCallback = remember(isPlayingProvider, onPlayButtonClick) {
-            PlayButtonCallback(
-                isPlayingProvider,
-                onClick = {
-                    viewModel.onPlayButtonClick()
-                    onPlayButtonClick()
-                }, onLongClick = {
-                    showingSetStopTimerDialog = true
-                })
-        }, stopTime = stopTime,
-        onStopTimerClick = { showingCancelStopTimerDialog = true },
-        showingPresetSelector = viewModel.showingPresetSelector,
-        presetListCallback = presetListCallback,
-        onCloseButtonClick = viewModel::onCloseButtonClick)
+    val enterSpec = tween<Float>(
+        durationMillis = tweenDuration,
+        delayMillis = tweenDuration / 3,
+        easing = LinearOutSlowInEasing)
+    val exitSpec = tween<Float>(
+        durationMillis = tweenDuration,
+        easing = LinearOutSlowInEasing)
+    val transformOrigin = rememberClippedBrushBoxTransformOrigin(
+        alignment, padding,
+        dpSize = sizes.collapsedSize(stopTimeProvider() != null))
+
+    AnimatedVisibility(
+        visible = viewModel.showingMediaController,
+        enter = fadeIn(enterSpec) + scaleIn(enterSpec, 0.8f, transformOrigin),
+        exit = fadeOut(exitSpec) + scaleOut(exitSpec, 0.8f, transformOrigin)
+    ) {
+        MediaController(
+            modifier = modifier,
+            sizes = sizes,
+            backgroundBrush = backgroundBrush,
+            contentColor = MaterialTheme.colors.onPrimary,
+            alignment = alignment,
+            padding = padding,
+            activePresetCallback = remember {
+                ActivePresetCallback(
+                    nameProvider = viewModel::activePresetName::get,
+                    isModifiedProvider = viewModel::activePresetIsModified::get,
+                    onClick = viewModel::onActivePresetClick)
+            }, playButtonCallback = playButtonCallback,
+            stopTimeProvider = stopTimeProvider,
+            onStopTimerClick = { showingCancelStopTimerDialog = true },
+            showingPresetSelector = viewModel.showingPresetSelector,
+            presetListCallback = presetListCallback,
+            onCloseButtonClick = viewModel::onCloseButtonClick)
+    }
 
     if (viewModel.showingUnsavedChangesWarning)
         viewModel.activePresetName?.let { unsavedPresetName ->
@@ -293,13 +315,6 @@ class MediaControllerViewModel(
                 onCancelStopTimerRequest()
                 showingCancelStopTimerDialog = false
             })
-
-    if (viewModel.showingPlayButtonLongClickHint)
-        SoundAuraDialog(
-            title = stringResource(R.string.hint_description),
-            text = stringResource(R.string.play_button_long_click_hint_text),
-            onDismissRequest = viewModel::onPlayButtonLongClickHintDismiss,
-            showCancelButton = false)
 }
 
 /**

@@ -3,10 +3,8 @@
 package com.cliffracertech.soundaura
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.animation.core.AnimationConstants.DefaultDurationMillis
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
@@ -47,6 +45,9 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
+internal const val tweenDuration = 250
+internal const val springStiffness = 600f
+
 fun Modifier.minTouchTargetSize() =
     sizeIn(minWidth = 48.dp, minHeight = 48.dp)
 
@@ -65,15 +66,15 @@ fun Modifier.minTouchTargetSize() =
 
 /**
  * An [IconButton] that alternates between an empty circle with a plus icon,
- * and a filled circle with a minus icon depending on the parameter checked.
+ * and a filled circle with a minus icon depending on the parameter [added].
  *
  * @param added The added/removed state of the item the button is
- *     representing. If added == true, the button will display a minus
- *     icon. If added == false, a plus icon will be displayed instead.
+ *     representing. If added is true, the button will display a minus
+ *     icon. If added is false, a plus icon will be displayed instead.
  * @param contentDescription The content description of the button.
  * @param backgroundColor The [Color] of the background that the button
  *     is being displayed on. This is used for the inner plus icon
- *     when [added] == true and the background of the button is filled.
+ *     when [added] is true and the background of the button is filled.
  * @param tint The [Color] that will be used for the button.
  * @param onClick The callback that will be invoked when the button is clicked.
  */
@@ -127,7 +128,7 @@ fun Modifier.minTouchTargetSize() =
  */
 @Composable fun PlayPauseIcon(
     isPlaying: Boolean,
-    contentDescription: String,
+    contentDescription: String?,
     tint: Color = LocalContentColor.current
 ) {
     val playToPause = AnimatedImageVector.animatedVectorResource(R.drawable.play_to_pause)
@@ -184,8 +185,8 @@ fun Modifier.minTouchTargetSize() =
     val transition = remember(leftToRight) {
         val enterOffset = { size: Int -> size / if (leftToRight) 1 else -1 }
         val exitOffset = { size: Int -> size / if (leftToRight) -4 else 4 }
-        slideInHorizontally(initialOffsetX = enterOffset) with
-        slideOutHorizontally(targetOffsetX = exitOffset)
+        slideInHorizontally(spring(stiffness = springStiffness), enterOffset) with
+        slideOutHorizontally(spring(stiffness = springStiffness), exitOffset)
     }
     AnimatedContent(targetState, modifier, { transition }, content = content)
 }

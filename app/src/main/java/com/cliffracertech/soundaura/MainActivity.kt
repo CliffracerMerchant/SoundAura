@@ -19,10 +19,7 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.SnackbarDuration
-import androidx.compose.material.SnackbarHostState
-import androidx.compose.material.rememberScaffoldState
+import androidx.compose.material.*
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -201,14 +198,7 @@ class MainActivity : ComponentActivity() {
         snackbarHostState: SnackbarHostState
     ) = LaunchedEffect(Unit) {
         viewModel.messages.collect { message ->
-            val context = this@MainActivity
-            val messageText = message.stringResource.resolve(context)
-            val actionLabel = message.actionStringResource?.resolve(context) ?:
-                              context.getString(R.string.dismiss).uppercase()
-            snackbarHostState.showSnackbar(
-                message = messageText,
-                actionLabel = actionLabel,
-                duration = SnackbarDuration.Short)
+            message.showAsSnackbar(this@MainActivity, snackbarHostState)
         }
     }
 
@@ -247,10 +237,7 @@ class MainActivity : ComponentActivity() {
                 })
         }
 
-        MediaController(
-            visible = !showingAppSettings,
-            padding = padding,
-            alignToEnd = !widthIsConstrained)
+        MediaController(padding, alignToEnd = !widthIsConstrained)
 
         AddTrackButton(
             visible = !showingAppSettings,
@@ -259,7 +246,6 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable private fun BoxWithConstraintsScope.MediaController(
-        visible: Boolean,
         padding: PaddingValues,
         alignToEnd: Boolean
     ) {
@@ -307,33 +293,16 @@ class MainActivity : ComponentActivity() {
                              else contentAreaSize.height))
         }
 
-        val alignment = if (alignToEnd) Alignment.TopEnd as BiasAlignment
-                        else            Alignment.BottomStart as BiasAlignment
-
-        val transformOrigin = rememberClippedBrushBoxTransformOrigin(
-            alignment, padding,
-            dpSize = mediaControllerSizes.collapsedSize(
-                boundPlayerService?.stopTime != null))
-
-        AnimatedVisibility(
-            visible = visible,
-            enter = fadeIn(tween(delayMillis = 75)) +
-                    scaleIn(overshootTween(delay = 75),
-                            transformOrigin = transformOrigin),
-            exit = fadeOut(tween(delayMillis = 125)) +
-                   scaleOut(anticipateTween(delay = 75),
-                            transformOrigin = transformOrigin)
-        ) {
-            SoundAuraMediaController(
-                sizes = mediaControllerSizes,
-                alignment = alignment,
-                padding = padding,
-                isPlayingProvider = { boundPlayerService?.isPlaying ?: false },
-                onPlayButtonClick = ::onPlayButtonClick,
-                stopTime = boundPlayerService?.stopTime,
-                onNewStopTimerRequest = ::onSetTimer,
-                onCancelStopTimerRequest = ::onClearTimer)
-        }
+        SoundAuraMediaController(
+            sizes = mediaControllerSizes,
+            alignment = if (alignToEnd) Alignment.TopEnd as BiasAlignment
+                        else            Alignment.BottomStart as BiasAlignment,
+            padding = padding,
+            isPlayingProvider = { boundPlayerService?.isPlaying ?: false },
+            onPlayButtonClick = ::onPlayButtonClick,
+            stopTimeProvider = { boundPlayerService?.stopTime },
+            onNewStopTimerRequest = ::onSetTimer,
+            onCancelStopTimerRequest = ::onClearTimer)
     }
 
     /** Compose an add button at the bottom end edge of the screen that is
@@ -358,12 +327,22 @@ class MainActivity : ComponentActivity() {
                     val buttonSize = 56.dp
                     (margin - 8.dp - buttonSize) / -2f
                 }
-            }, label = "Add button x offset animation")
+            }, label = "Add button x offset animation",
+            animationSpec = tween(tweenDuration * 5 / 4, 0, LinearOutSlowInEasing))
+
         val addButtonYDpOffset by animateDpAsState(
             targetValue = if (!showingPresetSelector) 0.dp
                           else (-16).dp,
             label = "Add button y offset animation",
-            animationSpec = spring(stiffness = springStiffness))
+            animationSpec = tween(tweenDuration, 0, LinearOutSlowInEasing))
+
+        val enterSpec = tween<Float>(
+            durationMillis = tweenDuration,
+            easing = LinearOutSlowInEasing)
+        val exitSpec = tween<Float>(
+            durationMillis = tweenDuration,
+            delayMillis = tweenDuration / 3,
+            easing = LinearOutSlowInEasing)
         AnimatedVisibility( // add track button
             visible = visible,
             modifier = modifier
@@ -372,8 +351,8 @@ class MainActivity : ComponentActivity() {
                     addButtonXDpOffset.roundToPx(),
                     addButtonYDpOffset.roundToPx()
                 )},
-            enter = fadeIn(tween()) + scaleIn(overshootTween()),
-            exit = fadeOut(tween(delayMillis = 50)) + scaleOut(anticipateTween()),
+            enter = fadeIn(enterSpec) + scaleIn(enterSpec, initialScale = 0.8f),
+            exit = fadeOut(exitSpec) + scaleOut(exitSpec, targetScale = 0.8f),
         ) {
             AddButton(
                 target = if (showingPresetSelector)

@@ -39,7 +39,7 @@ class TrackListViewModelTests {
     }
     @After fun cleanUp() = db.close()
 
-    @Test fun tracksPropertyReflectsAddedTracks() = runTest {
+    @Test fun tracks_property_updates() = runTest {
         var tracks = tracksFlow.first()
         assertThat(tracks?.isEmpty() != false).isTrue()
         dao.insert(testTracks)
@@ -47,7 +47,7 @@ class TrackListViewModelTests {
         assertThat(tracks).containsExactlyElementsIn(testTracks).inOrder()
     }
 
-    @Test fun deleteTrackDialogConfirm() = runTest {
+    @Test fun delete_track_dialog_confirm() = runTest {
         dao.insert(testTracks)
         var tracks = tracksFlow.waitUntil { !it.isNullOrEmpty() }
         val track3 = testTracks[2]
@@ -58,7 +58,7 @@ class TrackListViewModelTests {
         assertThat(tracks).containsExactlyElementsIn(testTracks.minus(track3)).inOrder()
     }
 
-    @Test fun trackAddRemoveClick() = runTest {
+    @Test fun track_add_remove_click() = runTest {
         dao.insert(testTracks)
         var tracks = tracksFlow.waitUntil { !it.isNullOrEmpty() }
         assertThat(tracks?.map(Track::isActive)).doesNotContain(true)
@@ -79,7 +79,7 @@ class TrackListViewModelTests {
             .inOrder()
     }
 
-    @Test fun trackVolumeChangeRequest() = runTest {
+    @Test fun track_volume_change_request() = runTest {
         dao.insert(testTracks)
         var tracks = tracksFlow.waitUntil { !it.isNullOrEmpty() }
         val expectedVolumes = mutableListOf(1f, 1f, 1f, 1f, 1f)
@@ -105,7 +105,7 @@ class TrackListViewModelTests {
             .containsExactlyElementsIn(expectedVolumes).inOrder()
     }
 
-    @Test fun trackRenameDialogConfirm() = runTest {
+    @Test fun track_rename_dialog_confirm() = runTest {
         dao.insert(testTracks)
         var tracks = tracksFlow.waitUntil { !it.isNullOrEmpty() }
         assertThat(tracks?.get(3)?.name).isEqualTo(testTracks[3].name)
@@ -120,7 +120,7 @@ class TrackListViewModelTests {
         assertThat(tracks).containsExactlyElementsIn(expectedTracks)
     }
 
-    @Test fun searchQueriesWork() = runTest {
+    @Test fun search_queries_work() = runTest {
         dao.insert(testTracks)
         searchQueryState.query.value = "3"
         var tracks = tracksFlow.waitUntil { it?.size == 1 }

@@ -52,7 +52,6 @@
 
     <string name="preset_button_click_label">Change active preset</string>
     <string name="unsaved_preset_description">Unsaved preset</string>
-    <string name="playing_preset_description">Playing preset</string>
 
     <string name="play_button_description">Play SoundAura audio</string>
     <string name="pause_button_description">Pause SoundAura audio</string>
@@ -122,9 +121,8 @@
     <string name="name_descending">Name descending</string>
     <string name="order_added">Order added</string>
 
-    <string name="hint_description">Hint</string>
     <string name="play_button_long_click_hint_text">
-        You can long press the play/pause button to set an automatic stop timer.</string>
+        Hint: You can long press the play/pause button to set an automatic stop timer</string>
 
     <string name="app_settings_description">SoundAura settings</string>
     <string name="settings">Settings</string>

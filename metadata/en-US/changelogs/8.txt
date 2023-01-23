@@ -1,0 +1,5 @@
+Add the ability to save and load presets.
+Add the ability to set an auto stop timer by long pressing the play button.
+Add the auto stop timer and an action to cancel it to the app's notification.
+Add Android 13 compatible media controls artwork to the app's notification.
+Add a setting to restart tracks from the beginning when playback is paused.
