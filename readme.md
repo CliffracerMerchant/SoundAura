@@ -23,7 +23,7 @@ SoundAura is built using:
 ## Features
 - A library of tracks added from the device's local files, with individual
   volume controls for each track.
-- User created presets of tracks
+- User created presets of tracks.
 - An automatic stop timer set by long pressing the play/pause button.
 - A media notification to control playback when the app is in the background.
   These controls will appear with other media session controls if 'play in
