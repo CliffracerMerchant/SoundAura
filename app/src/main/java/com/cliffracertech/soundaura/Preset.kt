@@ -12,7 +12,6 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.room.*
-import com.cliffracertech.soundaura.SoundAura.pref_key_activePresetName
 import dagger.hilt.android.scopes.ActivityRetainedScoped
 import kotlinx.coroutines.flow.*
 import javax.inject.Inject
@@ -130,7 +129,7 @@ class ActivePresetState @Inject constructor(
     trackDao: TrackDao,
     presetDao: PresetDao,
 ) {
-    private val nameKey = stringPreferencesKey(pref_key_activePresetName)
+    private val nameKey = stringPreferencesKey(PrefKeys.activePresetName)
 
     /** A [Flow]`<Preset>` whose latest value is equal to the [Preset] current
      * marked as the active one. */

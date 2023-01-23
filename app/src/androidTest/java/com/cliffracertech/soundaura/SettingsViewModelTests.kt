@@ -13,10 +13,6 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.cliffracertech.soundaura.SoundAura.pref_key_appTheme
-import com.cliffracertech.soundaura.SoundAura.pref_key_autoPauseDuringCalls
-import com.cliffracertech.soundaura.SoundAura.pref_key_onZeroVolumeAudioDeviceBehavior
-import com.cliffracertech.soundaura.SoundAura.pref_key_playInBackground
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
@@ -43,10 +39,10 @@ class SettingsViewModelTests {
     private val dataStore = PreferenceDataStoreFactory.create(scope = coroutineScope) {
         context.preferencesDataStoreFile("testDatastore")
     }
-    private val appThemeKey = intPreferencesKey(pref_key_appTheme)
-    private val playInBackgroundKey = booleanPreferencesKey(pref_key_playInBackground)
-    private val autoPauseDuringCallKey = booleanPreferencesKey(pref_key_autoPauseDuringCalls)
-    private val onZeroVolumeAudioDeviceBehaviorKey = intPreferencesKey(pref_key_onZeroVolumeAudioDeviceBehavior)
+    private val appThemeKey = intPreferencesKey(PrefKeys.appTheme)
+    private val playInBackgroundKey = booleanPreferencesKey(PrefKeys.playInBackground)
+    private val autoPauseDuringCallKey = booleanPreferencesKey(PrefKeys.autoPauseDuringCalls)
+    private val onZeroVolumeAudioDeviceBehaviorKey = intPreferencesKey(PrefKeys.onZeroVolumeAudioDeviceBehavior)
 
     private lateinit var instance: SettingsViewModel
 

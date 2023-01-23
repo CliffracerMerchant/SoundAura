@@ -30,7 +30,6 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.cliffracertech.soundaura.SoundAura.pref_key_playButtonLongClickHintShown
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
@@ -72,7 +71,7 @@ class MediaControllerViewModel(
     val Preset.isActive get() = name == activePresetName
 
     private val playButtonLongClickHintShownKey =
-        booleanPreferencesKey(pref_key_playButtonLongClickHintShown)
+        booleanPreferencesKey(PrefKeys.playButtonLongClickHintShown)
     private val playButtonLongClickHintShown by
         dataStore.preferenceState(playButtonLongClickHintShownKey, false, scope)
 

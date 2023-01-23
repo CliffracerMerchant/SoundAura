@@ -11,7 +11,6 @@ import android.media.AudioManager.STREAM_MUSIC
 import android.support.v4.media.session.PlaybackStateCompat.STATE_STOPPED
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.LifecycleService
-import com.cliffracertech.soundaura.SoundAura.pref_key_onZeroVolumeAudioDeviceBehavior
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 
@@ -19,7 +18,7 @@ import kotlinx.coroutines.flow.onEach
  * OnAudioDeviceChangePlaybackModule will detect changes in audio devices that
  * result in a media volume of zero, and automatically affect playback in
  * response to this event according to the enum preference pointed to by
- * [pref_key_onZeroVolumeAudioDeviceBehavior].
+ * [PrefKeys.onZeroVolumeAudioDeviceBehavior].
  */
 class OnAudioDeviceChangePlaybackModule(
     private val unpauseLocks: MutableSet<String>,
@@ -47,7 +46,7 @@ class OnAudioDeviceChangePlaybackModule(
         audioManager = service.getSystemService(AUDIO_SERVICE) as AudioManager
         audioManager.registerAudioDeviceCallback(audioDeviceChangeCallback, null)
 
-        val key = intPreferencesKey(pref_key_onZeroVolumeAudioDeviceBehavior)
+        val key = intPreferencesKey(PrefKeys.onZeroVolumeAudioDeviceBehavior)
 
         service.repeatWhenStarted {
             service.dataStore.enumPreferenceFlow<OnZeroVolumeAudioDeviceBehavior>(key)

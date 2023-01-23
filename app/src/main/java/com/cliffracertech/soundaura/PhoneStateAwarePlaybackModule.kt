@@ -17,8 +17,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import com.cliffracertech.soundaura.SoundAura.pref_key_playInBackground
-import com.cliffracertech.soundaura.SoundAura.pref_key_autoPauseDuringCalls
 
 /** Run the provided block after a clearCallingIdentity
  * call and before a restoreCallingIdentity call. */
@@ -30,7 +28,7 @@ fun withClearCallingIdentity(block: () -> Unit) {
 
 /**
  * PhoneStateAwarePlaybackModule will, in the event of both boolean preferences
- * pointed to by the keys [pref_key_playInBackground] and [pref_key_autoPauseDuringCalls]
+ * pointed to by the keys [PrefKeys.playInBackground] and [PrefKeys.autoPauseDuringCalls]
  * being true, automatically pause playback during a phone call and automatically
  * unpause when the call ends. This behavior only occurs when the playInBackground
  * preference is true because it assumes that the app will obey audio focus rules
@@ -47,9 +45,9 @@ class PhoneStateAwarePlaybackModule(
 
     override fun onCreate(service: LifecycleService) {
         telephonyManager = service.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-        val playInBackgroundKey = booleanPreferencesKey(pref_key_playInBackground)
+        val playInBackgroundKey = booleanPreferencesKey(PrefKeys.playInBackground)
         val playInBackgroundFlow = service.dataStore.preferenceFlow(playInBackgroundKey, false)
-        val autoPauseDuringCallsKey = booleanPreferencesKey(pref_key_autoPauseDuringCalls)
+        val autoPauseDuringCallsKey = booleanPreferencesKey(PrefKeys.autoPauseDuringCalls)
         val autoPauseDuringCallsFlow = service.dataStore.preferenceFlow(autoPauseDuringCallsKey, false)
 
         service.repeatWhenStarted {

@@ -33,8 +33,11 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewModelScope
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import com.google.accompanist.insets.LocalWindowInsets
 import com.google.accompanist.insets.ProvideWindowInsets
@@ -44,6 +47,8 @@ import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.scopes.ActivityRetainedScoped
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.runBlocking
 import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
@@ -64,14 +69,32 @@ class MainActivityNavigationState @Inject constructor() {
     }
 }
 
-@HiltViewModel
-class MainActivityViewModel @Inject constructor(
+@HiltViewModel class MainActivityViewModel(
     messageHandler: MessageHandler,
+    dataStore: DataStore<Preferences>,
     private val navigationState: MainActivityNavigationState,
+    coroutineScope: CoroutineScope?
 ) : ViewModel() {
+
+    @Inject constructor(
+        messageHandler: MessageHandler,
+        dataStore: DataStore<Preferences>,
+        navigationState: MainActivityNavigationState,
+    ) : this(messageHandler, dataStore, navigationState, null)
+
+    private val appThemeKey = intPreferencesKey(PrefKeys.appTheme)
+    private val scope = coroutineScope ?: viewModelScope
+
     val messages = messageHandler.messages
     val showingAppSettings get() = navigationState.showingAppSettings
     val showingPresetSelector get() = navigationState.showingPresetSelector
+
+    // The thread must be blocked when reading the first value
+    // of the app theme from the DataStore or else the screen
+    // can flicker between light and dark themes on startup.
+    val appTheme by runBlocking {
+        dataStore.awaitEnumPreferenceState<AppTheme>(appThemeKey, scope)
+    }
 
     fun onBackButtonClick() = navigationState.onBackButtonClick()
 }
@@ -165,13 +188,12 @@ class MainActivity : ComponentActivity() {
         parent: CompositionContext? = null,
         content: @Composable () -> Unit
     ) = setContent(parent) {
-        val settingsViewModel: SettingsViewModel = viewModel()
-        val themePreference = settingsViewModel.appTheme
-        val systemIsUsingDarkTheme = isSystemInDarkTheme()
-        val useDarkTheme by remember(themePreference, systemIsUsingDarkTheme) {
+        val themePreference = viewModel.appTheme
+        val systemInDarkTheme = isSystemInDarkTheme()
+        val useDarkTheme by remember(themePreference, systemInDarkTheme) {
             derivedStateOf {
                 themePreference == AppTheme.Dark ||
-                (themePreference == AppTheme.UseSystem && systemIsUsingDarkTheme)
+                (themePreference == AppTheme.UseSystem && systemInDarkTheme)
             }
         }
 
@@ -179,10 +201,9 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(useDarkTheme) {
             // For some reason the status bar icons get reset
             // to a light color when the theme is changed, so
-            // this effect needs to run after every theme change
-            // instead of just when the app starts.
+            // this effect needs to run after every theme change.
             uiController.setStatusBarColor(Color.Transparent, true)
-            uiController.setNavigationBarColor(Color.Transparent, true)
+            uiController.setNavigationBarColor(Color.Transparent, !useDarkTheme)
         }
         SoundAuraTheme(useDarkTheme) {
             val windowSizeClass = calculateWindowSizeClass(this)
