@@ -10,7 +10,6 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Switch
@@ -40,11 +39,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 }
 
 @Composable private fun DisplaySettingsCategory() =
-    SettingCategory(stringResource(R.string.display)) {
+    SettingCategory(stringResource(R.string.display)) { paddingModifier ->
         val viewModel: SettingsViewModel = viewModel()
 
         EnumDialogSetting(
             title = stringResource(R.string.app_theme),
+            modifier = paddingModifier,
             values = AppTheme.values(),
             valueNames = AppTheme.valueStrings(),
             currentValue = viewModel.appTheme,
@@ -52,106 +52,110 @@ import androidx.lifecycle.viewmodel.compose.viewModel
     }
 
 @Composable private fun PlayInBackgroundSetting(
-    onTileTutorialShowRequest: () -> Unit
+    viewModel: SettingsViewModel,
+    modifier: Modifier = Modifier,
+    onTileTutorialShowRequest: () -> Unit,
+) = Setting(
+    title = stringResource(R.string.play_in_background_setting_title),
+    modifier = modifier,
+    subtitle = stringResource(R.string.play_in_background_setting_description),
+    onClick = viewModel::onPlayInBackgroundTitleClick
 ) {
-    val viewModel: SettingsViewModel = viewModel()
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        // Vertical Divider
+        Box(Modifier.width((1.5).dp).height(40.dp)
+            .background(MaterialTheme.colors.onSurface.copy(alpha = 0.12f)))
 
-    Setting(
-        title = stringResource(R.string.play_in_background_setting_title),
-        subtitle = stringResource(R.string.play_in_background_setting_description),
-        onClick = viewModel::onPlayInBackgroundTitleClick
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // Vertical Divider
-            Box(Modifier.width((1.5).dp).height(40.dp)
-                .background(MaterialTheme.colors.onSurface.copy(alpha = 0.12f)))
-
-            Spacer(Modifier.width(6.dp))
-            Switch(checked = viewModel.playInBackground,
-                onCheckedChange = remember {{ viewModel.onPlayInBackgroundSwitchClick() }})
-        }
-        if (viewModel.showingPlayInBackgroundExplanation)
-            PlayInBackgroundExplanationDialog(
-                onDismissRequest = viewModel::onPlayInBackgroundExplanationDismiss)
-        if (viewModel.showingNotificationPermissionDialog) {
-            val context = LocalContext.current
-            val showExplanation =
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
-                    false
-                else ContextCompat.checkSelfPermission(
-                        context, Manifest.permission.POST_NOTIFICATIONS
-                    ) == PackageManager.PERMISSION_DENIED
-            NotificationPermissionDialog(
-                showExplanationFirst = showExplanation,
-                onShowTileTutorialClick = onTileTutorialShowRequest,
-                onDismissRequest = viewModel::onNotificationPermissionDialogDismiss,
-                onPermissionResult = viewModel::onNotificationPermissionDialogConfirm)
-        }
+        Spacer(Modifier.width(6.dp))
+        Switch(checked = viewModel.playInBackground,
+            onCheckedChange = remember {{ viewModel.onPlayInBackgroundSwitchClick() }})
+    }
+    if (viewModel.showingPlayInBackgroundExplanation)
+        PlayInBackgroundExplanationDialog(
+            onDismissRequest = viewModel::onPlayInBackgroundExplanationDismiss)
+    if (viewModel.showingNotificationPermissionDialog) {
+        val context = LocalContext.current
+        val showExplanation =
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
+                false
+            else ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_DENIED
+        NotificationPermissionDialog(
+            showExplanationFirst = showExplanation,
+            onShowTileTutorialClick = onTileTutorialShowRequest,
+            onDismissRequest = viewModel::onNotificationPermissionDialogDismiss,
+            onPermissionResult = viewModel::onNotificationPermissionDialogConfirm)
     }
 }
 
-@Composable private fun AutoPauseDuringCallSetting() {
-    val viewModel: SettingsViewModel = viewModel()
-
-    AnimatedVisibility(
-        visible = viewModel.autoPauseDuringCallSettingVisible,
-        enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
-        exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top)
-    ) {
-        Column {
-            Divider()
-            Setting(
-                title = stringResource(R.string.auto_pause_during_calls_setting_title),
-                subtitle = stringResource(R.string.auto_pause_during_calls_setting_subtitle),
-                onClick = viewModel::onAutoPauseDuringCallClick
-            ) {
-                Switch(checked = viewModel.autoPauseDuringCall,
-                    onCheckedChange = remember {{ viewModel.onAutoPauseDuringCallClick() }})
-            }
-            if (viewModel.showingPhoneStatePermissionDialog) {
-                val context = LocalContext.current
-                val showExplanation = ContextCompat.checkSelfPermission(
-                        context, Manifest.permission.READ_PHONE_STATE
-                    ) == PackageManager.PERMISSION_DENIED
-                PhoneStatePermissionDialog(
-                    showExplanationFirst = showExplanation,
-                    onDismissRequest = viewModel::onPhoneStatePermissionDialogDismiss,
-                    onPermissionResult = viewModel::onPhoneStatePermissionDialogConfirm)
-            }
+@Composable private fun AutoPauseDuringCallSetting(
+    viewModel: SettingsViewModel,
+    modifier: Modifier = Modifier,
+) = AnimatedVisibility(
+    visible = viewModel.autoPauseDuringCallSettingVisible,
+    enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
+    exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top)
+) {
+    Column {
+        HorizontalDivider(modifier)
+        Setting(
+            title = stringResource(R.string.auto_pause_during_calls_setting_title),
+            modifier = modifier,
+            subtitle = stringResource(R.string.auto_pause_during_calls_setting_subtitle),
+            onClick = viewModel::onAutoPauseDuringCallClick
+        ) {
+            Switch(checked = viewModel.autoPauseDuringCall,
+                onCheckedChange = remember {{ viewModel.onAutoPauseDuringCallClick() }})
+        }
+        if (viewModel.showingPhoneStatePermissionDialog) {
+            val context = LocalContext.current
+            val showExplanation = ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.READ_PHONE_STATE
+                ) == PackageManager.PERMISSION_DENIED
+            PhoneStatePermissionDialog(
+                showExplanationFirst = showExplanation,
+                onDismissRequest = viewModel::onPhoneStatePermissionDialogDismiss,
+                onPermissionResult = viewModel::onPhoneStatePermissionDialogConfirm)
         }
     }
 }
 
 @Composable private fun PlaybackSettingsCategory() =
-    SettingCategory(stringResource(R.string.playback)) {
+    SettingCategory(stringResource(R.string.playback)) { paddingModifier ->
         val viewModel: SettingsViewModel = viewModel()
         var showingTileTutorialDialog by rememberSaveable { mutableStateOf(false) }
 
         PlayInBackgroundSetting(
+            viewModel = viewModel,
+            modifier = paddingModifier,
             onTileTutorialShowRequest = { showingTileTutorialDialog = true })
-        AutoPauseDuringCallSetting()
+        AutoPauseDuringCallSetting(viewModel, paddingModifier)
 
-        Divider()
+        HorizontalDivider(paddingModifier)
         EnumDialogSetting(
             title = stringResource(R.string.on_zero_volume_behavior_setting_title),
-            modifier = Modifier.restrictWidthAccordingToSizeClass(),
+            modifier = paddingModifier,
             useDefaultWidth = false,
+            dialogModifier = Modifier.restrictWidthAccordingToSizeClass(),
             description = stringResource(R.string.on_zero_volume_behavior_setting_description),
-            values = enumValues<OnZeroVolumeAudioDeviceBehavior>(),
+            values = enumValues(),
             valueNames = OnZeroVolumeAudioDeviceBehavior.valueStrings(),
             valueDescriptions = OnZeroVolumeAudioDeviceBehavior.valueDescriptions(),
             currentValue = viewModel.onZeroVolumeAudioDeviceBehavior,
             onValueClick = viewModel::onOnZeroVolumeAudioDeviceBehaviorClick)
-        Divider()
+        HorizontalDivider(paddingModifier)
         DialogSetting(
             title = stringResource(R.string.control_playback_using_tile_setting_title),
+            modifier = paddingModifier,
             dialogVisible = showingTileTutorialDialog,
             onShowRequest = { showingTileTutorialDialog = true },
             onDismissRequest = { showingTileTutorialDialog = false },
             content = { TileTutorialDialog(onDismissRequest = it) })
-        Divider()
+        HorizontalDivider(paddingModifier)
         Setting(
             title = stringResource(R.string.stop_instead_of_pause_setting_title),
+            modifier = paddingModifier,
             subtitle = stringResource(R.string.stop_instead_of_pause_setting_description),
             onClick = viewModel::onStopInsteadOfPauseClick
         ) {
@@ -161,16 +165,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
     }
 
 @Composable private fun AboutSettingsCategory() =
-    SettingCategory(stringResource(R.string.about)) {
-        DialogSetting(stringResource(R.string.privacy_policy_setting_title)) {
+    SettingCategory(stringResource(R.string.about)) { paddingModifier ->
+        DialogSetting(stringResource(R.string.privacy_policy_setting_title), paddingModifier) {
             PrivacyPolicyDialog(onDismissRequest = it)
         }
-        Divider()
-        DialogSetting(stringResource(R.string.open_source_licenses)) {
+        HorizontalDivider(paddingModifier)
+        DialogSetting(stringResource(R.string.open_source_licenses), paddingModifier) {
             OpenSourceLibrariesUsedDialog(onDismissRequest = it)
         }
-        Divider()
-        DialogSetting(stringResource(R.string.about_app_setting_title)) {
+        HorizontalDivider(paddingModifier)
+        DialogSetting(stringResource(R.string.about_app_setting_title), paddingModifier) {
             AboutAppDialog(onDismissRequest = it)
         }
     }

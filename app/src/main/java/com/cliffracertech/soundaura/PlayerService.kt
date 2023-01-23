@@ -26,8 +26,6 @@ import androidx.media.AudioManagerCompat.AUDIOFOCUS_GAIN
 import com.cliffracertech.soundaura.PlayerService.Binder
 import com.cliffracertech.soundaura.PlayerService.Companion.PlaybackChangeListener
 import com.cliffracertech.soundaura.PlayerService.Companion.addPlaybackChangeListener
-import com.cliffracertech.soundaura.SoundAura.pref_key_playInBackground
-import com.cliffracertech.soundaura.SoundAura.pref_key_stopInsteadOfPause
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -76,8 +74,8 @@ import javax.inject.Inject
  * therefore call [Binder.setTrackVolume].
  *
  * PlayerService reads the values of and changes its behavior depending on the
- * app preferences pointed to by the keys [pref_key_playInBackground] and
- * [pref_key_stopInsteadOfPause]. Read the documentation for these preferences
+ * app preferences pointed to by the keys [PrefKeys.playInBackground] and
+ * [PrefKeys.stopInsteadOfPause]. Read the documentation for these preferences
  * for more information about how PlayerService responds to each value of these
  * settings.
  */
@@ -149,7 +147,7 @@ class PlayerService: LifecycleService() {
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         playbackState = STATE_PAUSED
 
-        val playInBackgroundKey = booleanPreferencesKey(pref_key_playInBackground)
+        val playInBackgroundKey = booleanPreferencesKey(PrefKeys.playInBackground)
         val playInBackgroundFlow = dataStore.preferenceFlow(playInBackgroundKey, false)
         // playInBackground needs to be set before playback starts so that
         // PlayerService knows whether it needs to request audio focus or not.
@@ -172,7 +170,7 @@ class PlayerService: LifecycleService() {
                 .onEach { playInBackground = it }
                 .launchIn(this)
 
-            val stopInsteadOfPauseKey = booleanPreferencesKey(pref_key_stopInsteadOfPause)
+            val stopInsteadOfPauseKey = booleanPreferencesKey(PrefKeys.stopInsteadOfPause)
             dataStore.preferenceFlow(stopInsteadOfPauseKey, false)
                 .onEach { stopInsteadOfPause = it }
                 .launchIn(this)

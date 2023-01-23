@@ -11,7 +11,6 @@ import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.cliffracertech.soundaura.SoundAura.pref_key_playButtonLongClickHintShown
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
@@ -126,7 +125,7 @@ class MediaControllerViewModelTests {
 
     @Test fun play_button_long_click_hint_not_shown_with_no_active_tracks() = runTest {
         dataStore.edit { it.remove(
-            booleanPreferencesKey(pref_key_playButtonLongClickHintShown)
+            booleanPreferencesKey(PrefKeys.playButtonLongClickHintShown)
         )}
         var latestMessage: MessageHandler.Message? = null
         coroutineScope.launch {
@@ -140,7 +139,7 @@ class MediaControllerViewModelTests {
 
     @Test fun play_button_long_click_hint_shows_once() = runTest {
         dataStore.edit { it.remove(
-            booleanPreferencesKey(pref_key_playButtonLongClickHintShown)
+            booleanPreferencesKey(PrefKeys.playButtonLongClickHintShown)
         )}
         var latestMessage: MessageHandler.Message? = null
         coroutineScope.launch {
