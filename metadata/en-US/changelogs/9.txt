@@ -1,1 +1,1 @@
-Fix crash when view open source library licenses
+Fix crash when viewing open source library licenses
