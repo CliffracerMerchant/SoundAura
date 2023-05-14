@@ -4,9 +4,18 @@ package com.cliffracertech.soundaura
 
 import android.util.Log
 import android.view.ViewTreeObserver
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.platform.LocalConfiguration
@@ -24,7 +33,13 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlin.reflect.KProperty
 
@@ -60,6 +75,14 @@ fun <T> DataStore<Preferences>.preferenceState(
         .onEach { state.value = it }
         .launchIn(scope)
     return state
+}
+
+/** Edit the DataStore preference pointed to by [key] to the new [value]. */
+suspend fun <T> DataStore<Preferences>.edit(
+    key: Preferences.Key<T>,
+    value: T,
+) {
+    edit { it[key] = value }
 }
 
 /** Edit the DataStore preference pointed to by [key] to the new [value] in [scope]. */

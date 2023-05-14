@@ -10,6 +10,9 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.ServiceTestRule
+import com.cliffracertech.soundaura.model.database.SoundAuraDatabase
+import com.cliffracertech.soundaura.model.database.Track
+import com.cliffracertech.soundaura.service.PlayerService
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
 import org.junit.Before

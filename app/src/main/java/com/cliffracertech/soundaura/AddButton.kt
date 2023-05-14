@@ -29,6 +29,15 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.cliffracertech.soundaura.dialog.RenameDialog
+import com.cliffracertech.soundaura.dialog.SoundAuraDialog
+import com.cliffracertech.soundaura.model.ActivePresetState
+import com.cliffracertech.soundaura.model.MessageHandler
+import com.cliffracertech.soundaura.model.StringResource
+import com.cliffracertech.soundaura.model.database.PresetDao
+import com.cliffracertech.soundaura.model.database.PresetNameValidator
+import com.cliffracertech.soundaura.model.database.Track
+import com.cliffracertech.soundaura.model.database.TrackDao
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -286,8 +295,7 @@ fun Uri.getDisplayName(context: Context) =
 
 /** Return whether the list contains any strings that are blank
  * (i.e. are either empty or consist of only whitespace characters). */
-val List<String>.containsBlanks get() =
-    find { it.isBlank() } != null
+val List<String>.containsBlanks get() = find { it.isBlank() } != null
 
 /** Compose a LazyColumn of TextFields to edit the
  * strings of the the receiver MutableList<NewTrack>. */

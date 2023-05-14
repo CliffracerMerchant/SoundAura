@@ -6,6 +6,7 @@ package com.cliffracertech.soundaura
 import android.content.Context
 import android.media.MediaPlayer
 import android.net.Uri
+import com.cliffracertech.soundaura.model.database.ActiveTrack
 
 /**
  * A [MediaPlayer] wrapper that allows for seamless looping of the provided uri.

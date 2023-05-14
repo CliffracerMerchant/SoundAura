@@ -38,6 +38,16 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cliffracertech.soundaura.actionbar.SoundAuraActionBar
+import com.cliffracertech.soundaura.mediacontroller.MediaControllerSizes
+import com.cliffracertech.soundaura.mediacontroller.SoundAuraMediaController
+import com.cliffracertech.soundaura.model.MessageHandler
+import com.cliffracertech.soundaura.model.NavigationState
+import com.cliffracertech.soundaura.service.PlayerService
+import com.cliffracertech.soundaura.settings.AppSettings
+import com.cliffracertech.soundaura.settings.AppTheme
+import com.cliffracertech.soundaura.settings.PrefKeys
+import com.cliffracertech.soundaura.tracklist.SoundAuraTrackList
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import com.google.accompanist.insets.LocalWindowInsets
 import com.google.accompanist.insets.ProvideWindowInsets
@@ -46,40 +56,23 @@ import com.google.accompanist.insets.rememberInsetsPaddingValues
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.scopes.ActivityRetainedScoped
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.runBlocking
 import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
-@ActivityRetainedScoped
-class MainActivityNavigationState @Inject constructor() {
-    var showingAppSettings by mutableStateOf(false)
-    var showingPresetSelector by mutableStateOf(false)
-
-    fun onBackButtonClick() = when {
-        showingAppSettings -> {
-            showingAppSettings = false
-            true
-        } showingPresetSelector -> {
-            showingPresetSelector = false
-            true
-        } else -> false
-    }
-}
-
 @HiltViewModel class MainActivityViewModel(
     messageHandler: MessageHandler,
     dataStore: DataStore<Preferences>,
-    private val navigationState: MainActivityNavigationState,
+    private val navigationState: NavigationState,
     coroutineScope: CoroutineScope?
 ) : ViewModel() {
 
     @Inject constructor(
         messageHandler: MessageHandler,
         dataStore: DataStore<Preferences>,
-        navigationState: MainActivityNavigationState,
+        navigationState: NavigationState,
     ) : this(messageHandler, dataStore, navigationState, null)
 
     private val appThemeKey = intPreferencesKey(PrefKeys.appTheme)

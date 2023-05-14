@@ -25,13 +25,13 @@
             </intent-filter>
         </activity>
 
-        <service android:name=".PlayerService"
+        <service android:name=".service.PlayerService"
             android:description="@string/app_player_service_description"
             android:foregroundServiceType="mediaPlayback"
             android:exported="false" />
 
         <service
-            android:name=".TogglePlaybackTileService"
+            android:name=".service.TogglePlaybackTileService"
             android:label="@string/app_name"
             android:icon="@drawable/tile_and_notification_icon"
             android:exported="true"
