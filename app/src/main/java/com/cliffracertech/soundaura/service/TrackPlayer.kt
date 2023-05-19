@@ -1,12 +1,33 @@
 /* This file is part of SoundAura, which is released under
  * the terms of the Apache License 2.0. See license.md in
  * the project's root directory to see the full license. */
-package com.cliffracertech.soundaura
+package com.cliffracertech.soundaura.service
 
 import android.content.Context
 import android.media.MediaPlayer
 import android.net.Uri
-import com.cliffracertech.soundaura.model.database.ActiveTrack
+import androidx.core.net.toUri
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
+import java.io.File
+
+/** An active (i.e. part of the current sound mix) [Playable]. */
+class Playable(
+    val name: String,
+    /** Whether or not a playlist has shuffle enabled. This value
+     * has no meaning for a track. */
+    val shuffleEnabled: Boolean,
+    /** The volume of the [Playable]. */
+    val volume: Float,
+    uriStrings: String,
+) {
+    /** The list of [Uri]s in the [Playable]. If the [Playable] is
+     * a track instead of a playlist, uris will consist of only the
+     * [Uri] for that track. */
+    val uris: ImmutableList<Uri> = uriStrings
+        .split(File.pathSeparatorChar)
+        .map(String::toUri).toImmutableList()
+}
 
 /**
  * A [MediaPlayer] wrapper that allows for seamless looping of the provided uri.

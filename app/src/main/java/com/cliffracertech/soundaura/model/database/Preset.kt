@@ -24,12 +24,12 @@ data class Preset(
     @ColumnInfo(name = "name") @PrimaryKey
     val name: String)
 
-@Entity(tableName = "presetTrack",
-        primaryKeys = ["presetName", "trackUriString"],
+@Entity(tableName = "presetPlayable",
+        primaryKeys = ["presetName", "playableName"],
         foreignKeys = [
-            ForeignKey(entity = Track::class,
-                       parentColumns=["uriString"],
-                       childColumns=["trackUriString"],
+            ForeignKey(entity = Playable::class,
+                       parentColumns=["name"],
+                       childColumns=["playableName"],
                        onUpdate=ForeignKey.CASCADE,
                        onDelete=ForeignKey.CASCADE),
             ForeignKey(entity = Preset::class,
@@ -37,16 +37,16 @@ data class Preset(
                        childColumns=["presetName"],
                        onUpdate=ForeignKey.CASCADE,
                        onDelete=ForeignKey.CASCADE)])
-data class PresetTrack(
+data class PresetPlayable(
     @ColumnInfo(name = "presetName")
     val presetName: String,
 
-    @ColumnInfo(name = "trackUriString")
-    val trackUriString: String,
+    @ColumnInfo(name = "playableName")
+    val playableName: String,
 
     @FloatRange(from = 0.0, to = 1.0)
-    @ColumnInfo(name="trackVolume")
-    val trackVolume: Float = 1f)
+    @ColumnInfo(name="playableVolume")
+    val playableVolume: Float = 1f)
 
 @Dao abstract class PresetDao {
     @Query("SELECT EXISTS(SELECT name FROM preset WHERE name = :presetName)")
@@ -55,39 +55,34 @@ data class PresetTrack(
     @Query("SELECT name FROM preset")
     abstract fun getPresetList() : Flow<List<Preset>>
 
-    @Query("SELECT trackUriString AS uriString, trackVolume AS volume " +
-            "FROM presetTrack WHERE presetName = :presetName")
-    abstract fun getPresetTracks(presetName: String) : Flow<List<ActiveTrack>>
+    @Query("SELECT playableName AS name, playableVolume AS volume " +
+           "FROM presetPlayable WHERE presetName = :presetName")
+    abstract fun getPresetPlayables(presetName: String):
+        Flow<List<com.cliffracertech.soundaura.model.PresetPlayable>>
 
     @Query("SELECT EXISTS(SELECT name FROM preset WHERE name = :name)")
     abstract suspend fun presetNameIsAlreadyInUse(name: String?): Boolean
 
-    @Query("WITH presetUriStrings AS " +
-            "(SELECT trackUriString FROM presetTrack WHERE presetName = :presetName) " +
-            "UPDATE track SET " +
-            "isActive = CASE WHEN uriString IN presetUriStrings THEN 1 ELSE 0 END, " +
-            "volume = CASE WHEN uriString NOT IN presetUriStrings THEN volume ELSE " +
-            "(SELECT trackVolume FROM presetTrack " +
-            "WHERE presetName = :presetName AND trackUriString = uriString LIMIT 1) END")
+    @Query("WITH presetPlayableNames AS " +
+           "(SELECT playableName FROM presetPlayable WHERE presetName = :presetName) " +
+           "UPDATE playable SET " +
+           "isActive = CASE WHEN name IN presetPlayableNames THEN 1 ELSE 0 END, " +
+           "volume = CASE WHEN name NOT IN presetPlayableNames THEN volume ELSE " +
+               "(SELECT playableVolume FROM presetPlayable " +
+                "WHERE presetName = :presetName AND playableName = playable.name LIMIT 1) END")
     abstract suspend fun loadPreset(presetName: String)
 
     @Query("DELETE FROM preset WHERE name = :presetName")
-    protected abstract suspend fun deletePresetName(presetName: String)
+    protected abstract suspend fun deletePreset(presetName: String)
 
-    @Query("DELETE FROM presetTrack WHERE presetName = :presetName")
+    @Query("DELETE FROM presetPlayable WHERE presetName = :presetName")
     protected abstract suspend fun deletePresetContents(presetName: String)
-
-    @Transaction
-    open suspend fun deletePreset(presetName: String) {
-        deletePresetContents(presetName)
-        deletePresetName(presetName)
-    }
 
     @Query("INSERT OR IGNORE INTO preset (name) VALUES (:presetName)")
     protected abstract suspend fun addPresetName(presetName: String)
 
-    @Query("INSERT INTO presetTrack " +
-            "SELECT :presetName, uriString, volume FROM track WHERE isActive")
+    @Query("INSERT INTO presetPlayable " +
+           "SELECT :presetName, name, volume FROM playable WHERE isActive")
     protected abstract suspend fun addPresetContents(presetName: String)
 
     @Transaction
@@ -103,7 +98,7 @@ data class PresetTrack(
 
 /** A [NameValidator] for naming [Preset]s. [PresetNameValidator] will return
  * an appropriate error message for blank or already in use [Preset] names. */
-class PresetNameValidator(
+class PresetNameValidator (
     private val presetDao: PresetDao,
 ) : NameValidator() {
     var target by mutableStateOf<Preset?>(null)

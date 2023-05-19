@@ -3,76 +3,64 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura.model.database
 
-import android.net.Uri
 import androidx.annotation.FloatRange
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.net.toUri
 import androidx.room.*
 import com.cliffracertech.soundaura.R
 import kotlinx.coroutines.flow.Flow
 import java.io.File
 
+@Entity(tableName = "playable")
+data class DbPlayable(
+    @ColumnInfo(name="name") @PrimaryKey
+    val name: String,
+
+    @ColumnInfo(name="uriStrings")
+    val uriStrings: String,
+
+    @ColumnInfo(name="shuffle")
+    val shuffleEnabled: Boolean = false,
+
+    @ColumnInfo(name="isActive", defaultValue = "0")
+    val isActive: Boolean = false,
+
+    @FloatRange(from = 0.0, to = 1.0)
+    @ColumnInfo(name="volume", defaultValue = "1.0")
+    val volume: Float = 1f,
+
+    @ColumnInfo(name="hasError", defaultValue = "0")
+    val hasError: Boolean = false)
+
 /** An entity that represents a piece of media that is playable,
  * i.e. either an individual track or a playlist of tracks. */
-interface Playable {
+class Playable(
     /** The name of the [Playable] */
-    val name: String
+    val name: String,
     /** Whether or not the [Playable] is toggled on */
-    val isActive: Boolean
+    val isActive: Boolean,
     /** The volume (in the range [0f, 1f]) of the [Playable] */
-    val volume: Float
+    val volume: Float,
     /** Whether or not there was an IO error accessing the [Playable] */
-    val hasError: Boolean
+    val hasError: Boolean,
     /** Whether or not the [Playable] is a playlist. If false,
      * the [Playable] represents an individual track instead. */
-    val isPlaylist: Boolean
-
+    val isPlaylist: Boolean,
+) {
+    constructor(dbPlayable: DbPlayable): this(
+        dbPlayable.name, dbPlayable.isActive, dbPlayable.volume, dbPlayable.hasError,
+        isPlaylist = dbPlayable.uriStrings.split(File.pathSeparatorChar).size > 1
+    )
     enum class Sort { NameAsc, NameDesc, OrderAdded;
         companion object {
             @Composable fun stringValues() = with(LocalContext.current) {
                 remember { arrayOf(getString(R.string.name_ascending),
-                                   getString(R.string.name_descending),
-                                   getString(R.string.order_added)) }
+                    getString(R.string.name_descending),
+                    getString(R.string.order_added)) }
             }
         }
     }
-}
-
-/** An active (i.e. part of the current sound mix) [Playable]. */
-interface ActivePlayable {
-    /** The list of [Uri]s in the [Playable]. If the [Playable] is
-     * a track instead of a playlist, uris will consist of only the
-     * [Uri] for that track. */
-    val uris: List<Uri>
-
-    /** Whether or not a playlist has shuffle enabled. This value
-     * has no meaning for a track. */
-    val shuffleEnabled: Boolean
-    /** The volume of the [Playable]. */
-    val volume: Float
-}
-
-@Entity(tableName = "playable")
-data class DbPlayable(
-    @ColumnInfo(name="name") @PrimaryKey
-    override val name: String,
-    @ColumnInfo(name="uriStrings")
-    val uriStrings: String,
-    @ColumnInfo(name="shuffle")
-    override val shuffleEnabled: Boolean = false,
-    @ColumnInfo(name="isActive", defaultValue = "0")
-    override val isActive: Boolean = false,
-    @FloatRange(from = 0.0, to = 1.0)
-    @ColumnInfo(name="volume", defaultValue = "1.0")
-    override val volume: Float = 1f,
-    @ColumnInfo(name="hasError", defaultValue = "0")
-    override val hasError: Boolean = false
-) : Playable, ActivePlayable {
-    override val uris get() = uriStrings.split(File.pathSeparatorChar).map(String::toUri)
-
-    override val isPlaylist = uris.size > 1
 }
 
 @Dao abstract class PlayableDao {
@@ -123,7 +111,12 @@ data class DbPlayable(
     }
 
     @Query("SELECT * FROM playable WHERE isActive")
-    abstract fun getActivePlayables(): Flow<List<ActivePlayable>>
+    abstract fun getServicePlayables():
+        Flow<List<com.cliffracertech.soundaura.service.Playable>>
+
+    @Query("SELECT name, volume FROM playable WHERE isActive")
+    abstract fun getCurrentPresetPlayables():
+        Flow<List<com.cliffracertech.soundaura.model.PresetPlayable>>
 
     @Query("UPDATE playable set hasError = 1 WHERE name = :name")
     abstract suspend fun notifyOfError(name: String)

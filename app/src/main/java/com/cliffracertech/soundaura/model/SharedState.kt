@@ -10,10 +10,10 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.cliffracertech.soundaura.model.database.ActiveTrack
+import com.cliffracertech.soundaura.model.database.Playable
+import com.cliffracertech.soundaura.model.database.PlayableDao
 import com.cliffracertech.soundaura.model.database.Preset
 import com.cliffracertech.soundaura.model.database.PresetDao
-import com.cliffracertech.soundaura.model.database.TrackDao
 import com.cliffracertech.soundaura.settings.PrefKeys
 import dagger.hilt.android.scopes.ActivityRetainedScoped
 import kotlinx.coroutines.flow.Flow
@@ -39,6 +39,11 @@ class NavigationState @Inject constructor() {
     }
 }
 
+/** A reference to a [Playable] within a [Preset]. */
+class PresetPlayable(
+    val name: String,
+    val volume: Float)
+
 /**
  * ActivePresetState holds the state of a currently active [Preset]. The name
  * of the currently active [Preset] can be collected from the [Flow]`<String?>`
@@ -49,7 +54,7 @@ class NavigationState @Inject constructor() {
 @ActivityRetainedScoped
 class ActivePresetState @Inject constructor(
     private val dataStore: DataStore<Preferences>,
-    trackDao: TrackDao,
+    playableDao: PlayableDao,
     presetDao: PresetDao,
 ) {
     private val nameKey = stringPreferencesKey(PrefKeys.activePresetName)
@@ -62,12 +67,13 @@ class ActivePresetState @Inject constructor(
         else -> null
     }}
 
-    private val allActiveTracks =
-        trackDao.getActiveTracks().map(List<ActiveTrack>::toHashSet)
+    private val allActiveTracks = playableDao
+            .getCurrentPresetPlayables()
+            .map(List<PresetPlayable>::toHashSet)
 
     private val presetTracks = name.transformLatest {
-        if (it == null) emptyList<ActiveTrack>()
-        else emitAll(presetDao.getPresetTracks(it))
+        if (it == null) emptyList<PresetPlayable>()
+        else emitAll(presetDao.getPresetPlayables(it))
     }.map { it.toHashSet() }
 
     /** A [Flow]`<Boolean>` whose latest value represents whether or not the
