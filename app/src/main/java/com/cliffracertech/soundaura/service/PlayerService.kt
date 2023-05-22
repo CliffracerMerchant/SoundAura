@@ -25,12 +25,11 @@ import androidx.media.AudioAttributesCompat.USAGE_MEDIA
 import androidx.media.AudioFocusRequestCompat
 import androidx.media.AudioManagerCompat
 import androidx.media.AudioManagerCompat.AUDIOFOCUS_GAIN
-import com.cliffracertech.soundaura.PlayerSet
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.StringResource
-import com.cliffracertech.soundaura.model.database.ActiveTrack
-import com.cliffracertech.soundaura.model.database.TrackDao
+import com.cliffracertech.soundaura.model.database.Playlist
+import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.preferenceFlow
 import com.cliffracertech.soundaura.repeatWhenStarted
 import com.cliffracertech.soundaura.service.PlayerService.Binder
@@ -98,7 +97,7 @@ class PlayerService: LifecycleService() {
         OnAudioDeviceChangePlaybackModule(
             unpauseLocks, ::autoPauseIf, ::setPlaybackState),
         PhoneStateAwarePlaybackModule(::autoPauseIf))
-    @Inject lateinit var trackDao: TrackDao
+    @Inject lateinit var playlistDao: PlaylistDao
     @Inject lateinit var messageHandler: MessageHandler
     private lateinit var audioManager: AudioManager
     private lateinit var notificationManager: PlayerNotification
@@ -106,8 +105,10 @@ class PlayerService: LifecycleService() {
     private var autoStopJob: Job? = null
     private var stopTime by mutableStateOf<Instant?>(null)
 
-    private val playerSet = PlayerSet(this) { uriString -> //onCreatePlayerFailure = {
-        lifecycleScope.launch { trackDao.notifyOfError(uriString) }
+    private val playerMap = PlayerMap(this) { playlistName, problemUris ->
+        lifecycleScope.launch {
+            playlistDao.removeTracksFromPlaylist(playlistName, problemUris)
+        }
     }
 
     private fun updateNotification() =
@@ -151,7 +152,7 @@ class PlayerService: LifecycleService() {
         set(value) {
             field = value
             if (value && !isPlaying)
-                playerSet.stop()
+                playerMap.stop()
         }
 
     override fun onCreate() {
@@ -187,7 +188,7 @@ class PlayerService: LifecycleService() {
                 .onEach { stopInsteadOfPause = it }
                 .launchIn(this)
 
-            trackDao.getActiveTracks()
+            playlistDao.getActivePlaylists()
                 .onEach(::updatePlayers)
                 .launchIn(this)
         }
@@ -201,7 +202,7 @@ class PlayerService: LifecycleService() {
         playbackModules.forEach { it.onDestroy(this) }
         playbackState = STATE_STOPPED
         notificationManager.remove()
-        playerSet.releaseAll()
+        playerMap.releaseAll()
         super.onDestroy()
     }
 
@@ -239,7 +240,7 @@ class PlayerService: LifecycleService() {
             return
 
         val newState = when {
-            state == STATE_PLAYING && playerSet.isInitialized && playerSet.isEmpty -> {
+            state == STATE_PLAYING && playerMap.isInitialized && playerMap.isEmpty -> {
                 // If there are no active tracks, we want to prevent a change to
                 // STATE_PLAYING and show an explanation message so that the user
                 // understands why their, e.g., play button tap didn't do anything.
@@ -275,9 +276,9 @@ class PlayerService: LifecycleService() {
         isPlaying = newState == STATE_PLAYING
         updateNotification()
         if (newState != STATE_STOPPED) when {
-            isPlaying ->          playerSet.play()
-            stopInsteadOfPause -> playerSet.stop()
-            else ->               playerSet.pause()
+            isPlaying ->          playerMap.play()
+            stopInsteadOfPause -> playerMap.stop()
+            else ->               playerMap.pause()
         } else {
             if (!playInBackground && hasAudioFocus)
                 abandonAudioFocus()
@@ -305,13 +306,13 @@ class PlayerService: LifecycleService() {
         updateNotification()
     }
 
-    private fun updatePlayers(tracks: List<ActiveTrack>) {
-        val firstUpdate = !playerSet.isInitialized
-        playerSet.update(tracks, isPlaying)
+    private fun updatePlayers(playlists: List<Playlist>) {
+        val firstUpdate = !playerMap.isInitialized
+        playerMap.update(playlists, isPlaying)
 
         // If the new track list is empty when isPlaying is true, we want
         // to pause playback because there are no tracks to play.
-        if (isPlaying && tracks.isEmpty()) {
+        if (isPlaying && playlists.isEmpty()) {
             setPlaybackState(STATE_PAUSED)
             // If this playback auto pause happened implicitly due to the user making
             // the last active track inactive, no user feedback should be necessary.
@@ -343,8 +344,8 @@ class PlayerService: LifecycleService() {
         else Toast.makeText(this, stringResId, Toast.LENGTH_SHORT).show()
     }
 
-    fun setTrackVolume(uriString: String, volume: Float) =
-        playerSet.setPlayerVolume(uriString, volume)
+    fun setPlayableVolume(playableName: String, volume: Float) =
+        playerMap.setPlayerVolume(playableName, volume)
 
     /**
      * Automatically pause playback if the parameter [condition] is true and
@@ -394,8 +395,8 @@ class PlayerService: LifecycleService() {
                              else           STATE_PLAYING)
         }
 
-        fun setTrackVolume(uriString: String, volume: Float) =
-            this@PlayerService.setTrackVolume(uriString, volume)
+        fun setTrackVolume(playableName: String, volume: Float) =
+            this@PlayerService.setPlayableVolume(playableName, volume)
     }
 
     override fun onBind(intent: Intent): Binder {
@@ -417,7 +418,7 @@ class PlayerService: LifecycleService() {
     /** PlaybackModule enables PlayerService to have its functionality extended
      * via composition. Implementors of PlaybackModule define their onCreate
      * and onDestroy methods, which will be called during PlayerService's
-     * onCreate and onDestroy, respectively.  */
+     * onCreate and onDestroy, respectively. */
     interface PlaybackModule {
         fun onCreate(service: LifecycleService) {}
         fun onDestroy(service: LifecycleService) {}
