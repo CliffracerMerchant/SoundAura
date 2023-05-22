@@ -10,8 +10,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.cliffracertech.soundaura.model.database.Playable
-import com.cliffracertech.soundaura.model.database.PlayableDao
+import com.cliffracertech.soundaura.model.database.Playlist
+import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.Preset
 import com.cliffracertech.soundaura.model.database.PresetDao
 import com.cliffracertech.soundaura.settings.PrefKeys
@@ -39,8 +39,14 @@ class NavigationState @Inject constructor() {
     }
 }
 
-/** A reference to a [Playable] within a [Preset]. */
-class PresetPlayable(
+/** A reference to a [Playlist] within a [Preset],
+ * containing only the [Playlist]'s [name] and [volume]. */
+// This PresetPlaylist mirrors the database package PresetPlaylist, except
+// that it omits the preset name. This is because this PresetPlaylist is
+// used to compare the current (possibly unsaved) preset with the active
+// preset to determine whether or not the active preset is modified, and
+// the preset's name is irrelevant in this use case.
+class PresetPlaylist(
     val name: String,
     val volume: Float)
 
@@ -54,7 +60,7 @@ class PresetPlayable(
 @ActivityRetainedScoped
 class ActivePresetState @Inject constructor(
     private val dataStore: DataStore<Preferences>,
-    playableDao: PlayableDao,
+    playlistDao: PlaylistDao,
     presetDao: PresetDao,
 ) {
     private val nameKey = stringPreferencesKey(PrefKeys.activePresetName)
@@ -67,20 +73,20 @@ class ActivePresetState @Inject constructor(
         else -> null
     }}
 
-    private val allActiveTracks = playableDao
-            .getCurrentPresetPlayables()
-            .map(List<PresetPlayable>::toHashSet)
+    private val allActivePlaylists = playlistDao
+            .getTempPresetPlaylists()
+            .map(List<PresetPlaylist>::toHashSet)
 
-    private val presetTracks = name.transformLatest {
-        if (it == null) emptyList<PresetPlayable>()
-        else emitAll(presetDao.getPresetPlayables(it))
+    private val presetPlaylists = name.transformLatest {
+        if (it == null) emptyList<PresetPlaylist>()
+        else emitAll(presetDao.getPresetPlaylists(it))
     }.map { it.toHashSet() }
 
     /** A [Flow]`<Boolean>` whose latest value represents whether or not the
      * active preset is modified. */
-    val isModified = combine(allActiveTracks, presetTracks) { activeTracks, presetTracks ->
-        if (presetTracks.isEmpty()) false
-        else activeTracks != presetTracks
+    val isModified = combine(allActivePlaylists, presetPlaylists) { activePlaylists, presetPlaylists ->
+        if (presetPlaylists.isEmpty()) false
+        else activePlaylists != presetPlaylists
     }
 
     /** Set the active preset to the one whose name matches [name]. */
