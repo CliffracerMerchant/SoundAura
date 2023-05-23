@@ -24,6 +24,7 @@ data class Playlist(
     val tracks: List<Uri>,
 
     /** Whether or not shuffle is enabled for the [Playlist]. */
+    @ColumnInfo(defaultValue = "0")
     val shuffleEnabled: Boolean = false,
 
     /** Whether or not the [Playlist] is active (i.e. part of the current sound mix). */

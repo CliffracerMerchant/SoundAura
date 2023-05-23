@@ -39,10 +39,10 @@ class Player(
     startPlaying: Boolean = false,
     private val onPlaybackFailure: (List<Uri>) -> Unit,
 ) {
-    private val uris = (playlist.tracks.run {
-            if (playlist.shuffleEnabled) shuffled()
-            else                         this
-        }).toMutableList()
+    private val uris = playlist.run {
+            if (shuffleEnabled) tracks.shuffled()
+            else                tracks
+        }.toMutableList()
     private var currentIndex = 0
 
     private var nextPlayer: MediaPlayer? = null
