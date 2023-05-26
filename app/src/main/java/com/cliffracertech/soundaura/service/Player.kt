@@ -156,8 +156,8 @@ class PlayerMap(
     fun pause() = playerMap.values.forEach(Player::pause)
     fun stop() = playerMap.values.forEach(Player::stop)
 
-    fun setPlayerVolume(playableName: String, volume: Float) {
-        playerMap[playableName]?.volume = volume
+    fun setPlayerVolume(playlistName: String, volume: Float) {
+        playerMap[playlistName]?.volume = volume
     }
 
     fun releaseAll() = playerMap.values.forEach(Player::release)

@@ -49,8 +49,8 @@ data class Playlist(
         companion object {
             @Composable fun stringValues() = with(LocalContext.current) {
                 remember { arrayOf(getString(R.string.name_ascending),
-                    getString(R.string.name_descending),
-                    getString(R.string.order_added)) }
+                                   getString(R.string.name_descending),
+                                   getString(R.string.order_added)) }
             }
         }
     }
@@ -124,10 +124,13 @@ data class Playlist(
     abstract fun getTempPresetPlaylists():
         Flow<List<com.cliffracertech.soundaura.model.PresetPlaylist>>
 
-    @Query("SELECT tracks FROM playable WHERE name = :name")
+    @Query("SELECT name FROM playlist")
+    abstract fun getPlaylistNames(): Flow<List<String>>
+
+    @Query("SELECT tracks FROM playlist WHERE name = :name")
     abstract suspend fun getPlaylistTracks(name: String): List<Uri>
 
-    @Query("UPDATE playable SET tracks = :newTracks WHERE name = :name")
+    @Query("UPDATE playlist SET tracks = :newTracks WHERE name = :name")
     abstract suspend fun setPlaylistTracks(name: String, newTracks: List<Uri>)
 
     /** Remove the tracks identified by the [Uri]s in [tracks]
@@ -140,14 +143,14 @@ data class Playlist(
     }
 
     /** Rename the [Playlist] whose name matches [oldName] to [newName]. */
-    @Query("UPDATE playable SET name = :newName WHERE name = :oldName")
+    @Query("UPDATE playlist SET name = :newName WHERE name = :oldName")
     abstract suspend fun rename(oldName: String, newName: String)
 
     /** Toggle the [Playlist.isActive] field of the [Playlist] identified by [name]. */
-    @Query("UPDATE playable set isActive = 1 - isActive WHERE name = :name")
+    @Query("UPDATE playlist set isActive = 1 - isActive WHERE name = :name")
     abstract suspend fun toggleIsActive(name: String)
 
     /** Set the [Playlist.volume] field of the [Playlist] identified by [name]. */
-    @Query("UPDATE playable SET volume = :volume WHERE name = :name")
+    @Query("UPDATE playlist SET volume = :volume WHERE name = :name")
     abstract suspend fun setVolume(name: String, volume: Float)
 }

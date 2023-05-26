@@ -247,7 +247,7 @@ class MainActivity : ComponentActivity() {
                         additionalBottom = if (widthIsConstrained) 64.dp else 0.dp)
                 }, state = trackListState,
                 onVolumeChange = { uri, volume ->
-                    boundPlayerService?.setTrackVolume(uri, volume)
+                    boundPlayerService?.setPlaylistVolume(uri, volume)
                 })
         }
 

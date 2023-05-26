@@ -24,8 +24,8 @@ data class Preset(
     @ColumnInfo(name = "name") @PrimaryKey
     val name: String)
 
-@Entity(tableName = "presetPlayable",
-        primaryKeys = ["presetName", "playableName"],
+@Entity(tableName = "presetPlaylist",
+        primaryKeys = ["presetName", "playlistName"],
         foreignKeys = [
             ForeignKey(entity = Playlist::class,
                        parentColumns=["name"],
@@ -55,8 +55,8 @@ data class PresetPlaylist(
     /** Return a [Flow] that updates with the latest [List] of all
      * [com.cliffracertech.soundaura.model.PresetPlaylist]s in the
      * [Preset] whose name matches [presetName]. */
-    @Query("SELECT playableName AS name, playableVolume AS volume " +
-           "FROM presetPlayable WHERE presetName = :presetName")
+    @Query("SELECT playlistName AS name, playlistVolume AS volume " +
+           "FROM presetPlaylist WHERE presetName = :presetName")
     abstract fun getPresetPlaylists(presetName: String):
         Flow<List<com.cliffracertech.soundaura.model.PresetPlaylist>>
 
@@ -90,11 +90,11 @@ data class PresetPlaylist(
     @Query("INSERT OR IGNORE INTO preset (name) VALUES (:presetName)")
     protected abstract suspend fun addPresetName(presetName: String)
 
-    @Query("DELETE FROM presetPlayable WHERE presetName = :presetName")
+    @Query("DELETE FROM presetPlaylist WHERE presetName = :presetName")
     protected abstract suspend fun deletePresetContents(presetName: String)
 
-    @Query("INSERT INTO presetPlayable " +
-           "SELECT :presetName, name, volume FROM playable WHERE isActive")
+    @Query("INSERT INTO presetPlaylist " +
+           "SELECT :presetName, name, volume FROM playlist WHERE isActive")
     protected abstract suspend fun addPresetContents(presetName: String)
 
     /** Overwrite the [Preset] identified by [presetName] with the [Playlist]s

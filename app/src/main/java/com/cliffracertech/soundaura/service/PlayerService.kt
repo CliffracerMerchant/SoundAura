@@ -79,10 +79,10 @@ import javax.inject.Inject
  * To ensure that the volume for already playing tracks is changed without
  * perceptible lag, PlayerService will not respond to track volume changes made
  * at the database level for already playing tracks. Instead, the method
- * [Binder.setTrackVolume] must be called with the Uri (in [String] form) of the
- * track and the new volume. If a bound activity presents the user with, e.g, a
- * slider to change a track's volume, the slider's onSlide callback should
- * therefore call [Binder.setTrackVolume].
+ * [Binder.setPlaylistVolume] must be called with the Uri (in [String] form) of
+ * the track and the new volume. If a bound activity presents the user with, e.g,
+ * a slider to change a track's volume, the slider's onSlide callback should
+ * therefore call [Binder.setPlaylistVolume].
  *
  * PlayerService reads the values of and changes its behavior depending on the
  * app preferences pointed to by the keys [PrefKeys.playInBackground] and
@@ -344,8 +344,8 @@ class PlayerService: LifecycleService() {
         else Toast.makeText(this, stringResId, Toast.LENGTH_SHORT).show()
     }
 
-    fun setPlayableVolume(playableName: String, volume: Float) =
-        playerMap.setPlayerVolume(playableName, volume)
+    fun setPlaylistVolume(playlistName: String, volume: Float) =
+        playerMap.setPlayerVolume(playlistName, volume)
 
     /**
      * Automatically pause playback if the parameter [condition] is true and
@@ -395,8 +395,8 @@ class PlayerService: LifecycleService() {
                              else           STATE_PLAYING)
         }
 
-        fun setTrackVolume(playableName: String, volume: Float) =
-            this@PlayerService.setPlayableVolume(playableName, volume)
+        fun setPlaylistVolume(playlistName: String, volume: Float) =
+            this@PlayerService.setPlaylistVolume(playlistName, volume)
     }
 
     override fun onBind(intent: Intent): Binder {
