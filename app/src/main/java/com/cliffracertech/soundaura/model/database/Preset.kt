@@ -4,25 +4,21 @@
 package com.cliffracertech.soundaura.model.database
 
 import androidx.annotation.FloatRange
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Transaction
 import com.cliffracertech.soundaura.R
-import com.cliffracertech.soundaura.dialog.NameValidator
 import com.cliffracertech.soundaura.model.StringResource
+import com.cliffracertech.soundaura.model.Validator
 import kotlinx.coroutines.flow.*
 
 @Entity(tableName = "preset")
-data class Preset(
-    @ColumnInfo(name = "name") @PrimaryKey
-    val name: String)
+data class Preset(@PrimaryKey val name: String)
 
 @Entity(tableName = "presetPlaylist",
         primaryKeys = ["presetName", "playlistName"],
@@ -60,9 +56,9 @@ data class PresetPlaylist(
     abstract fun getPresetPlaylists(presetName: String):
         Flow<List<com.cliffracertech.soundaura.model.PresetPlaylist>>
 
-    /** Delete the [Playlist] identified by [presetName]. */
+    /** Delete the [Preset] identified by [presetName]. */
     @Query("DELETE FROM preset WHERE name = :presetName")
-    protected abstract suspend fun deletePreset(presetName: String)
+    abstract suspend fun deletePreset(presetName: String)
 
     /**
      * Update the playlist table according to whether or not each [Playlist]
@@ -87,7 +83,7 @@ data class PresetPlaylist(
     @Query("UPDATE preset SET name = :newName WHERE name = :oldName")
     abstract suspend fun renamePreset(oldName: String, newName: String)
 
-    @Query("INSERT OR IGNORE INTO preset (name) VALUES (:presetName)")
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     protected abstract suspend fun addPresetName(presetName: String)
 
     @Query("DELETE FROM presetPlaylist WHERE presetName = :presetName")
@@ -107,20 +103,16 @@ data class PresetPlaylist(
     }
 }
 
-/** A [NameValidator] for naming [Preset]s. [PresetNameValidator] will return
- * an appropriate error message for blank or already in use [Preset] names. */
-class PresetNameValidator (
-    private val presetDao: PresetDao,
-) : NameValidator() {
-    var target by mutableStateOf<Preset?>(null)
-
-    override suspend fun validateName(proposedName: String?) = when {
-        proposedName?.isBlank() == true ->
-            StringResource(R.string.preset_name_cannot_be_blank_error_message)
-        proposedName == target?.name ->
+class PresetNameValidator(
+    private val dao: PresetDao,
+) : Validator<String>("") {
+    override suspend fun messageFor(value: String) = when {
+        !valueHasBeenChanged ->
             null
-        presetDao.exists(proposedName) ->
-            StringResource(R.string.preset_name_already_in_use_error_message)
+        value.isBlank() ->
+            Message.Error(StringResource(R.string.preset_name_cannot_be_blank_error_message))
+        dao.exists(value) ->
+            Message.Error(StringResource(R.string.preset_name_already_in_use_error_message))
         else -> null
     }
 }

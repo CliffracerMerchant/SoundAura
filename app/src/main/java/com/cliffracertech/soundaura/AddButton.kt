@@ -120,12 +120,11 @@ class AddTrackButtonViewModel(
     }
 }
 
-@HiltViewModel
-class AddPresetButtonViewModel(
+@HiltViewModel class AddPresetButtonViewModel(
     private val presetDao: PresetDao,
     private val messageHandler: MessageHandler,
     private val activePresetState: ActivePresetState,
-    trackDao: TrackDao,
+    playlistDao: PlaylistDao,
     coroutineScope: CoroutineScope?,
 ) : ViewModel() {
 
@@ -133,17 +132,16 @@ class AddPresetButtonViewModel(
         presetDao: PresetDao,
         messageHandler: MessageHandler,
         activePresetState: ActivePresetState,
-        trackDao: TrackDao,
-    ) : this(presetDao, messageHandler, activePresetState, trackDao, null)
+        playlistDao: PlaylistDao,
+    ) : this(presetDao, messageHandler, activePresetState, playlistDao, null)
 
     private val scope = coroutineScope ?: viewModelScope
 
     var showingAddPresetDialog by mutableStateOf(false)
         private set
 
-    private val activeTracksIsEmpty by trackDao.getActiveTracks()
-        .map { it.isEmpty() }
-        .collectAsState(true, scope)
+    private val activeTracksIsEmpty by playlistDao.getActivePlaylists()
+        .map { it.isEmpty() }.collectAsState(true, scope)
 
     fun onClick() { when {
         activeTracksIsEmpty -> messageHandler.postMessage(
@@ -152,25 +150,24 @@ class AddPresetButtonViewModel(
     }}
 
     private val nameValidator = PresetNameValidator(presetDao)
-    val proposedNewPresetName by nameValidator.proposedName.collectAsState(null, scope)
-    val newPresetNameValidatorMessage by nameValidator.errorMessage.collectAsState(null, scope)
+    val proposedNewPresetName by nameValidator::value
+    val newPresetNameValidatorMessage by nameValidator.message.collectAsState(null, scope)
 
     fun onAddPresetDialogDismiss() {
         showingAddPresetDialog = false
-        nameValidator.clearProposedName()
+        nameValidator.clear()
     }
 
-    fun onNewPresetNameChange(newName: String) =
-        nameValidator.setProposedName(newName)
+    fun onNewPresetNameChange(newName: String) {
+        nameValidator.value = newName
+    }
 
     fun onAddPresetDialogConfirm() {
          scope.launch {
-             val name = nameValidator.proposedName.value ?: ""
-             if (nameValidator.onNameConfirm(name)) {
-                 showingAddPresetDialog = false
-                 presetDao.savePreset(name)
-                 activePresetState.setName(name)
-             }
+             val name = nameValidator.validate() ?: return@launch
+             showingAddPresetDialog = false
+             presetDao.savePreset(name)
+             activePresetState.setName(name)
         }
     }
 }
@@ -226,7 +223,7 @@ enum class AddButtonTarget { Track, Preset }
             initialName = "",
             proposedNameProvider = addPresetViewModel::proposedNewPresetName,
             onProposedNameChange = addPresetViewModel::onNewPresetNameChange,
-            errorMessageProvider = nameValidatorMessage::value::get,
+            errorMessageProvider = addPresetViewModel::newPresetNameValidatorMessage,
             onDismissRequest = addPresetViewModel::onAddPresetDialogDismiss,
             onConfirm = addPresetViewModel::onAddPresetDialogConfirm)
 }
