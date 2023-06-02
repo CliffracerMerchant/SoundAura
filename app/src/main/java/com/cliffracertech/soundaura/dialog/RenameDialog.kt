@@ -3,11 +3,11 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura.dialog
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
@@ -15,67 +15,62 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.model.StringResource
+import com.cliffracertech.soundaura.model.Validator
 import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
 
-/**
- * An abstract name validator.
- *
- * NameValidator cna be used to validates names for objects. The currently
- * proposed name can be queried through the [String]? property [proposedName],
- * and set using [setProposedName]. The abstract suspend function [validateName]
- * must be overridden in subclasses to return a [StringResource] that, when
- * resolved, becomes an error message explaining why the current value of
- * [proposedName] is not a valid name, or null if the name is valid. The
- * [Flow]`<StringResource?>` property [errorMessage] can be collected to obtain
- * the error message given the current value of [proposedName].
- *
- * When naming is finished, [onNameConfirm] should be called with the proposed
- * name. [onNameConfirm] will check the provided name one last time and return
- * whether or not the name is valid, and also clears the proposed name if it is
- * valid so that the validator can be reused. This method covers the edge case
- * of an invalid name being input, and then confirmed before the suspend
- * functions underlying [errorMessage] have a chance to update its value to a
- * non-null [StringResource] error message, and allows for the possibility of
- * an always initially null [errorMessage] if the initial text of the, e.g.,
- * rename text field is not passed via [setProposedName]. This might be desired
- * to prevent an initially invalid name from immediately showing an error
- * message before the user has had a chance to change it.
- */
-abstract class NameValidator {
-    var proposedName = MutableStateFlow<String?>(null)
-        private set
-
-    fun setProposedName(value: String) {
-        proposedName.value = value
+/** Create a view that displays an icon appropriate for the
+ * type of [Validator.Message] alongside its text. */
+@Composable fun ValidatorMessageView(
+    message: Validator.Message,
+    modifier: Modifier = Modifier
+) = Row(
+    modifier
+        .fillMaxWidth()
+        .height(48.dp),
+    verticalAlignment = Alignment.CenterVertically
+) {
+    val vector = when {
+        message.isInformational -> Icons.Default.Info
+        message.isWarning ->       Icons.Default.Warning
+        else ->/*message.isError*/ Icons.Default.Error
     }
-
-    fun clearProposedName() { proposedName.value = null }
-
-    abstract suspend fun validateName(proposedName: String?): StringResource?
-
-    val errorMessage = proposedName.map(::validateName)
-
-    suspend fun onNameConfirm(newName: String): Boolean {
-        proposedName.value = newName
-        val message = validateName(newName)
-        if (message == null)
-            clearProposedName()
-        return message == null
+    val tint = when {
+        message.isInformational -> Color.Blue
+        message.isWarning ->       Color.Yellow
+        else ->/*message.isError*/ MaterialTheme.colors.error
     }
+    Icon(vector, null, tint = tint)
+
+    Text(message.stringResource.resolve(LocalContext.current))
+}
+
+/** A display of a single nullable [Validator.Message], with appearance and/or
+ * disappearance animations for when the message changes or becomes null. */
+@Composable fun AnimatedValidatorMessage(
+    message: Validator.Message?,
+    modifier: Modifier = Modifier
+) {
+    var lastMessage: Validator.Message = remember {
+        Validator.Message.Error(StringResource(""))
+    }
+    AnimatedVisibility(message != null, modifier) {
+        Crossfade(message ?: lastMessage) {
+            ValidatorMessageView(it)
+        }
+    }
+    message?.let { lastMessage = it }
 }
 
 /**
@@ -97,7 +92,7 @@ abstract class NameValidator {
     initialName: String = "",
     proposedNameProvider: () -> String?,
     onProposedNameChange: (String) -> Unit,
-    errorMessageProvider: () -> String?,
+    errorMessageProvider: () -> Validator.Message?,
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
 ) {
@@ -121,21 +116,6 @@ abstract class NameValidator {
             singleLine = true,
             textStyle = MaterialTheme.typography.body1)
 
-        var previousErrorMessage by remember { mutableStateOf("") }
-        AnimatedVisibility(errorMessage != null) {
-            Row(Modifier.align(Alignment.CenterHorizontally)
-                        .padding(start = 16.dp, end = 16.dp, top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.Default.Error,
-                    contentDescription = null,
-                    tint = MaterialTheme.colors.error)
-                AnimatedContent(errorMessage ?: previousErrorMessage) {
-                    Text(it, Modifier.weight(1f), MaterialTheme.colors.error)
-                }
-                errorMessage?.let { previousErrorMessage = it }
-            }
-        }
+        AnimatedValidatorMessage(message = errorMessageProvider())
     }
 }

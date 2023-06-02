@@ -46,6 +46,7 @@ import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.dialog.RenameDialog
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
 import com.cliffracertech.soundaura.minTouchTargetSize
+import com.cliffracertech.soundaura.model.Validator
 import com.cliffracertech.soundaura.model.database.Preset
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlinx.collections.immutable.ImmutableList
@@ -175,7 +176,7 @@ interface PresetListCallback {
     fun onProposedNameChange(newName: String)
     /** A function that will provide the error message to display for the proposed
      * name of the [Preset] being renamed, or null if the proposed name is valid */
-    val renameErrorMessageProvider: () -> String?
+    val renameErrorMessageProvider: () -> Validator.Message?
     /** The callback that will be invoked when the
      * rename option has been chosen for [preset] */
     fun onRenameStart(preset: Preset) {}
