@@ -5,7 +5,6 @@ package com.cliffracertech.soundaura
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
 import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -16,11 +15,10 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -29,18 +27,23 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.cliffracertech.soundaura.dialog.DialogButtonRow
 import com.cliffracertech.soundaura.dialog.RenameDialog
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
 import com.cliffracertech.soundaura.model.ActivePresetState
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.StringResource
+import com.cliffracertech.soundaura.model.Validator
+import com.cliffracertech.soundaura.model.database.Playlist
+import com.cliffracertech.soundaura.model.database.PlaylistDao
+import com.cliffracertech.soundaura.model.database.PlaylistNameValidator
 import com.cliffracertech.soundaura.model.database.PresetDao
 import com.cliffracertech.soundaura.model.database.PresetNameValidator
-import com.cliffracertech.soundaura.model.database.Track
-import com.cliffracertech.soundaura.model.database.TrackDao
+import com.cliffracertech.soundaura.model.database.TrackNamesValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -48,20 +51,19 @@ import javax.inject.Inject
 // The stored context object here is the application
 // context, and therefore does not present a problem.
 @HiltViewModel @SuppressLint("StaticFieldLeak")
-class AddTrackButtonViewModel(
-    @ApplicationContext
+class AddPlaylistButtonViewModel(
     private val context: Context,
-    private val trackDao: TrackDao,
+    private val playlistDao: PlaylistDao,
     private val messageHandler: MessageHandler,
-    coroutineScope: CoroutineScope? = null
+    private val coroutineScope: CoroutineScope? = null
 ) : ViewModel() {
 
     @Inject constructor(
         @ApplicationContext
         context: Context,
-        trackDao: TrackDao,
+        playlistDao: PlaylistDao,
         messageHandler: MessageHandler
-    ) : this(context, trackDao, messageHandler, null)
+    ) : this(context, playlistDao, messageHandler, null)
 
     private val scope = coroutineScope ?: viewModelScope
 
@@ -72,50 +74,85 @@ class AddTrackButtonViewModel(
 
     fun onDialogDismiss() { showingDialog = false }
 
-    fun onDialogConfirm(trackUris: List<Uri>, trackNames: List<String>) {
-        onDialogDismiss()
-        scope.launch {
-            val newTracks = List(trackUris.size) {
-                val name = trackNames.getOrNull(it) ?: ""
-                Track(trackUris[it].toString(), name)
-            }
-            val results = trackDao.insert(newTracks)
-            val insertedTracks = mutableListOf<Track>()
-            val failedTracks = mutableListOf<Track>()
-            results.forEachIndexed { index, insertedId ->
-                val track = newTracks[index]
-                if (insertedId >= 0)
-                    insertedTracks.add(track)
-                else failedTracks.add(track)
-            }
-            if (failedTracks.isNotEmpty())
-                messageHandler.postMessage(
-                    if (newTracks.size == 1)
-                        StringResource(R.string.track_already_exists_error_message)
-                    else StringResource(R.string.some_tracks_already_exist_error_message,
-                                        failedTracks.size))
+    private var onDialogConfirmJob: Job? = null
+
+    private var trackNamesValidator: TrackNamesValidator? = null
+    private var playlistNameValidator: PlaylistNameValidator? = null
+    val message by derivedStateOf {
+        trackNamesValidator?.message
+    }
+
+    var targetUris = emptyList<Uri>()
+    val targetUriNamesAndErrors get() = trackNamesValidator?.values ?: emptyList()
+
+    fun onAddAsIndividualTracksClick(uris: List<Uri>) {
+        assert(uris.isNotEmpty())
+        targetUris = uris
+        trackNamesValidator = TrackNamesValidator(
+            playlistDao, scope, uris.map{ it.getDisplayName(context) ?: ""})
+    }
+
+    fun onNewTrackNameChange(index: Int, newName: String) =
+        trackNamesValidator?.setValue(index, newName)
+
+    fun onAddTracksDialogConfirm() {
+        if (onDialogConfirmJob != null) return
+
+        onDialogConfirmJob = scope.launch {
+            val newTrackNames = trackNamesValidator?.validate()
+                ?: return@launch
 
             val persistedPermissionAllowance =
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) 128 else 512
-            var numPersistedPermissions = context.contentResolver.persistedUriPermissions.size
+            val persistedPermissionsCount = context.contentResolver.persistedUriPermissions.size
+            val remainingSpace = persistedPermissionAllowance - persistedPermissionsCount
 
-            failedTracks.clear()
-            insertedTracks.forEach { track ->
-                if (numPersistedPermissions < persistedPermissionAllowance) {
-                    val trackUri = Uri.parse(track.uriString)
-                    context.contentResolver.takePersistableUriPermission(
-                        trackUri, FLAG_GRANT_READ_URI_PERMISSION)
-                    numPersistedPermissions++
-                } else failedTracks.add(track)
+            val failureCount = newTrackNames.size - remainingSpace
+            messageHandler.postMessage(
+                StringResource(
+                    string = null,
+                    stringResId = R.string.cant_add_all_tracks_warning,
+                    args = arrayListOf(failureCount, persistedPermissionAllowance)))
+
+            if (remainingSpace > 0) {
+                val newPlaylistsAndContents = newTrackNames
+                    .subList(0, remainingSpace - 1)
+                    .map(::Playlist).withIndex()
+                    .associate { it.value to listOf(targetUris[it.index]) }
+                playlistDao.insert(newPlaylistsAndContents)
             }
-            if (failedTracks.isNotEmpty()) {
-                messageHandler.postMessage(
-                    StringResource(
-                        string = null,
-                        stringResId = R.string.over_file_permission_limit_warning,
-                        args = arrayListOf(failedTracks.size, persistedPermissionAllowance)))
-                trackDao.delete(failedTracks.map(Track::uriString::get))
-            }
+            onDialogDismiss()
+        }
+    }
+
+    fun onAddAsPlaylistClick(uris: List<Uri>) {
+        assert(uris.isNotEmpty())
+        targetUris = uris
+        playlistNameValidator = PlaylistNameValidator(
+            playlistDao, "${uris.first().getDisplayName(context)} playlist")
+    }
+
+    fun onNewPlaylistNameChange(newName: String) {
+        playlistNameValidator?.value = newName
+    }
+
+    fun onAddPlaylistDialogConfirm() {
+        if (onDialogConfirmJob != null) return
+
+        onDialogConfirmJob = scope.launch {
+            val newPlaylistName = playlistNameValidator?.validate()
+                ?: return@launch
+
+            val persistedPermissionAllowance =
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) 128 else 512
+            val persistedPermissionsCount = context.contentResolver.persistedUriPermissions.size
+            val remainingSpace = persistedPermissionAllowance - persistedPermissionsCount
+
+            if (remainingSpace < targetUris.size)
+                messageHandler.postMessage(StringResource(
+                    R.string.cant_add_playlist_warning, persistedPermissionAllowance))
+            else playlistDao.insert(mapOf(Playlist(newPlaylistName) to targetUris))
+            onDialogDismiss()
         }
     }
 }
@@ -173,11 +210,11 @@ class AddTrackButtonViewModel(
 }
 
 /** An enum class whose values describe the entities that can be added by the [AddButton]. */
-enum class AddButtonTarget { Track, Preset }
+enum class AddButtonTarget { Playlist, Preset }
 
 /**
  * A button to add local files or presets, with state provided by instances
- * of [AddTrackButtonViewModel] and [AddPresetButtonViewModel].
+ * of [AddPlaylistButtonViewModel] and [AddPresetButtonViewModel].
  *
  * @param target The [AddButtonTarget] that should be added when the button is clicked
  * @param backgroundColor The color to use for the button's background
@@ -188,13 +225,13 @@ enum class AddButtonTarget { Track, Preset }
     backgroundColor: Color,
     modifier: Modifier = Modifier,
 ) {
-    val addTrackViewModel: AddTrackButtonViewModel = viewModel()
+    val addPlaylistViewModel: AddPlaylistButtonViewModel = viewModel()
     val addPresetViewModel: AddPresetButtonViewModel = viewModel()
 
     FloatingActionButton(
         onClick = { when(target) {
-            AddButtonTarget.Track -> addTrackViewModel.onClick()
-            AddButtonTarget.Preset -> addPresetViewModel.onClick()
+            AddButtonTarget.Playlist -> addPlaylistViewModel.onClick()
+            AddButtonTarget.Preset ->   addPresetViewModel.onClick()
         }},
         modifier = modifier,
         backgroundColor = backgroundColor,
@@ -202,21 +239,15 @@ enum class AddButtonTarget { Track, Preset }
     ) {
         Icon(imageVector = Icons.Default.Add,
             contentDescription = stringResource(when(target) {
-                AddButtonTarget.Track -> R.string.add_track_button_description
-                AddButtonTarget.Preset -> R.string.add_preset_button_description
+                AddButtonTarget.Playlist -> R.string.add_local_files_button_description
+                AddButtonTarget.Preset ->   R.string.add_preset_button_description
             }),
             tint = MaterialTheme.colors.onPrimary)
     }
 
-    if (addTrackViewModel.showingDialog)
-        AddTracksFromLocalFilesDialog(
-            onDismissRequest = addTrackViewModel::onDialogDismiss,
-            onConfirmRequest = addTrackViewModel::onDialogConfirm)
+    if (addPlaylistViewModel.showingDialog)
+        AddLocalFilesDialog(addPlaylistViewModel::onDialogDismiss)
 
-    val context = LocalContext.current
-    val nameValidatorMessage = remember { derivedStateOf {
-        addPresetViewModel.newPresetNameValidatorMessage?.resolve(context)
-    }}
     if (addPresetViewModel.showingAddPresetDialog)
         RenameDialog(
             title = stringResource(R.string.create_new_preset_dialog_title),
@@ -239,17 +270,10 @@ enum class AddButtonTarget { Track, Preset }
  *     The first parameter is the list of [Uri]s representing the files to add,
  *     while the second parameter is the list of names for each of these uris.
  */
-@Composable fun AddTracksFromLocalFilesDialog(
-    onDismissRequest: () -> Unit,
-    onConfirmRequest: (List<Uri>, List<String>) -> Unit,
-) {
+@Composable fun AddLocalFilesDialog(onDismissRequest: () -> Unit) {
     val context = LocalContext.current
+    val vm = viewModel<AddPlaylistButtonViewModel>()
     var chosenUris by rememberSaveable { mutableStateOf<List<Uri>?>(null) }
-    val trackNames = rememberSaveable<SnapshotStateList<String>>(
-        saver = listSaver(
-            save = { it },
-            restore = { it.toMutableStateList() }),
-        init = { mutableStateListOf() })
 
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
@@ -257,30 +281,104 @@ enum class AddButtonTarget { Track, Preset }
         if (uris.isEmpty())
             onDismissRequest()
         chosenUris = uris
-        trackNames.clear()
-        for (uri in uris)
-            trackNames.add(uri.getDisplayName(context) ?: "")
     }
 
-    if (chosenUris == null)
+    val uris = chosenUris
+    if (uris == null)
         LaunchedEffect(Unit) { launcher.launch(arrayOf("audio/*", "application/ogg")) }
-    else SoundAuraDialog(
-        modifier = Modifier.restrictWidthAccordingToSizeClass(),
-        useDefaultWidth = false,
-        title = stringResource(R.string.add_local_files_dialog_title),
-        onDismissRequest = onDismissRequest,
-        confirmButtonEnabled = chosenUris != null &&
-                               !trackNames.containsBlanks,
-        onConfirm = {
-            val uris = chosenUris ?: return@SoundAuraDialog
-            onConfirmRequest(uris, trackNames)
-        }, content = {
-            // Editor uses a LazyColumn internally. To prevent a crash
-            // due to nested LazyColumn we have to restrict its height.
-            trackNames.Editor(Modifier
-                .padding(horizontal = 16.dp)
-                .heightIn(max = LocalConfiguration.current.screenHeightDp.dp))
-        })
+    else {
+        var addingUrisAsPlaylist by rememberSaveable {
+            // false means the uris are being added as individual tracks
+            // null means the user has not chosen yet
+            // If there is only one Uri, we default to false (an
+            // individual track) to skip the user needing to choose
+            mutableStateOf(if (uris.size == 1) false else null)
+        }
+        SoundAuraDialog(
+            modifier = Modifier.restrictWidthAccordingToSizeClass(),
+            useDefaultWidth = false,
+            title = when (addingUrisAsPlaylist) {
+                null -> stringResource(R.string.add_local_files_dialog_title)
+                false -> stringResource(R.string.add_local_files_as_tracks_dialog_title)
+                true -> stringResource(R.string.configure_playlist_dialog_title)
+            }, onDismissRequest = onDismissRequest,
+            buttons = {
+                if (addingUrisAsPlaylist == null)
+                    Column {
+                        HorizontalDivider(Modifier.padding(top = 12.dp))
+                        TextButton(
+                            onClick = {
+                                addingUrisAsPlaylist = false
+                                vm.onAddAsIndividualTracksClick(uris)
+                            }, modifier = Modifier.minTouchTargetSize(),
+                            shape = RectangleShape,
+                        ) { Text(stringResource(R.string.add_local_files_as_tracks_option)) }
+
+                        HorizontalDivider()
+                        TextButton(
+                            onClick = {
+                                addingUrisAsPlaylist = true
+                                vm.onAddAsPlaylistClick(uris)
+                            }, modifier = Modifier.minTouchTargetSize(),
+                            shape = RectangleShape,
+                        ) { Text(stringResource(R.string.add_local_files_as_playlist_option)) }
+
+                        HorizontalDivider()
+                        TextButton(
+                            onClick = onDismissRequest,
+                            modifier = Modifier.minTouchTargetSize(),
+                            shape = MaterialTheme.shapes.medium.bottomShape(),
+                        ) { Text(stringResource(R.string.cancel)) }
+                    }
+                else DialogButtonRow(
+                    onCancel = { addingUrisAsPlaylist = null },
+                    confirmButtonEnabled = vm.message !is Validator.Message.Error,
+                    onConfirm = { when (addingUrisAsPlaylist) {
+                        true -> vm.onAddPlaylistDialogConfirm()
+                        false -> vm.onAddTracksDialogConfirm()
+                        else -> {}
+                    }})
+            }
+        ) {
+            SlideAnimatedContent(
+                targetState = addingUrisAsPlaylist,
+                leftToRight = addingUrisAsPlaylist != null,
+            ) { addingUrisAsPlaylist ->
+                when (addingUrisAsPlaylist) {
+                    null -> {
+                        Text(stringResource(R.string.add_local_files_as_playlist_or_tracks_question))
+                    } false -> {
+                        // To prevent a crash due to nested LazyColumns we have to restrict its height
+                        LazyColumn(
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .heightIn(max = LocalConfiguration.current.screenHeightDp.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            content = {
+                                items(vm.targetUriNamesAndErrors.size) { index ->
+                                    val value = vm.targetUriNamesAndErrors.getOrNull(index)
+                                    TextField(
+                                        value = value?.first ?: "",
+                                        onValueChange = { vm.onNewTrackNameChange(index, it) },
+                                        textStyle = MaterialTheme.typography.body1,
+                                        singleLine = true,
+                                        isError = value?.second ?: false,
+                                        modifier = Modifier.fillMaxWidth())
+                            }})
+                    } true -> {
+                        val value = vm.targetUriNamesAndErrors.first()
+                        TextField(
+                            value = value.first,
+                            onValueChange = vm::onNewPlaylistNameChange,
+                            textStyle = MaterialTheme.typography.body1,
+                            singleLine = true,
+                            isError = vm.message?.isError == true,
+                            modifier = Modifier.fillMaxWidth())
+                    }
+                }
+            }
+        }
+    }
 }
 
 /** Return a suitable display name for a file [Uri] (i.e. the file name minus
@@ -292,20 +390,4 @@ fun Uri.getDisplayName(context: Context) =
 
 /** Return whether the list contains any strings that are blank
  * (i.e. are either empty or consist of only whitespace characters). */
-val List<String>.containsBlanks get() = find { it.isBlank() } != null
-
-/** Compose a LazyColumn of TextFields to edit the
- * strings of the the receiver MutableList<NewTrack>. */
-@Composable private fun MutableList<String>.Editor(
-    modifier: Modifier = Modifier
-) = LazyColumn(
-    modifier = modifier,
-    verticalArrangement = Arrangement.spacedBy(8.dp),
-    content = { items(size) { index ->
-        TextField(
-            value = get(index),
-            onValueChange = { this@Editor[index] = it },
-            textStyle = MaterialTheme.typography.body1,
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth())
-    }})
+fun List<String>.containsBlanks() = find { it.isBlank() } != null

@@ -31,24 +31,39 @@
 
     <string name="rename">Rename</string>
     <string name="default_rename_dialog_title">Enter new name</string>
-    <string name="track_name_cannot_be_blank_error_message">The track\'s name cannot be blank.</string>
+    <string name="track_name_cannot_be_blank_error_message">The track\'s name cannot be blank</string>
 
     <string name="remove">Remove</string>
     <string name="confirm_remove_title">Remove %1$s?</string>
     <string name="confirm_remove_message">This will remove the track from your library
         and any presets it is a part of, but will not delete the file from your device.</string>
 
-    <string name="add_track_button_description">Add track</string>
-    <string name="add_local_files_dialog_title">Confirm track name(s)</string>
-    <string name="track_already_exists_error_message">
-        This file is already in the library.</string>
+    <string name="add_local_files_button_description">Add tracks or playlists from local files</string>
+    <string name="add_local_files_dialog_title">Confirm added file(s)</string>
+    <string name="add_local_files_as_playlist_or_tracks_question">
+        Would you like to add the files as individual tracks, or as a playlist?</string>
+    <string name="add_local_files_as_tracks_option">Individual tracks</string>
+    <string name="add_local_files_as_playlist_option">Playlist</string>
+    <string name="add_local_files_as_tracks_dialog_title">Confirm track name(s)</string>
+
+    <string name="add_multiple_tracks_name_error_message">The tracks must have unique, non-blank names</string>
+    <string name="add_playlist_duplicate_name_error_message">The name is already in use</string>
+    <string name="add_playlist_blank_name_error_message">The name must not be blank</string>
+
+    <string name="track_or_playlist_already_exists_error_message">
+        This track is already in the library.</string>
     <string name="some_tracks_already_exist_error_message">
-        %1$d of the selected files were already in the library.</string>
-    <string name="over_file_permission_limit_warning">
+        %1$d of the selected tracks were already in the library.</string>
+    <string name="cant_add_all_tracks_warning">
         %1$d files could not be added because the app is at
         Android\'s file permission limit of %2$d. You must
-        remove some tracks in order to add any more.
-    </string>
+        remove some tracks or playlists in order to add any more.</string>
+    <string name="cant_add_playlist_warning">
+        The playlist could not be added because the app is at
+        Android\'s file permission limit of %2$d. You must
+        remove some tracks or playlists in order to add any more.</string>
+
+    <string name="configure_playlist_dialog_title">Configure playlist options</string>
 
     <string name="preset_button_click_label">Change active preset</string>
     <string name="unsaved_preset_description">Unsaved preset</string>
@@ -76,7 +91,8 @@
 
     <string name="overwrite">Overwrite</string>
     <string name="overwrite_no_active_tracks_error_message">
-        Presets must have at least one active track. Tap a track\'s add button first.</string>
+        Presets must have at least one active track or playlist.
+        Tap a track or playlist\'s add button first.</string>
     <string name="confirm_overwrite_preset_dialog_title">Confirm overwrite preset</string>
     <string name="confirm_overwrite_preset_dialog_message">
         This will overwrite the preset %1$s. Are you sure?</string>

@@ -371,7 +371,7 @@ class MainActivity : ComponentActivity() {
             AddButton(
                 target = if (showingPresetSelector)
                              AddButtonTarget.Preset
-                         else AddButtonTarget.Track,
+                         else AddButtonTarget.Playlist,
                 backgroundColor = MaterialTheme.colors.secondaryVariant)
         }
     }
