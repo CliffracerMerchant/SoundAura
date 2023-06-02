@@ -21,7 +21,6 @@ import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
@@ -41,11 +40,11 @@ import com.cliffracertech.soundaura.model.ActivePresetState
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.NavigationState
 import com.cliffracertech.soundaura.model.StringResource
-import com.cliffracertech.soundaura.model.database.ActiveTrack
+import com.cliffracertech.soundaura.model.database.Playlist
+import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.Preset
 import com.cliffracertech.soundaura.model.database.PresetDao
 import com.cliffracertech.soundaura.model.database.PresetNameValidator
-import com.cliffracertech.soundaura.model.database.TrackDao
 import com.cliffracertech.soundaura.preferenceState
 import com.cliffracertech.soundaura.settings.PrefKeys
 import com.cliffracertech.soundaura.tweenDuration
@@ -65,7 +64,7 @@ class MediaControllerViewModel(
     private val activePresetState: ActivePresetState,
     private val messageHandler: MessageHandler,
     private val dataStore: DataStore<Preferences>,
-    trackDao: TrackDao,
+    playlistDao: PlaylistDao,
     coroutineScope: CoroutineScope?
 ) : ViewModel() {
 
@@ -75,9 +74,9 @@ class MediaControllerViewModel(
         activePresetState: ActivePresetState,
         messageHandler: MessageHandler,
         dataStore: DataStore<Preferences>,
-        trackDao: TrackDao,
+        playlistDao: PlaylistDao,
     ) : this(dao, navigationState, activePresetState,
-             messageHandler, dataStore, trackDao, null)
+             messageHandler, dataStore, playlistDao, null)
 
     private val scope = coroutineScope ?: viewModelScope
 
@@ -95,7 +94,7 @@ class MediaControllerViewModel(
         dataStore.preferenceState(playButtonLongClickHintShownKey, false, scope)
 
     fun onPlayButtonClick() {
-        if (playButtonLongClickHintShown || activeTracksIsEmpty)
+        if (playButtonLongClickHintShown || activePlaylistsIsEmpty)
             return // We don't want to show the hint if there are no active tracks
                    // because the PlayerService should show a message about there
                    // being no active tracks
@@ -117,42 +116,43 @@ class MediaControllerViewModel(
     }
 
     private val nameValidator = PresetNameValidator(presetDao)
-    val renameDialogTarget get() = nameValidator.target
-    val proposedPresetName by nameValidator.proposedName.collectAsState(null, scope)
-    val proposedPresetNameErrorMessage by nameValidator.errorMessage.collectAsState(null, scope)
+    var renameDialogTarget by mutableStateOf<Preset?>(null)
+        private set
+    val proposedPresetName by nameValidator::value
+    val proposedPresetNameMessage by nameValidator.message.collectAsState(null, scope)
 
-    fun onPresetRenameClick(preset: Preset) { nameValidator.target = preset }
+    fun onPresetRenameClick(preset: Preset) { renameDialogTarget = preset }
 
     fun onPresetRenameCancel() {
-        nameValidator.target = null
-        nameValidator.clearProposedName()
+        renameDialogTarget = null
+        nameValidator.clear()
     }
 
-    fun onProposedPresetNameChange(newName: String) =
-        nameValidator.setProposedName(newName)
+    fun onProposedPresetNameChange(newName: String) {
+        nameValidator.value = newName
+    }
 
     fun onPresetRenameConfirm() {
         val preset = renameDialogTarget ?: return
         scope.launch {
-            val name = proposedPresetName ?: preset.name
-            if (nameValidator.onNameConfirm(name)) {
-                if (name != nameValidator.target?.name)
-                    presetDao.renamePreset(preset.name, name)
-                nameValidator.target = null
-                if (preset.isActive)
-                    activePresetState.setName(name)
-            }
+            val name = nameValidator.validate()
+                ?: return@launch
+            if (name != renameDialogTarget?.name)
+                presetDao.renamePreset(preset.name, name)
+            renameDialogTarget = null
+            if (preset.isActive)
+                activePresetState.setName(name)
         }
     }
 
-    private val activeTracksIsEmpty by trackDao.getActiveTracks()
-        .map(List<ActiveTrack>::isEmpty)
+    private val activePlaylistsIsEmpty by playlistDao.getActivePlaylists()
+        .map(List<Playlist>::isEmpty)
         .collectAsState(true, scope)
 
     private fun onPresetOverwriteRequest(presetName: String) {
         val isActive = presetName == activePresetName
         when {
-            activeTracksIsEmpty ->
+            activePlaylistsIsEmpty ->
                 messageHandler.postMessage(StringResource(
                     R.string.overwrite_no_active_tracks_error_message))
             isActive && !activePresetIsModified -> {
@@ -230,8 +230,6 @@ class MediaControllerViewModel(
     onCancelStopTimerRequest: () -> Unit,
 ) {
     val viewModel: MediaControllerViewModel = viewModel()
-    val context = LocalContext.current
-
     var showingSetStopTimerDialog by rememberSaveable { mutableStateOf(false) }
     var showingCancelStopTimerDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -241,14 +239,11 @@ class MediaControllerViewModel(
         Brush.horizontalGradient(colors = listOf(startColor, endColor))
     }
 
-    val renameErrorMessage = remember { derivedStateOf {
-        viewModel.proposedPresetNameErrorMessage?.resolve(context)
-    }}
     val presetListCallback = remember { object: PresetListCallback {
         override val listProvider = viewModel::presetList::get
         override val renameTargetProvider = viewModel::renameDialogTarget::get
         override val proposedNameProvider = viewModel::proposedPresetName::get
-        override val renameErrorMessageProvider = renameErrorMessage::value::get
+        override val renameErrorMessageProvider = viewModel::proposedPresetNameMessage::get
         override fun onProposedNameChange(newName: String) = viewModel.onProposedPresetNameChange(newName)
         override fun onRenameStart(preset: Preset) = viewModel.onPresetRenameClick(preset)
         override fun onRenameCancel() = viewModel.onPresetRenameCancel()
