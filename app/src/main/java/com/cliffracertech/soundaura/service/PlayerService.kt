@@ -28,7 +28,6 @@ import androidx.media.AudioManagerCompat.AUDIOFOCUS_GAIN
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.StringResource
-import com.cliffracertech.soundaura.model.database.Playlist
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.preferenceFlow
 import com.cliffracertech.soundaura.repeatWhenStarted
@@ -42,6 +41,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -106,8 +106,8 @@ class PlayerService: LifecycleService() {
     private var stopTime by mutableStateOf<Instant?>(null)
 
     private val playerMap = PlayerMap(this) { playlistName, problemUris ->
-        lifecycleScope.launch {
-            playlistDao.removeTracksFromPlaylist(playlistName, problemUris)
+        /* onPlayerCreationFailure = */lifecycleScope.launch {
+            playlistDao.setPlaylistTrackHasError(playlistName, problemUris)
         }
     }
 
@@ -188,7 +188,8 @@ class PlayerService: LifecycleService() {
                 .onEach { stopInsteadOfPause = it }
                 .launchIn(this)
 
-            playlistDao.getActivePlaylists()
+            playlistDao.getActivePlaylistsAndContents()
+                .map{ it.map(::Playlist) }
                 .onEach(::updatePlayers)
                 .launchIn(this)
         }

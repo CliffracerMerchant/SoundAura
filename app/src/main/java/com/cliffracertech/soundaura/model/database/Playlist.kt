@@ -213,6 +213,25 @@ data class Playlist(
     /** Set the [Playlist.volume] field of the [Playlist] identified by [name]. */
     @Query("UPDATE playlist SET volume = :volume WHERE name = :name")
     abstract suspend fun setVolume(name: String, volume: Float)
+
+    @Query("UPDATE track SET hasError = 1 WHERE uri in (:uris)")
+    protected abstract suspend fun setTracksHaveError(uris: List<Uri>)
+
+    @Query("SELECT NOT EXISTS(SELECT playlistName FROM playlistTrack " +
+                             "JOIN track ON playlistTrack.trackUri = track.uri " +
+                             "WHERE playlistName = :playlistName AND " +
+                                   "track.hasError = 0 LIMIT 1)")
+    protected abstract suspend fun playlistHasNoValidTracks(playlistName: String): Boolean
+
+    @Query("UPDATE playlist SET hasError = 1 WHERE name = :playlistName")
+    protected abstract suspend fun setPlaylistHasError(playlistName: String)
+
+    @Transaction
+    open suspend fun setPlaylistTrackHasError(playlistName: String, trackUris: List<Uri>) {
+        setTracksHaveError(trackUris)
+        if (playlistHasNoValidTracks(playlistName))
+            setPlaylistHasError(playlistName)
+    }
 }
 
 class TrackNamesValidator(

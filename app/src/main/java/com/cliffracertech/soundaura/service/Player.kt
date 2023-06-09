@@ -6,7 +6,16 @@ package com.cliffracertech.soundaura.service
 import android.content.Context
 import android.media.MediaPlayer
 import android.net.Uri
-import com.cliffracertech.soundaura.model.database.Playlist
+
+data class Playlist(
+    val name: String,
+    val shuffle: Boolean,
+    val volume: Float,
+    val tracks: List<Uri>
+) {
+    constructor(mapEntry: Map.Entry<com.cliffracertech.soundaura.model.database.Playlist, List<Uri>>) :
+        this(mapEntry.key.name, mapEntry.key.shuffle, mapEntry.key.volume, mapEntry.value)
+}
 
 /**
  * A [MediaPlayer] wrapper that allows for seamless looping of the provided
@@ -40,8 +49,8 @@ class Player(
     private val onPlaybackFailure: (List<Uri>) -> Unit,
 ) {
     private val uris = playlist.run {
-            if (shuffleEnabled) tracks.shuffled()
-            else                tracks
+            if (shuffle) tracks.shuffled()
+            else         tracks
         }.toMutableList()
     private var currentIndex = 0
 
