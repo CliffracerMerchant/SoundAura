@@ -22,7 +22,7 @@ import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.collectAsState
 import com.cliffracertech.soundaura.edit
 import com.cliffracertech.soundaura.enumPreferenceState
-import com.cliffracertech.soundaura.model.database.Track
+import com.cliffracertech.soundaura.model.database.Playlist
 import com.cliffracertech.soundaura.preferenceFlow
 import com.cliffracertech.soundaura.preferenceState
 import com.cliffracertech.soundaura.service.PlayerService
@@ -47,14 +47,15 @@ class PreferencesModule {
 }
 
 object PrefKeys {
-    /** A boolean value that indicates whether the list of tracks should
-     * be sorted by tracks' active states (with active tracks appearing
-     * before inactive ones) before being sorted by another sorting method. */
-    const val showActiveTracksFirst = "show_active_tracks_first"
+    /** A boolean value that indicates whether the list of tracks/playlists
+     * should be sorted by their active states (with active tracks/playlists
+     * appearing before inactive ones) before being sorted by another
+     * sorting method. */
+    const val showActivePlaylistsFirst = "show_active_tracks_first"
 
-    /** An int value that represents the ordinal of the desired [Track.Sort]
-     * enum value to use for sorting tracks in the main activity. */
-    const val trackSort = "track_sort"
+    /** An int value that represents the ordinal of the desired [Playlist.Sort]
+     * enum value to use for sorting tracks/playlists in the main activity. */
+    const val playlistSort = "track_sort"
 
     /** A [String] value that represents the name of the currently active preset. */
     const val activePresetName = "active_preset_name"
@@ -101,8 +102,8 @@ object PrefKeys {
      * documentation for descriptions of each value. */
     const val onZeroVolumeAudioDeviceBehavior = "on_zero_volume_audio_device_behavior"
 
-    /** A boolean value that indicates whether tracks will be stopped instead
-     * of paused when the pause button is clicked. */
+    /** A boolean value that indicates whether tracks/playlists will
+     * be stopped instead of paused when the pause button is clicked. */
     const val stopInsteadOfPause = "stop_instead_of_pause"
 
     /** A boolean value that indicates whether the user has been shown the long
