@@ -4,9 +4,13 @@
 package com.cliffracertech.soundaura.mediacontroller
 
 import android.util.Range
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,8 +19,13 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.SnackbarDuration
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -40,7 +49,6 @@ import com.cliffracertech.soundaura.model.ActivePresetState
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.NavigationState
 import com.cliffracertech.soundaura.model.StringResource
-import com.cliffracertech.soundaura.model.database.Playlist
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.Preset
 import com.cliffracertech.soundaura.model.database.PresetDao
@@ -145,8 +153,8 @@ class MediaControllerViewModel(
         }
     }
 
-    private val activePlaylistsIsEmpty by playlistDao.getActivePlaylists()
-        .map(List<Playlist>::isEmpty)
+    private val activePlaylistsIsEmpty by playlistDao
+        .getAtLeastOnePlaylistIsActive()
         .collectAsState(true, scope)
 
     private fun onPresetOverwriteRequest(presetName: String) {
