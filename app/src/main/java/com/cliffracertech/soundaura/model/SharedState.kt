@@ -18,6 +18,7 @@ import com.cliffracertech.soundaura.settings.PrefKeys
 import dagger.hilt.android.scopes.ActivityRetainedScoped
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformLatest
@@ -46,7 +47,7 @@ class NavigationState @Inject constructor() {
 // used to compare the current (possibly unsaved) preset with the active
 // preset to determine whether or not the active preset is modified, and
 // the preset's name is irrelevant in this use case.
-class PresetPlaylist(
+data class PresetPlaylist(
     val name: String,
     val volume: Float)
 
@@ -78,16 +79,19 @@ class ActivePresetState @Inject constructor(
             .map(List<PresetPlaylist>::toHashSet)
 
     private val presetPlaylists = name.transformLatest {
-        if (it == null) emptyList<PresetPlaylist>()
-        else emitAll(presetDao.getPresetPlaylists(it))
-    }.map { it.toHashSet() }
+            if (it == null) emptyList<PresetPlaylist>()
+            else emitAll(presetDao.getPresetPlaylists(it))
+        }.map { it.toHashSet() }
 
-    /** A [Flow]`<Boolean>` whose latest value represents whether or not the
-     * active preset is modified. */
+    /** A [Flow]`<Boolean>` whose latest value represents
+     * whether or not the active preset is modified. */
     val isModified = combine(allActivePlaylists, presetPlaylists) { activePlaylists, presetPlaylists ->
-        if (presetPlaylists.isEmpty()) false
-        else activePlaylists != presetPlaylists
-    }
+            if (presetPlaylists.isEmpty()) false
+            else activePlaylists != presetPlaylists
+        }.debounce(200) // This debounce prevents isModified from temporarily
+                        // being true when switching to a new preset, before
+                        // activePlaylists has had a chance to update
+        // TODO: Figure out a more elegant way to do this
 
     /** Set the active preset to the one whose name matches [name]. */
     suspend fun setName(name: String) {
