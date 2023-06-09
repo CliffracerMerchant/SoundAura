@@ -178,7 +178,7 @@ data class Playlist(
     @MapInfo(valueColumn = "trackUri")
     @Query("SELECT * FROM playlist " +
            "JOIN playlistTrack ON playlist.name = playlistTrack.playlistName " +
-           "ORDER by playlistOrder")
+           "WHERE isActive ORDER by playlistOrder")
     abstract fun getActivePlaylistsAndContents(): Flow<Map<Playlist, List<Uri>>>
 
     /** Return a [Flow] that updates with the latest [List] of

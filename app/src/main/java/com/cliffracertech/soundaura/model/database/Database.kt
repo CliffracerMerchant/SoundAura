@@ -5,6 +5,7 @@ package com.cliffracertech.soundaura.model.database
 
 import android.content.ContentValues
 import android.content.Context
+import android.util.Log
 import androidx.room.*
 import androidx.room.migration.Migration
 import com.cliffracertech.soundaura.model.database.SoundAuraDatabase.Companion.addAllMigrations
@@ -32,20 +33,17 @@ abstract class SoundAuraDatabase : RoomDatabase() {
         private val migration1to2 = Migration(1,2) { db ->
             db.execSQL("PRAGMA foreign_keys=off")
             db.execSQL("BEGIN TRANSACTION")
-            try {
-                db.execSQL("""CREATE TABLE temp_table (
-                    `uriString` TEXT NOT NULL PRIMARY KEY,
-                    `name` TEXT NOT NULL,
-                    `isActive` INTEGER NOT NULL DEFAULT 0,
-                    `volume` REAL NOT NULL DEFAULT 1.0)""")
-                db.execSQL("""INSERT INTO temp_table (uriString, name, isActive, volume)
-                              SELECT uriString, name, playing, volume FROM track;""")
-                db.execSQL("DROP TABLE track;")
-                db.execSQL("ALTER TABLE temp_table RENAME TO track;")
-            } finally {
-                db.execSQL("COMMIT;")
-                db.execSQL("PRAGMA foreign_keys=on;")
-            }
+            db.execSQL("""CREATE TABLE temp_table (
+                `uriString` TEXT NOT NULL PRIMARY KEY,
+                `name` TEXT NOT NULL,
+                `isActive` INTEGER NOT NULL DEFAULT 0,
+                `volume` REAL NOT NULL DEFAULT 1.0)""")
+            db.execSQL("""INSERT INTO temp_table (uriString, name, isActive, volume)
+                          SELECT uriString, name, playing, volume FROM track;""")
+            db.execSQL("DROP TABLE track;")
+            db.execSQL("ALTER TABLE temp_table RENAME TO track;")
+            db.execSQL("COMMIT;")
+            db.execSQL("PRAGMA foreign_keys=on;")
         }
 
         private val migration2to3 = Migration(2,3) { db ->
@@ -64,88 +62,84 @@ abstract class SoundAuraDatabase : RoomDatabase() {
         }
 
         private val migration4to5 = Migration(4,5) { db ->
+            Log.d("SoundAuraTag", "running 4 to 5 db migration")
             db.execSQL("PRAGMA foreign_keys=off")
-            db.beginTransaction()
-            try {
-                db.execSQL("CREATE TABLE temp_track (`uri` TEXT NOT NULL PRIMARY KEY, " +
-                                                    "`hasError` INTEGER NOT NULL DEFAULT 0)")
-                db.execSQL("INSERT INTO temp_track (uri, hasError) " +
-                           "SELECT uriString, hasError FROM track")
+            db.execSQL("CREATE TABLE temp_track (`uri` TEXT NOT NULL PRIMARY KEY, " +
+                                                "`hasError` INTEGER NOT NULL DEFAULT 0)")
+            db.execSQL("INSERT INTO temp_track (uri, hasError) " +
+                       "SELECT uriString, hasError FROM track")
 
-                db.execSQL("""CREATE TABLE playlist (
-                        `name` TEXT NOT NULL PRIMARY KEY,
-                        `shuffle` INTEGER NOT NULL DEFAULT 0,
-                        `isActive` INTEGER NOT NULL DEFAULT 0,
-                        `volume` REAL NOT NULL DEFAULT 1.0,
-                        `hasError` INTEGER NOT NULL DEFAULT 0)""")
+            db.execSQL("""CREATE TABLE playlist (
+                    `name` TEXT NOT NULL PRIMARY KEY,
+                    `shuffle` INTEGER NOT NULL DEFAULT 0,
+                    `isActive` INTEGER NOT NULL DEFAULT 0,
+                    `volume` REAL NOT NULL DEFAULT 1.0,
+                    `hasError` INTEGER NOT NULL DEFAULT 0)""")
 
-                db.execSQL("""CREATE TABLE playlistTrack (
-                       `playlistName` TEXT NOT NULL,
-                       `trackUri` TEXT NOT NULL,
-                       `playlistOrder` INTEGER NOT NULL,
-                   PRIMARY KEY (playlistName, trackUri),
-                   FOREIGN KEY (`playlistName`) REFERENCES `playlist`(`name`) ON UPDATE CASCADE ON DELETE CASCADE,
-                   FOREIGN KEY (`trackUri`) REFERENCES `track`(`uri`) ON UPDATE CASCADE ON DELETE CASCADE)""")
+            db.execSQL("""CREATE TABLE playlistTrack (
+                   `playlistName` TEXT NOT NULL,
+                   `trackUri` TEXT NOT NULL,
+                   `playlistOrder` INTEGER NOT NULL,
+               PRIMARY KEY (playlistName, trackUri),
+               FOREIGN KEY (`playlistName`) REFERENCES `playlist`(`name`) ON UPDATE CASCADE ON DELETE CASCADE,
+               FOREIGN KEY (`trackUri`) REFERENCES `track`(`uri`) ON UPDATE CASCADE ON DELETE CASCADE)""")
 
-                // Since the name field was previously not unique,
-                // we need to append non unique names with a number
-                val playlists: List<ContentValues>
-                val playlistTracks: List<ContentValues>
-                db.query("SELECT uriString, name, isActive, volume, hasError FROM track").use { cursor ->
-                    val usedNames = mutableSetOf<String>()
-                    playlists = List(cursor.count) {
-                        cursor.moveToPosition(it)
+            // Since the name field was previously not unique,
+            // we need to append non unique names with a number
+            val playlists: List<ContentValues>
+            val playlistTracks: List<ContentValues>
+            db.query("SELECT uriString, name, isActive, volume, hasError FROM track").use { cursor ->
+                val usedNames = mutableSetOf<String>()
+                playlists = List(cursor.count) {
+                    cursor.moveToPosition(it)
 
-                        val name = cursor.getString(1)
-                        val newName = if (name !in usedNames) name else {
-                            var counter = 2
-                            while ("$name $counter" in usedNames)
-                                counter++
-                            "$name $counter"
-                        }
-                        usedNames.add(newName)
-
-                        ContentValues(4).apply {
-                            put("name", newName)
-                            put("isActive", cursor.getInt(2))
-                            put("volume", cursor.getFloat(3))
-                            put("hasError", cursor.getInt(4))
-                        }
+                    val name = cursor.getString(1)
+                    val newName = if (name !in usedNames) name else {
+                        var counter = 2
+                        while ("$name $counter" in usedNames)
+                            counter++
+                        "$name $counter"
                     }
-                    playlistTracks = List(cursor.count) {
-                        cursor.moveToPosition(it)
-                        ContentValues(3).apply {
-                            put("playlistName", playlists[it].getAsString(("name")))
-                            put("trackUri", cursor.getString(0))
-                            put("playlistOrder", "0")
-                        }
+                    usedNames.add(newName)
+
+                    ContentValues(4).apply {
+                        put("name", newName)
+                        put("isActive", cursor.getInt(2))
+                        put("volume", cursor.getFloat(3))
+                        put("hasError", cursor.getInt(4))
                     }
                 }
-                for (playlist in playlists)
-                    db.insert("playlist", OnConflictStrategy.NONE, playlist)
-                for (playlistTrack in playlistTracks)
-                    db.insert("playlistTrack", OnConflictStrategy.NONE, playlistTrack)
-
-                db.execSQL(
-                    """CREATE TABLE presetPlaylist (
-                        `presetName` TEXT NOT NULL,
-                        `playlistName` TEXT NOT NULL,
-                        `playlistVolume` REAL NOT NULL,
-                    PRIMARY KEY (presetName, playlistName),
-                    FOREIGN KEY(`presetName`) REFERENCES `preset`(`name`) ON UPDATE CASCADE ON DELETE CASCADE,
-                    FOREIGN KEY(`playlistName`) REFERENCES `playlist`(`name`) ON UPDATE CASCADE ON DELETE CASCADE)""")
-                val trackNameSelector = "(SELECT name FROM track " +
-                                         "WHERE uriString = presetTrack.trackUriString LIMIT 1)"
-                db.execSQL("INSERT INTO presetPlaylist (presetName, playlistName, playlistVolume) " +
-                           "SELECT presetName, $trackNameSelector, trackVolume FROM presetTrack")
-
-                db.execSQL("DROP TABLE track")
-                db.execSQL("DROP TABLE presetTrack")
-                db.execSQL("ALTER TABLE temp_track RENAME TO track;")
-            } finally {
-                db.endTransaction()
-                db.execSQL("PRAGMA foreign_keys=on;")
+                playlistTracks = List(cursor.count) {
+                    cursor.moveToPosition(it)
+                    ContentValues(3).apply {
+                        put("playlistName", playlists[it].getAsString(("name")))
+                        put("trackUri", cursor.getString(0))
+                        put("playlistOrder", "0")
+                    }
+                }
             }
+            for (playlist in playlists)
+                db.insert("playlist", OnConflictStrategy.NONE, playlist)
+            for (playlistTrack in playlistTracks)
+                db.insert("playlistTrack", OnConflictStrategy.NONE, playlistTrack)
+
+            db.execSQL(
+                """CREATE TABLE presetPlaylist (
+                    `presetName` TEXT NOT NULL,
+                    `playlistName` TEXT NOT NULL,
+                    `playlistVolume` REAL NOT NULL,
+                PRIMARY KEY (presetName, playlistName),
+                FOREIGN KEY(`presetName`) REFERENCES `preset`(`name`) ON UPDATE CASCADE ON DELETE CASCADE,
+                FOREIGN KEY(`playlistName`) REFERENCES `playlist`(`name`) ON UPDATE CASCADE ON DELETE CASCADE)""")
+            val trackNameSelector = "(SELECT name FROM track " +
+                                     "WHERE uriString = presetTrack.trackUriString LIMIT 1)"
+            db.execSQL("INSERT INTO presetPlaylist (presetName, playlistName, playlistVolume) " +
+                       "SELECT presetName, $trackNameSelector, trackVolume FROM presetTrack")
+
+            db.execSQL("DROP TABLE track")
+            db.execSQL("DROP TABLE presetTrack")
+            db.execSQL("ALTER TABLE temp_track RENAME TO track;")
+            db.execSQL("PRAGMA foreign_keys=on;")
         }
     }
 }
@@ -153,9 +147,13 @@ abstract class SoundAuraDatabase : RoomDatabase() {
 @Module @InstallIn(SingletonComponent::class)
 class DatabaseModule {
     @Singleton @Provides
-    fun provideDatabase(@ApplicationContext app: Context) =
-        Room.databaseBuilder(app, SoundAuraDatabase::class.java, "SoundAuraDb")
+    fun provideDatabase(@ApplicationContext app: Context): SoundAuraDatabase {
+        Log.d("SoundAuraTag", "Building Db")
+        val db = Room.databaseBuilder(app, SoundAuraDatabase::class.java, "SoundAuraDb")
             .also(::addAllMigrations).build()
+        Log.d("SoundAuraTag", "db version = ${db.openHelper.readableDatabase.version}")
+        return db
+    }
 
     @Qualifier @Retention(AnnotationRetention.BINARY)
     annotation class InMemoryDatabase
