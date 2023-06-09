@@ -41,8 +41,8 @@ import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.collectAsState
 import com.cliffracertech.soundaura.enumPreferenceFlow
 import com.cliffracertech.soundaura.model.SearchQueryState
-import com.cliffracertech.soundaura.model.database.Track
-import com.cliffracertech.soundaura.model.database.TrackDao
+import com.cliffracertech.soundaura.model.database.Playlist
+import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.preferenceFlow
 import com.cliffracertech.soundaura.settings.PrefKeys
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -57,7 +57,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * A [LazyColumn] to display all of the provided [Track]s with instances of [TrackView].
+ * A [LazyColumn] to display all of the provided [Playlist]s with instances of [PlaylistView].
  *
  * @param modifier The [Modifier] that will be used for the TrackList.
  * @param state The [LazyListState] used for the TrackList's scrolling state.
@@ -67,15 +67,15 @@ import javax.inject.Inject
  *     [Track]s that will be displayed by the TrackList. If the provided list
  *     is empty, an empty list message will be displayed instead. A null value
  *     is interpreted as a loading state.
- * @param trackViewCallback The instance of [TrackViewCallback] that will
+ * @param playlistViewCallback The instance of [PlaylistViewCallback] that will
  *     be used for responses to individual TrackView interactions.
  */
-@Composable fun TrackList(
+@Composable fun PlaylistListView(
     modifier: Modifier = Modifier,
     state: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues,
-    trackListProvider: () -> ImmutableList<Track>?,
-    trackViewCallback: TrackViewCallback
+    trackListProvider: () -> ImmutableList<Playlist>?,
+    playlistViewCallback: PlaylistViewCallback
 ) {
     val trackList = trackListProvider()
     Crossfade(trackList?.isEmpty()) { when(it) {
@@ -93,67 +93,67 @@ import javax.inject.Inject
         ) {
             items(
                 items = trackList ?: emptyList(),
-                key = Track::uriString::get
+                key = Playlist::name::get
             ) { track ->
-                TrackView(track, trackViewCallback,
-                          Modifier.animateItemPlacement())
+                PlaylistView(track, playlistViewCallback,
+                             Modifier.animateItemPlacement())
             }
         }
     }}
 }
 
 @HiltViewModel
-class TrackListViewModel(
+class PlaylistListViewModel(
     dataStore: DataStore<Preferences>,
-    private val trackDao: TrackDao,
+    private val playlistDao: PlaylistDao,
     searchQueryState: SearchQueryState,
     coroutineScope: CoroutineScope? = null
 ) : ViewModel() {
 
     @Inject constructor(
         dataStore: DataStore<Preferences>,
-        trackDao: TrackDao,
+        playlistDao: PlaylistDao,
         searchQueryState: SearchQueryState,
-    ) : this(dataStore, trackDao, searchQueryState, null)
+    ) : this(dataStore, playlistDao, searchQueryState, null)
 
     private val scope = coroutineScope ?: viewModelScope
-    private val showActiveTracksFirstKey = booleanPreferencesKey(PrefKeys.showActiveTracksFirst)
+    private val showActiveTracksFirstKey = booleanPreferencesKey(PrefKeys.showActivePlaylistsFirst)
     private val showActiveTracksFirst = dataStore.preferenceFlow(showActiveTracksFirstKey, false)
-    private val trackSortKey = intPreferencesKey(PrefKeys.trackSort)
-    private val trackSort = dataStore.enumPreferenceFlow<Track.Sort>(trackSortKey)
+    private val playlistSortKey = intPreferencesKey(PrefKeys.playlistSort)
+    private val playlistSort = dataStore.enumPreferenceFlow<Playlist.Sort>(playlistSortKey)
 
     private val searchQueryFlow = snapshotFlow { searchQueryState.query.value }
-    val tracks by combine(trackSort, showActiveTracksFirst, searchQueryFlow, trackDao::getAllTracks)
+    val tracks by combine(playlistSort, showActiveTracksFirst, searchQueryFlow, playlistDao::getAllPlaylists)
         .transformLatest { emitAll(it) }
         .map { it.toImmutableList() }
         .collectAsState(null, scope)
 
-    fun onDeleteTrackDialogConfirm(context: Context, uriString: String) {
+    fun onDeletePlaylistDialogConfirm(context: Context, uriString: String) {
         scope.launch {
             val uri = Uri.parse(uriString)
             try {
                 context.contentResolver.releasePersistableUriPermission(
                     uri, FLAG_GRANT_READ_URI_PERMISSION)
             } catch (_: SecurityException) {}
-            trackDao.delete(uriString)
+            playlistDao.delete(uriString)
         }
     }
 
-    fun onTrackAddRemoveButtonClick(uriString: String) {
-        scope.launch { trackDao.toggleIsActive(uriString) }
+    fun onPlaylistAddRemoveButtonClick(uriString: String) {
+        scope.launch { playlistDao.toggleIsActive(uriString) }
     }
 
-    fun onTrackVolumeChangeRequest(uriString: String, volume: Float) {
-        scope.launch { trackDao.setVolume(uriString, volume) }
+    fun onPlaylistVolumeChangeRequest(uriString: String, volume: Float) {
+        scope.launch { playlistDao.setVolume(uriString, volume) }
     }
 
-    fun onTrackRenameDialogConfirm(uriString: String, name: String) {
-        scope.launch { trackDao.setName(uriString, name) }
+    fun onPlaylistRenameDialogConfirm(oldName: String, newName: String) {
+        scope.launch { playlistDao.rename(oldName, newName) }
     }
 }
 
 /**
- * Compose a [TrackList], using an instance of [TrackListViewModel] to
+ * Compose a [PlaylistListView], using an instance of [PlaylistListViewModel] to
  * obtain the list of tracks and to respond to item related callbacks.
  *
  * @param modifier The [Modifier] that will be used for the TrackList.
@@ -173,20 +173,20 @@ class TrackListViewModel(
     state: LazyListState = rememberLazyListState(),
     onVolumeChange: (String, Float) -> Unit,
 ) = Surface(modifier, color = MaterialTheme.colors.background) {
-    val viewModel: TrackListViewModel = viewModel()
+    val viewModel: PlaylistListViewModel = viewModel()
     val context = LocalContext.current
-    val itemCallback = rememberTrackViewCallback(
-        onAddRemoveButtonClick = viewModel::onTrackAddRemoveButtonClick,
+    val itemCallback = rememberPlaylistViewCallback(
+        onAddRemoveButtonClick = viewModel::onPlaylistAddRemoveButtonClick,
         onVolumeChange = onVolumeChange,
-        onVolumeChangeFinished = viewModel::onTrackVolumeChangeRequest,
-        onRenameRequest = viewModel::onTrackRenameDialogConfirm,
+        onVolumeChangeFinished = viewModel::onPlaylistVolumeChangeRequest,
+        onRenameRequest = viewModel::onPlaylistRenameDialogConfirm,
         onDeleteRequest = {
-            viewModel.onDeleteTrackDialogConfirm(context, it)
+            viewModel.onDeletePlaylistDialogConfirm(context, it)
         })
-    TrackList(
+    PlaylistListView(
         modifier = modifier,
         state = state,
         contentPadding = padding,
         trackListProvider = viewModel::tracks::get,
-        trackViewCallback = itemCallback)
+        playlistViewCallback = itemCallback)
 }

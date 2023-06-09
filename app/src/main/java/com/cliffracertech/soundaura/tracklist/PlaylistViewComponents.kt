@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.dialog.RenameDialog
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
+import com.cliffracertech.soundaura.model.StringResource
+import com.cliffracertech.soundaura.model.Validator
 
 @Composable fun <T>overshootTween(
     duration: Int = DefaultDurationMillis,
@@ -107,14 +109,14 @@ import com.cliffracertech.soundaura.dialog.SoundAuraDialog
     onConfirm: (String) -> Unit,
 ) {
     var currentName by rememberSaveable { mutableStateOf(itemName) }
-    val errorMessage = if (currentName.isNotBlank()) null
-    else stringResource(R.string.track_name_cannot_be_blank_error_message)
     RenameDialog(
         initialName = itemName,
         proposedNameProvider = { currentName },
         onProposedNameChange = { currentName = it },
-        errorMessageProvider = { errorMessage },
-        onDismissRequest = onDismissRequest,
+        errorMessageProvider = {
+            if (currentName.isNotBlank()) null
+            else Validator.Message.Error(StringResource(R.string.track_name_cannot_be_blank_error_message))
+        }, onDismissRequest = onDismissRequest,
         onConfirm = {
             onConfirm(currentName)
             onDismissRequest()

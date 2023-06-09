@@ -47,103 +47,103 @@ import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.MarqueeText
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.minTouchTargetSize
-import com.cliffracertech.soundaura.model.database.Track
+import com.cliffracertech.soundaura.model.database.Playlist
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlin.math.roundToInt
 
-/** A collection of callbacks for [TrackView] interactions. The first parameter
- * for each of the callbacks is the uri of the track in [String] form. */
-interface TrackViewCallback {
+/** A collection of callbacks for [PlaylistView] interactions. The first parameter
+ * for each of the callbacks is the [Playlist.name] for the [Playlist]. */
+interface PlaylistViewCallback {
     /** The callback that will be invoked when the add/remove button is clicked */
-    fun onAddRemoveButtonClick(uri: String)
+    fun onAddRemoveButtonClick(name: String)
     /** The callback that will be invoked when the volume slider's value is changing */
-    fun onVolumeChange(uri: String, volume: Float)
+    fun onVolumeChange(name: String, volume: Float)
     /** The callback that will be invoked when the volume slider's handle is released */
-    fun onVolumeChangeFinished(uri: String, volume: Float)
-    /** The callback that will be invoked when a rename of the track is requested */
-    fun onRenameRequest(uri: String, name: String)
-    /** The callback that will be invoked when the deletion of the track is requested */
-    fun onDeleteRequest(uri: String)
+    fun onVolumeChangeFinished(name: String, volume: Float)
+    /** The callback that will be invoked when a rename of the playlist is requested */
+    fun onRenameRequest(oldName: String, newName: String)
+    /** The callback that will be invoked when the deletion of the playlist is requested */
+    fun onDeleteRequest(name: String)
 }
 
-/** Return a remembered [TrackViewCallback] implementation. */
-@Composable fun rememberTrackViewCallback(
+/** Return a remembered [PlaylistViewCallback] implementation. */
+@Composable fun rememberPlaylistViewCallback(
     onAddRemoveButtonClick: (String) -> Unit = { _ -> },
     onVolumeChange: (String, Float) -> Unit = { _, _ -> },
     onVolumeChangeFinished: (String, Float) -> Unit = { _, _ -> },
     onRenameRequest: (String, String) -> Unit = { _, _ -> },
     onDeleteRequest: (String) -> Unit = { }
-) = remember { object: TrackViewCallback {
-    override fun onAddRemoveButtonClick(uri: String) = onAddRemoveButtonClick(uri)
-    override fun onVolumeChange(uri: String, volume: Float) = onVolumeChange(uri, volume)
-    override fun onVolumeChangeFinished(uri: String, volume: Float) = onVolumeChangeFinished(uri, volume)
-    override fun onRenameRequest(uri: String, name: String) = onRenameRequest(uri, name)
-    override fun onDeleteRequest(uri: String) = onDeleteRequest(uri)
+) = remember { object: PlaylistViewCallback {
+    override fun onAddRemoveButtonClick(name: String) = onAddRemoveButtonClick(name)
+    override fun onVolumeChange(name: String, volume: Float) = onVolumeChange(name, volume)
+    override fun onVolumeChangeFinished(name: String, volume: Float) = onVolumeChangeFinished(name, volume)
+    override fun onRenameRequest(oldName: String, newName: String) = onRenameRequest(oldName, newName)
+    override fun onDeleteRequest(name: String) = onDeleteRequest(name)
 }}
 
 /**
  * A view that displays an add/remove button, a title, a volume slider, and a
- * more options button for the provided [Track] Instance. If the track's hasError
+ * more options button for the provided [Playlist] Instance. If the [Playlist.hasError]
  * field is true, then an error icon will be displayed instead of the add/remove
  * button, an error message will be displayed in place of the volume slider, and
  * the more options menu button will be replaced by a delete icon. The more
  * options button will also be replaced by a numerical display of the track's
  * volume when the volume slider is being dragged.
  *
- * @param track The [Track] instance that is being represented.
- * @param callback The [TrackViewCallback] that describes how to respond to user interactions.
+ * @param playlist The [Playlist] instance that is being represented
+ * @param callback The [PlaylistViewCallback] that describes how to respond to user interactions
  */
-@Composable fun TrackView(
-    track: Track,
-    callback: TrackViewCallback,
+@Composable fun PlaylistView(
+    playlist: Playlist,
+    callback: PlaylistViewCallback,
     modifier: Modifier = Modifier
 ) = Surface(modifier, MaterialTheme.shapes.large) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         AddRemoveButtonOrErrorIcon(
-            showError = track.hasError,
-            isAdded = track.isActive,
-            contentDescription = if (track.hasError) null else {
-                val id = if (track.isActive)
+            showError = playlist.hasError,
+            isAdded = playlist.isActive,
+            contentDescription = if (playlist.hasError) null else {
+                val id = if (playlist.isActive)
                              R.string.remove_track_from_mix_description
                          else R.string.add_track_to_mix_description
-                stringResource(id, track.name)
+                stringResource(id, playlist.name)
             }, onAddRemoveClick = {
-                callback.onAddRemoveButtonClick(track.uriString)
+                callback.onAddRemoveButtonClick(playlist.name)
             })
 
         val volumeSliderInteractionSource = remember { MutableInteractionSource() }
-        var volumeSliderValue by remember(track.volume) { mutableStateOf(track.volume) }
+        var volumeSliderValue by remember(playlist.volume) { mutableStateOf(playlist.volume) }
         val volumeSliderIsBeingPressed by volumeSliderInteractionSource.collectIsPressedAsState()
         val volumeSliderIsBeingDragged by volumeSliderInteractionSource.collectIsDraggedAsState()
 
         Box(Modifier.weight(1f)) {
             // 1dp start padding is required to make the text align with the volume icon
-            MarqueeText(text = track.name, style = MaterialTheme.typography.h5,
+            MarqueeText(text = playlist.name, style = MaterialTheme.typography.h5,
                         modifier = Modifier.padding(start = 1.dp, top = 6.dp)
                                            .paddingFromBaseline(bottom = 48.dp))
             VolumeSliderOrErrorMessage(
                 volume = volumeSliderValue,
                 onVolumeChange = { volume ->
                     volumeSliderValue = volume
-                    callback.onVolumeChange(track.uriString, volume)
+                    callback.onVolumeChange(playlist.name, volume)
                 }, onVolumeChangeFinished = {
-                    callback.onVolumeChangeFinished(track.uriString, volumeSliderValue)
+                    callback.onVolumeChangeFinished(playlist.name, volumeSliderValue)
                 }, modifier = Modifier.align(Alignment.BottomStart),
                 sliderInteractionSource = volumeSliderInteractionSource,
-                errorMessage = if (!track.hasError) null else
+                errorMessage = if (!playlist.hasError) null else
                     stringResource(R.string.file_error_message))
         }
-        TrackViewEndContentImpl(
+        PlaylistViewEndContent(
             content = when {
-                track.hasError ->
-                    TrackViewEndContent.DeleteButton
+                playlist.hasError ->
+                    PlaylistViewEndContentType.DeleteButton
                 volumeSliderIsBeingPressed || volumeSliderIsBeingDragged ->
-                    TrackViewEndContent.VolumeDisplay
+                    PlaylistViewEndContentType.VolumeDisplay
                 else ->
-                    TrackViewEndContent.MoreOptionsButton
-            }, itemName = track.name,
-            onRenameRequest = { callback.onRenameRequest(track.uriString, it) },
-            onDeleteRequest = { callback.onDeleteRequest(track.uriString) },
+                    PlaylistViewEndContentType.MoreOptionsButton
+            }, itemName = playlist.name,
+            onRenameRequest = { callback.onRenameRequest(playlist.name, it) },
+            onDeleteRequest = { callback.onDeleteRequest(playlist.name) },
             volume = volumeSliderValue,
             tint = MaterialTheme.colors.secondaryVariant)
     }
@@ -248,8 +248,8 @@ interface TrackViewCallback {
     }
 }
 
-/** An enum detailing the possible content for the end of a [TrackView]'s layout. */
-private enum class TrackViewEndContent {
+/** An enum detailing the possible content for the end of a [PlaylistView]'s layout. */
+private enum class PlaylistViewEndContentType {
     /** The TrackView will display a more options
      * button that opens a popup menu when clicked. */
     MoreOptionsButton,
@@ -262,26 +262,28 @@ private enum class TrackViewEndContent {
 }
 
 /**
- * Show the end content for a TrackView. This content will change
- * according to the value of the parameter content to match one of
- * the possible values for the TrackViewEndContent enum.
+ * Show the end content for a [PlaylistView]. This content will change
+ * according to the value of the parameter [content] to match one of
+ * the possible values for the [PlaylistViewEndContentType] enum.
  *
- * @param content The value of TrackViewEndContent that describes what
- *     will be displayed. The visible content will be crossfaded between
- *     when this value changes.
- * @param itemName The name of the item that is being interacted with
+ * @param content The value of [PlaylistViewEndContentType] that describes
+ *     what will be displayed. The visible content will be crossfaded
+ *     between when this value changes.
+ * @param itemName The name of the [Playlist] that is being interacted with
  * @param onRenameRequest The callback that will be invoked when the
  *     user requests through the rename dialog that they wish to change
- *     the item's name to the callback's string parameter
+ *     the playlist's name to the callback's [String] parameter
  * @param onDeleteRequest The callback that will be invoked when the user
  *     requests through the delete dialog that they wish to delete the
- *     item, or when showAsDelete is true and the button is clicked
+ *     playlist, or when the [content] parameter is equal to
+ *     [PlaylistViewEndContentType.DeleteButton] and the delete button is
+ *     clicked
  * @param tint The tint that will be used for the more options button
  *     and the volume display. The delete button will use the value
  *     of the local theme's MaterialTheme.colors.error value instead.
  */
-@Composable private fun TrackViewEndContentImpl(
-    content: TrackViewEndContent,
+@Composable private fun PlaylistViewEndContent(
+    content: PlaylistViewEndContentType,
     itemName: String,
     onRenameRequest: (String) -> Unit,
     onDeleteRequest: () -> Unit,
@@ -289,7 +291,7 @@ private enum class TrackViewEndContent {
     volume: Float,
     tint: Color = LocalContentColor.current,
 ) = Crossfade(content) { when(it) {
-    TrackViewEndContent.MoreOptionsButton -> {
+    PlaylistViewEndContentType.MoreOptionsButton -> {
         var showingOptionsMenu by rememberSaveable { mutableStateOf(false) }
         IconButton({ showingOptionsMenu = true }) {
             Icon(imageVector = Icons.Default.MoreVert,
@@ -323,14 +325,14 @@ private enum class TrackViewEndContent {
         if (showingDeleteDialog)
             ConfirmRemoveDialog(itemName, { showingDeleteDialog = false }, onDeleteRequest)
     }
-    TrackViewEndContent.VolumeDisplay -> {
+    PlaylistViewEndContentType.VolumeDisplay -> {
         Box(Modifier.minTouchTargetSize(), Alignment.Center) {
             Text(text = (volume * 100).roundToInt().toString(),
                 color = tint,
                 style = MaterialTheme.typography.subtitle2)
         }
     }
-    TrackViewEndContent.DeleteButton -> {
+    PlaylistViewEndContentType.DeleteButton -> {
         IconButton(onDeleteRequest) {
             Icon(imageVector = Icons.Default.Delete,
                 contentDescription = stringResource(
@@ -342,31 +344,28 @@ private enum class TrackViewEndContent {
 
 @Preview @Composable
 fun LightTrackViewPreview() = SoundAuraTheme(darkTheme = false) {
-    TrackView(
-        callback = rememberTrackViewCallback(),
-        track = Track(
-            uriString = "",
-            name = "Track 1",
+    PlaylistView(
+        callback = rememberPlaylistViewCallback(),
+        playlist = Playlist(
+            name = "Track",
             volume = 0.5f))
 }
 
 @Preview(showBackground = true) @Composable
 fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme = true) {
-    TrackView(
-        callback = rememberTrackViewCallback(),
-        track = Track(
-            uriString = "",
-            name = "Track 2",
+    PlaylistView(
+        callback = rememberPlaylistViewCallback(),
+        playlist = Playlist(
+            name = "Playlist",
             isActive = true,
             volume = 0.25f))
 }
 
 @Preview @Composable
 fun LightTrackErrorPreview() = SoundAuraTheme(darkTheme = false) {
-    TrackView(
-        callback = rememberTrackViewCallback(),
-        track = Track(
-            uriString = "",
+    PlaylistView(
+        callback = rememberPlaylistViewCallback(),
+        playlist = Playlist(
             name = "Track 3",
             volume = 1.00f,
             hasError = true))
@@ -374,10 +373,9 @@ fun LightTrackErrorPreview() = SoundAuraTheme(darkTheme = false) {
 
 @Preview(showBackground = true) @Composable
 fun DarkTrackErrorPreview() = SoundAuraTheme(darkTheme = true) {
-    TrackView(
-        callback = rememberTrackViewCallback(),
-        track = Track(
-            uriString = "",
+    PlaylistView(
+        callback = rememberPlaylistViewCallback(),
+        playlist = Playlist(
             name = "Track 4",
             volume = 1.00f,
             hasError = true))
