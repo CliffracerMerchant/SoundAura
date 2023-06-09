@@ -17,8 +17,9 @@ import javax.inject.Qualifier
 import javax.inject.Singleton
 
 @Database(version = 5, exportSchema = true,
-          entities = [Playlist::class, Preset::class, PresetPlaylist::class])
-@TypeConverters(Playlist.TracksConverter::class)
+          entities = [Playlist::class, Preset::class, PresetPlaylist::class,
+                      PlaylistTrack::class, Track::class])
+@TypeConverters(Track.UriStringConverter::class)
 abstract class SoundAuraDatabase : RoomDatabase() {
     abstract fun playlistDao(): PlaylistDao
     abstract fun presetDao(): PresetDao
@@ -63,58 +64,88 @@ abstract class SoundAuraDatabase : RoomDatabase() {
         }
 
         private val migration4to5 = Migration(4,5) { db ->
-            db.execSQL("""CREATE TABLE playlist (" +
-                `name` TEXT NOT NULL PRIMARY KEY,
-                `tracks` TEXT NOT NULL,
-                `shuffleEnabled` INTEGER NOT NULL DEFAULT 0,
-                `isActive` INTEGER NOT NULL DEFAULT 0,
-                `volume` REAL NOT NULL DEFAULT 1.0)""")
+            db.execSQL("PRAGMA foreign_keys=off")
+            db.beginTransaction()
+            try {
+                db.execSQL("CREATE TABLE temp_track (`uri` TEXT NOT NULL PRIMARY KEY, " +
+                                                    "`hasError` INTEGER NOT NULL DEFAULT 0)")
+                db.execSQL("INSERT INTO temp_track (uri, hasError) " +
+                           "SELECT uriString, hasError FROM track")
 
-            // Since the name field was previously not unique,
-            // we need to append non unique names with a number
-            val playlists: List<ContentValues>
-            db.query("SELECT name, uriString, isActive, volume FROM track").use { cursor ->
-                val usedNames = mutableSetOf<String>()
-                playlists = List(cursor.count) {
-                    cursor.moveToPosition(it)
+                db.execSQL("""CREATE TABLE playlist (
+                        `name` TEXT NOT NULL PRIMARY KEY,
+                        `shuffle` INTEGER NOT NULL DEFAULT 0,
+                        `isActive` INTEGER NOT NULL DEFAULT 0,
+                        `volume` REAL NOT NULL DEFAULT 1.0,
+                        `hasError` INTEGER NOT NULL DEFAULT 0)""")
 
-                    val name = cursor.getString(0)
-                    val newName = if (name !in usedNames) name else {
-                        var counter = 2
-                        while ("$name $counter" in usedNames)
-                            counter++
-                        "$name $counter"
+                db.execSQL("""CREATE TABLE playlistTrack (
+                       `playlistName` TEXT NOT NULL,
+                       `trackUri` TEXT NOT NULL,
+                       `playlistOrder` INTEGER NOT NULL,
+                   PRIMARY KEY (playlistName, trackUri),
+                   FOREIGN KEY (`playlistName`) REFERENCES `playlist`(`name`) ON UPDATE CASCADE ON DELETE CASCADE,
+                   FOREIGN KEY (`trackUri`) REFERENCES `track`(`uri`) ON UPDATE CASCADE ON DELETE CASCADE)""")
+
+                // Since the name field was previously not unique,
+                // we need to append non unique names with a number
+                val playlists: List<ContentValues>
+                val playlistTracks: List<ContentValues>
+                db.query("SELECT uriString, name, isActive, volume, hasError FROM track").use { cursor ->
+                    val usedNames = mutableSetOf<String>()
+                    playlists = List(cursor.count) {
+                        cursor.moveToPosition(it)
+
+                        val name = cursor.getString(1)
+                        val newName = if (name !in usedNames) name else {
+                            var counter = 2
+                            while ("$name $counter" in usedNames)
+                                counter++
+                            "$name $counter"
+                        }
+                        usedNames.add(newName)
+
+                        ContentValues(4).apply {
+                            put("name", newName)
+                            put("isActive", cursor.getInt(2))
+                            put("volume", cursor.getFloat(3))
+                            put("hasError", cursor.getInt(4))
+                        }
                     }
-                    usedNames.add(newName)
-
-                    ContentValues(4).apply {
-                        put("name", newName)
-                        put("tracks", cursor.getString(1))
-                        put("isActive", cursor.getInt(2))
-                        put("volume", cursor.getFloat(3))
+                    playlistTracks = List(cursor.count) {
+                        cursor.moveToPosition(it)
+                        ContentValues(3).apply {
+                            put("playlistName", playlists[it].getAsString(("name")))
+                            put("trackUri", cursor.getString(0))
+                            put("playlistOrder", "0")
+                        }
                     }
                 }
-            }
+                for (playlist in playlists)
+                    db.insert("playlist", OnConflictStrategy.NONE, playlist)
+                for (playlistTrack in playlistTracks)
+                    db.insert("playlistTrack", OnConflictStrategy.NONE, playlistTrack)
 
-            db.beginTransaction()
-            try { for (playlist in playlists)
-                db.insert("playlist", OnConflictStrategy.NONE, playlist)
-            } finally { db.endTransaction() }
-
-            db.execSQL("""CREATE TABLE presetPlaylist (
+                db.execSQL(
+                    """CREATE TABLE presetPlaylist (
                         `presetName` TEXT NOT NULL,
                         `playlistName` TEXT NOT NULL,
                         `playlistVolume` REAL NOT NULL,
                     PRIMARY KEY (presetName, playlistName),
                     FOREIGN KEY(`presetName`) REFERENCES `preset`(`name`) ON UPDATE CASCADE ON DELETE CASCADE,
-                    FOREIGN KEY(`playlistName`) REFERENCES `playlist`(`name`) ON UPDATE CASCADE ON DELETE CASCADE
-                )""")
-            val trackNameSelector = "(SELECT name FROM track WHERE uriString = presetTrack.trackUriString LIMIT 1)"
-            db.execSQL("INSERT INTO presetPlaylist (presetName, playlistName, playlistVolume) " +
-                       "SELECT presetName, $trackNameSelector, trackVolume FROM presetTrack")
+                    FOREIGN KEY(`playlistName`) REFERENCES `playlist`(`name`) ON UPDATE CASCADE ON DELETE CASCADE)""")
+                val trackNameSelector = "(SELECT name FROM track " +
+                                         "WHERE uriString = presetTrack.trackUriString LIMIT 1)"
+                db.execSQL("INSERT INTO presetPlaylist (presetName, playlistName, playlistVolume) " +
+                           "SELECT presetName, $trackNameSelector, trackVolume FROM presetTrack")
 
-            db.execSQL("DROP TABLE track")
-            db.execSQL("DROP TABLE presetTrack")
+                db.execSQL("DROP TABLE track")
+                db.execSQL("DROP TABLE presetTrack")
+                db.execSQL("ALTER TABLE temp_track RENAME TO track;")
+            } finally {
+                db.endTransaction()
+                db.execSQL("PRAGMA foreign_keys=on;")
+            }
         }
     }
 }

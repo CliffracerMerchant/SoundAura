@@ -7,8 +7,6 @@ import androidx.annotation.FloatRange
 import androidx.room.Dao
 import androidx.room.Entity
 import androidx.room.ForeignKey
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Transaction
@@ -83,7 +81,7 @@ data class PresetPlaylist(
     @Query("UPDATE preset SET name = :newName WHERE name = :oldName")
     abstract suspend fun renamePreset(oldName: String, newName: String)
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Query("INSERT INTO preset VALUES (:presetName)")
     protected abstract suspend fun addPresetName(presetName: String)
 
     @Query("DELETE FROM presetPlaylist WHERE presetName = :presetName")

@@ -177,8 +177,9 @@ class AddPlaylistButtonViewModel(
     var showingAddPresetDialog by mutableStateOf(false)
         private set
 
-    private val activeTracksIsEmpty by playlistDao.getActivePlaylists()
-        .map { it.isEmpty() }.collectAsState(true, scope)
+    private val activeTracksIsEmpty by playlistDao
+        .getAtLeastOnePlaylistIsActive()
+        .collectAsState(true, scope)
 
     fun onClick() { when {
         activeTracksIsEmpty -> messageHandler.postMessage(

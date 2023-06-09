@@ -21,11 +21,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import java.io.File
 
 @Entity(tableName = "track")
-data class Track(@PrimaryKey val uri: Uri) {
-    class UriConverter {
+data class Track(
+    @ColumnInfo(typeAffinity = ColumnInfo.TEXT)
+    @PrimaryKey val uri: Uri,
+
+    @ColumnInfo(defaultValue = "0")
+    val hasError: Boolean = false
+) {
+    class UriStringConverter {
         @TypeConverter fun fromString(string: String) = string.toUri()
         @TypeConverter fun toString(uri: Uri) = uri.toString()
     }
@@ -57,7 +62,7 @@ data class Playlist(
 
     /** Whether or not shuffle is enabled for the [Playlist]. */
     @ColumnInfo(defaultValue = "0")
-    val shuffleEnabled: Boolean = false,
+    val shuffle: Boolean = false,
 
     /** Whether or not the [Playlist] is active (i.e. part of the current sound mix). */
     @ColumnInfo(defaultValue = "0")
@@ -67,14 +72,14 @@ data class Playlist(
     @FloatRange(from = 0.0, to = 1.0)
     @ColumnInfo(defaultValue = "1.0")
     val volume: Float = 1f,
-) {
-    class TracksConverter {
-        @TypeConverter fun fromString(string: String) =
-            string.split(File.pathSeparatorChar).map(String::toUri)
-        @TypeConverter fun toString(tracks: List<Uri>) =
-            tracks.joinToString(File.pathSeparator, transform = Uri::toString)
-    }
 
+    /** Whether or not the entire playlist has an error. This should be
+     * true if every track in the playlist has an error, but is stored
+     * as a separate column instead of being computed to prevent needing
+     * a subquery to determine its value. */
+    @ColumnInfo(defaultValue = "0")
+    val hasError: Boolean = false,
+) {
     enum class Sort { NameAsc, NameDesc, OrderAdded;
         companion object {
             @Composable fun stringValues() = with(LocalContext.current) {
@@ -87,30 +92,29 @@ data class Playlist(
 }
 
 @Dao abstract class PlaylistDao {
-    /** Insert the [Playlist]s in [playlists] into the database. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    protected abstract suspend fun insertTracks(tracks: List<Track>): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    protected abstract suspend fun addPlaylistTrack(playlistTrack: PlaylistTrack)
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     protected abstract suspend fun insertPlaylists(playlists: List<Playlist>)
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    protected abstract suspend fun insertTracks(tracks: List<Uri>): List<Uri>
-
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    protected abstract suspend fun insertPlaylistContents(playlistName: String, tracks: List<Uri>)
-
-    @Query("DELETE FROM playlistTrack WHERE playlistName = :playlistName")
+    @Query("DELETE FROM playlistTrack WHERE playlistName in (:playlistNames)")
     protected abstract suspend fun deletePlaylistContents(playlistNames: List<String>)
 
-    @Query("INSERT INTO playlistTrack SELECT :playlistName, uri, row_number() FROM (:uris)")
-    protected abstract suspend fun addPlaylistContents(playlistName: String, uris: List<Uri>)
-
     @Transaction
-    suspend fun insert(playlistContentMap: Map<Playlist, List<Uri>>) {
+    open suspend fun insert(playlistContentMap: Map<Playlist, List<Track>>) {
         val playlists = playlistContentMap.keys.toList()
         insertPlaylists(playlists)
         deletePlaylistContents(playlists.map(Playlist::name))
         for (playlist in playlists) {
-
-            addPlaylistContents(playlist.name, playlistContentMap[playlist] ?: emptyList())
+            val tracks = playlistContentMap[playlist] ?: emptyList()
+            insertTracks(tracks)
+            tracks.forEachIndexed { index, track ->
+                addPlaylistTrack(PlaylistTrack(playlist.name, track.uri, index))
+            }
         }
     }
 
@@ -166,10 +170,16 @@ data class Playlist(
         }
     }
 
-    /** Return a [Flow] that updates with the latest [List] of
-     * all [Playlist]s whose [Playlist.isActive] field is true. */
-    @Query("SELECT * FROM playlist WHERE isActive")
-    abstract fun getActivePlaylists(): Flow<List<Playlist>>
+    @Query("SELECT EXISTS(SELECT name FROM playlist WHERE isActive LIMIT 1)")
+    abstract fun getAtLeastOnePlaylistIsActive(): Flow<Boolean>
+
+    /** Return a [Flow] that updates with a [Map] of each
+     * active [Playlist] mapped to its list of track [Uri]s. */
+    @MapInfo(valueColumn = "trackUri")
+    @Query("SELECT * FROM playlist " +
+           "JOIN playlistTrack ON playlist.name = playlistTrack.playlistName " +
+           "ORDER by playlistOrder")
+    abstract fun getActivePlaylistsAndContents(): Flow<Map<Playlist, List<Uri>>>
 
     /** Return a [Flow] that updates with the latest [List] of
      * [com.cliffracertech.soundaura.model.PresetPlaylist]s. This represents
@@ -181,19 +191,15 @@ data class Playlist(
     @Query("SELECT name FROM playlist")
     abstract fun getPlaylistNames(): Flow<List<String>>
 
-    @Query("SELECT tracks FROM playlist WHERE name = :name")
+    @Query("SELECT trackUri FROM playlistTrack WHERE playlistName = :name ORDER by playlistOrder")
     abstract suspend fun getPlaylistTracks(name: String): List<Uri>
 
-    @Query("UPDATE playlist SET tracks = :newTracks WHERE name = :name")
-    abstract suspend fun setPlaylistTracks(name: String, newTracks: List<Uri>)
-
-    /** Remove the tracks identified by the [Uri]s in [tracks]
-     * from the [Playlist] whose name matches [playlistName]. */
     @Transaction
-    suspend fun removeTracksFromPlaylist(playlistName: String, tracks: List<Uri>) {
-        val newTracks = getPlaylistTracks(playlistName)
-                .filterNot { it in tracks }
-        setPlaylistTracks(playlistName, newTracks)
+    open suspend fun setPlaylistTracks(name: String, newTracks: List<Uri>) {
+        deletePlaylistContents(listOf(name))
+        newTracks.forEachIndexed { index, uri ->
+            addPlaylistTrack(PlaylistTrack(name, uri, index))
+        }
     }
 
     /** Rename the [Playlist] whose name matches [oldName] to [newName]. */
