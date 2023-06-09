@@ -36,7 +36,7 @@ import com.cliffracertech.soundaura.enumPreferenceState
 import com.cliffracertech.soundaura.model.NavigationState
 import com.cliffracertech.soundaura.model.SearchQueryState
 import com.cliffracertech.soundaura.model.StringResource
-import com.cliffracertech.soundaura.model.database.Track
+import com.cliffracertech.soundaura.model.database.Playlist
 import com.cliffracertech.soundaura.preferenceState
 import com.cliffracertech.soundaura.settings.PrefKeys
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -67,17 +67,17 @@ import javax.inject.Inject
             else R.string.app_name)
     }
 
-    private val showActiveTracksFirstKey = booleanPreferencesKey(PrefKeys.showActiveTracksFirst)
-    val showActiveTracksFirst by dataStore.preferenceState(showActiveTracksFirstKey, false, scope)
+    private val showActivePlaylistsFirstKey = booleanPreferencesKey(PrefKeys.showActivePlaylistsFirst)
+    val showActivePlaylistsFirst by dataStore.preferenceState(showActivePlaylistsFirstKey, false, scope)
 
-    fun onShowActiveTracksFirstSwitchClick() =
-        dataStore.edit(showActiveTracksFirstKey, !showActiveTracksFirst, scope)
+    fun onShowActivePlaylistsFirstSwitchClick() =
+        dataStore.edit(showActivePlaylistsFirstKey, !showActivePlaylistsFirst, scope)
 
-    private val trackSortKey = intPreferencesKey(PrefKeys.trackSort)
-    val trackSort by dataStore.enumPreferenceState<Track.Sort>(trackSortKey, scope)
+    private val playlistSortKey = intPreferencesKey(PrefKeys.playlistSort)
+    val playlistSort by dataStore.enumPreferenceState<Playlist.Sort>(playlistSortKey, scope)
 
-    fun onTrackSortOptionClick(newValue: Track.Sort) =
-        dataStore.edit(trackSortKey, newValue.ordinal, scope)
+    fun onSortOptionClick(newValue: Playlist.Sort) =
+        dataStore.edit(playlistSortKey, newValue.ordinal, scope)
 
     fun onSearchButtonClick() {
         searchQuery = if (searchQuery == null) "" else null
@@ -120,19 +120,19 @@ import javax.inject.Inject
         onSearchQueryChanged = viewModel::searchQuery::set,
         showRightAlignedContent = !viewModel.showingAppSettings,
         onSearchButtonClick = viewModel::onSearchButtonClick,
-        sortOptions = Track.Sort.values(),
-        sortOptionNames = Track.Sort.stringValues(),
-        currentSortOption = viewModel.trackSort,
-        onSortOptionClick = viewModel::onTrackSortOptionClick,
+        sortOptions = Playlist.Sort.values(),
+        sortOptionNames = Playlist.Sort.stringValues(),
+        currentSortOption = viewModel.playlistSort,
+        onSortOptionClick = viewModel::onSortOptionClick,
         otherSortMenuContent = { onDismissRequest ->
             DropdownMenuItem(onClick = {
                 onDismissRequest()
-                viewModel.onShowActiveTracksFirstSwitchClick()
+                viewModel.onShowActivePlaylistsFirstSwitchClick()
             }) {
-                Text(stringResource(R.string.show_active_tracks_first),
+                Text(stringResource(R.string.show_active_playlists_first),
                      style = MaterialTheme.typography.button)
                 Spacer(Modifier.weight(1f).widthIn(12.dp))
-                Switch(checked = viewModel.showActiveTracksFirst,
+                Switch(checked = viewModel.showActivePlaylistsFirst,
                        onCheckedChange = null)
             }
             Divider()

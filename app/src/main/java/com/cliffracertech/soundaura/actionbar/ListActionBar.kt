@@ -25,7 +25,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.minTouchTargetSize
-import com.cliffracertech.soundaura.model.database.Track
+import com.cliffracertech.soundaura.model.database.Playlist
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import com.google.accompanist.insets.statusBarsPadding
 
@@ -276,9 +276,9 @@ import com.google.accompanist.insets.statusBarsPadding
         title = stringResource(R.string.app_name),
         searchQuery = null,
         onSearchQueryChanged = { },
-        sortOptions = Track.Sort.values(),
-        sortOptionNames = Track.Sort.stringValues(),
-        currentSortOption = Track.Sort.NameAsc,
+        sortOptions = Playlist.Sort.values(),
+        sortOptionNames = Playlist.Sort.stringValues(),
+        currentSortOption = Playlist.Sort.NameAsc,
         onSortOptionClick = { },
         onSearchButtonClick = { }
     ) {
@@ -292,9 +292,9 @@ import com.google.accompanist.insets.statusBarsPadding
         title = "",
         searchQuery = "search query",
         onSearchQueryChanged = { },
-        sortOptions = Track.Sort.values(),
-        sortOptionNames = Track.Sort.stringValues(),
-        currentSortOption = Track.Sort.NameAsc,
+        sortOptions = Playlist.Sort.values(),
+        sortOptionNames = Playlist.Sort.stringValues(),
+        currentSortOption = Playlist.Sort.NameAsc,
         onSortOptionClick = { },
         onSearchButtonClick = { }
     ) {
@@ -309,9 +309,9 @@ import com.google.accompanist.insets.statusBarsPadding
         searchQuery = null,
         onSearchQueryChanged = { },
         showRightAlignedContent = false,
-        sortOptions = Track.Sort.values(),
-        sortOptionNames = Track.Sort.stringValues(),
-        currentSortOption = Track.Sort.NameAsc,
+        sortOptions = Playlist.Sort.values(),
+        sortOptionNames = Playlist.Sort.stringValues(),
+        currentSortOption = Playlist.Sort.NameAsc,
         onSortOptionClick = { },
         onSearchButtonClick = { }
     )}
