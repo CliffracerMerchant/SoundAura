@@ -1,7 +1,7 @@
 /* This file is part of SoundAura, which is released under
  * the terms of the Apache License 2.0. See license.md in
  * the project's root directory to see the full license. */
-package com.cliffracertech.soundaura.tracklist
+package com.cliffracertech.soundaura.library
 
 import android.content.Context
 import android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
@@ -63,22 +63,21 @@ import javax.inject.Inject
  * @param state The [LazyListState] used for the TrackList's scrolling state.
  * @param contentPadding The [PaddingValues] instance that will be used as
  *     the content padding for the TrackList's items.
- * @param trackListProvider A method that will return the [ImmutableList] of
- *     [Track]s that will be displayed by the TrackList. If the provided list
- *     is empty, an empty list message will be displayed instead. A null value
- *     is interpreted as a loading state.
+ * @param libraryContents The [ImmutableList] of [Playlist]s that will be
+ *     displayed by the LibraryView. If the list is empty, an empty list
+ *     message will be displayed instead. A null value is interpreted as
+ *     a loading state.
  * @param playlistViewCallback The instance of [PlaylistViewCallback] that will
  *     be used for responses to individual TrackView interactions.
  */
-@Composable fun PlaylistListView(
+@Composable fun LibraryView(
     modifier: Modifier = Modifier,
     state: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues,
-    trackListProvider: () -> ImmutableList<Playlist>?,
+    libraryContents: ImmutableList<Playlist>?,
     playlistViewCallback: PlaylistViewCallback
 ) {
-    val trackList = trackListProvider()
-    Crossfade(trackList?.isEmpty()) { when(it) {
+    Crossfade(libraryContents?.isEmpty()) { when(it) {
         null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
             CircularProgressIndicator(Modifier.size(50.dp))
         } true -> Box(Modifier.fillMaxSize(), Alignment.Center) {
@@ -92,7 +91,7 @@ import javax.inject.Inject
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(
-                items = trackList ?: emptyList(),
+                items = libraryContents ?: emptyList(),
                 key = Playlist::name::get
             ) { track ->
                 PlaylistView(track, playlistViewCallback,
@@ -102,8 +101,7 @@ import javax.inject.Inject
     }}
 }
 
-@HiltViewModel
-class PlaylistListViewModel(
+@HiltViewModel class LibraryViewModel(
     dataStore: DataStore<Preferences>,
     private val playlistDao: PlaylistDao,
     searchQueryState: SearchQueryState,
@@ -125,7 +123,7 @@ class PlaylistListViewModel(
     private val searchQueryFlow = snapshotFlow { searchQueryState.query.value }
     val tracks by combine(playlistSort, showActiveTracksFirst, searchQueryFlow, playlistDao::getAllPlaylists)
         .transformLatest { emitAll(it) }
-        .map { it.toImmutableList() }
+        .map(List<Playlist>::toImmutableList)
         .collectAsState(null, scope)
 
     fun onDeletePlaylistDialogConfirm(context: Context, uriString: String) {
@@ -153,7 +151,7 @@ class PlaylistListViewModel(
 }
 
 /**
- * Compose a [PlaylistListView], using an instance of [PlaylistListViewModel] to
+ * Compose a [LibraryView], using an instance of [LibraryViewModel] to
  * obtain the list of tracks and to respond to item related callbacks.
  *
  * @param modifier The [Modifier] that will be used for the TrackList.
@@ -167,13 +165,13 @@ class PlaylistListViewModel(
  * @param onVolumeChange The callback that will be invoked when
  *     a TrackView's volume slider is moved.
  */
-@Composable fun SoundAuraTrackList(
+@Composable fun SoundAuraLibraryView(
     modifier: Modifier = Modifier,
     padding: PaddingValues,
     state: LazyListState = rememberLazyListState(),
     onVolumeChange: (String, Float) -> Unit,
 ) = Surface(modifier, color = MaterialTheme.colors.background) {
-    val viewModel: PlaylistListViewModel = viewModel()
+    val viewModel: LibraryViewModel = viewModel()
     val context = LocalContext.current
     val itemCallback = rememberPlaylistViewCallback(
         onAddRemoveButtonClick = viewModel::onPlaylistAddRemoveButtonClick,
@@ -183,10 +181,10 @@ class PlaylistListViewModel(
         onDeleteRequest = {
             viewModel.onDeletePlaylistDialogConfirm(context, it)
         })
-    PlaylistListView(
+    LibraryView(
         modifier = modifier,
         state = state,
         contentPadding = padding,
-        trackListProvider = viewModel::tracks::get,
+        libraryContents = viewModel.tracks,
         playlistViewCallback = itemCallback)
 }

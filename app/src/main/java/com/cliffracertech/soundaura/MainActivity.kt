@@ -47,7 +47,7 @@ import com.cliffracertech.soundaura.service.PlayerService
 import com.cliffracertech.soundaura.settings.AppSettings
 import com.cliffracertech.soundaura.settings.AppTheme
 import com.cliffracertech.soundaura.settings.PrefKeys
-import com.cliffracertech.soundaura.tracklist.SoundAuraTrackList
+import com.cliffracertech.soundaura.library.SoundAuraLibraryView
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import com.google.accompanist.insets.LocalWindowInsets
 import com.google.accompanist.insets.ProvideWindowInsets
@@ -238,7 +238,7 @@ class MainActivity : ComponentActivity() {
         ) { showingAppSettingsScreen ->
             if (showingAppSettingsScreen)
                 AppSettings(padding)
-            else SoundAuraTrackList(
+            else SoundAuraLibraryView(
                 // The track list's padding must be adjusted
                 // depending on the placement of the FABs.
                 padding = remember(padding, widthIsConstrained) {

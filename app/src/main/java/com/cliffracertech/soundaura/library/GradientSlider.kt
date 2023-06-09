@@ -12,7 +12,7 @@
  * - The slider no longer jumps to the tap location when the slider is
  *   tapped outside the thumb.
  */
-package com.cliffracertech.soundaura.tracklist
+package com.cliffracertech.soundaura.library
 
 /*
  * Copyright 2019 The Android Open Source Project
