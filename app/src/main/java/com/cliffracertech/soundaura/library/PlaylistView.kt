@@ -47,9 +47,28 @@ import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.MarqueeText
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.minTouchTargetSize
-import com.cliffracertech.soundaura.model.database.Playlist
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlin.math.roundToInt
+
+/**
+ * A data class whose values describe the attributes of a playlist in a library of playlists.
+ *
+ * @param name The name of the playlist
+ * @param isActive Whether or not the playlist is currently playing
+ * @param volume The volume of the playlist
+ * @param hasError Whether or not there is an error (e.g. a playback
+ *     problem) with the playlist
+ * @param isSingleTrack Whether or not the playlist has only one track.
+ *     This value can be used in case single-track playlists need to
+ *     appear differently from multi-track playlists (e.g. by referring
+ *     to them as 'tracks' instead of 'playlists').
+ */
+data class Playlist(
+    val name: String,
+    val isActive: Boolean,
+    val volume: Float,
+    val hasError: Boolean,
+    val isSingleTrack: Boolean)
 
 /** A collection of callbacks for [PlaylistView] interactions. The first parameter
  * for each of the callbacks is the [Playlist.name] for the [Playlist]. */

@@ -41,7 +41,6 @@ import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.collectAsState
 import com.cliffracertech.soundaura.enumPreferenceFlow
 import com.cliffracertech.soundaura.model.SearchQueryState
-import com.cliffracertech.soundaura.model.database.Playlist
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.preferenceFlow
 import com.cliffracertech.soundaura.settings.PrefKeys
@@ -55,6 +54,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Playlist.Sort
 
 /**
  * A [LazyColumn] to display all of the provided [Playlist]s with instances of [PlaylistView].
@@ -93,8 +94,8 @@ import javax.inject.Inject
             items(
                 items = libraryContents ?: emptyList(),
                 key = Playlist::name::get
-            ) { track ->
-                PlaylistView(track, playlistViewCallback,
+            ) { playlist ->
+                PlaylistView(playlist, playlistViewCallback,
                              Modifier.animateItemPlacement())
             }
         }
@@ -118,10 +119,10 @@ import javax.inject.Inject
     private val showActiveTracksFirstKey = booleanPreferencesKey(PrefKeys.showActivePlaylistsFirst)
     private val showActiveTracksFirst = dataStore.preferenceFlow(showActiveTracksFirstKey, false)
     private val playlistSortKey = intPreferencesKey(PrefKeys.playlistSort)
-    private val playlistSort = dataStore.enumPreferenceFlow<Playlist.Sort>(playlistSortKey)
+    private val playlistSort = dataStore.enumPreferenceFlow<PlaylistSort>(playlistSortKey)
 
     private val searchQueryFlow = snapshotFlow { searchQueryState.query.value }
-    val tracks by combine(playlistSort, showActiveTracksFirst, searchQueryFlow, playlistDao::getAllPlaylists)
+    val playlists by combine(playlistSort, showActiveTracksFirst, searchQueryFlow, playlistDao::getAllPlaylists)
         .transformLatest { emitAll(it) }
         .map(List<Playlist>::toImmutableList)
         .collectAsState(null, scope)
@@ -185,6 +186,6 @@ import javax.inject.Inject
         modifier = modifier,
         state = state,
         contentPadding = padding,
-        libraryContents = viewModel.tracks,
+        libraryContents = viewModel.playlists,
         playlistViewCallback = itemCallback)
 }

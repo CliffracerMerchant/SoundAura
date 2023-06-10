@@ -22,6 +22,16 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
+typealias LibraryPlaylist = com.cliffracertech.soundaura.library.Playlist
+
+private const val librarySelect =
+    "SELECT name, isActive, volume, hasError, " +
+           "COUNT(playlistName) = 1 AS isSingleTrack " +
+    "FROM playlist " +
+    "JOIN playlistTrack ON playlist.name = playlistTrack.playlistName " +
+    "WHERE name LIKE :filter " +
+    "GROUP BY playlistTrack.playlistName"
+
 @Entity(tableName = "track")
 data class Track(
     @ColumnInfo(typeAffinity = ColumnInfo.TEXT)
@@ -130,23 +140,23 @@ data class Playlist(
     @Query("SELECT EXISTS(SELECT name FROM playlist WHERE name = :name)")
     abstract suspend fun exists(name: String?): Boolean
 
-    @Query("SELECT * FROM playlist WHERE name LIKE :filter ORDER BY name COLLATE NOCASE ASC")
-    protected abstract fun getAllPlaylistsSortedByNameAsc(filter: String): Flow<List<Playlist>>
+    @Query("$librarySelect ORDER BY name COLLATE NOCASE ASC")
+    protected abstract fun getAllPlaylistsSortedByNameAsc(filter: String): Flow<List<LibraryPlaylist>>
 
-    @Query("SELECT * FROM playlist WHERE name LIKE :filter ORDER BY name COLLATE NOCASE DESC")
-    protected abstract fun getAllPlaylistsSortedByNameDesc(filter: String): Flow<List<Playlist>>
+    @Query("$librarySelect ORDER BY name COLLATE NOCASE DESC")
+    protected abstract fun getAllPlaylistsSortedByNameDesc(filter: String): Flow<List<LibraryPlaylist>>
 
-    @Query("SELECT * FROM playlist WHERE name LIKE :filter")
-    protected abstract fun getAllPlaylistsSortedByOrderAdded(filter: String): Flow<List<Playlist>>
+    @Query(librarySelect)
+    protected abstract fun getAllPlaylistsSortedByOrderAdded(filter: String): Flow<List<LibraryPlaylist>>
 
-    @Query("SELECT * FROM playlist WHERE name LIKE :filter ORDER BY isActive DESC, name COLLATE NOCASE ASC")
-    protected abstract fun getAllPlaylistsSortedByActiveThenNameAsc(filter: String): Flow<List<Playlist>>
+    @Query("$librarySelect ORDER BY isActive DESC, name COLLATE NOCASE ASC")
+    protected abstract fun getAllPlaylistsSortedByActiveThenNameAsc(filter: String): Flow<List<LibraryPlaylist>>
 
-    @Query("SELECT * FROM playlist WHERE name LIKE :filter ORDER BY isActive DESC, name COLLATE NOCASE DESC")
-    protected abstract fun getAllPlaylistsSortedByActiveThenNameDesc(filter: String): Flow<List<Playlist>>
+    @Query("$librarySelect ORDER BY isActive DESC, name COLLATE NOCASE DESC")
+    protected abstract fun getAllPlaylistsSortedByActiveThenNameDesc(filter: String): Flow<List<LibraryPlaylist>>
 
-    @Query("SELECT * FROM playlist WHERE name LIKE :filter ORDER BY isActive DESC")
-    protected abstract fun getAllPlaylistsSortedByActiveThenOrderAdded(filter: String): Flow<List<Playlist>>
+    @Query("$librarySelect ORDER BY isActive DESC")
+    protected abstract fun getAllPlaylistsSortedByActiveThenOrderAdded(filter: String): Flow<List<LibraryPlaylist>>
 
     /** Return a [Flow] that updates with the latest [List] of all [Playlist]s
      * in the database. The returned [List] will be sorted according to the
@@ -157,7 +167,7 @@ data class Playlist(
         sort: Playlist.Sort,
         showActiveFirst: Boolean,
         searchFilter: String?
-    ): Flow<List<Playlist>> {
+    ): Flow<List<LibraryPlaylist>> {
         val filter = "%${searchFilter ?: ""}%"
         return if (showActiveFirst) when (sort) {
             Playlist.Sort.NameAsc ->    getAllPlaylistsSortedByActiveThenNameAsc(filter)
