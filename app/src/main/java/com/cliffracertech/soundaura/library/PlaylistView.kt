@@ -160,10 +160,11 @@ interface PlaylistViewCallback {
                     PlaylistViewEndContentType.VolumeDisplay
                 else ->
                     PlaylistViewEndContentType.MoreOptionsButton
-            }, itemName = playlist.name,
+            }, playlistName = playlist.name,
+            volume = volumeSliderValue,
+            isSingleTrack = playlist.isSingleTrack,
             onRenameRequest = { callback.onRenameRequest(playlist.name, it) },
             onDeleteRequest = { callback.onDeleteRequest(playlist.name) },
-            volume = volumeSliderValue,
             tint = MaterialTheme.colors.secondaryVariant)
     }
 }
@@ -280,15 +281,31 @@ private enum class PlaylistViewEndContentType {
     VolumeDisplay
 }
 
+/** An enum whose values describe the possible types of popups a [PlaylistView] can show. */
+private enum class PlaylistViewPopup {
+    /** The options menu for the [PlaylistView] */
+    OptionsMenu,
+    /** The rename dialog for the [PlaylistView] */
+    RenameDialog,
+    /** The confirm remove dialog for the [PlaylistView] */
+    RemoveDialog,
+    /** The create playlist from dialog for [PlaylistView]s whose playlist has only one track */
+    CreatePlaylistDialog,
+    /** The playlist options dialog for [PlaylistView]s whose playlist has more than one track */
+    PlaylistOptionsDialog,
+}
+
 /**
  * Show the end content for a [PlaylistView]. This content will change
  * according to the value of the parameter [content] to match one of
  * the possible values for the [PlaylistViewEndContentType] enum.
  *
  * @param content The value of [PlaylistViewEndContentType] that describes
- *     what will be displayed. The visible content will be crossfaded
+ *     what will be displayed. The visible content will be cross-faded
  *     between when this value changes.
- * @param itemName The name of the [Playlist] that is being interacted with
+ * @param playlistName The name of the [Playlist] that is being interacted with
+ * @param volume The volume of the [Playlist] that is being interacted with
+ * @param isSingleTrack Whether or not the [Playlist] has only one track
  * @param onRenameRequest The callback that will be invoked when the
  *     user requests through the rename dialog that they wish to change
  *     the playlist's name to the callback's [String] parameter
@@ -303,46 +320,54 @@ private enum class PlaylistViewEndContentType {
  */
 @Composable private fun PlaylistViewEndContent(
     content: PlaylistViewEndContentType,
-    itemName: String,
-    onRenameRequest: (String) -> Unit,
-    onDeleteRequest: () -> Unit,
+    playlistName: String,
     @FloatRange(from=0.0, to=1.0)
     volume: Float,
+    isSingleTrack: Boolean,
+    onRenameRequest: (String) -> Unit,
+    onDeleteRequest: () -> Unit,
     tint: Color = LocalContentColor.current,
 ) = Crossfade(content) { when(it) {
     PlaylistViewEndContentType.MoreOptionsButton -> {
-        var showingOptionsMenu by rememberSaveable { mutableStateOf(false) }
-        IconButton({ showingOptionsMenu = true }) {
+        var shownPopupType by rememberSaveable {
+            mutableStateOf<PlaylistViewPopup?>(null)
+        }
+
+        IconButton({ shownPopupType = PlaylistViewPopup.OptionsMenu }) {
             Icon(imageVector = Icons.Default.MoreVert,
                 contentDescription = stringResource(
-                    R.string.item_options_button_description, itemName),
+                    R.string.item_options_button_description, playlistName),
                 tint = tint)
         }
 
-        var showingRenameDialog by rememberSaveable { mutableStateOf(false) }
-        var showingDeleteDialog by rememberSaveable { mutableStateOf(false) }
         DropdownMenu(
-            expanded = showingOptionsMenu,
-            onDismissRequest = { showingOptionsMenu = false }
+            expanded = shownPopupType == PlaylistViewPopup.OptionsMenu,
+            onDismissRequest = { shownPopupType = null }
         ) {
-            DropdownMenuItem(onClick = {
-                showingRenameDialog = true
-                showingOptionsMenu = false
-            }) {
+            DropdownMenuItem({ shownPopupType = PlaylistViewPopup.RenameDialog}) {
                 Text(stringResource(R.string.rename))
             }
-            DropdownMenuItem(onClick = {
-                showingDeleteDialog = true
-                showingOptionsMenu = false
-            }) {
+            DropdownMenuItem({ shownPopupType = PlaylistViewPopup.RemoveDialog}) {
                 Text(stringResource(R.string.remove))
             }
+            DropdownMenuItem(onClick = {
+                shownPopupType = if (isSingleTrack) PlaylistViewPopup.CreatePlaylistDialog
+                                 else               PlaylistViewPopup.PlaylistOptionsDialog
+            }) {
+                Text(stringResource(if (isSingleTrack) R.string.create_playlist_title
+                                    else               R.string.playlist_options_title))
+            }
         }
-
-        if (showingRenameDialog)
-            TrackRenameDialog(itemName, { showingRenameDialog = false }, onRenameRequest)
-        if (showingDeleteDialog)
-            ConfirmRemoveDialog(itemName, { showingDeleteDialog = false }, onDeleteRequest)
+        when (shownPopupType) {
+            PlaylistViewPopup.OptionsMenu -> {}
+            null -> {}
+            PlaylistViewPopup.RenameDialog ->
+                TrackRenameDialog(playlistName, { shownPopupType = null }, onRenameRequest)
+            PlaylistViewPopup.RemoveDialog ->
+                ConfirmRemoveDialog(playlistName, { shownPopupType = null }, onDeleteRequest)
+            PlaylistViewPopup.CreatePlaylistDialog -> {}
+            PlaylistViewPopup.PlaylistOptionsDialog -> {}
+        }
     }
     PlaylistViewEndContentType.VolumeDisplay -> {
         Box(Modifier.minTouchTargetSize(), Alignment.Center) {
@@ -355,7 +380,7 @@ private enum class PlaylistViewEndContentType {
         IconButton(onDeleteRequest) {
             Icon(imageVector = Icons.Default.Delete,
                 contentDescription = stringResource(
-                    R.string.remove_item_description, itemName),
+                    R.string.remove_item_description, playlistName),
                 tint = MaterialTheme.colors.error)
         }
     }
@@ -367,7 +392,10 @@ fun LightTrackViewPreview() = SoundAuraTheme(darkTheme = false) {
         callback = rememberPlaylistViewCallback(),
         playlist = Playlist(
             name = "Track",
-            volume = 0.5f))
+            isActive = false,
+            volume = 0.5f,
+            hasError = false,
+            isSingleTrack = true))
 }
 
 @Preview(showBackground = true) @Composable
@@ -377,7 +405,9 @@ fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme = true) {
         playlist = Playlist(
             name = "Playlist",
             isActive = true,
-            volume = 0.25f))
+            volume = 0.25f,
+            hasError = false,
+            isSingleTrack = false))
 }
 
 @Preview @Composable
@@ -386,8 +416,10 @@ fun LightTrackErrorPreview() = SoundAuraTheme(darkTheme = false) {
         callback = rememberPlaylistViewCallback(),
         playlist = Playlist(
             name = "Track 3",
+            isActive = false,
             volume = 1.00f,
-            hasError = true))
+            hasError = true,
+            isSingleTrack = true))
 }
 
 @Preview(showBackground = true) @Composable
@@ -396,6 +428,8 @@ fun DarkTrackErrorPreview() = SoundAuraTheme(darkTheme = true) {
         callback = rememberPlaylistViewCallback(),
         playlist = Playlist(
             name = "Track 4",
+            isActive = false,
             volume = 1.00f,
-            hasError = true))
+            hasError = true,
+            isSingleTrack = true))
 }
