@@ -36,9 +36,7 @@ import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
     message: Validator.Message,
     modifier: Modifier = Modifier
 ) = Row(
-    modifier
-        .fillMaxWidth()
-        .height(48.dp),
+    modifier = modifier.fillMaxWidth().height(48.dp),
     verticalAlignment = Alignment.CenterVertically
 ) {
     val vector = when {
@@ -77,10 +75,8 @@ import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
  * Show a dialog to rename an object.
  *
  * @param title The title of the dialog
- * @param initialName The name that will be displayed in the text field initially. This
- *     value will be used when [proposedNameProvider] returns null.
- * @param proposedNameProvider A function that returns the currently proposed name when invoked
- * @param onProposedNameChange The callback that will be invoked when the user attempts
+ * @param newNameProvider A method that returns the currently proposed name when invoked
+ * @param onNewNameChange The callback that will be invoked when the user attempts
  *     to change the proposed name to the callback's [String] parameter
  * @param errorMessageProvider A function that returns the error message that should
  *     be displayed given the most recently proposed name, or null if the name is valid
@@ -89,15 +85,13 @@ import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
  */
 @Composable fun RenameDialog(
     title: String = stringResource(R.string.default_rename_dialog_title),
-    initialName: String = "",
-    proposedNameProvider: () -> String?,
-    onProposedNameChange: (String) -> Unit,
+    newNameProvider: () -> String,
+    onNewNameChange: (String) -> Unit,
     errorMessageProvider: () -> Validator.Message?,
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
 ) {
     val errorMessage = errorMessageProvider()
-    val text = proposedNameProvider() ?: initialName
     SoundAuraDialog(
         modifier = Modifier.restrictWidthAccordingToSizeClass(),
         useDefaultWidth = false,
@@ -107,8 +101,8 @@ import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
         onConfirm = onConfirm
     ) {
         TextField(
-            onValueChange = onProposedNameChange,
-            value = text,
+            onValueChange = onNewNameChange,
+            value = newNameProvider(),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),

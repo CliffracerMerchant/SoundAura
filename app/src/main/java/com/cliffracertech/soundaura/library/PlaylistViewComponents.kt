@@ -20,9 +20,6 @@ import androidx.compose.material.LocalContentColor
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
@@ -30,10 +27,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
-import com.cliffracertech.soundaura.dialog.RenameDialog
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
-import com.cliffracertech.soundaura.model.StringResource
-import com.cliffracertech.soundaura.model.Validator
 
 @Composable fun <T>overshootTween(
     duration: Int = DefaultDurationMillis,
@@ -101,26 +95,6 @@ import com.cliffracertech.soundaura.model.Validator
     // together appear as a plus icon.
     Icon(minusIcon, null, Modifier.rotate(2 * angle), tint)
     Icon(minusIcon, contentDescription, Modifier.rotate(angle), iconTint)
-}
-
-@Composable fun TrackRenameDialog(
-    itemName: String,
-    onDismissRequest: () -> Unit,
-    onConfirm: (String) -> Unit,
-) {
-    var currentName by rememberSaveable { mutableStateOf(itemName) }
-    RenameDialog(
-        initialName = itemName,
-        proposedNameProvider = { currentName },
-        onProposedNameChange = { currentName = it },
-        errorMessageProvider = {
-            if (currentName.isNotBlank()) null
-            else Validator.Message.Error(StringResource(R.string.track_name_cannot_be_blank_error_message))
-        }, onDismissRequest = onDismissRequest,
-        onConfirm = {
-            onConfirm(currentName)
-            onDismissRequest()
-        })
 }
 
 @Composable fun ConfirmRemoveDialog(

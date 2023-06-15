@@ -94,7 +94,7 @@ class MediaControllerViewModel(
 
     val activePresetName by activePresetState.name.collectAsState(null, scope)
     val activePresetIsModified by activePresetState.isModified.collectAsState(false, scope)
-    val Preset.isActive get() = name == activePresetName
+    private val Preset.isActive get() = name == activePresetName
 
     private val playButtonLongClickHintShownKey =
         booleanPreferencesKey(PrefKeys.playButtonLongClickHintShown)
@@ -203,7 +203,7 @@ class MediaControllerViewModel(
             else -> loadPreset(preset)
         }
     }
-
+    // TODO: Figure out why UI stutters when selecting new preset
     private fun loadPreset(preset: Preset) {
         scope.launch {
             activePresetState.setName(preset.name)

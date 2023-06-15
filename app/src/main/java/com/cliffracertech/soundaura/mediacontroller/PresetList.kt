@@ -259,9 +259,8 @@ interface PresetListCallback {
             renameDialogTarget?.let { preset ->
                 RenameDialog(
                     title = stringResource(R.string.create_new_preset_dialog_title),
-                    initialName = preset.name,
-                    proposedNameProvider = callback.proposedNameProvider,
-                    onProposedNameChange = callback::onProposedNameChange,
+                    newNameProvider = { callback.proposedNameProvider().orEmpty() },
+                    onNewNameChange = callback::onProposedNameChange,
                     errorMessageProvider = callback.renameErrorMessageProvider,
                     onDismissRequest = callback::onRenameCancel,
                     onConfirm = callback::onRenameConfirm)

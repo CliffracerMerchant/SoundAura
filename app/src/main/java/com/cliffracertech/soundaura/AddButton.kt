@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
@@ -39,12 +38,12 @@ import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.PlaylistNameValidator
 import com.cliffracertech.soundaura.model.database.PresetDao
 import com.cliffracertech.soundaura.model.database.PresetNameValidator
+import com.cliffracertech.soundaura.model.database.Track
 import com.cliffracertech.soundaura.model.database.TrackNamesValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -55,7 +54,7 @@ class AddPlaylistButtonViewModel(
     private val context: Context,
     private val playlistDao: PlaylistDao,
     private val messageHandler: MessageHandler,
-    private val coroutineScope: CoroutineScope? = null
+    coroutineScope: CoroutineScope? = null
 ) : ViewModel() {
 
     @Inject constructor(
@@ -118,7 +117,7 @@ class AddPlaylistButtonViewModel(
                 val newPlaylistsAndContents = newTrackNames
                     .subList(0, remainingSpace - 1)
                     .map(::Playlist).withIndex()
-                    .associate { it.value to listOf(targetUris[it.index]) }
+                    .associate { it.value to listOf(Track(targetUris[it.index])) }
                 playlistDao.insert(newPlaylistsAndContents)
             }
             onDialogDismiss()
@@ -151,7 +150,7 @@ class AddPlaylistButtonViewModel(
             if (remainingSpace < targetUris.size)
                 messageHandler.postMessage(StringResource(
                     R.string.cant_add_playlist_warning, persistedPermissionAllowance))
-            else playlistDao.insert(mapOf(Playlist(newPlaylistName) to targetUris))
+            else playlistDao.insert(mapOf(Playlist(newPlaylistName) to targetUris.map(::Track)))
             onDialogDismiss()
         }
     }
@@ -252,9 +251,8 @@ enum class AddButtonTarget { Playlist, Preset }
     if (addPresetViewModel.showingAddPresetDialog)
         RenameDialog(
             title = stringResource(R.string.create_new_preset_dialog_title),
-            initialName = "",
-            proposedNameProvider = addPresetViewModel::proposedNewPresetName,
-            onProposedNameChange = addPresetViewModel::onNewPresetNameChange,
+            newNameProvider = addPresetViewModel::proposedNewPresetName,
+            onNewNameChange = addPresetViewModel::onNewPresetNameChange,
             errorMessageProvider = addPresetViewModel::newPresetNameValidatorMessage,
             onDismissRequest = addPresetViewModel::onAddPresetDialogDismiss,
             onConfirm = addPresetViewModel::onAddPresetDialogConfirm)
@@ -266,13 +264,8 @@ enum class AddButtonTarget { Playlist, Preset }
  *
  * @param onDismissRequest The callback that will be invoked when the user
  *     clicks outside the dialog or taps the cancel button.
- * @param onConfirmRequest The callback that will be invoked when the user
- *     taps the dialog's confirm button after having selected one or more files.
- *     The first parameter is the list of [Uri]s representing the files to add,
- *     while the second parameter is the list of names for each of these uris.
  */
 @Composable fun AddLocalFilesDialog(onDismissRequest: () -> Unit) {
-    val context = LocalContext.current
     val vm = viewModel<AddPlaylistButtonViewModel>()
     var chosenUris by rememberSaveable { mutableStateOf<List<Uri>?>(null) }
 

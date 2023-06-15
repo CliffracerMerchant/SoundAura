@@ -3,9 +3,6 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura.library
 
-import android.content.Context
-import android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-import android.net.Uri
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,10 +20,11 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -39,9 +37,12 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.collectAsState
+import com.cliffracertech.soundaura.dialog.RenameDialog
 import com.cliffracertech.soundaura.enumPreferenceFlow
 import com.cliffracertech.soundaura.model.SearchQueryState
+import com.cliffracertech.soundaura.model.Validator
 import com.cliffracertech.soundaura.model.database.PlaylistDao
+import com.cliffracertech.soundaura.model.database.PlaylistNameValidator
 import com.cliffracertech.soundaura.preferenceFlow
 import com.cliffracertech.soundaura.settings.PrefKeys
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -56,6 +57,37 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Playlist.Sort
+
+sealed class PlaylistDialog(
+    val target: Playlist,
+    val onDismissRequest: () -> Unit,
+    val onConfirmClick: () -> Unit,
+) {
+    /** The rename dialog for a playlist */
+    class Rename(
+        target: Playlist,
+        onDismissRequest: () -> Unit,
+        onConfirmClick: () -> Unit,
+        val newNameProvider: () -> String,
+        val messageProvider: () -> Validator.Message?,
+        val onNameChange: (String) -> Unit,
+    ): PlaylistDialog(target, onDismissRequest, onConfirmClick)
+    /** The extra options dialog for a playlist. This will be a playlist options
+     * dialog for multi-track playlists, or a convert to playlist dialog for
+     * single-track playlists (which are presented to the user as 'track's instead
+     * of 'playlist's) . */
+    class ExtraOptions(
+        target: Playlist,
+        onDismissRequest: () -> Unit,
+        onConfirmClick: () -> Unit,
+    ): PlaylistDialog(target, onDismissRequest, onConfirmClick)
+    /** The remove dialog for a playlist */
+    class Remove(
+        target: Playlist,
+        onDismissRequest: () -> Unit,
+        onConfirmClick: () -> Unit,
+    ): PlaylistDialog(target, onDismissRequest, onConfirmClick)
+}
 
 /**
  * A [LazyColumn] to display all of the provided [Playlist]s with instances of [PlaylistView].
@@ -76,6 +108,7 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
     state: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues,
     libraryContents: ImmutableList<Playlist>?,
+    shownDialog: PlaylistDialog?,
     playlistViewCallback: PlaylistViewCallback
 ) {
     Crossfade(libraryContents?.isEmpty()) { when(it) {
@@ -100,6 +133,24 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
             }
         }
     }}
+    when (shownDialog) {
+        null -> {}
+        is PlaylistDialog.Rename ->
+            RenameDialog(
+                title = stringResource(R.string.default_rename_dialog_title),
+                newNameProvider = shownDialog.newNameProvider,
+                onNewNameChange = shownDialog.onNameChange,
+                errorMessageProvider = shownDialog.messageProvider,
+                onDismissRequest = shownDialog.onDismissRequest,
+                onConfirm = shownDialog.onConfirmClick)
+        is PlaylistDialog.ExtraOptions ->
+            {}
+        is PlaylistDialog.Remove ->
+            ConfirmRemoveDialog(
+                itemName = shownDialog.target.name,
+                onDismissRequest = shownDialog.onDismissRequest,
+                onConfirm = shownDialog.onConfirmClick)
+    }
 }
 
 @HiltViewModel class LibraryViewModel(
@@ -127,27 +178,53 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
         .map(List<Playlist>::toImmutableList)
         .collectAsState(null, scope)
 
-    fun onDeletePlaylistDialogConfirm(context: Context, uriString: String) {
-        scope.launch {
-            val uri = Uri.parse(uriString)
-            try {
-                context.contentResolver.releasePersistableUriPermission(
-                    uri, FLAG_GRANT_READ_URI_PERMISSION)
-            } catch (_: SecurityException) {}
-            playlistDao.delete(uriString)
-        }
+    var shownDialog by mutableStateOf<PlaylistDialog?>(null)
+
+    fun onPlaylistAddRemoveButtonClick(playlist: Playlist) {
+        scope.launch { playlistDao.toggleIsActive(playlist.name) }
     }
 
-    fun onPlaylistAddRemoveButtonClick(uriString: String) {
-        scope.launch { playlistDao.toggleIsActive(uriString) }
+    fun onPlaylistVolumeChangeRequest(playlist: Playlist, volume: Float) {
+        scope.launch { playlistDao.setVolume(playlist.name, volume) }
     }
 
-    fun onPlaylistVolumeChangeRequest(uriString: String, volume: Float) {
-        scope.launch { playlistDao.setVolume(uriString, volume) }
+    private val nameValidator = PlaylistNameValidator(playlistDao, "")
+    private val validatorMessage by nameValidator.message.collectAsState(null, scope)
+    fun onPlaylistRenameClick(playlist: Playlist) {
+        nameValidator.clear()
+        nameValidator.value = playlist.name
+        shownDialog = PlaylistDialog.Rename(
+            target = playlist,
+            newNameProvider = nameValidator::value,
+            onNameChange = { nameValidator.value = it },
+            messageProvider = ::validatorMessage,
+            onDismissRequest = { shownDialog = null },
+            onConfirmClick = {
+                scope.launch {
+                    val newName = nameValidator.validate() ?: return@launch
+                    playlistDao.rename(playlist.name, newName)
+                }
+            })
     }
 
-    fun onPlaylistRenameDialogConfirm(oldName: String, newName: String) {
-        scope.launch { playlistDao.rename(oldName, newName) }
+    fun onPlaylistExtraOptionsClick(playlist: Playlist) {
+        shownDialog = PlaylistDialog.ExtraOptions(
+            target = playlist,
+            onDismissRequest = { shownDialog = null },
+            onConfirmClick = {
+
+            }
+        )
+    }
+
+    fun onPlaylistRemoveClick(playlist: Playlist) {
+        shownDialog = PlaylistDialog.Remove(
+            target = playlist,
+            onDismissRequest = { shownDialog = null },
+            onConfirmClick = { scope.launch {
+                playlistDao.delete(playlist.name)
+            }}
+        )
     }
 }
 
@@ -173,19 +250,18 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
     onVolumeChange: (String, Float) -> Unit,
 ) = Surface(modifier, color = MaterialTheme.colors.background) {
     val viewModel: LibraryViewModel = viewModel()
-    val context = LocalContext.current
     val itemCallback = rememberPlaylistViewCallback(
         onAddRemoveButtonClick = viewModel::onPlaylistAddRemoveButtonClick,
-        onVolumeChange = onVolumeChange,
+        onVolumeChange = { playlist, volume -> onVolumeChange(playlist.name, volume) },
         onVolumeChangeFinished = viewModel::onPlaylistVolumeChangeRequest,
-        onRenameRequest = viewModel::onPlaylistRenameDialogConfirm,
-        onDeleteRequest = {
-            viewModel.onDeletePlaylistDialogConfirm(context, it)
-        })
+        onRenameClick = viewModel::onPlaylistRenameClick,
+        onExtraOptionsClick = viewModel::onPlaylistExtraOptionsClick,
+        onRemoveClick = viewModel::onPlaylistRemoveClick)
     LibraryView(
         modifier = modifier,
         state = state,
         contentPadding = padding,
         libraryContents = viewModel.playlists,
+        shownDialog = viewModel.shownDialog,
         playlistViewCallback = itemCallback)
 }
