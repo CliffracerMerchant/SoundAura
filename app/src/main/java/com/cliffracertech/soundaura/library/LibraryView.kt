@@ -144,7 +144,12 @@ sealed class PlaylistDialog(
                 onDismissRequest = shownDialog.onDismissRequest,
                 onConfirm = shownDialog.onConfirmClick)
         is PlaylistDialog.ExtraOptions ->
-            {}
+            if (!shownDialog.target.isSingleTrack)
+                PlaylistOptionsDialog(
+                    playlist = shownDialog.target,
+                    onDismissRequest = shownDialog.onDismissRequest,
+                    onConfirm = shownDialog.onConfirmClick)
+            else {}
         is PlaylistDialog.Remove ->
             ConfirmRemoveDialog(
                 itemName = shownDialog.target.name,
