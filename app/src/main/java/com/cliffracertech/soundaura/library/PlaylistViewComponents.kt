@@ -55,6 +55,7 @@ import com.cliffracertech.soundaura.dialog.SoundAuraDialog
 import com.cliffracertech.soundaura.minTouchTargetSize
 import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
+import kotlinx.collections.immutable.ImmutableList
 import java.io.File
 
 @Composable fun <T>overshootTween(
@@ -189,6 +190,8 @@ import java.io.File
  *
  * @param playlist The [Playlist] whose shuffle and track order
  *     are being adjusted
+ * @param shuffleEnabled Whether or not the playlist has shuffle enabled
+ * @param tracks An [ImmutableList] containing the [Uri]s of the playlist's tracks
  * @param onDismissRequest The callback that will be invoked
  *     when the back button or gesture is activated or the
  *     dialog's cancel button is clicked
@@ -199,13 +202,15 @@ import java.io.File
  */
 @Composable fun PlaylistOptionsDialog(
     playlist: Playlist,
+    shuffleEnabled: Boolean,
+    tracks: ImmutableList<Uri>,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    onConfirm: () -> Unit,
+    onConfirm: (shuffleEnabled: Boolean, newTrackOrder: List<Uri>) -> Unit,
 ) {
-    var tempShuffleEnabled by remember { mutableStateOf(false) }
-    val tempTrackOrder: MutableList<Uri> = remember {
-        mutableStateListOf()//*(playlistTracks.toTypedArray()))
+    var tempShuffleEnabled by remember { mutableStateOf(shuffleEnabled) }
+    val tempTrackOrder: MutableList<Uri> = remember(tracks) {
+        mutableStateListOf(*(tracks.toTypedArray()))
     }
     SoundAuraDialog(
         modifier = modifier.restrictWidthAccordingToSizeClass(),
@@ -216,7 +221,7 @@ import java.io.File
                 stringResource(R.string.playlist_options_title)
             }
         }, onDismissRequest = onDismissRequest,
-        onConfirm = onConfirm
+        onConfirm = { onConfirm(tempShuffleEnabled, tempTrackOrder) }
     ) {
         PlaylistOptions(
             tempShuffleEnabled, tempTrackOrder,

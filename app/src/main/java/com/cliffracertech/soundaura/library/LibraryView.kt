@@ -3,6 +3,7 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura.library
 
+import android.net.Uri
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -61,32 +62,42 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
 sealed class PlaylistDialog(
     val target: Playlist,
     val onDismissRequest: () -> Unit,
-    val onConfirmClick: () -> Unit,
 ) {
     /** The rename dialog for a playlist */
     class Rename(
         target: Playlist,
         onDismissRequest: () -> Unit,
-        onConfirmClick: () -> Unit,
+        val onConfirmClick: () -> Unit,
         val newNameProvider: () -> String,
         val messageProvider: () -> Validator.Message?,
         val onNameChange: (String) -> Unit,
-    ): PlaylistDialog(target, onDismissRequest, onConfirmClick)
-    /** The extra options dialog for a playlist. This will be a playlist options
-     * dialog for multi-track playlists, or a convert to playlist dialog for
-     * single-track playlists (which are presented to the user as 'track's instead
-     * of 'playlist's) . */
-    class ExtraOptions(
+    ): PlaylistDialog(target, onDismissRequest)
+
+    /** The 'create playlist from' dialog for a playlist. */
+    class CreatePlaylist(
         target: Playlist,
         onDismissRequest: () -> Unit,
-        onConfirmClick: () -> Unit,
-    ): PlaylistDialog(target, onDismissRequest, onConfirmClick)
+        val onConfirmClick: (newTrackList: List<Uri>) -> Unit,
+    ): PlaylistDialog(target, onDismissRequest)
+
+    /** The 'playlist options' dialog for a playlist. */
+    class PlaylistOptions(
+        target: Playlist,
+        val playlistShuffleEnabled: Boolean,
+        val playlistTracks: ImmutableList<Uri>,
+        onDismissRequest: () -> Unit,
+        val onConfirmClick: (
+                shuffleEnabled: Boolean,
+                newTrackList: List<Uri>,
+            ) -> Unit,
+    ): PlaylistDialog(target, onDismissRequest)
+
     /** The remove dialog for a playlist */
     class Remove(
         target: Playlist,
         onDismissRequest: () -> Unit,
-        onConfirmClick: () -> Unit,
-    ): PlaylistDialog(target, onDismissRequest, onConfirmClick)
+        val onConfirmClick: () -> Unit,
+    ): PlaylistDialog(target, onDismissRequest)
 }
 
 /**
@@ -143,13 +154,14 @@ sealed class PlaylistDialog(
                 errorMessageProvider = shownDialog.messageProvider,
                 onDismissRequest = shownDialog.onDismissRequest,
                 onConfirm = shownDialog.onConfirmClick)
-        is PlaylistDialog.ExtraOptions ->
-            if (!shownDialog.target.isSingleTrack)
-                PlaylistOptionsDialog(
-                    playlist = shownDialog.target,
-                    onDismissRequest = shownDialog.onDismissRequest,
-                    onConfirm = shownDialog.onConfirmClick)
-            else {}
+        is PlaylistDialog.CreatePlaylist -> {}
+        is PlaylistDialog.PlaylistOptions ->
+            PlaylistOptionsDialog(
+                playlist = shownDialog.target,
+                shuffleEnabled = shownDialog.playlistShuffleEnabled,
+                tracks = shownDialog.playlistTracks,
+                onDismissRequest = shownDialog.onDismissRequest,
+                onConfirm = shownDialog.onConfirmClick)
         is PlaylistDialog.Remove ->
             ConfirmRemoveDialog(
                 itemName = shownDialog.target.name,
@@ -209,26 +221,37 @@ sealed class PlaylistDialog(
                     val newName = nameValidator.validate() ?: return@launch
                     playlistDao.rename(playlist.name, newName)
                 }
+                shownDialog = null
             })
     }
 
     fun onPlaylistExtraOptionsClick(playlist: Playlist) {
-        shownDialog = PlaylistDialog.ExtraOptions(
-            target = playlist,
-            onDismissRequest = { shownDialog = null },
-            onConfirmClick = {
-
-            }
-        )
+        scope.launch {
+            val shuffleEnabled = playlistDao.getPlaylistShuffle(playlist.name)
+            val tracks = playlistDao.getPlaylistTracks(playlist.name)
+            shownDialog = PlaylistDialog.PlaylistOptions(
+                target = playlist,
+                playlistShuffleEnabled = shuffleEnabled,
+                playlistTracks = tracks.toImmutableList(),
+                onDismissRequest = { shownDialog = null },
+                onConfirmClick = { newShuffleEnabled, newTrackList ->
+                    scope.launch {
+                        playlistDao.setPlaylistShuffleAndTracks(
+                            playlist.name, newShuffleEnabled, newTrackList)
+                    }
+                    shownDialog = null
+                })
+        }
     }
 
     fun onPlaylistRemoveClick(playlist: Playlist) {
         shownDialog = PlaylistDialog.Remove(
             target = playlist,
             onDismissRequest = { shownDialog = null },
-            onConfirmClick = { scope.launch {
-                playlistDao.delete(playlist.name)
-            }}
+            onConfirmClick = {
+                scope.launch { playlistDao.delete(playlist.name) }
+                shownDialog = null
+            }
         )
     }
 }

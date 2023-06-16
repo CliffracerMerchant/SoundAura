@@ -242,6 +242,24 @@ data class Playlist(
         if (playlistHasNoValidTracks(playlistName))
             setPlaylistHasError(playlistName)
     }
+
+    @Query("SELECT shuffle FROM playlist " +
+           "WHERE playlist.name = :playlistName LIMIT 1")
+    abstract suspend fun getPlaylistShuffle(playlistName: String): Boolean
+
+    @Query("UPDATE playlist SET shuffle = :enabled " +
+           "WHERE name = :playlistName")
+    abstract suspend fun setPlaylistShuffle(playlistName: String, enabled: Boolean)
+
+    @Transaction
+    open suspend fun setPlaylistShuffleAndTracks(
+        playlistName: String,
+        shuffleEnabled: Boolean,
+        tracks: List<Uri>
+    ) {
+        setPlaylistShuffle(playlistName, shuffleEnabled)
+        setPlaylistTracks(playlistName, tracks)
+    }
 }
 
 class TrackNamesValidator(
