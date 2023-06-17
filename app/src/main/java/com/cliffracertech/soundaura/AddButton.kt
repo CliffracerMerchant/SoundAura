@@ -255,7 +255,7 @@ enum class AddButtonTarget { Playlist, Preset }
             onNewNameChange = addPresetViewModel::onNewPresetNameChange,
             errorMessageProvider = addPresetViewModel::newPresetNameValidatorMessage,
             onDismissRequest = addPresetViewModel::onAddPresetDialogDismiss,
-            onConfirm = addPresetViewModel::onAddPresetDialogConfirm)
+            onConfirmClick = addPresetViewModel::onAddPresetDialogConfirm)
 }
 
 /**

@@ -81,7 +81,7 @@ import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
  * @param errorMessageProvider A function that returns the error message that should
  *     be displayed given the most recently proposed name, or null if the name is valid
  * @param onDismissRequest The callback that will be invoked when the user attempts to dismiss the dialog
- * @param onConfirm The callback that will be invoked when the user clicks the ok button
+ * @param onConfirmClick The callback that will be invoked when the user clicks the ok button
  */
 @Composable fun RenameDialog(
     title: String = stringResource(R.string.default_rename_dialog_title),
@@ -89,7 +89,7 @@ import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
     onNewNameChange: (String) -> Unit,
     errorMessageProvider: () -> Validator.Message?,
     onDismissRequest: () -> Unit,
-    onConfirm: () -> Unit,
+    onConfirmClick: () -> Unit,
 ) {
     val errorMessage = errorMessageProvider()
     SoundAuraDialog(
@@ -98,7 +98,7 @@ import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
         title = title,
         onDismissRequest = onDismissRequest,
         confirmButtonEnabled = errorMessage == null,
-        onConfirm = onConfirm
+        onConfirm = onConfirmClick
     ) {
         TextField(
             onValueChange = onNewNameChange,

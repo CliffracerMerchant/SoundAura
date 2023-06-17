@@ -3,7 +3,9 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura.library
 
+import android.content.Context
 import android.net.Uri
+import android.os.Build
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -40,7 +43,9 @@ import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.collectAsState
 import com.cliffracertech.soundaura.dialog.RenameDialog
 import com.cliffracertech.soundaura.enumPreferenceFlow
+import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.SearchQueryState
+import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.Validator
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.PlaylistNameValidator
@@ -71,13 +76,6 @@ sealed class PlaylistDialog(
         val newNameProvider: () -> String,
         val messageProvider: () -> Validator.Message?,
         val onNameChange: (String) -> Unit,
-    ): PlaylistDialog(target, onDismissRequest)
-
-    /** The 'create playlist from' dialog for a playlist. */
-    class CreatePlaylist(
-        target: Playlist,
-        onDismissRequest: () -> Unit,
-        val onConfirmClick: (newTrackList: List<Uri>) -> Unit,
     ): PlaylistDialog(target, onDismissRequest)
 
     /** The 'playlist options' dialog for a playlist. */
@@ -153,26 +151,32 @@ sealed class PlaylistDialog(
                 onNewNameChange = shownDialog.onNameChange,
                 errorMessageProvider = shownDialog.messageProvider,
                 onDismissRequest = shownDialog.onDismissRequest,
-                onConfirm = shownDialog.onConfirmClick)
-        is PlaylistDialog.CreatePlaylist -> {}
+                onConfirmClick = shownDialog.onConfirmClick)
         is PlaylistDialog.PlaylistOptions ->
-            PlaylistOptionsDialog(
+            if (shownDialog.target.isSingleTrack)
+                CreatePlaylistFromDialog(
+                    playlist = shownDialog.target,
+                    trackUri = shownDialog.playlistTracks.first(),
+                    onDismissRequest = shownDialog.onDismissRequest,
+                    onConfirmClick = shownDialog.onConfirmClick)
+            else PlaylistOptionsDialog(
                 playlist = shownDialog.target,
                 shuffleEnabled = shownDialog.playlistShuffleEnabled,
                 tracks = shownDialog.playlistTracks,
                 onDismissRequest = shownDialog.onDismissRequest,
-                onConfirm = shownDialog.onConfirmClick)
+                onConfirmClick = shownDialog.onConfirmClick)
         is PlaylistDialog.Remove ->
             ConfirmRemoveDialog(
                 itemName = shownDialog.target.name,
                 onDismissRequest = shownDialog.onDismissRequest,
-                onConfirm = shownDialog.onConfirmClick)
+                onConfirmClick = shownDialog.onConfirmClick)
     }
 }
 
 @HiltViewModel class LibraryViewModel(
     dataStore: DataStore<Preferences>,
     private val playlistDao: PlaylistDao,
+    private val messageHandler: MessageHandler,
     searchQueryState: SearchQueryState,
     coroutineScope: CoroutineScope? = null
 ) : ViewModel() {
@@ -180,8 +184,9 @@ sealed class PlaylistDialog(
     @Inject constructor(
         dataStore: DataStore<Preferences>,
         playlistDao: PlaylistDao,
+        messageHandler: MessageHandler,
         searchQueryState: SearchQueryState,
-    ) : this(dataStore, playlistDao, searchQueryState, null)
+    ) : this(dataStore, playlistDao, messageHandler, searchQueryState, null)
 
     private val scope = coroutineScope ?: viewModelScope
     private val showActiveTracksFirstKey = booleanPreferencesKey(PrefKeys.showActivePlaylistsFirst)
@@ -225,10 +230,11 @@ sealed class PlaylistDialog(
             })
     }
 
-    fun onPlaylistExtraOptionsClick(playlist: Playlist) {
+    fun onPlaylistOptionsClick(playlist: Playlist, context: Context) {
         scope.launch {
             val shuffleEnabled = playlistDao.getPlaylistShuffle(playlist.name)
             val tracks = playlistDao.getPlaylistTracks(playlist.name)
+            val wasSingleTrack = tracks.size == 1
             shownDialog = PlaylistDialog.PlaylistOptions(
                 target = playlist,
                 playlistShuffleEnabled = shuffleEnabled,
@@ -236,6 +242,18 @@ sealed class PlaylistDialog(
                 onDismissRequest = { shownDialog = null },
                 onConfirmClick = { newShuffleEnabled, newTrackList ->
                     scope.launch {
+                        if (wasSingleTrack) {
+                            val persistedPermissionAllowance =
+                                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) 128 else 512
+                            val permissionsCount = context.contentResolver.persistedUriPermissions.size
+                            val remainingSpace = persistedPermissionAllowance - permissionsCount
+
+                            if (remainingSpace < newTrackList.size)
+                                messageHandler.postMessage(StringResource(
+                                    R.string.cant_add_playlist_warning, persistedPermissionAllowance))
+                            else for (track in newTrackList)
+                                context.contentResolver.takePersistableUriPermission(track, 0)
+                        }
                         playlistDao.setPlaylistShuffleAndTracks(
                             playlist.name, newShuffleEnabled, newTrackList)
                     }
@@ -278,12 +296,13 @@ sealed class PlaylistDialog(
     onVolumeChange: (String, Float) -> Unit,
 ) = Surface(modifier, color = MaterialTheme.colors.background) {
     val viewModel: LibraryViewModel = viewModel()
+    val context = LocalContext.current
     val itemCallback = rememberPlaylistViewCallback(
         onAddRemoveButtonClick = viewModel::onPlaylistAddRemoveButtonClick,
         onVolumeChange = { playlist, volume -> onVolumeChange(playlist.name, volume) },
         onVolumeChangeFinished = viewModel::onPlaylistVolumeChangeRequest,
         onRenameClick = viewModel::onPlaylistRenameClick,
-        onExtraOptionsClick = viewModel::onPlaylistExtraOptionsClick,
+        onExtraOptionsClick = { viewModel.onPlaylistOptionsClick(it, context) },
         onRemoveClick = viewModel::onPlaylistRemoveClick)
     LibraryView(
         modifier = modifier,

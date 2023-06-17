@@ -263,7 +263,7 @@ interface PresetListCallback {
                     onNewNameChange = callback::onProposedNameChange,
                     errorMessageProvider = callback.renameErrorMessageProvider,
                     onDismissRequest = callback::onRenameCancel,
-                    onConfirm = callback::onRenameConfirm)
+                    onConfirmClick = callback::onRenameConfirm)
             }
             overwriteDialogTarget?.let { preset ->
                 ConfirmPresetOverwriteDialog(
