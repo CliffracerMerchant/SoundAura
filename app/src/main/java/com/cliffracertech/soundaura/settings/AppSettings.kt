@@ -37,9 +37,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.cliffracertech.soundaura.HorizontalDivider
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
+import com.cliffracertech.soundaura.ui.HorizontalDivider
 
 @Composable fun AppSettings(
     contentPadding: PaddingValues,

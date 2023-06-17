@@ -41,13 +41,13 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.cliffracertech.soundaura.MarqueeText
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.dialog.RenameDialog
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
-import com.cliffracertech.soundaura.minTouchTargetSize
 import com.cliffracertech.soundaura.model.Validator
 import com.cliffracertech.soundaura.model.database.Preset
+import com.cliffracertech.soundaura.ui.MarqueeText
+import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList

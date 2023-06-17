@@ -24,8 +24,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
-import com.cliffracertech.soundaura.minTouchTargetSize
 import com.cliffracertech.soundaura.model.database.Playlist
+import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import com.google.accompanist.insets.statusBarsPadding
 

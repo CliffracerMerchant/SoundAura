@@ -58,15 +58,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import com.cliffracertech.soundaura.MarqueeText
 import com.cliffracertech.soundaura.R
-import com.cliffracertech.soundaura.bottomShape
-import com.cliffracertech.soundaura.endShape
 import com.cliffracertech.soundaura.model.database.Preset
-import com.cliffracertech.soundaura.startShape
-import com.cliffracertech.soundaura.topShape
-import com.cliffracertech.soundaura.tweenDuration
+import com.cliffracertech.soundaura.ui.MarqueeText
+import com.cliffracertech.soundaura.ui.bottomShape
+import com.cliffracertech.soundaura.ui.endShape
+import com.cliffracertech.soundaura.ui.startShape
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
+import com.cliffracertech.soundaura.ui.topShape
+import com.cliffracertech.soundaura.ui.tweenDuration
 import kotlinx.collections.immutable.toImmutableList
 import java.time.Instant
 

@@ -26,11 +26,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.cliffracertech.soundaura.R
-import com.cliffracertech.soundaura.SlideAnimatedContent
-import com.cliffracertech.soundaura.VerticalDivider
-import com.cliffracertech.soundaura.bottomEndShape
-import com.cliffracertech.soundaura.bottomStartShape
-import com.cliffracertech.soundaura.minTouchTargetSize
+import com.cliffracertech.soundaura.ui.SlideAnimatedContent
+import com.cliffracertech.soundaura.ui.VerticalDivider
+import com.cliffracertech.soundaura.ui.bottomEndShape
+import com.cliffracertech.soundaura.ui.bottomStartShape
+import com.cliffracertech.soundaura.ui.minTouchTargetSize
 
 /**
  * Compose an alert dialog with multiple pages. The dialog will display

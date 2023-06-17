@@ -38,13 +38,10 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.cliffracertech.soundaura.HorizontalDivider
 import com.cliffracertech.soundaura.R
-import com.cliffracertech.soundaura.bottomShape
 import com.cliffracertech.soundaura.collectAsState
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
 import com.cliffracertech.soundaura.edit
-import com.cliffracertech.soundaura.minTouchTargetSize
 import com.cliffracertech.soundaura.model.ActivePresetState
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.NavigationState
@@ -55,7 +52,10 @@ import com.cliffracertech.soundaura.model.database.PresetDao
 import com.cliffracertech.soundaura.model.database.PresetNameValidator
 import com.cliffracertech.soundaura.preferenceState
 import com.cliffracertech.soundaura.settings.PrefKeys
-import com.cliffracertech.soundaura.tweenDuration
+import com.cliffracertech.soundaura.ui.HorizontalDivider
+import com.cliffracertech.soundaura.ui.bottomShape
+import com.cliffracertech.soundaura.ui.minTouchTargetSize
+import com.cliffracertech.soundaura.ui.tweenDuration
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope

@@ -52,12 +52,12 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import com.cliffracertech.soundaura.HorizontalDivider
-import com.cliffracertech.soundaura.MarqueeText
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
-import com.cliffracertech.soundaura.minTouchTargetSize
 import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
+import com.cliffracertech.soundaura.ui.HorizontalDivider
+import com.cliffracertech.soundaura.ui.MarqueeText
+import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlinx.collections.immutable.ImmutableList
 import java.io.File

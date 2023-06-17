@@ -61,14 +61,14 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
-import com.cliffracertech.soundaura.VerticalDivider
-import com.cliffracertech.soundaura.bottomEndShape
-import com.cliffracertech.soundaura.bottomStartShape
 import com.cliffracertech.soundaura.dialog.MultiStepDialog
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
-import com.cliffracertech.soundaura.minTouchTargetSize
 import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
 import com.cliffracertech.soundaura.service.TogglePlaybackTileService
+import com.cliffracertech.soundaura.ui.VerticalDivider
+import com.cliffracertech.soundaura.ui.bottomEndShape
+import com.cliffracertech.soundaura.ui.bottomStartShape
+import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 

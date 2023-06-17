@@ -39,6 +39,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cliffracertech.soundaura.actionbar.SoundAuraActionBar
+import com.cliffracertech.soundaura.library.SoundAuraLibraryView
 import com.cliffracertech.soundaura.mediacontroller.MediaControllerSizes
 import com.cliffracertech.soundaura.mediacontroller.SoundAuraMediaController
 import com.cliffracertech.soundaura.model.MessageHandler
@@ -47,8 +48,9 @@ import com.cliffracertech.soundaura.service.PlayerService
 import com.cliffracertech.soundaura.settings.AppSettings
 import com.cliffracertech.soundaura.settings.AppTheme
 import com.cliffracertech.soundaura.settings.PrefKeys
-import com.cliffracertech.soundaura.library.SoundAuraLibraryView
+import com.cliffracertech.soundaura.ui.SlideAnimatedContent
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
+import com.cliffracertech.soundaura.ui.tweenDuration
 import com.google.accompanist.insets.LocalWindowInsets
 import com.google.accompanist.insets.ProvideWindowInsets
 import com.google.accompanist.insets.navigationBarsHeight

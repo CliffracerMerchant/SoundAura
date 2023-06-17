@@ -33,7 +33,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.LayoutDirection
-import com.cliffracertech.soundaura.tweenDuration
+import com.cliffracertech.soundaura.ui.tweenDuration
 
 val LayoutDirection.isLtr get() = this == LayoutDirection.Ltr
 

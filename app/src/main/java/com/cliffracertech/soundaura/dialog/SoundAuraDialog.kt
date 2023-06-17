@@ -31,14 +31,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.cliffracertech.soundaura.HorizontalDivider
 import com.cliffracertech.soundaura.R
-import com.cliffracertech.soundaura.VerticalDivider
-import com.cliffracertech.soundaura.bottomEndShape
-import com.cliffracertech.soundaura.bottomShape
-import com.cliffracertech.soundaura.bottomStartShape
 import com.cliffracertech.soundaura.imeIsOpen
-import com.cliffracertech.soundaura.minTouchTargetSize
+import com.cliffracertech.soundaura.ui.HorizontalDivider
+import com.cliffracertech.soundaura.ui.VerticalDivider
+import com.cliffracertech.soundaura.ui.bottomEndShape
+import com.cliffracertech.soundaura.ui.bottomShape
+import com.cliffracertech.soundaura.ui.bottomStartShape
+import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.google.accompanist.insets.LocalWindowInsets
 
 /**
