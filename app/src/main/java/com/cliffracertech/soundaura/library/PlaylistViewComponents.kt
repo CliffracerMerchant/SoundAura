@@ -60,7 +60,6 @@ import com.cliffracertech.soundaura.minTouchTargetSize
 import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 import java.io.File
 
 @Composable fun <T>overshootTween(
@@ -132,50 +131,6 @@ import java.io.File
 }
 
 /**
- * Show a dialog to create a playlist from a track (i.e. add tracks to an
- * existing single-track playlist.
- *
- * @param playlist The single track playlist that is being added to
- * @param trackUri The [Uri] for the single existing track in the playlist
- * @param onDismissRequest The callback that will be invoked
- *     when the back button or gesture is activated or the
- *     dialog's cancel button is clicked
- * @param modifier The [Modifier] to use for the dialog window
- * @param onConfirmClick The callback that will be invoked when the
- *     dialog's confirm button is clicked. The List<Uri> parameter
- *     newTracks represents the new track order for the playlist.
- */
-@Composable fun CreatePlaylistFromDialog(
-    playlist: Playlist,
-    trackUri: Uri,
-    onDismissRequest: () -> Unit,
-    modifier: Modifier = Modifier,
-    onConfirmClick: (shuffleEnabled: Boolean, newTrackOrder: List<Uri>) -> Unit,
-) {
-    var chosenUris by rememberSaveable { mutableStateOf<List<Uri>?>(null) }
-
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenMultipleDocuments()
-    ) { uris ->
-        if (uris.isEmpty()) onDismissRequest()
-        chosenUris = uris
-    }
-
-    val uris = chosenUris
-    if (uris == null)
-        LaunchedEffect(Unit) { launcher.launch(arrayOf("audio/*", "application/ogg")) }
-    else {
-        val tracks = listOf(trackUri, *uris.toTypedArray()).toImmutableList()
-        PlaylistOptionsDialog(
-            playlist, shuffleEnabled = false,
-            tracks,
-            onDismissRequest,
-            modifier,
-            onConfirmClick)
-    }
-}
-
-/**
  * Show a toggle shuffle switch and a reorderable list of tracks for a playlist.
  *
  * @param shuffleEnabled Whether or not shuffle is currently enabled
@@ -234,8 +189,11 @@ import java.io.File
 }
 
 /**
- * Show a dialog that contains an inner [PlaylistOptions] section
- * to alter the [playlist]'s shuffle and track order.
+ * Show a dialog that contains an inner [PlaylistOptions] section to alter the
+ * [playlist]'s shuffle and track order. If [playlist]'s [Playlist.isSingleTrack]
+ * property is true, then a system file picker will show first to allow the
+ * user to choose extra files to add to the single track in order to create a
+ * multi-track playlist.
  *
  * @param playlist The [Playlist] whose shuffle and track order
  *     are being adjusted
@@ -257,26 +215,44 @@ import java.io.File
     modifier: Modifier = Modifier,
     onConfirmClick: (shuffleEnabled: Boolean, newTrackOrder: List<Uri>) -> Unit,
 ) {
-    var tempShuffleEnabled by remember { mutableStateOf(shuffleEnabled) }
-    val tempTrackOrder: MutableList<Uri> = remember(tracks) {
-        mutableStateListOf(*(tracks.toTypedArray()))
-    }
-    SoundAuraDialog(
-        modifier = modifier.restrictWidthAccordingToSizeClass(),
-        useDefaultWidth = false,
-        titleLayout = @Composable {
-            Row {
-                MarqueeText(playlist.name)
-                stringResource(R.string.playlist_options_title)
+    var chosenUris by remember { mutableStateOf<List<Uri>?>(null) }
+
+    if (playlist.isSingleTrack && chosenUris == null) {
+        val launcher = rememberLauncherForActivityResult(
+            ActivityResultContracts.OpenMultipleDocuments()
+        ) { uris ->
+            if (uris.isEmpty())
+                onDismissRequest()
+            chosenUris = uris
+        }
+        LaunchedEffect(Unit) {
+            launcher.launch(arrayOf("audio/*", "application/ogg"))
+        }
+    } else {
+        var tempShuffleEnabled by rememberSaveable { mutableStateOf(shuffleEnabled) }
+        val tempTrackOrder: MutableList<Uri> = rememberSaveable(tracks) {
+            val existingTracks = tracks.toTypedArray()
+            val newTracks = chosenUris?.toTypedArray() ?: emptyArray()
+            mutableStateListOf(*existingTracks, *newTracks)
+        }
+        SoundAuraDialog(
+            modifier = modifier.restrictWidthAccordingToSizeClass(),
+            useDefaultWidth = false,
+            titleLayout = @Composable {
+                Row { MarqueeText(playlist.name)
+                      stringResource(R.string.playlist_options_title) }
+            }, onDismissRequest = onDismissRequest,
+            onConfirm = {
+                onConfirmClick(tempShuffleEnabled, tempTrackOrder)
             }
-        }, onDismissRequest = onDismissRequest,
-        onConfirm = { onConfirmClick(tempShuffleEnabled, tempTrackOrder) }
-    ) {
-        PlaylistOptions(
-            tempShuffleEnabled, tempTrackOrder,
-            onShuffleSwitchClick = {
-                tempShuffleEnabled = !tempShuffleEnabled
-            })
+        ) {
+            PlaylistOptions(
+                tempShuffleEnabled,
+                tempTrackOrder,
+                onShuffleSwitchClick = {
+                    tempShuffleEnabled = !tempShuffleEnabled
+                })
+        }
     }
 }
 

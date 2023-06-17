@@ -169,7 +169,7 @@ interface PlaylistViewCallback {
             }, playlist = playlist,
             volume = volumeSliderValue,
             onRenameClick = { callback.onRenameClick(playlist) },
-            onExtraOptionsClick = { callback.onExtraOptionsClick(playlist) },
+            onPlaylistOptionsClick = { callback.onExtraOptionsClick(playlist) },
             onRemoveClick = { callback.onRemoveClick(playlist) },
             tint = MaterialTheme.colors.secondaryVariant)
     }
@@ -251,26 +251,24 @@ interface PlaylistViewCallback {
              maxLines = 1, overflow = TextOverflow.Ellipsis,
              modifier = Modifier.padding(start = (0.5).dp)
                                 .paddingFromBaseline(bottom = 18.dp))
-    } else {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(imageVector = Icons.Default.VolumeUp,
-                 contentDescription = null,
-                 modifier = Modifier.size(20.dp),
-                 tint = MaterialTheme.colors.primaryVariant)
-            GradientSlider(
-                value = volume,
-                onValueChange = onVolumeChange,
-                onValueChangeFinished = { onVolumeChangeFinished?.invoke() },
-                interactionSource = sliderInteractionSource,
-                colors = GradientSliderDefaults.colors(
-                    thumbColor = MaterialTheme.colors.primaryVariant,
-                    thumbColorEnd = MaterialTheme.colors.secondaryVariant,
-                    activeTrackBrush = Brush.horizontalGradient(listOf(
-                        MaterialTheme.colors.primaryVariant,
-                        MaterialTheme.colors.secondaryVariant))
-                ))
+    } else Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(imageVector = Icons.Default.VolumeUp,
+             contentDescription = null,
+             modifier = Modifier.size(20.dp),
+             tint = MaterialTheme.colors.primaryVariant)
+        GradientSlider(
+            value = volume,
+            onValueChange = onVolumeChange,
+            onValueChangeFinished = { onVolumeChangeFinished?.invoke() },
+            interactionSource = sliderInteractionSource,
+            colors = GradientSliderDefaults.colors(
+                thumbColor = MaterialTheme.colors.primaryVariant,
+                thumbColorEnd = MaterialTheme.colors.secondaryVariant,
+                activeTrackBrush = Brush.horizontalGradient(listOf(
+                    MaterialTheme.colors.primaryVariant,
+                    MaterialTheme.colors.secondaryVariant))
+            ))
 
-        }
     }
 }
 
@@ -299,7 +297,7 @@ private enum class PlaylistViewEndContentType {
  * @param volume The volume of the [Playlist] that is being interacted with
  * @param onRenameClick The callback that will be invoked when the
  *     playlist's rename option is clicked
- * @param onExtraOptionsClick The callback that will be invoked when a
+ * @param onPlaylistOptionsClick The callback that will be invoked when a
  *     multi-track playlist's 'playlist options' option is clicked or a
  *     single-track playlist's 'create playlist' option is clicked
  * @param onRemoveClick The callback that will be invoked when the playlist's
@@ -316,7 +314,7 @@ private enum class PlaylistViewEndContentType {
     @FloatRange(from=0.0, to=1.0)
     volume: Float,
     onRenameClick: () -> Unit,
-    onExtraOptionsClick: () -> Unit,
+    onPlaylistOptionsClick: () -> Unit,
     onRemoveClick: () -> Unit,
     tint: Color = LocalContentColor.current,
 ) = Crossfade(content) { when(it) {
@@ -343,7 +341,7 @@ private enum class PlaylistViewEndContentType {
             }
             DropdownMenuItem(onClick = {
                 showingOptionsMenu = false
-                onExtraOptionsClick()
+                onPlaylistOptionsClick()
             }) {
                 Text(stringResource(
                     if (playlist.isSingleTrack)
