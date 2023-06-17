@@ -153,13 +153,7 @@ sealed class PlaylistDialog(
                 onDismissRequest = shownDialog.onDismissRequest,
                 onConfirmClick = shownDialog.onConfirmClick)
         is PlaylistDialog.PlaylistOptions ->
-            if (shownDialog.target.isSingleTrack)
-                CreatePlaylistFromDialog(
-                    playlist = shownDialog.target,
-                    trackUri = shownDialog.playlistTracks.first(),
-                    onDismissRequest = shownDialog.onDismissRequest,
-                    onConfirmClick = shownDialog.onConfirmClick)
-            else PlaylistOptionsDialog(
+            PlaylistOptionsDialog(
                 playlist = shownDialog.target,
                 shuffleEnabled = shownDialog.playlistShuffleEnabled,
                 tracks = shownDialog.playlistTracks,
