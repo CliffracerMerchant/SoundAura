@@ -1,10 +1,20 @@
 /* This file is part of SoundAura, which is released under
  * the terms of the Apache License 2.0. See license.md in
  * the project's root directory to see the full license. */
-package com.cliffracertech.soundaura
+package com.cliffracertech.soundaura.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.ZeroCornerSize
@@ -99,9 +109,9 @@ fun CutoutShapesPreview() = SoundAuraTheme {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Column(Modifier.width(258.dp), Arrangement.spacedBy(4.dp)) {
             Row(modifier = Modifier
-                .width(150.dp).height(50.dp)
-                .align(Alignment.CenterHorizontally)
-                .background(tint, shape.topShape()),
+                    .width(150.dp).height(50.dp)
+                    .align(Alignment.CenterHorizontally)
+                    .background(tint, shape.topShape()),
                 horizontalArrangement = Arrangement.Center
             ) {
                 Spacer(Modifier.weight(1f))
@@ -124,9 +134,8 @@ fun CutoutShapesPreview() = SoundAuraTheme {
                 Box(Modifier.background(tint, shape)
                     .sizeIn(minHeight = 150.dp, minWidth = 150.dp),
                     contentAlignment = Alignment.Center
-                ) {
-                    Text("Original shape", color = textColor)
-                }
+                ) { Text("Original shape", color = textColor) }
+
                 Box(Modifier
                     .width(50.dp).height(150.dp)
                     .background(tint, shape.endShape()),
@@ -158,15 +167,12 @@ fun CutoutShapesPreview() = SoundAuraTheme {
                 Box(Modifier.weight(1f).fillMaxHeight()
                     .background(tint, shape.topStartShape()),
                     contentAlignment = Alignment.Center
-                ) {
-                    Text("Top start", color = textColor)
-                }
+                ) { Text("Top start", color = textColor) }
+
                 Box(Modifier.weight(1f).fillMaxHeight()
                     .background(tint, shape.topEndShape()),
                     contentAlignment = Alignment.Center
-                ) {
-                    Text("Top end", color = textColor)
-                }
+                ) { Text("Top end", color = textColor) }
             }
             Row(Modifier.size(width = 254.dp, height = 125.dp),
                 Arrangement.spacedBy(4.dp)
@@ -174,15 +180,12 @@ fun CutoutShapesPreview() = SoundAuraTheme {
                 Box(Modifier.weight(1f).fillMaxHeight()
                     .background(tint, shape.bottomStartShape()),
                     contentAlignment = Alignment.Center
-                ) {
-                    Text("Bottom start", color = textColor)
-                }
+                ) { Text("Bottom start", color = textColor) }
+
                 Box(Modifier.weight(1f).fillMaxHeight()
                     .background(tint, shape.bottomEndShape()),
                     contentAlignment = Alignment.Center
-                ) {
-                    Text("Bottom end", color = textColor)
-                }
+                ) { Text("Bottom end", color = textColor) }
             }
         }
     }

@@ -43,9 +43,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.cliffracertech.soundaura.MarqueeText
 import com.cliffracertech.soundaura.R
-import com.cliffracertech.soundaura.minTouchTargetSize
+import com.cliffracertech.soundaura.ui.MarqueeText
+import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlin.math.roundToInt
 
@@ -336,9 +336,8 @@ private enum class PlaylistViewEndContentType {
             DropdownMenuItem(onClick = {
                 showingOptionsMenu = false
                 onRenameClick()
-            }) {
-                Text(stringResource(R.string.rename))
-            }
+            }) { Text(stringResource(R.string.rename)) }
+
             DropdownMenuItem(onClick = {
                 showingOptionsMenu = false
                 onPlaylistOptionsClick()
@@ -351,9 +350,7 @@ private enum class PlaylistViewEndContentType {
             DropdownMenuItem({
                 showingOptionsMenu = false
                 onRemoveClick()
-            }) {
-                Text(stringResource(R.string.remove))
-            }
+            }) { Text(stringResource(R.string.remove)) }
         }
     }
     PlaylistViewEndContentType.VolumeDisplay -> {
