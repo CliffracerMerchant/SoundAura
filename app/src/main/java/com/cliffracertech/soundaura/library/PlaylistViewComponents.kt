@@ -15,11 +15,15 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -40,12 +44,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -145,9 +152,11 @@ import java.io.File
     modifier: Modifier = Modifier,
     onShuffleSwitchClick: () -> Unit,
 ) {
+    HorizontalDivider(Modifier.padding(horizontal = 8.dp))
     Row(modifier = modifier
+            .height(56.dp)
             .clickable(role = Role.Switch, onClick = onShuffleSwitchClick)
-            .padding(horizontal = 8.dp),
+            .padding(start = 16.dp, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(stringResource(R.string.playlist_shuffle_switch_title),
@@ -155,8 +164,14 @@ import java.io.File
         Spacer(modifier = Modifier.weight(1f))
         Switch(shuffleEnabled, { onShuffleSwitchClick() })
     }
-    HorizontalDivider(Modifier.padding(vertical = 4.dp, horizontal = 8.dp))
-    LazyColumn(Modifier) {
+    HorizontalDivider(Modifier.padding(horizontal = 8.dp))
+    // The track list ordering must have its height restricted to
+    // prevent a crash due to nested infinite height layouts
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    LazyColumn(Modifier
+        .heightIn(max = screenHeight - 350.dp)
+        .padding(end = 16.dp)
+    ) {
         items(tracks, key = { it.path.orEmpty() }) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val lastPathSegment = it.lastPathSegment.orEmpty()
@@ -181,7 +196,7 @@ import java.io.File
         }.toTypedArray()
         mutableStateListOf(*tracks)
     }
-    Surface { Column(Modifier.padding(16.dp)) {
+    Surface { Column(Modifier.padding(vertical = 16.dp)) {
         PlaylistOptions(tempShuffleEnabled, tempTrackOrder) {
             tempShuffleEnabled = !tempShuffleEnabled
         }
@@ -230,25 +245,36 @@ import java.io.File
         }
     } else {
         var tempShuffleEnabled by rememberSaveable { mutableStateOf(shuffleEnabled) }
-        val tempTrackOrder: MutableList<Uri> = rememberSaveable(tracks) {
-            val existingTracks = tracks.toTypedArray()
-            val newTracks = chosenUris?.toTypedArray() ?: emptyArray()
-            mutableStateListOf(*existingTracks, *newTracks)
-        }
+        val tempTrackOrder: MutableList<Uri> = rememberSaveable(
+                /* inputs =*/ tracks,
+                saver = listSaver({ it }, List<Uri>::toMutableStateList)
+            ) {
+                val existingTracks = tracks.toTypedArray()
+                val newTracks = chosenUris?.toTypedArray() ?: emptyArray()
+                mutableStateListOf(*existingTracks, *newTracks)
+            }
         SoundAuraDialog(
             modifier = modifier.restrictWidthAccordingToSizeClass(),
             useDefaultWidth = false,
             titleLayout = @Composable {
-                Row { MarqueeText(playlist.name)
-                      stringResource(R.string.playlist_options_title) }
+                Row(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp, bottom = 12.dp,
+                                 start = 16.dp, end = 16.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    val style = MaterialTheme.typography.h6
+                    MarqueeText(playlist.name, style = style)
+                    Text(stringResource(R.string.playlist_options_title), style = style)
+                }
             }, onDismissRequest = onDismissRequest,
             onConfirm = {
                 onConfirmClick(tempShuffleEnabled, tempTrackOrder)
             }
         ) {
             PlaylistOptions(
-                tempShuffleEnabled,
-                tempTrackOrder,
+                shuffleEnabled = tempShuffleEnabled,
+                tracks = tempTrackOrder,
                 onShuffleSwitchClick = {
                     tempShuffleEnabled = !tempShuffleEnabled
                 })
