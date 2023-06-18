@@ -39,9 +39,10 @@
         and any presets it is a part of, but will not delete the file from your device.</string>
 
     <string name="create_playlist_title">Create playlist</string>
-    <!-- playlist_options_title doesn't have a string arg for the
+    <string name="playlist_options_title">Playlist options</string>
+    <!-- playlist_options_dialog_title doesn't have a string arg for the
          playlist's name so that a marquee text can be used instead -->
-    <string name="playlist_options_title">\u0020options</string>
+    <string name="playlist_options_dialog_title">\u0020options</string>
     <string name="playlist_shuffle_switch_title">Shuffle</string>
     <string name="playlist_track_handle_description">Reorder track %1$s</string>
 

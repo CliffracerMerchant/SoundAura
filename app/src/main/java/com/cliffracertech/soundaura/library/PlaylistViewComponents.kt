@@ -265,7 +265,7 @@ import java.io.File
                 ) {
                     val style = MaterialTheme.typography.h6
                     MarqueeText(playlist.name, style = style)
-                    Text(stringResource(R.string.playlist_options_title), style = style)
+                    Text(stringResource(R.string.playlist_options_dialog_title), style = style)
                 }
             }, onDismissRequest = onDismissRequest,
             onConfirm = {

@@ -343,11 +343,10 @@ private enum class PlaylistViewEndContentType {
                 onPlaylistOptionsClick()
             }) {
                 Text(stringResource(
-                    if (playlist.isSingleTrack)
-                        R.string.create_playlist_title
-                    else R.string.playlist_options_title))
+                    if (playlist.isSingleTrack) R.string.create_playlist_title
+                    else                        R.string.playlist_options_title))
             }
-            DropdownMenuItem({
+            DropdownMenuItem(onClick = {
                 showingOptionsMenu = false
                 onRemoveClick()
             }) { Text(stringResource(R.string.remove)) }
