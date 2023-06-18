@@ -42,23 +42,15 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.google.accompanist.insets.LocalWindowInsets
 
 /**
- * A row of buttons for an alert dialog.
+ * A row of buttons for an alert dialog containing an optional
+ * cancel button and a disableable confirm button.
  *
  * @param onCancel The callback that will be invoked when the optional
  *     cancel button is clicked. The cancel button will not be displayed
- *     if onCancel is null, or if the [content] parameter is overridden.
- * @param confirmButtonEnabled Whether or not the confirm button will be
- *     enabled. This parameter will only take effect if the [content] parameter
- *     is not overridden.
- * @param confirmText The text used for the confirm button. This parameter will
- *     only take effect if the [content] parameter is not overridden.
- * @param onConfirm The callback that will be invoked when the confirm button
- *     is clicked. This parameter will only take effect if the [content]
- *     parameter is not overridden.
- * @param content The content of the button row. content defaults to a row with
- *     a cancel button if [onCancel] is not null, and a confirm button that is
- *     enabled according to the value of [confirmButtonEnabled], with a text
- *     matching [confirmText], and a callback equal to [onConfirm].
+ *     if onCancel is null.
+ * @param confirmButtonEnabled Whether or not the confirm button will be enabled
+ * @param confirmText The text used for the confirm button
+ * @param onConfirm The callback that will be invoked when the confirm button is clicked
  */
 @Composable fun DialogButtonRow(
     modifier: Modifier = Modifier,
@@ -66,29 +58,25 @@ import com.google.accompanist.insets.LocalWindowInsets
     confirmButtonEnabled: Boolean = true,
     confirmText: String = stringResource(R.string.ok),
     onConfirm: () -> Unit = {},
-    content: @Composable () -> Unit = {
-        // The height(IntrinsicSize.Max) is needed to prevent the buttons from taking
-        // up the dialog window's max height in the PhoneStatePermission dialog.
-        Row(modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
-            if (onCancel != null) {
-                TextButton(
-                    onClick = onCancel,
-                    modifier = Modifier.minTouchTargetSize().weight(1f),
-                    shape = MaterialTheme.shapes.medium.bottomStartShape(),
-                    content = { Text(stringResource(R.string.cancel)) })
-                VerticalDivider()
-            }
-            TextButton(
-                onClick = onConfirm,
-                modifier = Modifier.minTouchTargetSize().weight(1f),
-                enabled = confirmButtonEnabled,
-                shape = if (onCancel != null)
-                    MaterialTheme.shapes.medium.bottomEndShape()
-                else MaterialTheme.shapes.medium.bottomShape(),
-                content = { Text(confirmText) })
-        }
-}) {
-    content()
+) = Row(modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
+    // The height(IntrinsicSize.Max) is needed to prevent the buttons from taking
+    // up the dialog window's max height in the PhoneStatePermission dialog.
+    if (onCancel != null) {
+        TextButton(
+            onClick = onCancel,
+            modifier = Modifier.minTouchTargetSize().weight(1f),
+            shape = MaterialTheme.shapes.medium.bottomStartShape(),
+            content = { Text(stringResource(R.string.cancel)) })
+        VerticalDivider()
+    }
+    TextButton(
+        onClick = onConfirm,
+        modifier = Modifier.minTouchTargetSize().weight(1f),
+        enabled = confirmButtonEnabled,
+        shape = if (onCancel != null)
+            MaterialTheme.shapes.medium.bottomEndShape()
+        else MaterialTheme.shapes.medium.bottomShape(),
+        content = { Text(confirmText) })
 }
 
 @Composable private fun SoundAuraDialogContent(
@@ -183,10 +171,18 @@ import com.google.accompanist.insets.LocalWindowInsets
             if (!imeIsOpen) 0f
             else LocalWindowInsets.current
                 .run { ime.bottom - navigationBars.bottom } / -2f)
-        Box(Modifier
-            .graphicsLayer { translationY = yOffset }
-            .fillMaxSize()
-            .clickable(onClick = onDismissRequest), Alignment.Center,
-        ) { SoundAuraDialogContent(titleLayout, content, buttons, modifier) }
+        Box(modifier = Modifier
+                .graphicsLayer { translationY = yOffset }
+                .fillMaxSize()
+                .clickable(onClick = onDismissRequest),
+            contentAlignment = Alignment.Center,
+        ) {
+            // The combo of the outer box clickable and the disabled
+            // dialog content clickable causes the dialog to close when a
+            // click outside its bounds is performed like a standard dialog
+            SoundAuraDialogContent(
+                titleLayout, content, buttons,
+                modifier.clickable(false) {})
+        }
     } else SoundAuraDialogContent(titleLayout, content, buttons, modifier)
 }
