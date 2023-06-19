@@ -249,7 +249,7 @@ sealed class PlaylistDialog(
                             else {
                                 for (track in newTrackList)
                                     context.contentResolver.takePersistableUriPermission(track, 0)
-                                playlistDao.insertTracks(newTrackList.map { Track(it) })
+                                playlistDao.insertTracks(newTrackList.map(::Track))
                             }
                         }
                         playlistDao.setPlaylistShuffleAndTracks(

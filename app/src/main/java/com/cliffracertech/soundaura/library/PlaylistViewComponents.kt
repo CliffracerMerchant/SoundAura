@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.AnimationConstants.DefaultDurationMillis
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.scaleIn
@@ -51,6 +52,7 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
@@ -67,6 +69,10 @@ import com.cliffracertech.soundaura.ui.MarqueeText
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlinx.collections.immutable.ImmutableList
+import org.burnoutcrew.reorderable.ReorderableItem
+import org.burnoutcrew.reorderable.detectReorder
+import org.burnoutcrew.reorderable.rememberReorderableLazyListState
+import org.burnoutcrew.reorderable.reorderable
 import java.io.File
 
 @Composable fun <T>overshootTween(
@@ -165,24 +171,45 @@ import java.io.File
         Switch(shuffleEnabled, { onShuffleSwitchClick() })
     }
     HorizontalDivider(Modifier.padding(horizontal = 8.dp))
+
+    val reorderableState = rememberReorderableLazyListState(onMove = { from, to ->
+        tracks.add(to.index, tracks.removeAt(from.index))
+    })
     // The track list ordering must have its height restricted to
     // prevent a crash due to nested infinite height layouts
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
-    LazyColumn(Modifier
-        .heightIn(max = screenHeight - 350.dp)
-        .padding(end = 16.dp)
+    LazyColumn(
+        modifier = Modifier
+            .heightIn(max = screenHeight - 350.dp)
+            .reorderable(reorderableState),
+        state = reorderableState.listState,
     ) {
-        items(tracks, key = { it.path.orEmpty() }) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val lastPathSegment = it.lastPathSegment.orEmpty()
-                Icon(imageVector = Icons.Default.DragHandle,
-                    contentDescription = stringResource(
-                        R.string.playlist_track_handle_description, lastPathSegment),
-                    modifier = Modifier.minTouchTargetSize().padding(10.dp))
+        items(tracks, key = { it }) { uri ->
+            ReorderableItem(reorderableState, key = uri) {isDragging ->
+                val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp)
+                val shape = MaterialTheme.shapes.small
 
-                if (it.path.orEmpty().length > lastPathSegment.length)
-                    Text("…${File.separatorChar}")
-                MarqueeText(lastPathSegment)
+                Row(modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(elevation, shape)
+                        .background(MaterialTheme.colors.surface, shape)
+                        .padding(end = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Uri.lastPathSegment seems to not work with some Uris for some reason
+                    val lastPathSegment = uri.path?.substringAfterLast(File.separatorChar).orEmpty()
+                    Icon(imageVector = Icons.Default.DragHandle,
+                        contentDescription = stringResource(
+                            R.string.playlist_track_handle_description, lastPathSegment),
+                        modifier = Modifier
+                            .minTouchTargetSize()
+                            .detectReorder(reorderableState)
+                            .padding(10.dp))
+
+                    if (uri.path.orEmpty().length > lastPathSegment.length)
+                        Text("…${File.separatorChar}")
+                    MarqueeText(lastPathSegment)
+                }
             }
         }
     }
@@ -268,9 +295,7 @@ import java.io.File
                     Text(stringResource(R.string.playlist_options_dialog_title), style = style)
                 }
             }, onDismissRequest = onDismissRequest,
-            onConfirm = {
-                onConfirmClick(tempShuffleEnabled, tempTrackOrder)
-            }
+            onConfirm = { onConfirmClick(tempShuffleEnabled, tempTrackOrder) }
         ) {
             PlaylistOptions(
                 shuffleEnabled = tempShuffleEnabled,
