@@ -180,7 +180,7 @@ import java.io.File
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     LazyColumn(
         modifier = Modifier
-            .heightIn(max = screenHeight - 350.dp)
+            .heightIn(max = screenHeight - 224.dp)
             .reorderable(reorderableState),
         state = reorderableState.listState,
     ) {
