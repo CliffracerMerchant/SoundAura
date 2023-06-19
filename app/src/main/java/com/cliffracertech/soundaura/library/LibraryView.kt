@@ -49,6 +49,7 @@ import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.Validator
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.PlaylistNameValidator
+import com.cliffracertech.soundaura.model.database.Track
 import com.cliffracertech.soundaura.preferenceFlow
 import com.cliffracertech.soundaura.settings.PrefKeys
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -245,8 +246,11 @@ sealed class PlaylistDialog(
                             if (remainingSpace < newTrackList.size)
                                 messageHandler.postMessage(StringResource(
                                     R.string.cant_add_playlist_warning, persistedPermissionAllowance))
-                            else for (track in newTrackList)
-                                context.contentResolver.takePersistableUriPermission(track, 0)
+                            else {
+                                for (track in newTrackList)
+                                    context.contentResolver.takePersistableUriPermission(track, 0)
+                                playlistDao.insertTracks(newTrackList.map { Track(it) })
+                            }
                         }
                         playlistDao.setPlaylistShuffleAndTracks(
                             playlist.name, newShuffleEnabled, newTrackList)

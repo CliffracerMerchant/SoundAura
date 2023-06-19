@@ -103,7 +103,7 @@ data class Playlist(
 
 @Dao abstract class PlaylistDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    protected abstract suspend fun insertTracks(tracks: List<Track>): List<Long>
+    abstract suspend fun insertTracks(tracks: List<Track>): List<Long>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     protected abstract suspend fun addPlaylistTrack(playlistTrack: PlaylistTrack)
