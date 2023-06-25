@@ -206,10 +206,10 @@ sealed class PlaylistDialog(
     }
 
     private val nameValidator = PlaylistNameValidator(playlistDao, "")
-    private val validatorMessage by nameValidator.message.collectAsState(null, scope)
+    val validatorMessage by nameValidator.message.collectAsState(null, scope)
+
     fun onPlaylistRenameClick(playlist: Playlist) {
-        nameValidator.clear()
-        nameValidator.value = playlist.name
+        nameValidator.reset(playlist.name)
         shownDialog = PlaylistDialog.Rename(
             target = playlist,
             newNameProvider = nameValidator::value,

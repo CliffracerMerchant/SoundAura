@@ -7,9 +7,11 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
@@ -51,7 +53,7 @@ import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
         else ->/*message.isError*/ MaterialTheme.colors.error
     }
     Icon(vector, null, tint = tint)
-
+    Spacer(Modifier.width(4.dp))
     Text(message.stringResource.resolve(LocalContext.current))
 }
 

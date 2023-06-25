@@ -196,7 +196,7 @@ class AddPlaylistButtonViewModel(
 
     fun onAddPresetDialogDismiss() {
         showingAddPresetDialog = false
-        nameValidator.clear()
+        nameValidator.reset("")
     }
 
     fun onNewPresetNameChange(newName: String) {

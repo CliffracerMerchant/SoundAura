@@ -295,13 +295,18 @@ class TrackNamesValidator(
 
 class PlaylistNameValidator(
     private val playlistDao: PlaylistDao,
-    initialName: String
+    private val initialName: String
 ) : Validator<String>(initialName) {
+    private val blankNameErrorMessage = Message.Error(
+        StringResource(R.string.add_playlist_blank_name_error_message))
+    private val duplicateNameErrorMessage = Message.Error(
+        StringResource(R.string.add_playlist_duplicate_name_error_message))
+
     override suspend fun messageFor(value: String) = when {
-        value.isBlank() ->
-            Message.Error(StringResource(R.string.add_playlist_blank_name_error_message))
-        playlistDao.exists(value) ->
-            Message.Error(StringResource(R.string.add_playlist_duplicate_name_error_message))
-        else -> null
+        !valueHasBeenChanged ->      null
+        value == initialName ->      null
+        value.isBlank() ->           blankNameErrorMessage
+        playlistDao.exists(value) -> duplicateNameErrorMessage
+        else ->                      null
     }
 }

@@ -6,6 +6,8 @@ package com.cliffracertech.soundaura.model
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import com.cliffracertech.soundaura.collectAsState
 import com.cliffracertech.soundaura.model.Validator.Message
@@ -13,7 +15,6 @@ import com.cliffracertech.soundaura.model.Validator.Message.Error
 import com.cliffracertech.soundaura.model.Validator.Message.Information
 import com.cliffracertech.soundaura.model.Validator.Message.Warning
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 
 /**
@@ -41,25 +42,24 @@ import kotlinx.coroutines.flow.map
  * because [value] might change in another thread after being validated, the
  * suspend function [validate] should always be called to ensure that a given
  * value is valid. The current [value] will be validated, and then either the
- * validated value or null if the value was invalid will be returned. [validate]
- * also resets [value] to [initialValue] if it does not return null so that the
- * validator can be reused.
+ * validated value or null if the value was invalid will be returned. If the
+ * validator needs to be reused after a successful validation, calling [reset]
+ * with a new initial value will reset [valueHasBeenChanged].
  */
-abstract class Validator <T>(private val initialValue: T) {
-    private val valueFlow = MutableStateFlow(initialValue)
+abstract class Validator <T>(initialValue: T) {
+    private var _value by mutableStateOf(initialValue)
+    var value
+        get() = _value
+        set(value) {
+            _value = value
+            valueHasBeenChanged = true
+        }
     protected var valueHasBeenChanged = false
         private set
 
-    var value
-        get() = valueFlow.value
-        set(value) {
-            valueFlow.value = value
-            valueHasBeenChanged = true
-        }
-
-    fun clear() {
-        value = initialValue
+    fun reset(newInitialValue: T) {
         valueHasBeenChanged = false
+        _value = newInitialValue
     }
 
     /** Message's subclasses [Information], [Warning], and [Error] provide
@@ -82,7 +82,7 @@ abstract class Validator <T>(private val initialValue: T) {
 
     protected abstract suspend fun messageFor(value: T): Message?
 
-    val message = valueFlow.map(::messageFor)
+    val message = snapshotFlow { _value }.map(::messageFor)
 
     suspend fun validate(): T? {
         val value = this.value
