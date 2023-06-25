@@ -5,6 +5,7 @@ package com.cliffracertech.soundaura.dialog
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -56,7 +57,7 @@ import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
 
 /** A display of a single nullable [Validator.Message], with appearance and/or
  * disappearance animations for when the message changes or becomes null. */
-@Composable fun AnimatedValidatorMessage(
+@Composable fun ColumnScope.AnimatedValidatorMessage(
     message: Validator.Message?,
     modifier: Modifier = Modifier
 ) {
@@ -80,7 +81,8 @@ import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
  *     to change the proposed name to the callback's [String] parameter
  * @param errorMessageProvider A function that returns the error message that should
  *     be displayed given the most recently proposed name, or null if the name is valid
- * @param onDismissRequest The callback that will be invoked when the user attempts to dismiss the dialog
+ * @param onDismissRequest The callback that will be invoked when the
+ *     user attempts to dismiss the dialog
  * @param onConfirmClick The callback that will be invoked when the user clicks the ok button
  */
 @Composable fun RenameDialog(
@@ -110,6 +112,8 @@ import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
             singleLine = true,
             textStyle = MaterialTheme.typography.body1)
 
-        AnimatedValidatorMessage(message = errorMessageProvider())
+        AnimatedValidatorMessage(
+            message = errorMessageProvider(),
+            modifier = Modifier.padding(horizontal = 16.dp))
     }
 }
