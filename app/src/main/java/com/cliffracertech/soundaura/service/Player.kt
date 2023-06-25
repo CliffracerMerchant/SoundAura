@@ -19,16 +19,20 @@ data class Playlist(
 
 /**
  * A [MediaPlayer] wrapper that allows for seamless looping of the provided
- * [Playlist]. If there is a problem with a [Uri] within the [Playlist], then
- * the inner [MediaPlayer] instance creation can fail. In this case, calling
- * [play] will have no effect. The property [volume] describes the current
- * volume for both audio channels, and is initialized to the [Playlist.volume]
- * field.
+ * [Playlist]. The [update] method can be used when the [Playlist]'s properties
+ * change. The property [volume] describes the current volume for both audio
+ * channels, and is initialized to the [Playlist.volume] field.
  *
  * The methods [play], [pause], and [stop] can be used to control playback of
  * the Player. These methods correspond to the [MediaPlayer] methods of the
  * same name, except for [stop]. [Player]'s [stop] method is functionally the
  * same as pausing while seeking to the start of the media.
+ *
+ * If there is a problem with one or more [Uri]s within the [Playlist.tracks],
+ * playback of the next track will be attempted until one is found that can be
+ * played. If [MediaPlayer] creation fails for all of the tracks, no playback
+ * will occur, and calling [play] will have no effect. When one or more tracks
+ * fail to play, the provided callback [onPlaybackFailure] will be invoked.
  *
  * @param context A [Context] instance. Note that the provided context instance
  *     is held onto for the lifetime of the Player instance, and so should not
@@ -48,15 +52,10 @@ class Player(
     startPlaying: Boolean = false,
     private val onPlaybackFailure: (List<Uri>) -> Unit,
 ) {
-    private val uris = playlist.run {
-            if (shuffle) tracks.shuffled()
-            else         tracks
-        }.toMutableList()
-    private var currentIndex = 0
-
-    private var nextPlayer: MediaPlayer? = null
-    private var currentPlayer: MediaPlayer? = createPlayerForNextUri()
-
+    private var shuffle = playlist.shuffle
+    private var uris = playlist.tracks
+        .toMutableList()
+        .apply { if (playlist.shuffle) shuffle() }
     var volume: Float = playlist.volume
         set(value) {
             field = value
@@ -64,26 +63,43 @@ class Player(
             nextPlayer?.setVolume(volume, volume)
         }
 
-    private fun MediaPlayer.attempt(action: MediaPlayer.() -> Unit) {
-        try { action() }
-        // An IllegalStateException can be thrown here if the pause is called
-        // immediately after creation when the player is still initializing
-        catch(e: java.lang.IllegalStateException) {
-            setOnPreparedListener {
-                action()
-                setOnPreparedListener(null)
-            }
-        }
+    // The next index might not be currentIndex + 1 if MediaPlayer creation
+    // fails for uris[currentIndex + 1], so we track it separately
+    private var currentIndex = 0
+    private var nextIndex = 0
+    private var currentPlayer: MediaPlayer? = createPlayerForNextUri()
+    private var nextPlayer: MediaPlayer? = null
+
+    init {
+        prepareNextPlayer()
+        volume = playlist.volume
+        if (startPlaying) play()
     }
 
     fun play() { currentPlayer?.attempt(MediaPlayer::start) }
     fun pause() { currentPlayer?.attempt(MediaPlayer::pause) }
     fun stop() { currentPlayer?.attempt { pause(); seekTo(0) }}
 
-    init {
+    fun update(newPlaylist: Playlist) {
+        volume = newPlaylist.volume
+        val playing = currentPlayer?.isPlaying == true &&
+                (currentPlayer?.currentPosition ?: 0) > 0
+        val playingUri = if (!playing) null
+        else uris[currentIndex]
+
+        shuffle = newPlaylist.shuffle
+        uris = newPlaylist.tracks.toMutableList().apply {
+            if (newPlaylist.shuffle) shuffle()
+        }
+        currentIndex = newPlaylist.tracks
+            .indexOf(playingUri)
+            .coerceIn(uris.indices)
         prepareNextPlayer()
-        volume = playlist.volume
-        if (startPlaying) play()
+    }
+
+    fun release() {
+        currentPlayer?.release()
+        nextPlayer?.release()
     }
 
     private fun prepareNextPlayer() {
@@ -94,6 +110,7 @@ class Player(
         currentPlayer.setOnCompletionListener {
             it.release()
             this.currentPlayer = nextPlayer
+            currentIndex = nextIndex
             prepareNextPlayer()
         }
     }
@@ -101,30 +118,36 @@ class Player(
     private fun createPlayerForNextUri(): MediaPlayer? {
         // The start index is recorded so that we know
         // we have done one full loop of the playlist
-        val startIndex = currentIndex
+        val startIndex = nextIndex
         var player: MediaPlayer?
         var failedUris: MutableList<Uri>? = null
 
         do {
-            val uri = uris[currentIndex]
+            val uri = uris[nextIndex]
             player = MediaPlayer.create(context, uri) ?: run {
                 failedUris?.add(uri) ?: run {
                     failedUris = mutableListOf(uri)
                 }
-                currentIndex = if (currentIndex == uris.lastIndex) 0
-                               else currentIndex + 1
+                nextIndex = if (nextIndex == uris.lastIndex) 0 else nextIndex++
                 null
             }
-        } while (player == null && currentIndex != startIndex)
+        } while (player == null && nextIndex != startIndex)
 
         failedUris?.let { onPlaybackFailure(it) }
         return player
     }
 
-    fun release() {
-        currentPlayer?.release()
-        nextPlayer?.release()
-    }
+    /** Attempt the [action] on the receiver [MediaPlayer]. In the case of a still-
+     * initializing [MediaPlayer] a [MediaPlayer.OnPreparedListener] will automatically
+     * be added to execute the [action] when the [MediaPlayer] is ready. */
+    private fun MediaPlayer.attempt(action: MediaPlayer.() -> Unit) =
+        try { action() }
+        catch(e: java.lang.IllegalStateException) {
+            setOnPreparedListener {
+                action()
+                it.setOnPreparedListener(null)
+            }
+        }
 }
 
 /**
@@ -157,7 +180,7 @@ class PlayerMap(
 ) {
     var isInitialized = false
         private set
-    private val playerMap = mutableMapOf<String, Player>()
+    private var playerMap: MutableMap<String, Player> = hashMapOf()
 
     val isEmpty get() = playerMap.isEmpty()
 
@@ -176,23 +199,19 @@ class PlayerMap(
      * [Player]s will begin paused. */
     fun update(playlists: List<Playlist>, startPlaying: Boolean) {
         isInitialized = true
+        val oldMap = playerMap
+        playerMap = HashMap(playlists.size, 1f)
 
-        // remove players for removed playlists
-        val oldNames = playlists.map(Playlist::name)
-        playerMap.keys.retainAll {
-            val inNewList = it in oldNames
-            if (!inNewList)
-                playerMap[it]?.release()
-            inNewList
-        }
-        // add players for newly added playlists
-        playlists.forEach { playlist ->
-            playerMap.getOrPut(playlist.name) {
+        for (playlist in playlists) {
+            val existingPlayer = oldMap.remove(playlist.name)
+                ?.apply { update(playlist) }
+
+            playerMap[playlist.name] = existingPlayer ?:
                 Player(context, playlist, startPlaying,
                        onPlaybackFailure = {
                            onPlaybackFailure(playlist.name, it)
                        })
-            }
         }
+        oldMap.values.forEach(Player::release)
     }
 }
