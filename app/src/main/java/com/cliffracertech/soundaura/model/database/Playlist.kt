@@ -264,9 +264,9 @@ data class Playlist(
 
 class TrackNamesValidator(
     private val playlistDao: PlaylistDao,
-    coroutineScope: CoroutineScope,
     names: List<String>,
-) : ListValidator<String>(coroutineScope, names) {
+    coroutineScope: CoroutineScope,
+) : ListValidator<String>(names, coroutineScope) {
 
     private val existingNames by playlistDao
         .getPlaylistNames()
@@ -277,10 +277,8 @@ class TrackNamesValidator(
 
     override suspend fun messageFor(values: List<Pair<String, Boolean>>) =
         if (values.find { it.second } == null) null
-        else Validator.Message.Error(
-            StringResource(
-            R.string.add_multiple_tracks_name_error_message)
-        )
+        else Validator.Message.Error(StringResource(
+            R.string.add_multiple_tracks_name_error_message))
 
     override suspend fun validate(): List<String>? {
         val existingNames = playlistDao.getPlaylistNames().first().toSet()
@@ -295,8 +293,9 @@ class TrackNamesValidator(
 
 class PlaylistNameValidator(
     private val playlistDao: PlaylistDao,
-    private val initialName: String
-) : Validator<String>(initialName) {
+    private val initialName: String,
+    coroutineScope: CoroutineScope,
+) : Validator<String>(initialName, coroutineScope) {
     private val blankNameErrorMessage = Message.Error(
         StringResource(R.string.add_playlist_blank_name_error_message))
     private val duplicateNameErrorMessage = Message.Error(

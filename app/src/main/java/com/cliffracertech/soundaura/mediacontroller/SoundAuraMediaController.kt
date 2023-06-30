@@ -123,11 +123,11 @@ class MediaControllerViewModel(
         navigationState.showingPresetSelector = false
     }
 
-    private val nameValidator = PresetNameValidator(presetDao)
+    private val nameValidator = PresetNameValidator(presetDao, scope)
     var renameDialogTarget by mutableStateOf<Preset?>(null)
         private set
     val proposedPresetName by nameValidator::value
-    val proposedPresetNameMessage by nameValidator.message.collectAsState(null, scope)
+    val proposedPresetNameMessage by nameValidator::message
 
     fun onPresetRenameClick(preset: Preset) {
         renameDialogTarget = preset

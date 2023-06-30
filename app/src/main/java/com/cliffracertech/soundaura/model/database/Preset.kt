@@ -13,6 +13,7 @@ import androidx.room.Transaction
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.Validator
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
 
 @Entity(tableName = "preset")
@@ -103,7 +104,8 @@ data class PresetPlaylist(
 
 class PresetNameValidator(
     private val dao: PresetDao,
-) : Validator<String>("") {
+    coroutineScope: CoroutineScope,
+) : Validator<String>("", coroutineScope) {
     override suspend fun messageFor(value: String) = when {
         !valueHasBeenChanged ->
             null

@@ -205,8 +205,7 @@ sealed class PlaylistDialog(
         scope.launch { playlistDao.setVolume(playlist.name, volume) }
     }
 
-    private val nameValidator = PlaylistNameValidator(playlistDao, "")
-    val validatorMessage by nameValidator.message.collectAsState(null, scope)
+    private val nameValidator = PlaylistNameValidator(playlistDao, "", scope)
 
     fun onPlaylistRenameClick(playlist: Playlist) {
         nameValidator.reset(playlist.name)
@@ -214,7 +213,7 @@ sealed class PlaylistDialog(
             target = playlist,
             newNameProvider = nameValidator::value,
             onNameChange = { nameValidator.value = it },
-            messageProvider = ::validatorMessage,
+            messageProvider = nameValidator::message,
             onDismissRequest = { shownDialog = null },
             onConfirmClick = {
                 scope.launch {

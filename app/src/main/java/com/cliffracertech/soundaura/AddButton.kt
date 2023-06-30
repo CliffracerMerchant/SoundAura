@@ -92,7 +92,7 @@ class AddPlaylistButtonViewModel(
         assert(uris.isNotEmpty())
         targetUris = uris
         trackNamesValidator = TrackNamesValidator(
-            playlistDao, scope, uris.map{ it.getDisplayName(context) ?: ""})
+            playlistDao, uris.map{ it.getDisplayName(context) ?: ""}, scope)
     }
 
     fun onNewTrackNameChange(index: Int, newName: String) =
@@ -132,7 +132,7 @@ class AddPlaylistButtonViewModel(
         assert(uris.isNotEmpty())
         targetUris = uris
         playlistNameValidator = PlaylistNameValidator(
-            playlistDao, "${uris.first().getDisplayName(context)} playlist")
+            playlistDao, "${uris.first().getDisplayName(context)} playlist", scope)
     }
 
     fun onNewPlaylistNameChange(newName: String) {
@@ -190,9 +190,9 @@ class AddPlaylistButtonViewModel(
         else -> showingAddPresetDialog = true
     }}
 
-    private val nameValidator = PresetNameValidator(presetDao)
+    private val nameValidator = PresetNameValidator(presetDao, scope)
     val proposedNewPresetName by nameValidator::value
-    val newPresetNameValidatorMessage by nameValidator.message.collectAsState(null, scope)
+    val newPresetNameValidatorMessage by nameValidator::message
 
     fun onAddPresetDialogDismiss() {
         showingAddPresetDialog = false

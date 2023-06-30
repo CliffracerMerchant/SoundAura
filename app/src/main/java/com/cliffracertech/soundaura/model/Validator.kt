@@ -6,8 +6,6 @@ package com.cliffracertech.soundaura.model
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import com.cliffracertech.soundaura.collectAsState
 import com.cliffracertech.soundaura.model.Validator.Message
@@ -15,6 +13,7 @@ import com.cliffracertech.soundaura.model.Validator.Message.Error
 import com.cliffracertech.soundaura.model.Validator.Message.Information
 import com.cliffracertech.soundaura.model.Validator.Message.Warning
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 
 /**
@@ -22,44 +21,43 @@ import kotlinx.coroutines.flow.map
  *
  * Validator can be used to validate generic non-null values and return
  * messages explaining why the value is not valid if necessary. The initial
- * value of the mutable property [value] will be equal to [initialValue]. The
- * property [valueHasBeenChanged] is visible to sub-classes, and can be used
- * in case different error messages are desired before or after [value] has
- * been changed at least once. For example, a [String] property would mostly
- * likely be initialized to a blank [String]. If blank [String]s are invalid,
- * [valueHasBeenChanged] can be utilized to only show a 'value must not be
- * blank' error message after it has been changed at least once. This would
- * prevent the message from being immediately displayed before the user has
- * had a chance to change the value.
+ * value of the mutable property [value] will be equal to the provided
+ * [initialValue]. The property [valueHasBeenChanged] is visible to sub-classes,
+ * and can be used in case different error messages are desired before or after
+ * [value] has been changed at least once. For example, a [String] property
+ * would mostly likely be initialized to a blank [String]. If blank [String]s
+ * are invalid, [valueHasBeenChanged] can be utilized to only show a 'value
+ * must not be blank' error message after it has been changed at least once.
+ * This would prevent the message from being immediately displayed before the
+ * user has had a chance to change the value.
  *
  * The suspend function [messageFor] must be overridden in subclasses to return
  * a [StringResource] that becomes the message explaining why the current value
- * is not valid when resolved, or null if the name is valid. The Flow<[Message]?>
- * property [message] can be collected to obtain the current message given the
- * current [value].
+ * is not valid when resolved, or null if the name is valid. The property
+ * [message] can be used to access the message for the most recent [value].
  *
- * Because [message] may not have updated after a recent change to [value], and
- * because [value] might change in another thread after being validated, the
- * suspend function [validate] should always be called to ensure that a given
- * value is valid. The current [value] will be validated, and then either the
- * validated value or null if the value was invalid will be returned. If the
- * validator needs to be reused after a successful validation, calling [reset]
- * with a new initial value will reset [valueHasBeenChanged].
+ * Because [message] may not have had time to update after a recent change to
+ * [value], and because [value] might change in another thread after being
+ * validated, the suspend function [validate] should always be called to ensure
+ * that a given value is valid. The current [value] will be validated, and then
+ * either the validated value or null if the value was invalid will be returned.
+ * If the validator needs to be reused after a successful validation, calling
+ * [reset] with a new initial value will reset [valueHasBeenChanged].
  */
-abstract class Validator <T>(initialValue: T) {
-    private var _value by mutableStateOf(initialValue)
-    var value
-        get() = _value
-        set(value) {
-            _value = value
-            valueHasBeenChanged = true
-        }
+abstract class Validator <T>(initialValue: T, coroutineScope: CoroutineScope) {
+    private val flow = MutableStateFlow(initialValue)
+    private val _value by flow.collectAsState(initialValue, coroutineScope)
+    var value get() = _value
+              set(value) {
+                  flow.value = value
+                  valueHasBeenChanged = true
+              }
     protected var valueHasBeenChanged = false
         private set
 
     fun reset(newInitialValue: T) {
         valueHasBeenChanged = false
-        _value = newInitialValue
+        flow.value = newInitialValue
     }
 
     /** Message's subclasses [Information], [Warning], and [Error] provide
@@ -82,7 +80,7 @@ abstract class Validator <T>(initialValue: T) {
 
     protected abstract suspend fun messageFor(value: T): Message?
 
-    val message = snapshotFlow { _value }.map(::messageFor)
+    val message by flow.map(::messageFor).collectAsState(null, coroutineScope)
 
     suspend fun validate(): T? {
         val value = this.value
@@ -119,8 +117,8 @@ abstract class Validator <T>(initialValue: T) {
  * current values is invalid, or null if the values are valid.
  */
 abstract class ListValidator <T>(
-    val scope: CoroutineScope,
-    items: List<T>
+    items: List<T>,
+    scope: CoroutineScope,
 ) {
     private val _values = mutableStateListOf(
         *Array(items.size) { items[it] to false })
