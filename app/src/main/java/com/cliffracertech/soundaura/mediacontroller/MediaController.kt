@@ -510,16 +510,10 @@ fun MediaControllerPreview() = SoundAuraTheme {
     val activePresetName = remember { mutableStateOf<String?>(list.first().name) }
     val callback = remember { object: PresetListCallback {
         override val listProvider = { list }
-        override val renameTargetProvider = { null }
-        override val proposedNameProvider = { null }
-        override val renameErrorMessageProvider = { null }
-        override fun onProposedNameChange(newName: String) {}
-        override fun onRenameStart(preset: Preset) {}
-        override fun onRenameCancel() {}
-        override fun onRenameConfirm() {}
-        override fun onOverwriteConfirm(preset: Preset) {}
-        override fun onDeleteConfirm(preset: Preset) {}
-        override fun onPresetClick(preset: Preset) {
+        override fun onRenameClick(preset: Preset) {}
+        override fun onOverwriteClick(preset: Preset) {}
+        override fun onDeleteClick(preset: Preset) {}
+        override fun onClick(preset: Preset) {
             activePresetName.value = preset.name
         }
     }}

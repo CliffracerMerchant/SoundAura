@@ -42,9 +42,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
-import com.cliffracertech.soundaura.dialog.RenameDialog
-import com.cliffracertech.soundaura.dialog.SoundAuraDialog
-import com.cliffracertech.soundaura.model.Validator
 import com.cliffracertech.soundaura.model.database.Preset
 import com.cliffracertech.soundaura.ui.MarqueeText
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
@@ -123,75 +120,22 @@ import kotlinx.collections.immutable.toImmutableList
     }
 }
 
-/**
- * Show a dialog asking the user to confirm that they would like to overwrite
- * the [Preset] whose name is equal to [presetName] with any current
- * changes. The cancel and ok buttons will invoke [onDismissRequest] and
- * [onConfirm], respectively.
- */
-@Composable fun ConfirmPresetOverwriteDialog(
-    presetName: String,
-    onDismissRequest: () -> Unit,
-    onConfirm: () -> Unit,
-) = SoundAuraDialog(
-    title = stringResource(R.string.confirm_overwrite_preset_dialog_title),
-    text = stringResource(R.string.confirm_overwrite_preset_dialog_message, presetName),
-    onDismissRequest = onDismissRequest,
-    onConfirm = {
-        onConfirm()
-        onDismissRequest()
-    })
-
-/**
- * Show a dialog asking the user to confirm that they want
- * to delete the [Preset] whose name equals [presetName].
- */
-@Composable fun ConfirmDeletePresetDialog(
-    presetName: String,
-    onDismissRequest: () -> Unit,
-    onConfirm: () -> Unit
-) = SoundAuraDialog(
-    onDismissRequest = onDismissRequest,
-    title = stringResource(R.string.confirm_delete_preset_title, presetName),
-    text = stringResource(R.string.confirm_delete_preset_message),
-    confirmText = stringResource(R.string.delete),
-    onConfirm = {
-        onConfirm()
-        onDismissRequest()
-    })
-
 /** A collection of callbacks used in user [PresetList] interactions. */
 interface PresetListCallback {
     /** A function that will provide the list
      * of [Preset]s to display when invoked */
     val listProvider: () -> ImmutableList<Preset>?
-    /** A function that will provide the current target
-     * of the rename dialog, if any, when invoked */
-    val renameTargetProvider: () -> Preset?
-    /** A function that will provide the proposed name
-     * for the [Preset] being renamed when invoked */
-    val proposedNameProvider: () -> String?
-    /** The callback that will be invoked when the proposed
-     * name for the [Preset] being renamed is changed to [newName] */
-    fun onProposedNameChange(newName: String)
-    /** A function that will provide the error message to display for the proposed
-     * name of the [Preset] being renamed, or null if the proposed name is valid */
-    val renameErrorMessageProvider: () -> Validator.Message?
     /** The callback that will be invoked when the
-     * rename option has been chosen for [preset] */
-    fun onRenameStart(preset: Preset) {}
-    /** The callback that will be invoked when the rename dialog is dismissed */
-    fun onRenameCancel()
-    /** The callback that will be invoked when the rename dialog ok button is clicked */
-    fun onRenameConfirm()
-    /** The callback that will be invoked when the user confirms that
-     * they want to overwrite [preset] with the current sound mix */
-    fun onOverwriteConfirm(preset: Preset)
+     * [preset]'s rename option has been clicked */
+    fun onRenameClick(preset: Preset)
     /** The callback that will be invoked when the
-     * user confirms that they want to delete [preset] */
-    fun onDeleteConfirm(preset: Preset)
+     * [preset]'s overwrite option is clicked */
+    fun onOverwriteClick(preset: Preset)
+    /** The callback that will be invoked when the
+     * [preset]'s delete option is clicked */
+    fun onDeleteClick(preset: Preset)
     /** The callback that will be invoked when the user clicks on [preset] */
-    fun onPresetClick(preset: Preset)
+    fun onClick(preset: Preset)
 }
 
 /**
@@ -225,14 +169,6 @@ interface PresetListCallback {
                  modifier = Modifier.width(300.dp),
                  textAlign = TextAlign.Justify)
         } else -> {
-            var overwriteDialogTarget by rememberSaveable { mutableStateOf<Preset?>(null) }
-            var deleteDialogTarget by rememberSaveable { mutableStateOf<Preset?>(null) }
-            // Although it is inconsistent, the renameDialogTarget state must be stored in
-            // the view model and accessed through the provided callback due to its more
-            // complicated logic (i.e. unlike the overwrite and delete dialogs, which only
-            // need a simple yes/no confirmation, the rename dialog may be dismissed or not
-            // on ok clicks depending on the validity of the proposed name).
-
             val activePresetName = activePresetCallback.nameProvider()
             val activePresetIsModified = activePresetCallback.isModifiedProvider()
 
@@ -247,40 +183,12 @@ interface PresetListCallback {
                                    else Modifier.background(selectionBrush, alpha = 0.5f),
                         presetName = preset.name,
                         isModified = isActivePreset && activePresetIsModified,
-                        onRenameClick = { callback.onRenameStart(preset) },
-                        onOverwriteClick = { overwriteDialogTarget = preset },
-                        onDeleteClick = { deleteDialogTarget = preset },
-                        onClick = { callback.onPresetClick(preset) })
+                        onRenameClick = { callback.onRenameClick(preset) },
+                        onOverwriteClick = { callback.onOverwriteClick(preset) },
+                        onDeleteClick = { callback.onDeleteClick(preset) },
+                        onClick = { callback.onClick(preset) })
                     Divider()
                 }
-            }
-
-            val renameDialogTarget = callback.renameTargetProvider()
-            renameDialogTarget?.let { preset ->
-                RenameDialog(
-                    title = stringResource(R.string.create_new_preset_dialog_title),
-                    newNameProvider = { callback.proposedNameProvider().orEmpty() },
-                    onNewNameChange = callback::onProposedNameChange,
-                    errorMessageProvider = callback.renameErrorMessageProvider,
-                    onDismissRequest = callback::onRenameCancel,
-                    onConfirmClick = callback::onRenameConfirm)
-            }
-            overwriteDialogTarget?.let { preset ->
-                ConfirmPresetOverwriteDialog(
-                    presetName = preset.name,
-                    onDismissRequest = { overwriteDialogTarget = null },
-                    onConfirm = {
-                        overwriteDialogTarget = null
-                        callback.onOverwriteConfirm(preset)
-                    })
-            }
-            deleteDialogTarget?.let { preset ->
-                ConfirmDeletePresetDialog(preset.name,
-                    onDismissRequest = { deleteDialogTarget = null },
-                    onConfirm = {
-                        deleteDialogTarget = null
-                        callback.onDeleteConfirm(preset)
-                    })
             }
         }
     }}
@@ -294,16 +202,10 @@ fun PresetListPreview() = SoundAuraTheme {
     val activePresetName = remember { mutableStateOf<String?>(list.first().name) }
     val callback = remember { object: PresetListCallback {
         override val listProvider = { list }
-        override val renameTargetProvider = { null }
-        override val proposedNameProvider = { null }
-        override val renameErrorMessageProvider = { null }
-        override fun onProposedNameChange(newName: String) {}
-        override fun onRenameStart(preset: Preset) {}
-        override fun onRenameCancel() {}
-        override fun onRenameConfirm() {}
-        override fun onOverwriteConfirm(preset: Preset) {}
-        override fun onDeleteConfirm(preset: Preset) {}
-        override fun onPresetClick(preset: Preset) {
+        override fun onRenameClick(preset: Preset) {}
+        override fun onOverwriteClick(preset: Preset) {}
+        override fun onDeleteClick(preset: Preset) {}
+        override fun onClick(preset: Preset) {
             activePresetName.value = preset.name
         }
     }}

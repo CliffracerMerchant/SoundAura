@@ -20,16 +20,15 @@ import androidx.compose.material.SnackbarDuration
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
@@ -40,12 +39,14 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.collectAsState
+import com.cliffracertech.soundaura.dialog.RenameDialog
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
 import com.cliffracertech.soundaura.edit
 import com.cliffracertech.soundaura.model.ActivePresetState
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.NavigationState
 import com.cliffracertech.soundaura.model.StringResource
+import com.cliffracertech.soundaura.model.Validator
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.Preset
 import com.cliffracertech.soundaura.model.database.PresetDao
@@ -65,8 +66,78 @@ import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
-@HiltViewModel
-class MediaControllerViewModel(
+/**
+ * A sealed class whose subclasses the various dialogs that a [MediaController]
+ * would be expected to show.
+ *
+ * @param onDismissRequest The callback that should be invoked when the user
+ *     indicates via a back button/gesture, a tap outside the dialog's bounds,
+ *     or a cancel button click that they would like to dismiss the dialog
+ */
+sealed class MediaControllerDialog(
+    val onDismissRequest: () -> Unit,
+) {
+    /**
+     * A [Preset] rename dialog
+     *
+     * @param target The [Preset] that is being renamed
+     * @param onConfirmClick The callback that should be invoked if the dialog's
+     *     confirm button is clicked
+     * @param newNameProvider A lambda that returns the proposed new name for the
+     *     [target] when invoked
+     * @param messageProvider A lambda that returns a nullable Validator.Message
+     *     that describes any problems with the currently proposed new name for
+     *     the [target], or null if the name is valid
+     * @param onNameChange The callback that should be invoked when the user
+     *     attempts to change the proposed new name for the [target]
+     */
+    class RenamePreset(
+        onDismissRequest: () -> Unit,
+        val target: Preset,
+        val onConfirmClick: () -> Unit,
+        val newNameProvider: () -> String,
+        val messageProvider: () -> Validator.Message?,
+        val onNameChange: (String) -> Unit,
+    ): MediaControllerDialog(onDismissRequest)
+
+    /**
+     * A dialog that presents choices regarding the unsaved changes
+     * for a [Preset] that is about to switched away from.
+     *
+     * @param target The active [Preset] that has unsaved changes
+     * @param onConfirmClick The callback that should be invoked if the dialog's
+     *     confirm button is clicked along with whether or not the user requested
+     *     for the active preset to be saved first provided
+     */
+    class PresetUnsavedChangesWarning(
+        onDismissRequest: () -> Unit,
+        val target: Preset,
+        val onConfirmClick: (saveFirst: Boolean) -> Unit,
+    ): MediaControllerDialog(onDismissRequest)
+
+    /** A dialog that allows the user to set an auto stop timer. */
+    class SetAutoStopTimer(onDismissRequest: () -> Unit) :
+        MediaControllerDialog(onDismissRequest)
+
+    /**
+     * A confirmatory dialog with cancel and confirm buttons
+     *
+     * @param title The [StringResource] that, when resolved, should be used
+     *     as the dialog's title
+     * @param text The [StringResource] that, when resolved, should be
+     *     used as the dialog's body text
+     * @param onConfirmClick The callback that should be invoked when the
+     *     dialog's confirm button is clicked
+     */
+    class Confirmatory(
+        onDismissRequest: () -> Unit,
+        val title: StringResource,
+        val text: StringResource,
+        val onConfirmClick: () -> Unit,
+    ): MediaControllerDialog(onDismissRequest)
+}
+
+@HiltViewModel class MediaControllerViewModel(
     private val presetDao: PresetDao,
     private val navigationState: NavigationState,
     private val activePresetState: ActivePresetState,
@@ -94,12 +165,14 @@ class MediaControllerViewModel(
 
     val activePresetName by activePresetState.name.collectAsState(null, scope)
     val activePresetIsModified by activePresetState.isModified.collectAsState(false, scope)
-    private val Preset.isActive get() = name == activePresetName
 
     private val playButtonLongClickHintShownKey =
         booleanPreferencesKey(PrefKeys.playButtonLongClickHintShown)
     private val playButtonLongClickHintShown by
         dataStore.preferenceState(playButtonLongClickHintShownKey, false, scope)
+    private val activePlaylistsIsEmpty by playlistDao
+        .getAtLeastOnePlaylistIsActive()
+        .collectAsState(true, scope)
 
     fun onPlayButtonClick() {
         if (playButtonLongClickHintShown || activePlaylistsIsEmpty)
@@ -112,8 +185,19 @@ class MediaControllerViewModel(
         dataStore.edit(playButtonLongClickHintShownKey, true, scope)
     }
 
-    val showingMediaController get() = !navigationState.showingAppSettings
-    val showingPresetSelector get() = navigationState.showingPresetSelector
+    fun onAutoStopTimerClick() {
+        shownDialog = MediaControllerDialog.Confirmatory(
+            onDismissRequest = ::dismissDialog,
+            title = StringResource(R.string.cancel_stop_timer_dialog_title),
+            text = StringResource(R.string.cancel_stop_timer_dialog_text),
+            onConfirmClick = {})
+    }
+
+    fun onPlayButtonLongClick() {
+        shownDialog = MediaControllerDialog.SetAutoStopTimer(
+            onDismissRequest = ::dismissDialog
+        )
+    }
 
     fun onActivePresetClick() {
         navigationState.showingPresetSelector = true
@@ -124,40 +208,51 @@ class MediaControllerViewModel(
     }
 
     private val nameValidator = PresetNameValidator(presetDao, scope)
-    var renameDialogTarget by mutableStateOf<Preset?>(null)
-        private set
-    val proposedPresetName by nameValidator::value
-    val proposedPresetNameMessage by nameValidator::message
+    var shownDialog by mutableStateOf<MediaControllerDialog?>(null)
+    private fun dismissDialog() { shownDialog = null }
 
     fun onPresetRenameClick(preset: Preset) {
-        renameDialogTarget = preset
+        nameValidator.reset(preset.name)
+        shownDialog = MediaControllerDialog.RenamePreset(
+            target = preset,
+            newNameProvider = nameValidator::value,
+            onNameChange = { nameValidator.value = it },
+            messageProvider = nameValidator::message,
+            onDismissRequest = ::dismissDialog,
+            onConfirmClick = {
+                scope.launch {
+                    val newName = nameValidator.validate() ?: return@launch
+                    presetDao.renamePreset(preset.name, newName)
+                }
+                dismissDialog()
+            })
     }
 
-    fun onPresetRenameCancel() {
-        renameDialogTarget = null
-        nameValidator.reset("")
+    fun onPresetOverwriteClick(preset: Preset) {
+        shownDialog = MediaControllerDialog.Confirmatory(
+            title = StringResource(R.string.confirm_overwrite_preset_dialog_title),
+            text = StringResource(R.string.confirm_overwrite_preset_dialog_message, preset.name),
+            onDismissRequest = ::dismissDialog,
+            onConfirmClick = {
+                onPresetOverwriteRequest(preset.name)
+                dismissDialog()
+            })
     }
 
-    fun onProposedPresetNameChange(newName: String) {
-        nameValidator.value = newName
+    fun onPresetDeleteClick(preset: Preset) {
+        shownDialog = MediaControllerDialog.Confirmatory(
+            title = StringResource(R.string.confirm_delete_preset_title, preset.name),
+            text = StringResource(R.string.confirm_delete_preset_message),
+            onDismissRequest = ::dismissDialog,
+            onConfirmClick = {
+                scope.launch {
+                    if (preset.name == activePresetName)
+                        activePresetState.clear()
+                    presetDao.deletePreset(preset.name)
+                }
+                dismissDialog()
+            })
     }
-
-    fun onPresetRenameConfirm() {
-        val preset = renameDialogTarget ?: return
-        scope.launch {
-            val name = nameValidator.validate()
-                ?: return@launch
-            if (name != renameDialogTarget?.name)
-                presetDao.renamePreset(preset.name, name)
-            renameDialogTarget = null
-            if (preset.isActive)
-                activePresetState.setName(name)
-        }
-    }
-
-    private val activePlaylistsIsEmpty by playlistDao
-        .getAtLeastOnePlaylistIsActive()
-        .collectAsState(true, scope)
 
     private fun onPresetOverwriteRequest(presetName: String) {
         val isActive = presetName == activePresetName
@@ -179,27 +274,19 @@ class MediaControllerViewModel(
         }
     }
 
-    fun onPresetOverwriteRequest(preset: Preset) =
-        onPresetOverwriteRequest(preset.name)
-
-    fun onPresetDeleteRequest(preset: Preset) {
-        scope.launch {
-            if (preset.isActive)
-                activePresetState.clear()
-            presetDao.deletePreset(preset.name)
-        }
-    }
-
-    private var newPresetAfterUnsavedChangesWarning by mutableStateOf<Preset?>(null)
-    val showingUnsavedChangesWarning by derivedStateOf {
-        newPresetAfterUnsavedChangesWarning != null
-    }
-
     fun onPresetSelectorPresetClick(preset: Preset) {
         when {
             activePresetIsModified -> {
-                newPresetAfterUnsavedChangesWarning = preset
-            } preset.isActive ->
+                shownDialog = MediaControllerDialog.PresetUnsavedChangesWarning(
+                    target = preset,
+                    onDismissRequest = ::dismissDialog,
+                    onConfirmClick = { saveFirst ->
+                        if (saveFirst)
+                            activePresetName?.let(::onPresetOverwriteRequest)
+                        loadPreset(preset)
+                        dismissDialog()
+                    })
+            } preset.name == activePresetName ->
                 // This skips a pointless loading of the unmodified active preset
                 onCloseButtonClick()
             else -> loadPreset(preset)
@@ -212,18 +299,6 @@ class MediaControllerViewModel(
             presetDao.loadPreset(preset.name)
             onCloseButtonClick()
         }
-    }
-
-    fun onUnsavedChangesWarningCancel() {
-        newPresetAfterUnsavedChangesWarning = null
-    }
-
-    fun onUnsavedChangesWarningConfirm(saveFirst: Boolean) {
-        val newPreset = newPresetAfterUnsavedChangesWarning ?: return
-        if (saveFirst)
-            activePresetName?.let(::onPresetOverwriteRequest)
-        loadPreset(newPreset)
-        newPresetAfterUnsavedChangesWarning = null
     }
 }
 
@@ -240,8 +315,6 @@ class MediaControllerViewModel(
     onCancelStopTimerRequest: () -> Unit,
 ) {
     val viewModel: MediaControllerViewModel = viewModel()
-    var showingSetStopTimerDialog by rememberSaveable { mutableStateOf(false) }
-    var showingCancelStopTimerDialog by rememberSaveable { mutableStateOf(false) }
 
     val startColor = MaterialTheme.colors.primaryVariant
     val endColor = MaterialTheme.colors.secondaryVariant
@@ -251,16 +324,10 @@ class MediaControllerViewModel(
 
     val presetListCallback = remember { object: PresetListCallback {
         override val listProvider = viewModel::presetList::get
-        override val renameTargetProvider = viewModel::renameDialogTarget::get
-        override val proposedNameProvider = viewModel::proposedPresetName::get
-        override val renameErrorMessageProvider = viewModel::proposedPresetNameMessage::get
-        override fun onProposedNameChange(newName: String) = viewModel.onProposedPresetNameChange(newName)
-        override fun onRenameStart(preset: Preset) = viewModel.onPresetRenameClick(preset)
-        override fun onRenameCancel() = viewModel.onPresetRenameCancel()
-        override fun onRenameConfirm() = viewModel.onPresetRenameConfirm()
-        override fun onOverwriteConfirm(preset: Preset) = viewModel.onPresetOverwriteRequest(preset)
-        override fun onDeleteConfirm(preset: Preset) = viewModel.onPresetDeleteRequest(preset)
-        override fun onPresetClick(preset: Preset) = viewModel.onPresetSelectorPresetClick(preset)
+        override fun onRenameClick(preset: Preset) = viewModel.onPresetRenameClick(preset)
+        override fun onOverwriteClick(preset: Preset) = viewModel.onPresetOverwriteClick(preset)
+        override fun onDeleteClick(preset: Preset) = viewModel.onPresetDeleteClick(preset)
+        override fun onClick(preset: Preset) = viewModel.onPresetSelectorPresetClick(preset)
     }}
 
     val playButtonCallback = remember(isPlayingProvider, onPlayButtonClick) {
@@ -272,9 +339,8 @@ class MediaControllerViewModel(
             }, clickLabelResIdProvider = {isPlaying ->
                 if (isPlaying) R.string.pause_button_description
                 else           R.string.play_button_description
-            }, onLongClick = {
-                showingSetStopTimerDialog = true
-            }, longClickLabelResId = R.string.play_pause_button_long_click_description)
+            }, onLongClick = viewModel::onPlayButtonLongClick,
+            longClickLabelResId = R.string.play_pause_button_long_click_description)
     }
 
     val enterSpec = tween<Float>(
@@ -289,7 +355,7 @@ class MediaControllerViewModel(
         dpSize = sizes.collapsedSize(stopTimeProvider() != null))
 
     AnimatedVisibility(
-        visible = viewModel.showingMediaController,
+        visible = viewModel.visible,
         enter = fadeIn(enterSpec) + scaleIn(enterSpec, 0.8f, transformOrigin),
         exit = fadeOut(exitSpec) + scaleOut(exitSpec, 0.8f, transformOrigin)
     ) {
@@ -307,37 +373,41 @@ class MediaControllerViewModel(
                     onClick = viewModel::onActivePresetClick)
             }, playButtonCallback = playButtonCallback,
             stopTimeProvider = stopTimeProvider,
-            onStopTimerClick = { showingCancelStopTimerDialog = true },
+            onStopTimerClick = viewModel::onAutoStopTimerClick,
             showingPresetSelector = viewModel.showingPresetSelector,
             presetListCallback = presetListCallback,
             onCloseButtonClick = viewModel::onCloseButtonClick)
     }
 
-    if (viewModel.showingUnsavedChangesWarning)
-        viewModel.activePresetName?.let { unsavedPresetName ->
+    when (val shownDialog = viewModel.shownDialog) {
+        null -> {}
+        is MediaControllerDialog.Confirmatory ->
+            SoundAuraDialog(
+                title = shownDialog.title.resolve(LocalContext.current),
+                text = shownDialog.text.resolve(LocalContext.current),
+                onDismissRequest = shownDialog.onDismissRequest,
+                onConfirm = shownDialog.onConfirmClick)
+        is MediaControllerDialog.RenamePreset ->
+            RenameDialog(
+                title = stringResource(R.string.default_rename_dialog_title),
+                newNameProvider = shownDialog.newNameProvider,
+                onNewNameChange = shownDialog.onNameChange,
+                errorMessageProvider = shownDialog.messageProvider,
+                onDismissRequest = shownDialog.onDismissRequest,
+                onConfirmClick = shownDialog.onConfirmClick)
+        is MediaControllerDialog.PresetUnsavedChangesWarning ->
             UnsavedPresetChangesWarningDialog(
-                unsavedPresetName = unsavedPresetName,
-                onDismissRequest = viewModel::onUnsavedChangesWarningCancel,
-                onConfirm = viewModel::onUnsavedChangesWarningConfirm)
-        }
-
-    if (showingSetStopTimerDialog)
-        SetStopTimerDialog(
-            onDismissRequest = {
-                showingSetStopTimerDialog = false
-            }, onConfirm = {
-                onNewStopTimerRequest(it)
-                showingSetStopTimerDialog = false
-            })
-
-    if (showingCancelStopTimerDialog)
-        CancelStopTimerDialog(
-            onDismissRequest = {
-                showingCancelStopTimerDialog = false
-            }, onConfirm = {
-                onCancelStopTimerRequest()
-                showingCancelStopTimerDialog = false
-            })
+                unsavedPresetName = shownDialog.target.name,
+                onDismissRequest = shownDialog.onDismissRequest,
+                onConfirm = shownDialog.onConfirmClick)
+        is MediaControllerDialog.SetAutoStopTimer ->
+            SetStopTimerDialog(
+                onDismissRequest = shownDialog.onDismissRequest,
+                onConfirm = {
+                    onNewStopTimerRequest(it)
+                    shownDialog.onDismissRequest()
+                })
+    }
 }
 
 /**
@@ -406,16 +476,3 @@ class MediaControllerViewModel(
     description = stringResource(R.string.set_stop_timer_dialog_description),
     bounds = Range(Duration.ZERO, Duration.ofHours(100).minusSeconds(1)),
     onDismissRequest, onConfirm)
-
-/** A dialog that asks the user to confirm that they would
- * like to cancel the previously set auto stop timer. */
-@Composable fun CancelStopTimerDialog(
-    modifier: Modifier = Modifier,
-    onDismissRequest: () -> Unit,
-    onConfirm: () -> Unit,
-) = SoundAuraDialog(
-    modifier = modifier,
-    title = stringResource(R.string.cancel_stop_timer_dialog_title),
-    text = stringResource(R.string.cancel_stop_timer_dialog_text),
-    onDismissRequest = onDismissRequest,
-    onConfirm = onConfirm)
