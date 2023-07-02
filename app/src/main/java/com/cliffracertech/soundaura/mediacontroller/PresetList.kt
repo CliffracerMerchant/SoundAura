@@ -124,7 +124,7 @@ import kotlinx.collections.immutable.toImmutableList
 interface PresetListCallback {
     /** A function that will provide the list
      * of [Preset]s to display when invoked */
-    val listProvider: () -> ImmutableList<Preset>?
+    fun getList(): ImmutableList<Preset>?
     /** The callback that will be invoked when the
      * [preset]'s rename option has been clicked */
     fun onRenameClick(preset: Preset)
@@ -159,7 +159,7 @@ interface PresetListCallback {
     selectionBrush: Brush,
     callback: PresetListCallback,
 ) = CompositionLocalProvider(LocalContentColor provides MaterialTheme.colors.onSurface) {
-    val presetList = callback.listProvider()
+    val presetList = callback.getList()
 
     Crossfade(presetList?.isEmpty(), modifier) { when(it) {
         null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
@@ -169,8 +169,8 @@ interface PresetListCallback {
                  modifier = Modifier.width(300.dp),
                  textAlign = TextAlign.Justify)
         } else -> {
-            val activePresetName = activePresetCallback.nameProvider()
-            val activePresetIsModified = activePresetCallback.isModifiedProvider()
+            val activePresetName = activePresetCallback.getName()
+            val activePresetIsModified = activePresetCallback.getIsModified()
 
             LazyColumn(Modifier, contentPadding = contentPadding) {
                 items(
@@ -199,23 +199,23 @@ fun PresetListPreview() = SoundAuraTheme {
     val list = remember { List(4) {
         Preset("Super Duper Extra Really Long Preset Name$it")
     }.toImmutableList() }
-    val activePresetName = remember { mutableStateOf<String?>(list.first().name) }
+    var activePresetName by remember { mutableStateOf<String?>(list.first().name) }
     val callback = remember { object: PresetListCallback {
-        override val listProvider = { list }
+        override fun getList() = list
         override fun onRenameClick(preset: Preset) {}
         override fun onOverwriteClick(preset: Preset) {}
         override fun onDeleteClick(preset: Preset) {}
         override fun onClick(preset: Preset) {
-            activePresetName.value = preset.name
+            activePresetName = preset.name
         }
     }}
 
     PresetList(
-        activePresetCallback = ActivePresetCallback(
-            nameProvider = activePresetName::value::get,
-            isModifiedProvider = { true },
-            onClick = {}),
-        selectionBrush = Brush.horizontalGradient(
+        activePresetCallback = object : ActivePresetCallback {
+            override fun getName() = activePresetName
+            override fun getIsModified() = true
+            override fun onClick() {}
+        }, selectionBrush = Brush.horizontalGradient(
             listOf(MaterialTheme.colors.primaryVariant,
                    MaterialTheme.colors.secondaryVariant)),
         callback = callback)

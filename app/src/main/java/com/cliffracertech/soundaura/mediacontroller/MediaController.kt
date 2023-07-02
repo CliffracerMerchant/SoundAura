@@ -113,7 +113,7 @@ data class MediaControllerSizes(
     val presetSelectorSize: DpSize,
 ) {
     val dividerSize get() = dividerThicknessDp.dp
-    val stopTimerLength get() =
+    val stopTimeLength get() =
         if (orientation.isVertical) stopTimerSize.height
         else                        stopTimerSize.width
 
@@ -134,7 +134,7 @@ data class MediaControllerSizes(
      * auto stop time is being shown and the orientation. */
     fun collapsedSize(showingStopTimer: Boolean): DpSize {
         val stopTimerLength = if (!showingStopTimer) 0.dp
-        else dividerSize + stopTimerLength
+        else dividerSize + stopTimeLength
         val length = activePresetLength + dividerSize +
                 playButtonLength + stopTimerLength
         return DpSize(
@@ -187,20 +187,18 @@ fun Modifier.rotateClockwise() = layout { measurable, constraints ->
     }
 }.rotate(90f)
 
-/**
- * A collection of callbacks related to the display of an active preset.
- *
- * @param nameProvider A function that returns the actively playing
- *     [Preset]'s name, or null if there isn't one, when invoked
- * @param isModifiedProvider A function that returns whether or
- *     not the active preset has unsaved changes when invoked
- * @param onClick The callback that will be invoked when the display
- *     of the active preset is clicked
- */
-data class ActivePresetCallback(
-    val nameProvider: () -> String?,
-    val isModifiedProvider: () -> Boolean,
-    val onClick: () -> Unit)
+/** A collection of callbacks related to the display of an active preset. */
+interface ActivePresetCallback {
+    /** A function that returns the actively playing [Preset]'s
+    * name, or null if there isn't one, when invoked */
+    fun getName(): String?
+    /** A function that returns whether or not the
+     * active preset has unsaved changes when invoked */
+    fun getIsModified(): Boolean
+    /** The callback that will be invoked when
+     * the display of the active preset is clicked */
+    fun onClick()
+}
 
 @Composable private fun ActivePresetDisplay(
     sizes: MediaControllerSizes,
@@ -211,7 +209,7 @@ data class ActivePresetCallback(
     val columnModifier = remember(modifier, sizes.orientation) {
         modifier.size(sizes.activePresetSize)
                 .clip(sizes.activePresetShape)
-                .clickable(true, onClickLabel, Role.Button, callback.onClick)
+                .clickable(true, onClickLabel, Role.Button, callback::onClick)
                 .then(if (sizes.orientation.isHorizontal)
                           Modifier.padding(start = 12.dp, end = 8.dp)
                     else Modifier.padding(top = 12.dp, bottom = 8.dp)
@@ -219,7 +217,7 @@ data class ActivePresetCallback(
     }
     Column(columnModifier, Arrangement.Center, Alignment.CenterHorizontally) {
         val style = MaterialTheme.typography.caption
-        val activePresetName = callback.nameProvider()
+        val activePresetName = callback.getName()
         Text(text = stringResource(R.string.playing),
              maxLines = 1, style = style, softWrap = false)
         Row {
@@ -229,7 +227,7 @@ data class ActivePresetCallback(
                 maxWidth = sizes.activePresetLength,
                 modifier = Modifier.weight(1f, false),
                 style = style)
-            AnimatedVisibility(callback.isModifiedProvider()) {
+            AnimatedVisibility(callback.getIsModified()) {
                 Text(" *", style = style)
             }
         }
@@ -434,7 +432,7 @@ data class ActivePresetCallback(
     modifier: Modifier = Modifier,
     sizes: MediaControllerSizes,
     backgroundBrush: Brush,
-    contentColor: Color,
+    contentColor: Color = MaterialTheme.colors.onPrimary,
     alignment: BiasAlignment,
     padding: PaddingValues,
     activePresetCallback: ActivePresetCallback,
@@ -450,20 +448,20 @@ data class ActivePresetCallback(
     isExpanded.targetState = showingPresetSelector
 
     val expandTransition = updateTransition(
-        isExpanded, "FloatingMediaController transition")
+        isExpanded, "MediaController expand transition")
     val expandTransitionProgress by expandTransition.animateFloat(
         transitionSpec = { tween(tweenDuration, 0, LinearOutSlowInEasing) },
-        label = "FloatingMediaController expand transition progress",
+        label = "MediaController expand transition progress",
         targetValueByState = { if (it) 1f else 0f })
     val transitionProgressProvider = remember {{ expandTransitionProgress }}
-    val hasStopTimer by remember { derivedStateOf {
+    val hasStopTime by remember { derivedStateOf {
         stopTimeProvider() != null
     }}
 
     ClippedBrushBox(
         modifier = modifier,
         brush = backgroundBrush,
-        size = sizes.rememberCurrentSize(showingPresetSelector, hasStopTimer),
+        size = sizes.rememberCurrentSize(showingPresetSelector, hasStopTime),
         cornerRadius = 28.dp,
         padding = padding,
         alignment = alignment,
@@ -471,10 +469,10 @@ data class ActivePresetCallback(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             val titleHeight by expandTransition.animateDp(
                 transitionSpec = { tween(tweenDuration, 0, LinearOutSlowInEasing) },
-                label = "MediaController / preset selector title height transition",
+                label = "MediaController/preset selector title height transition",
             ) { expanded ->
                 if (!expanded && sizes.orientation.isVertical)
-                    sizes.collapsedSize(hasStopTimer).height
+                    sizes.collapsedSize(hasStopTime).height
                 else sizes.minThickness
             }
             Box(Modifier.height(titleHeight)) {
@@ -490,7 +488,7 @@ data class ActivePresetCallback(
                         stopTimeProvider, onStopTimerClick)
             }
             MediaControllerPresetList(
-                sizes, hasStopTimer, backgroundBrush,
+                sizes, hasStopTime, backgroundBrush,
                 transitionProgressProvider,
                 activePresetCallback, presetListCallback)
         }
@@ -509,7 +507,7 @@ fun MediaControllerPreview() = SoundAuraTheme {
     ).toImmutableList() }
     val activePresetName = remember { mutableStateOf<String?>(list.first().name) }
     val callback = remember { object: PresetListCallback {
-        override val listProvider = { list }
+        override fun getList() = list
         override fun onRenameClick(preset: Preset) {}
         override fun onOverwriteClick(preset: Preset) {}
         override fun onDeleteClick(preset: Preset) {}
@@ -528,17 +526,17 @@ fun MediaControllerPreview() = SoundAuraTheme {
         contentColor = MaterialTheme.colors.onPrimary,
         alignment = Alignment.BottomStart as BiasAlignment,
         padding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 8.dp),
-        activePresetCallback = ActivePresetCallback(
-            nameProvider = activePresetName::value::get,
-            isModifiedProvider = { true },
-            onClick = { expanded = true }),
-        playButtonCallback = PlayButtonCallback(
-            isPlayingProvider = { playing },
-            onClick = { playing = !playing },
-            clickLabelResIdProvider = { 0 },
-            onLongClick = {},
-            longClickLabelResId = 0),
-        stopTimeProvider = { null },
+        activePresetCallback = object : ActivePresetCallback {
+            override fun getName() = activePresetName.value
+            override fun getIsModified() = true
+            override fun onClick() { expanded = true }
+        }, playButtonCallback = object : PlayButtonCallback {
+            override fun getIsPlaying() = playing
+            override fun onClick() { playing = !playing }
+            override fun getClickLabelResId(isPlaying: Boolean) = 0
+            override fun onLongClick() {}
+            override val longClickLabelResId = 0
+        }, stopTimeProvider = { null },
         onStopTimerClick = {},
         showingPresetSelector = expanded,
         presetListCallback = callback,

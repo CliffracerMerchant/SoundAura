@@ -159,12 +159,79 @@ sealed class MediaControllerDialog(
 
     private val scope = coroutineScope ?: viewModelScope
 
-    val presetList by presetDao.getPresetList()
+    val visible get() = !navigationState.showingAppSettings
+    val showingPresetSelector get() = navigationState.showingPresetSelector
+
+    private val activePresetName by activePresetState.name.collectAsState(null, scope)
+    private val activePresetIsModified by activePresetState.isModified.collectAsState(false, scope)
+    val activePresetCallback = object: ActivePresetCallback {
+        override fun getName() = activePresetName
+        override fun getIsModified() = activePresetIsModified
+        override fun onClick() { navigationState.showingPresetSelector = true }
+    }
+
+    private val presetList by presetDao.getPresetList()
         .map { it.toImmutableList() }
         .collectAsState(null, scope)
-
-    val activePresetName by activePresetState.name.collectAsState(null, scope)
-    val activePresetIsModified by activePresetState.isModified.collectAsState(false, scope)
+    val presetListCallback = object : PresetListCallback {
+        override fun getList() = presetList
+        override fun onRenameClick(preset: Preset) {
+            nameValidator.reset(preset.name)
+            shownDialog = MediaControllerDialog.RenamePreset(
+                target = preset,
+                newNameProvider = nameValidator::value,
+                onNameChange = { nameValidator.value = it },
+                messageProvider = nameValidator::message,
+                onDismissRequest = ::dismissDialog,
+                onConfirmClick = {
+                    scope.launch {
+                        val newName = nameValidator.validate() ?: return@launch
+                        presetDao.renamePreset(preset.name, newName)
+                    }
+                    dismissDialog()
+                })
+        }
+        override fun onOverwriteClick(preset: Preset) {
+            shownDialog = MediaControllerDialog.Confirmatory(
+                title = StringResource(R.string.confirm_overwrite_preset_dialog_title),
+                text = StringResource(R.string.confirm_overwrite_preset_dialog_message, preset.name),
+                onDismissRequest = ::dismissDialog,
+                onConfirmClick = {
+                    overwritePreset(preset.name)
+                    dismissDialog()
+                })
+        }
+        override fun onDeleteClick(preset: Preset) {
+            shownDialog = MediaControllerDialog.Confirmatory(
+                title = StringResource(R.string.confirm_delete_preset_title, preset.name),
+                text = StringResource(R.string.confirm_delete_preset_message),
+                onDismissRequest = ::dismissDialog,
+                onConfirmClick = {
+                    scope.launch {
+                        if (preset.name == activePresetName)
+                            activePresetState.clear()
+                        presetDao.deletePreset(preset.name)
+                    }
+                    dismissDialog()
+                })
+        }
+        override fun onClick(preset: Preset) { when {
+            activePresetIsModified -> {
+                shownDialog = MediaControllerDialog.PresetUnsavedChangesWarning(
+                    target = preset,
+                    onDismissRequest = ::dismissDialog,
+                    onConfirmClick = { saveFirst ->
+                        if (saveFirst)
+                            activePresetName?.let(::overwritePreset)
+                        loadPreset(preset)
+                        dismissDialog()
+                    })
+            } preset.name == activePresetName ->
+            // This skips a pointless loading of the unmodified active preset
+            onCloseButtonClick()
+            else -> loadPreset(preset)
+        }}
+    }
 
     private val playButtonLongClickHintShownKey =
         booleanPreferencesKey(PrefKeys.playButtonLongClickHintShown)
@@ -173,16 +240,25 @@ sealed class MediaControllerDialog(
     private val activePlaylistsIsEmpty by playlistDao
         .getAtLeastOnePlaylistIsActive()
         .collectAsState(true, scope)
-
-    fun onPlayButtonClick() {
-        if (playButtonLongClickHintShown || activePlaylistsIsEmpty)
-            return // We don't want to show the hint if there are no active tracks
-                   // because the PlayerService should show a message about there
-                   // being no active tracks
-        messageHandler.postMessage(
-            StringResource(R.string.play_button_long_click_hint_text),
-            SnackbarDuration.Long)
-        dataStore.edit(playButtonLongClickHintShownKey, true, scope)
+    val playButtonCallback = object: PlayButtonCallback {
+        override fun getIsPlaying() = false
+        override fun onClick() {
+            if (playButtonLongClickHintShown || activePlaylistsIsEmpty)
+                return // We don't want to show the hint if there are no active tracks
+            // because the PlayerService should show a message about there
+            // being no active tracks
+            messageHandler.postMessage(
+                StringResource(R.string.play_button_long_click_hint_text),
+                SnackbarDuration.Long)
+            dataStore.edit(playButtonLongClickHintShownKey, true, scope)
+        }
+        override fun onLongClick() {
+            shownDialog = MediaControllerDialog.SetAutoStopTimer(::dismissDialog)
+        }
+        override fun getClickLabelResId(isPlaying: Boolean) =
+            if (isPlaying) R.string.pause_button_description
+            else           R.string.play_button_description
+        override val longClickLabelResId = R.string.play_pause_button_long_click_description
     }
 
     fun onAutoStopTimerClick() {
@@ -193,16 +269,6 @@ sealed class MediaControllerDialog(
             onConfirmClick = {})
     }
 
-    fun onPlayButtonLongClick() {
-        shownDialog = MediaControllerDialog.SetAutoStopTimer(
-            onDismissRequest = ::dismissDialog
-        )
-    }
-
-    fun onActivePresetClick() {
-        navigationState.showingPresetSelector = true
-    }
-
     fun onCloseButtonClick() {
         navigationState.showingPresetSelector = false
     }
@@ -211,50 +277,7 @@ sealed class MediaControllerDialog(
     var shownDialog by mutableStateOf<MediaControllerDialog?>(null)
     private fun dismissDialog() { shownDialog = null }
 
-    fun onPresetRenameClick(preset: Preset) {
-        nameValidator.reset(preset.name)
-        shownDialog = MediaControllerDialog.RenamePreset(
-            target = preset,
-            newNameProvider = nameValidator::value,
-            onNameChange = { nameValidator.value = it },
-            messageProvider = nameValidator::message,
-            onDismissRequest = ::dismissDialog,
-            onConfirmClick = {
-                scope.launch {
-                    val newName = nameValidator.validate() ?: return@launch
-                    presetDao.renamePreset(preset.name, newName)
-                }
-                dismissDialog()
-            })
-    }
-
-    fun onPresetOverwriteClick(preset: Preset) {
-        shownDialog = MediaControllerDialog.Confirmatory(
-            title = StringResource(R.string.confirm_overwrite_preset_dialog_title),
-            text = StringResource(R.string.confirm_overwrite_preset_dialog_message, preset.name),
-            onDismissRequest = ::dismissDialog,
-            onConfirmClick = {
-                onPresetOverwriteRequest(preset.name)
-                dismissDialog()
-            })
-    }
-
-    fun onPresetDeleteClick(preset: Preset) {
-        shownDialog = MediaControllerDialog.Confirmatory(
-            title = StringResource(R.string.confirm_delete_preset_title, preset.name),
-            text = StringResource(R.string.confirm_delete_preset_message),
-            onDismissRequest = ::dismissDialog,
-            onConfirmClick = {
-                scope.launch {
-                    if (preset.name == activePresetName)
-                        activePresetState.clear()
-                    presetDao.deletePreset(preset.name)
-                }
-                dismissDialog()
-            })
-    }
-
-    private fun onPresetOverwriteRequest(presetName: String) {
+    private fun overwritePreset(presetName: String) {
         val isActive = presetName == activePresetName
         when {
             activePlaylistsIsEmpty ->
@@ -274,24 +297,6 @@ sealed class MediaControllerDialog(
         }
     }
 
-    fun onPresetSelectorPresetClick(preset: Preset) {
-        when {
-            activePresetIsModified -> {
-                shownDialog = MediaControllerDialog.PresetUnsavedChangesWarning(
-                    target = preset,
-                    onDismissRequest = ::dismissDialog,
-                    onConfirmClick = { saveFirst ->
-                        if (saveFirst)
-                            activePresetName?.let(::onPresetOverwriteRequest)
-                        loadPreset(preset)
-                        dismissDialog()
-                    })
-            } preset.name == activePresetName ->
-                // This skips a pointless loading of the unmodified active preset
-                onCloseButtonClick()
-            else -> loadPreset(preset)
-        }
-    }
     // TODO: Figure out why UI stutters when selecting new preset
     private fun loadPreset(preset: Preset) {
         scope.launch {
@@ -322,27 +327,6 @@ sealed class MediaControllerDialog(
         Brush.horizontalGradient(colors = listOf(startColor, endColor))
     }
 
-    val presetListCallback = remember { object: PresetListCallback {
-        override val listProvider = viewModel::presetList::get
-        override fun onRenameClick(preset: Preset) = viewModel.onPresetRenameClick(preset)
-        override fun onOverwriteClick(preset: Preset) = viewModel.onPresetOverwriteClick(preset)
-        override fun onDeleteClick(preset: Preset) = viewModel.onPresetDeleteClick(preset)
-        override fun onClick(preset: Preset) = viewModel.onPresetSelectorPresetClick(preset)
-    }}
-
-    val playButtonCallback = remember(isPlayingProvider, onPlayButtonClick) {
-        PlayButtonCallback(
-            isPlayingProvider,
-            onClick = {
-                viewModel.onPlayButtonClick()
-                onPlayButtonClick()
-            }, clickLabelResIdProvider = {isPlaying ->
-                if (isPlaying) R.string.pause_button_description
-                else           R.string.play_button_description
-            }, onLongClick = viewModel::onPlayButtonLongClick,
-            longClickLabelResId = R.string.play_pause_button_long_click_description)
-    }
-
     val enterSpec = tween<Float>(
         durationMillis = tweenDuration,
         delayMillis = tweenDuration / 3,
@@ -363,19 +347,14 @@ sealed class MediaControllerDialog(
             modifier = modifier,
             sizes = sizes,
             backgroundBrush = backgroundBrush,
-            contentColor = MaterialTheme.colors.onPrimary,
             alignment = alignment,
             padding = padding,
-            activePresetCallback = remember {
-                ActivePresetCallback(
-                    nameProvider = viewModel::activePresetName::get,
-                    isModifiedProvider = viewModel::activePresetIsModified::get,
-                    onClick = viewModel::onActivePresetClick)
-            }, playButtonCallback = playButtonCallback,
+            activePresetCallback = viewModel.activePresetCallback,
+            playButtonCallback = viewModel.playButtonCallback,
             stopTimeProvider = stopTimeProvider,
             onStopTimerClick = viewModel::onAutoStopTimerClick,
             showingPresetSelector = viewModel.showingPresetSelector,
-            presetListCallback = presetListCallback,
+            presetListCallback = viewModel.presetListCallback,
             onCloseButtonClick = viewModel::onCloseButtonClick)
     }
 
