@@ -77,6 +77,7 @@ import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
 /**
  * Show a dialog to rename an object.
  *
+ * @param modifier The [Modifier] to use for the root layout
  * @param title The title of the dialog
  * @param newNameProvider A method that returns the currently proposed name when invoked
  * @param onNewNameChange The callback that will be invoked when the user attempts
@@ -88,6 +89,7 @@ import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
  * @param onConfirmClick The callback that will be invoked when the user clicks the ok button
  */
 @Composable fun RenameDialog(
+    modifier: Modifier = Modifier,
     title: String = stringResource(R.string.default_rename_dialog_title),
     newNameProvider: () -> String,
     onNewNameChange: (String) -> Unit,
@@ -97,7 +99,7 @@ import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
 ) {
     val errorMessage = errorMessageProvider()
     SoundAuraDialog(
-        modifier = Modifier.restrictWidthAccordingToSizeClass(),
+        modifier = modifier.restrictWidthAccordingToSizeClass(),
         useDefaultWidth = false,
         title = title,
         onDismissRequest = onDismissRequest,
