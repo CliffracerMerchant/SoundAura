@@ -309,16 +309,10 @@ class MainActivity : ComponentActivity() {
                              else contentAreaSize.height))
         }
 
+        val alignment = if (alignToEnd) Alignment.TopEnd as BiasAlignment
+                        else            Alignment.BottomStart as BiasAlignment
         SoundAuraMediaController(
-            sizes = mediaControllerSizes,
-            alignment = if (alignToEnd) Alignment.TopEnd as BiasAlignment
-                        else            Alignment.BottomStart as BiasAlignment,
-            padding = padding,
-            isPlayingProvider = { boundPlayerService?.isPlaying ?: false },
-            onPlayButtonClick = ::onPlayButtonClick,
-            stopTimeProvider = { boundPlayerService?.stopTime },
-            onNewStopTimerRequest = ::onSetTimer,
-            onCancelStopTimerRequest = ::onClearTimer)
+            Modifier, mediaControllerSizes, alignment, padding)
     }
 
     /** Compose an add button at the bottom end edge of the screen that is

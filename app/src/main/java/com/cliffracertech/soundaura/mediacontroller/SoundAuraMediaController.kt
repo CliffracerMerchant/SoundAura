@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.SnackbarDuration
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,7 +48,6 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
@@ -74,20 +74,48 @@ import javax.inject.Inject
     private val scope = coroutineScope ?: viewModelScope
 
     val visible get() = !navigationState.showingAppSettings
-    val showingPresetSelector get() = navigationState.showingPresetSelector
 
     private val activePresetName by activePresetState.name.collectAsState(null, scope)
     private val activePresetIsModified by activePresetState.isModified.collectAsState(false, scope)
-    val activePresetCallback = object: ActivePresetCallback {
+    private fun activePresetCallback() = object: ActivePresetCallback {
         override fun getName() = activePresetName
         override fun getIsModified() = activePresetIsModified
         override fun onClick() { navigationState.showingPresetSelector = true }
     }
 
+    private val playButtonLongClickHintShownKey =
+        booleanPreferencesKey(PrefKeys.playButtonLongClickHintShown)
+    private val playButtonLongClickHintShown by
+    dataStore.preferenceState(playButtonLongClickHintShownKey, false, scope)
+    private val activePlaylistsIsEmpty by playlistDao
+        .getAtLeastOnePlaylistIsActive()
+        .collectAsState(true, scope)
+    private fun playButtonCallback() = object: PlayButtonCallback {
+        override fun getIsPlaying() = false
+        override fun onClick() {
+            if (playButtonLongClickHintShown || activePlaylistsIsEmpty)
+                return // We don't want to show the hint if there are no active tracks
+            // because the PlayerService should show a message about there
+            // being no active tracks
+            val stringRes = StringResource(R.string.play_button_long_click_hint_text)
+            messageHandler.postMessage(stringRes, SnackbarDuration.Long)
+            dataStore.edit(playButtonLongClickHintShownKey, true, scope)
+        }
+        override fun onLongClick() {
+            shownDialog = DialogType.SetAutoStopTimer(
+                onDismissRequest = ::dismissDialog,
+                onConfirmClick = { dismissDialog() })
+        }
+        override fun getClickLabelResId(isPlaying: Boolean) =
+            if (isPlaying) R.string.pause_button_description
+            else           R.string.play_button_description
+        override val longClickLabelResId = R.string.play_pause_button_long_click_description
+    }
+
     private val presetList by presetDao.getPresetList()
         .map { it.toImmutableList() }
         .collectAsState(null, scope)
-    val presetListCallback = object : PresetListCallback {
+    private fun presetListCallback() = object : PresetListCallback {
         override fun getList() = presetList
         override fun onRenameClick(preset: Preset) {
             nameValidator.reset(preset.name)
@@ -147,41 +175,20 @@ import javax.inject.Inject
         }}
     }
 
-    private val playButtonLongClickHintShownKey =
-        booleanPreferencesKey(PrefKeys.playButtonLongClickHintShown)
-    private val playButtonLongClickHintShown by
-        dataStore.preferenceState(playButtonLongClickHintShownKey, false, scope)
-    private val activePlaylistsIsEmpty by playlistDao
-        .getAtLeastOnePlaylistIsActive()
-        .collectAsState(true, scope)
-    val playButtonCallback = object: PlayButtonCallback {
-        override fun getIsPlaying() = false
-        override fun onClick() {
-            if (playButtonLongClickHintShown || activePlaylistsIsEmpty)
-                return // We don't want to show the hint if there are no active tracks
-            // because the PlayerService should show a message about there
-            // being no active tracks
-            val stringRes = StringResource(R.string.play_button_long_click_hint_text)
-            messageHandler.postMessage(stringRes, SnackbarDuration.Long)
-            dataStore.edit(playButtonLongClickHintShownKey, true, scope)
-        }
-        override fun onLongClick() {
-            shownDialog = DialogType.SetAutoStopTimer(
+    val callback = object: MediaControllerCallback {
+        override val activePresetCallback = activePresetCallback()
+        override val playButtonCallback = playButtonCallback()
+        override val presetListCallback = presetListCallback()
+        override fun getStopTime(): Instant? = null
+        override fun onStopTimerClick() {
+            shownDialog = DialogType.Confirmatory(
                 onDismissRequest = ::dismissDialog,
+                title = StringResource(R.string.cancel_stop_timer_dialog_title),
+                text = StringResource(R.string.cancel_stop_timer_dialog_text),
                 onConfirmClick = { dismissDialog() })
         }
-        override fun getClickLabelResId(isPlaying: Boolean) =
-            if (isPlaying) R.string.pause_button_description
-            else           R.string.play_button_description
-        override val longClickLabelResId = R.string.play_pause_button_long_click_description
-    }
-
-    fun onAutoStopTimerClick() {
-        shownDialog = DialogType.Confirmatory(
-            onDismissRequest = ::dismissDialog,
-            title = StringResource(R.string.cancel_stop_timer_dialog_title),
-            text = StringResource(R.string.cancel_stop_timer_dialog_text),
-            onConfirmClick = { dismissDialog() })
+        override fun getShowingPresetSelector() = navigationState.showingPresetSelector
+        override fun onCloseButtonClick() = this@MediaControllerViewModel.onCloseButtonClick()
     }
 
     fun onCloseButtonClick() {
@@ -228,11 +235,6 @@ import javax.inject.Inject
     sizes: MediaControllerSizes,
     alignment: BiasAlignment,
     padding: PaddingValues,
-    isPlayingProvider: () -> Boolean,
-    onPlayButtonClick: () -> Unit,
-    stopTimeProvider: () -> Instant?,
-    onNewStopTimerRequest: (Duration) -> Unit,
-    onCancelStopTimerRequest: () -> Unit,
 ) {
     val viewModel: MediaControllerViewModel = viewModel()
 
@@ -249,9 +251,11 @@ import javax.inject.Inject
     val exitSpec = tween<Float>(
         durationMillis = tweenDuration,
         easing = LinearOutSlowInEasing)
+    val hasStopTime by remember { derivedStateOf {
+        viewModel.callback.getStopTime() != null
+    }}
     val transformOrigin = rememberClippedBrushBoxTransformOrigin(
-        alignment, padding,
-        dpSize = sizes.collapsedSize(stopTimeProvider() != null))
+        alignment, padding, dpSize = sizes.collapsedSize(hasStopTime))
 
     AnimatedVisibility(
         visible = viewModel.visible,
@@ -264,13 +268,7 @@ import javax.inject.Inject
             backgroundBrush = backgroundBrush,
             alignment = alignment,
             padding = padding,
-            activePresetCallback = viewModel.activePresetCallback,
-            playButtonCallback = viewModel.playButtonCallback,
-            stopTimeProvider = stopTimeProvider,
-            onStopTimerClick = viewModel::onAutoStopTimerClick,
-            showingPresetSelector = viewModel.showingPresetSelector,
-            presetListCallback = viewModel.presetListCallback,
-            onCloseButtonClick = viewModel::onCloseButtonClick)
+            callback = viewModel.callback)
     }
     DialogShower(viewModel.shownDialog)
 }
