@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
@@ -389,12 +390,17 @@ class PlayerService: LifecycleService() {
 
     inner class Binder: android.os.Binder() {
         val isPlaying get() = this@PlayerService.isPlaying
-        val stopTime get() = this@PlayerService.stopTime
-
         fun toggleIsPlaying() {
             setPlaybackState(if (isPlaying) STATE_PAUSED
                              else           STATE_PLAYING)
         }
+
+        val stopTime get() = this@PlayerService.stopTime
+        fun setStopTimer(stopTimer: Duration) {
+            val stopTimeInstant = Instant.now().plus(stopTimer)
+            setStopTime(stopTimeInstant.toEpochMilli())
+        }
+        fun clearStopTimer() = setStopTime(null)
 
         fun setPlaylistVolume(playlistName: String, volume: Float) =
             this@PlayerService.setPlaylistVolume(playlistName, volume)
@@ -439,10 +445,10 @@ class PlayerService: LifecycleService() {
         fun pauseIntent(context: Context) = setPlaybackIntent(context, STATE_PAUSED)
         fun stopIntent(context: Context) = setPlaybackIntent(context, STATE_STOPPED)
 
-        fun setTimerIntent(context: Context, stopTime: Instant?) =
+        fun setTimerIntent(context: Context, stopTimer: Duration?) =
             Intent(context, PlayerService::class.java)
                 .setAction(setTimerAction)
-                .putExtra(setTimerAction, stopTime?.toEpochMilli())
+                .putExtra(setTimerAction, Instant.now().plus(stopTimer)?.toEpochMilli())
 
         fun interface PlaybackChangeListener {
             fun onPlaybackStateChange(newState: Int)

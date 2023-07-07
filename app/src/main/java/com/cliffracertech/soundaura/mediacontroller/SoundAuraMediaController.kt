@@ -41,6 +41,7 @@ import com.cliffracertech.soundaura.model.database.Preset
 import com.cliffracertech.soundaura.model.database.PresetDao
 import com.cliffracertech.soundaura.model.database.PresetNameValidator
 import com.cliffracertech.soundaura.preferenceState
+import com.cliffracertech.soundaura.service.PlaybackState
 import com.cliffracertech.soundaura.settings.PrefKeys
 import com.cliffracertech.soundaura.ui.tweenDuration
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -54,6 +55,7 @@ import javax.inject.Inject
 @HiltViewModel class MediaControllerViewModel(
     private val presetDao: PresetDao,
     private val navigationState: NavigationState,
+    private val playbackState: PlaybackState,
     private val activePresetState: ActivePresetState,
     private val messageHandler: MessageHandler,
     private val dataStore: DataStore<Preferences>,
@@ -64,11 +66,12 @@ import javax.inject.Inject
     @Inject constructor(
         dao: PresetDao,
         navigationState: NavigationState,
+        playbackState: PlaybackState,
         activePresetState: ActivePresetState,
         messageHandler: MessageHandler,
         dataStore: DataStore<Preferences>,
         playlistDao: PlaylistDao,
-    ) : this(dao, navigationState, activePresetState,
+    ) : this(dao, navigationState, playbackState, activePresetState,
              messageHandler, dataStore, playlistDao, null)
 
     private val scope = coroutineScope ?: viewModelScope
@@ -91,12 +94,13 @@ import javax.inject.Inject
         .getAtLeastOnePlaylistIsActive()
         .collectAsState(true, scope)
     private fun playButtonCallback() = object: PlayButtonCallback {
-        override fun getIsPlaying() = false
+        override fun getIsPlaying() = playbackState.isPlaying
         override fun onClick() {
+            playbackState.toggleIsPlaying()
             if (playButtonLongClickHintShown || activePlaylistsIsEmpty)
                 return // We don't want to show the hint if there are no active tracks
-            // because the PlayerService should show a message about there
-            // being no active tracks
+                       // because the PlayerService should show a message about there
+                       // being no active tracks
             val stringRes = StringResource(R.string.play_button_long_click_hint_text)
             messageHandler.postMessage(stringRes, SnackbarDuration.Long)
             dataStore.edit(playButtonLongClickHintShownKey, true, scope)
@@ -104,7 +108,10 @@ import javax.inject.Inject
         override fun onLongClick() {
             shownDialog = DialogType.SetAutoStopTimer(
                 onDismissRequest = ::dismissDialog,
-                onConfirmClick = { dismissDialog() })
+                onConfirmClick = { duration ->
+                    playbackState.setTimer(duration)
+                    dismissDialog()
+                })
         }
         override fun getClickLabelResId(isPlaying: Boolean) =
             if (isPlaying) R.string.pause_button_description
@@ -112,7 +119,8 @@ import javax.inject.Inject
         override val longClickLabelResId = R.string.play_pause_button_long_click_description
     }
 
-    private val presetList by presetDao.getPresetList()
+    private val presetList by presetDao
+        .getPresetList()
         .map { it.toImmutableList() }
         .collectAsState(null, scope)
     private fun presetListCallback() = object : PresetListCallback {
@@ -170,7 +178,7 @@ import javax.inject.Inject
                     })
             } preset.name == activePresetName ->
             // This skips a pointless loading of the unmodified active preset
-            onCloseButtonClick()
+            closePresetSelector()
             else -> loadPreset(preset)
         }}
     }
@@ -179,19 +187,22 @@ import javax.inject.Inject
         override val activePresetCallback = activePresetCallback()
         override val playButtonCallback = playButtonCallback()
         override val presetListCallback = presetListCallback()
-        override fun getStopTime(): Instant? = null
+        override fun getStopTime(): Instant? = playbackState.stopTime
         override fun onStopTimerClick() {
             shownDialog = DialogType.Confirmatory(
                 onDismissRequest = ::dismissDialog,
                 title = StringResource(R.string.cancel_stop_timer_dialog_title),
                 text = StringResource(R.string.cancel_stop_timer_dialog_text),
-                onConfirmClick = { dismissDialog() })
+                onConfirmClick = {
+                    playbackState.clearTimer()
+                    dismissDialog()
+                })
         }
         override fun getShowingPresetSelector() = navigationState.showingPresetSelector
-        override fun onCloseButtonClick() = this@MediaControllerViewModel.onCloseButtonClick()
+        override fun onCloseButtonClick() = closePresetSelector()
     }
 
-    fun onCloseButtonClick() {
+    private fun closePresetSelector() {
         navigationState.showingPresetSelector = false
     }
 
@@ -199,32 +210,29 @@ import javax.inject.Inject
     var shownDialog by mutableStateOf<DialogType?>(null)
     private fun dismissDialog() { shownDialog = null }
 
-    private fun overwritePreset(presetName: String) {
-        val isActive = presetName == activePresetName
-        when {
-            activePlaylistsIsEmpty ->
-                messageHandler.postMessage(StringResource(
-                    R.string.overwrite_no_active_tracks_error_message))
-            isActive && !activePresetIsModified -> {
-                // This prevents a pointless saving of the unmodified active preset
-            } else -> scope.launch {
-                presetDao.savePreset(presetName)
-                // Since the current sound mix is being saved to the preset
-                // whose name == presetName, we want to make it the active
-                // preset if it isn't currently.
-                if (!isActive)
-                    activePresetState.setName(presetName)
-                onCloseButtonClick()
-            }
+    private fun overwritePreset(presetName: String) { when {
+        activePlaylistsIsEmpty ->
+            messageHandler.postMessage(StringResource(
+                R.string.overwrite_no_active_tracks_error_message))
+        presetName == activePresetName && !activePresetIsModified -> {
+            // This prevents a pointless saving of the unmodified active preset
+        } else -> scope.launch {
+            presetDao.savePreset(presetName)
+            // Since the current sound mix is being saved to the preset
+            // whose name == presetName, we want to make it the active
+            // preset if it isn't currently.
+            if (presetName != activePresetName)
+                activePresetState.setName(presetName)
+            closePresetSelector()
         }
-    }
+    }}
 
     // TODO: Figure out why UI stutters when selecting new preset
     private fun loadPreset(preset: Preset) {
         scope.launch {
             activePresetState.setName(preset.name)
             presetDao.loadPreset(preset.name)
-            onCloseButtonClick()
+            closePresetSelector()
         }
     }
 }

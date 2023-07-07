@@ -51,6 +51,7 @@ import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.PlaylistNameValidator
 import com.cliffracertech.soundaura.model.database.Track
 import com.cliffracertech.soundaura.preferenceFlow
+import com.cliffracertech.soundaura.service.PlaybackState
 import com.cliffracertech.soundaura.settings.PrefKeys
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.ImmutableList
@@ -172,6 +173,7 @@ sealed class PlaylistDialog(
     dataStore: DataStore<Preferences>,
     private val playlistDao: PlaylistDao,
     private val messageHandler: MessageHandler,
+    private val playbackState: PlaybackState,
     searchQueryState: SearchQueryState,
     coroutineScope: CoroutineScope? = null
 ) : ViewModel() {
@@ -180,8 +182,10 @@ sealed class PlaylistDialog(
         dataStore: DataStore<Preferences>,
         playlistDao: PlaylistDao,
         messageHandler: MessageHandler,
+        playbackState: PlaybackState,
         searchQueryState: SearchQueryState,
-    ) : this(dataStore, playlistDao, messageHandler, searchQueryState, null)
+    ) : this(dataStore, playlistDao, messageHandler,
+             playbackState, searchQueryState, null)
 
     private val scope = coroutineScope ?: viewModelScope
     private val showActiveTracksFirstKey = booleanPreferencesKey(PrefKeys.showActivePlaylistsFirst)
@@ -201,7 +205,10 @@ sealed class PlaylistDialog(
         scope.launch { playlistDao.toggleIsActive(playlist.name) }
     }
 
-    fun onPlaylistVolumeChangeRequest(playlist: Playlist, volume: Float) {
+    fun onPlaylistVolumeChange(playlist: Playlist, volume: Float) =
+        playbackState.setPlaylistVolume(playlist.name, volume)
+
+    fun onPlaylistVolumeChangeFinished(playlist: Playlist, volume: Float) {
         scope.launch { playlistDao.setVolume(playlist.name, volume) }
     }
 
@@ -244,7 +251,8 @@ sealed class PlaylistDialog(
 
                             if (remainingSpace < newTrackList.size)
                                 messageHandler.postMessage(StringResource(
-                                    R.string.cant_add_playlist_warning, persistedPermissionAllowance))
+                                    R.string.cant_add_playlist_warning,
+                                    persistedPermissionAllowance))
                             else {
                                 for (track in newTrackList)
                                     context.contentResolver.takePersistableUriPermission(track, 0)
@@ -283,21 +291,18 @@ sealed class PlaylistDialog(
  *     [rememberLazyListState] call, but can be overridden here in
  *     case, e.g., the scrolling position needs to be remembered
  *     even when the SoundAuraTrackList leaves the composition.
- * @param onVolumeChange The callback that will be invoked when
- *     a TrackView's volume slider is moved.
  */
 @Composable fun SoundAuraLibraryView(
     modifier: Modifier = Modifier,
     padding: PaddingValues,
     state: LazyListState = rememberLazyListState(),
-    onVolumeChange: (String, Float) -> Unit,
 ) = Surface(modifier, color = MaterialTheme.colors.background) {
     val viewModel: LibraryViewModel = viewModel()
     val context = LocalContext.current
     val itemCallback = rememberPlaylistViewCallback(
         onAddRemoveButtonClick = viewModel::onPlaylistAddRemoveButtonClick,
-        onVolumeChange = { playlist, volume -> onVolumeChange(playlist.name, volume) },
-        onVolumeChangeFinished = viewModel::onPlaylistVolumeChangeRequest,
+        onVolumeChange = viewModel::onPlaylistVolumeChange,
+        onVolumeChangeFinished = viewModel::onPlaylistVolumeChangeFinished,
         onRenameClick = viewModel::onPlaylistRenameClick,
         onExtraOptionsClick = { viewModel.onPlaylistOptionsClick(it, context) },
         onRemoveClick = viewModel::onPlaylistRemoveClick)
