@@ -7,8 +7,6 @@ import android.util.Range
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
-import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
@@ -22,6 +20,7 @@ import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.Validator
 import com.cliffracertech.soundaura.model.database.Preset
 import com.cliffracertech.soundaura.ui.HorizontalDivider
+import com.cliffracertech.soundaura.ui.TextButton
 import com.cliffracertech.soundaura.ui.bottomShape
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import java.time.Duration
@@ -160,28 +159,28 @@ sealed class DialogType(
     buttons = {
         HorizontalDivider(Modifier.padding(top = 12.dp))
         TextButton(
-            onClick = onDismissRequest,
             modifier = Modifier
                 .minTouchTargetSize()
                 .fillMaxWidth(),
             shape = RectangleShape,
-        ) { Text(stringResource(R.string.cancel)) }
+            textResId = R.string.cancel,
+            onClick = onDismissRequest)
 
         HorizontalDivider()
         TextButton(
-            onClick = { onConfirm(true) },
             modifier = Modifier
                 .minTouchTargetSize()
                 .fillMaxWidth(),
             shape = RectangleShape,
-        ) { Text(stringResource(R.string.unsaved_preset_changes_warning_save_first_option)) }
+            textResId = R.string.unsaved_preset_changes_warning_save_first_option,
+            onClick = { onConfirm(true) })
 
         HorizontalDivider()
         TextButton(
-            onClick = { onConfirm(false) },
             modifier = Modifier
                 .minTouchTargetSize()
                 .fillMaxWidth(),
             shape = MaterialTheme.shapes.medium.bottomShape(),
-        ) { Text(stringResource(R.string.unsaved_preset_changes_warning_load_anyways_option)) }
+            textResId = R.string.unsaved_preset_changes_warning_load_anyways_option,
+            onClick = { onConfirm(false) })
     })

@@ -15,7 +15,6 @@ import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.ProvideTextStyle
 import androidx.compose.material.Text
-import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.ui.SlideAnimatedContent
+import com.cliffracertech.soundaura.ui.TextButton
 import com.cliffracertech.soundaura.ui.VerticalDivider
 import com.cliffracertech.soundaura.ui.bottomEndShape
 import com.cliffracertech.soundaura.ui.bottomStartShape
@@ -94,6 +94,10 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
             Divider(Modifier.padding(top = 12.dp))
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
                 TextButton(
+                    modifier = Modifier.minTouchTargetSize().weight(1f),
+                    shape = MaterialTheme.shapes.medium.bottomStartShape(),
+                    textResId = if (currentPageIndex == 0) R.string.cancel
+                                else                       R.string.previous,
                     onClick = {
                         if (currentPageIndex == 0)
                             onDismissRequest()
@@ -101,15 +105,13 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
                             previousPageIndex = currentPageIndex
                             onCurrentPageIndexChange(currentPageIndex - 1)
                         }
-                    }, modifier = Modifier.minTouchTargetSize().weight(1f),
-                    shape = MaterialTheme.shapes.medium.bottomStartShape()
-                ) {
-                    Text(stringResource(
-                        if (currentPageIndex == 0) R.string.cancel
-                        else                       R.string.previous))
-                }
+                    })
                 VerticalDivider()
                 TextButton(
+                    modifier = Modifier.minTouchTargetSize().weight(1f),
+                    shape = MaterialTheme.shapes.medium.bottomEndShape(),
+                    textResId = if (currentPageIndex == numPages - 1) R.string.finish
+                                else                                  R.string.next,
                     onClick = {
                         if (currentPageIndex == numPages - 1)
                             onFinish()
@@ -117,13 +119,7 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
                             previousPageIndex = currentPageIndex
                             onCurrentPageIndexChange(currentPageIndex + 1)
                         }
-                    }, modifier = Modifier.minTouchTargetSize().weight(1f),
-                    shape = MaterialTheme.shapes.medium.bottomEndShape()
-                ) {
-                    Text(stringResource(
-                        if (currentPageIndex == numPages - 1) R.string.finish
-                        else                                  R.string.next))
-                }
+                    })
             }
         }
     ) {

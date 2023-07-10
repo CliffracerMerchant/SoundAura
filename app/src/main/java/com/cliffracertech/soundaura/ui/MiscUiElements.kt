@@ -3,6 +3,7 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.core.LinearEasing
@@ -10,13 +11,16 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.with
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -25,8 +29,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.ButtonColors
+import androidx.compose.material.ButtonDefaults
+import androidx.compose.material.ButtonElevation
 import androidx.compose.material.LocalContentColor
 import androidx.compose.material.LocalTextStyle
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,7 +45,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -77,7 +87,7 @@ fun Modifier.minTouchTargetSize() =
     val transition = remember(leftToRight) {
         val enterOffset = { size: Int -> size / if (leftToRight) 1 else -1 }
         val exitOffset = { size: Int -> size / if (leftToRight) -4 else 4 }
-        slideInHorizontally(spring(stiffness = springStiffness), enterOffset) with
+        slideInHorizontally(spring(stiffness = springStiffness), enterOffset) togetherWith
         slideOutHorizontally(spring(stiffness = springStiffness), exitOffset)
     }
     AnimatedContent(targetState, modifier, { transition }, content = content)
@@ -161,3 +171,40 @@ fun Modifier.minTouchTargetSize() =
         content(this.maxWidth)
     }
 }
+
+/** The same as an [androidx.compose.material.TextButton], except that the
+ * inner contents are set to be a [Text] composable that displays [text]. */
+@Composable fun TextButton(
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    elevation: ButtonElevation? = null,
+    shape: Shape = MaterialTheme.shapes.small,
+    border: BorderStroke? = null,
+    colors: ButtonColors = ButtonDefaults.textButtonColors(),
+    contentPadding: PaddingValues = ButtonDefaults.TextButtonContentPadding,
+    text: String,
+    onClick: () -> Unit,
+) = androidx.compose.material.TextButton(
+    onClick, modifier, enabled, interactionSource,
+    elevation, shape, border, colors, contentPadding
+) { Text(text) }
+
+/** The same as an [androidx.compose.material.TextButton], except that the
+ * inner contents are set to be a [Text] composable that displays the string
+ * pointed to by [textResId]. */
+@Composable fun TextButton(
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    elevation: ButtonElevation? = null,
+    shape: Shape = MaterialTheme.shapes.small,
+    border: BorderStroke? = null,
+    colors: ButtonColors = ButtonDefaults.textButtonColors(),
+    contentPadding: PaddingValues = ButtonDefaults.TextButtonContentPadding,
+    @StringRes textResId: Int,
+    onClick: () -> Unit,
+) = TextButton(
+    modifier, enabled, interactionSource, elevation,
+    shape, border, colors, contentPadding,
+    stringResource(textResId), onClick)

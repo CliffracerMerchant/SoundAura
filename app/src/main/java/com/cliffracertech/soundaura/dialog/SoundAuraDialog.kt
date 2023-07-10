@@ -20,7 +20,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
-import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -34,6 +33,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.imeIsOpen
 import com.cliffracertech.soundaura.ui.HorizontalDivider
+import com.cliffracertech.soundaura.ui.TextButton
 import com.cliffracertech.soundaura.ui.VerticalDivider
 import com.cliffracertech.soundaura.ui.bottomEndShape
 import com.cliffracertech.soundaura.ui.bottomShape
@@ -63,20 +63,20 @@ import com.google.accompanist.insets.LocalWindowInsets
     // up the dialog window's max height in the PhoneStatePermission dialog.
     if (onCancel != null) {
         TextButton(
-            onClick = onCancel,
             modifier = Modifier.minTouchTargetSize().weight(1f),
             shape = MaterialTheme.shapes.medium.bottomStartShape(),
-            content = { Text(stringResource(R.string.cancel)) })
+            textResId = R.string.cancel,
+            onClick = onCancel,)
         VerticalDivider()
     }
     TextButton(
-        onClick = onConfirm,
         modifier = Modifier.minTouchTargetSize().weight(1f),
         enabled = confirmButtonEnabled,
         shape = if (onCancel != null)
-            MaterialTheme.shapes.medium.bottomEndShape()
-        else MaterialTheme.shapes.medium.bottomShape(),
-        content = { Text(confirmText) })
+                    MaterialTheme.shapes.medium.bottomEndShape()
+                else MaterialTheme.shapes.medium.bottomShape(),
+        text = confirmText,
+        onClick = onConfirm,)
 }
 
 @Composable private fun SoundAuraDialogContent(
