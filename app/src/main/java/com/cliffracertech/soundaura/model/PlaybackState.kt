@@ -1,7 +1,7 @@
 /* This file is part of SoundAura, which is released under
  * the terms of the Apache License 2.0. See license.md in
  * the project's root directory to see the full license. */
-package com.cliffracertech.soundaura.service
+package com.cliffracertech.soundaura.model
 
 import android.content.ComponentName
 import android.content.Context
@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.app.ComponentActivity
+import com.cliffracertech.soundaura.service.PlayerService
 import dagger.hilt.android.scopes.ActivityRetainedScoped
 import java.time.Duration
 import javax.inject.Inject

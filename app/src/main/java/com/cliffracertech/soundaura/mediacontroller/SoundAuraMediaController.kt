@@ -41,7 +41,7 @@ import com.cliffracertech.soundaura.model.database.Preset
 import com.cliffracertech.soundaura.model.database.PresetDao
 import com.cliffracertech.soundaura.model.database.PresetNameValidator
 import com.cliffracertech.soundaura.preferenceState
-import com.cliffracertech.soundaura.service.PlaybackState
+import com.cliffracertech.soundaura.model.PlaybackState
 import com.cliffracertech.soundaura.settings.PrefKeys
 import com.cliffracertech.soundaura.ui.tweenDuration
 import dagger.hilt.android.lifecycle.HiltViewModel
