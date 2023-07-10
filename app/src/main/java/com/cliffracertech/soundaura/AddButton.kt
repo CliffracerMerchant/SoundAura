@@ -335,8 +335,15 @@ enum class AddButtonTarget { Playlist, Preset }
                         ) { Text(stringResource(R.string.cancel)) }
                     }
                 else DialogButtonRow(
-                    onCancel = { addingUrisAsPlaylist = null },
-                    confirmButtonEnabled = vm.message !is Validator.Message.Error,
+                    onCancel = {
+                        assert(uris.isNotEmpty())
+                        // if uris.size == 1, then the question of whether to add as
+                        // a track or as a playlist should have been skipped. In this
+                        // case, the dialog will be dismissed instead of going back.
+                        if (uris.size > 1)
+                            addingUrisAsPlaylist = null
+                        else onDismissRequest()
+                    }, confirmButtonEnabled = vm.message !is Validator.Message.Error,
                     onConfirm = { when (addingUrisAsPlaylist) {
                         true -> vm.onAddPlaylistDialogConfirm()
                         false -> vm.onAddTracksDialogConfirm()
