@@ -26,8 +26,6 @@ import androidx.media.AudioFocusRequestCompat
 import androidx.media.AudioManagerCompat
 import androidx.media.AudioManagerCompat.AUDIOFOCUS_GAIN
 import com.cliffracertech.soundaura.R
-import com.cliffracertech.soundaura.model.MessageHandler
-import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.preferenceFlow
 import com.cliffracertech.soundaura.repeatWhenStarted
@@ -51,8 +49,7 @@ import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 /**
- * A service to play the set of audio tracks marked as active tracks in the
- * application's database.
+ * A service to play the set of playlists marked as active in the app's database.
  *
  * PlayerService can either be started independently of an activity with a
  * [startService] call, or can be started bound to an activity if the activity
@@ -60,9 +57,7 @@ import javax.inject.Inject
  * on itself so that it outlives the binding activity. In either case,
  * PlayerService presents a foreground notification to the user that displays
  * its current play/pause state in string form, along with actions to toggle
- * the play/pause state and to close the service. The play/pause action will
- * always be visible, but the close action is hidden when the service is bound
- * to any clients.
+ * the play/pause state and to close the service.
  *
  * Changes in the playback state can be listened to by calling the static
  * function [addPlaybackChangeListener] with a [PlaybackChangeListener].
@@ -77,13 +72,13 @@ import javax.inject.Inject
  * easily with the static methods [PlayerService.setPlaybackIntent] and
  * [PlayerService.setTimerIntent].
  *
- * To ensure that the volume for already playing tracks is changed without
- * perceptible lag, PlayerService will not respond to track volume changes made
- * at the database level for already playing tracks. Instead, the method
- * [Binder.setPlaylistVolume] must be called with the Uri (in [String] form) of
- * the track and the new volume. If a bound activity presents the user with, e.g,
- * a slider to change a track's volume, the slider's onSlide callback should
- * therefore call [Binder.setPlaylistVolume].
+ * To ensure that the volume for already playing playlists is changed without
+ * perceptible lag, PlayerService will not respond to playlist volume changes
+ * made at the database level for already playing playlists. Instead, the method
+ * [Binder.setPlaylistVolume] must be called with the [Playlist.name] and its
+ * new volume. If a bound activity presents the user with, e.g, a slider to
+ * change a playlist's volume, the slider's onSlide callback should call
+ * [Binder.setPlaylistVolume].
  *
  * PlayerService reads the values of and changes its behavior depending on the
  * app preferences pointed to by the keys [PrefKeys.playInBackground] and
@@ -99,7 +94,6 @@ class PlayerService: LifecycleService() {
             unpauseLocks, ::autoPauseIf, ::setPlaybackState),
         PhoneStateAwarePlaybackModule(::autoPauseIf))
     @Inject lateinit var playlistDao: PlaylistDao
-    @Inject lateinit var messageHandler: MessageHandler
     private lateinit var audioManager: AudioManager
     private lateinit var notificationManager: PlayerNotification
 
@@ -112,17 +106,7 @@ class PlayerService: LifecycleService() {
         }
     }
 
-    private fun updateNotification() =
-        notificationManager.update(
-            playbackState, stopTime,
-            showStopAction = !boundToActivity)
-
-    private var boundToActivity = false
-        set(value) {
-            if (value == field) return
-            field = value
-            updateNotification()
-        }
+    private fun updateNotification() = notificationManager.update(playbackState, stopTime)
 
     private var playInBackground = false
         set(value) {
@@ -174,7 +158,6 @@ class PlayerService: LifecycleService() {
             stopIntent = stopIntent(this),
             cancelTimerIntent = setTimerIntent(this, null),
             playbackState = playbackState,
-            showStopAction = !boundToActivity,
             stopTime = stopTime,
             useMediaSession = !playInBackgroundFirstValue)
         playInBackground = playInBackgroundFirstValue
@@ -252,10 +235,6 @@ class PlayerService: LifecycleService() {
                 // The updatePlayers method will handle this edge case.
                 showAutoPausePlaybackExplanation()
                 STATE_PAUSED
-            } state == STATE_STOPPED && boundToActivity -> {
-                // The service is not intended to be stopped when it is bound to an
-                // activity, so in this case we will set the state to paused instead.
-                STATE_PAUSED
             } state == STATE_PLAYING && !hasAudioFocus -> {
                 hasAudioFocus = requestAudioFocus()
                 if (hasAudioFocus) STATE_PLAYING
@@ -331,19 +310,11 @@ class PlayerService: LifecycleService() {
         }
     }
 
-    /**
-     * Post a message explaining to the user that playback was automatically
-     * paused due to there being no active tracks to play. It is assumed here
-     * that if the service is bound to an activity, then the activity will
-     * display messages posted to an injected MessageHandler instance through,
-     * e.g., a snack bar. If the service is not bound to an activity, then the
-     * message will be displayed via a Toast instead.
-     */
+    /** Post a message explaining to the user that playback was
+     * automatically paused due to there being no active tracks to play. */
     private fun showAutoPausePlaybackExplanation() {
         val stringResId = R.string.player_no_tracks_warning_message
-        if (boundToActivity)
-            messageHandler.postMessage(StringResource(stringResId))
-        else Toast.makeText(this, stringResId, Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, stringResId, Toast.LENGTH_SHORT).show()
     }
 
     fun setPlaylistVolume(playlistName: String, volume: Float) =
@@ -408,19 +379,8 @@ class PlayerService: LifecycleService() {
 
     override fun onBind(intent: Intent): Binder {
         super.onBind(intent)
-        boundToActivity = true
         return Binder()
     }
-
-    override fun onUnbind(intent: Intent): Boolean {
-        boundToActivity = false
-        return true
-    }
-
-    override fun onRebind(intent: Intent) {
-        boundToActivity = true
-    }
-
 
     /** PlaybackModule enables PlayerService to have its functionality extended
      * via composition. Implementors of PlaybackModule define their onCreate
@@ -448,7 +408,9 @@ class PlayerService: LifecycleService() {
         fun setTimerIntent(context: Context, stopTimer: Duration?) =
             Intent(context, PlayerService::class.java)
                 .setAction(setTimerAction)
-                .putExtra(setTimerAction, Instant.now().plus(stopTimer)?.toEpochMilli())
+                .putExtra(setTimerAction, stopTimer?.let {
+                    Instant.now().plus(it).toEpochMilli()
+                })
 
         fun interface PlaybackChangeListener {
             fun onPlaybackStateChange(newState: Int)
@@ -466,9 +428,8 @@ class PlayerService: LifecycleService() {
         var playbackState = STATE_STOPPED
             private set(value) {
                 field = value
-                playbackChangeListeners.forEach {
-                    it.onPlaybackStateChange(value)
-                }
+                for (listener in playbackChangeListeners)
+                    listener.onPlaybackStateChange(value)
             }
     }
 }

@@ -34,13 +34,12 @@ import java.time.Instant
  *
  * PlayerNotification can post a notification for a foreground media playing
  * service that contains a string describing a playback state (e.g. playing,
- * paused), a toggle play/pause action, and an optional stop action. Using the
- * values of [playbackState], [stopTime], and [showStopAction] that are
- * provided in its constructor, PlayerNotification will automatically call
- * [Service.startForeground] for the client service during creation.
- * PlayerNotification should be notified of changes to the playback state, the
- * auto stop time, or the visibility of the stop action afterwards via the
- * function [update]. The notification can be cleared when the service is
+ * paused), a toggle play/pause action, and a stop action. Using the values
+ * of [playbackState] and [stopTime] that are provided in its constructor,
+ * PlayerNotification will automatically call [Service.startForeground] for
+ * the client service during creation. PlayerNotification should be notified
+ * of changes to the playback state or the auto stop time afterwards via the
+ * method [update]. The notification can be cleared when the service is
  * stopping with the function [remove].
 
  * @param service The foreground media playing service that PlayerNotification
@@ -58,9 +57,6 @@ import java.time.Instant
  * @param playbackState The initial playback state that will be displayed
  *     in the notification. playbackState can be changed after creation by
  *     passing the new value to the method update.
- * @param showStopAction Whether or not the stop action will be shown in the
- *     notification. showStopAction can be changed after creation by passing
- *     the new value to method update.
  * @param stopTime The time at which playback will be automatically stopped,
  *     if any. The duration between now and the stop time will be calculated
  *     and displayed in the notification.
@@ -77,7 +73,6 @@ class PlayerNotification(
     private val stopIntent: Intent,
     private val cancelTimerIntent: Intent,
     private var playbackState: Int,
-    private var showStopAction: Boolean,
     stopTime: Instant?,
     useMediaSession: Boolean
 ) {
@@ -222,13 +217,8 @@ class PlayerNotification(
         mediaSession?.release()
     }
 
-    fun update(
-        playbackState: Int,
-        stopTime: Instant?,
-        showStopAction: Boolean,
-    ) {
+    fun update(playbackState: Int, stopTime: Instant?) {
         this.playbackState = playbackState
-        this.showStopAction = showStopAction
 
         timeUntilStop = stopTime?.let { Duration.between(Instant.now(), it) }
         updateTimeLeftJob?.cancel()
@@ -245,11 +235,9 @@ class PlayerNotification(
                 }
             }
 
-        val notification = updatedNotification(
-            playbackState, timeUntilStop, showStopAction)
+        val notification = updatedNotification(playbackState, timeUntilStop)
         notificationManager.notify(notificationId, notification)
-        mediaSession?.setPlaybackState(
-            updatedPlaybackState(playbackState, showStopAction))
+        mediaSession?.setPlaybackState(updatedPlaybackState(playbackState))
     }
 
     private fun NotificationCompat.Builder.updateText(
@@ -275,7 +263,6 @@ class PlayerNotification(
     private fun updatedNotification(
         playbackState: Int = this.playbackState,
         timeUntilStop: Duration? = this.timeUntilStop,
-        showStopAction: Boolean = this.showStopAction
     ): Notification {
         val builder = notificationBuilder
             .updateText(timeUntilStop)
@@ -283,26 +270,22 @@ class PlayerNotification(
 
         builder.addAction(togglePlayPauseAction(
             isPlaying = playbackState == STATE_PLAYING))
-        if (showStopAction)
-            builder.addAction(stopAction)
+        builder.addAction(stopAction)
         if (timeUntilStop != null)
             builder.addAction(cancelTimerAction)
 
         // We only show a maximum of two actions in the compact
         // view to prevent the actions from clipping the text
-        if (showStopAction || timeUntilStop != null)
+        if (timeUntilStop != null)
             notificationStyle.setShowActionsInCompactView(0, 1)
         else notificationStyle.setShowActionsInCompactView(0)
 
         return builder.build()
     }
 
-    private fun updatedPlaybackState(
-        playbackState: Int,
-        showStopAction: Boolean
-    ) = playbackStateBuilder
+    private fun updatedPlaybackState(playbackState: Int) = playbackStateBuilder
         .setState(playbackState, PLAYBACK_POSITION_UNKNOWN, 1f)
-        .setActions(ACTION_PLAY_PAUSE or ACTION_PLAY or ACTION_PAUSE or
-                    if (showStopAction) ACTION_STOP else 0L)
+        .setActions(ACTION_PLAY_PAUSE or ACTION_PLAY or
+                    ACTION_PAUSE or ACTION_STOP)
         .build()
 }
