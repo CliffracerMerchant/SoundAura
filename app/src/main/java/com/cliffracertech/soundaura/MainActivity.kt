@@ -3,6 +3,7 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
+import android.content.Context
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
@@ -88,9 +89,9 @@ import javax.inject.Inject
 
     fun onBackButtonClick() = navigationState.onBackButtonClick()
 
-    fun onStart() = playbackState.onActivityStart()
+    fun onActivityStart(context: Context) = playbackState.onActivityStart(context)
 
-    fun onStop() = playbackState.onActivityStop()
+    fun onActivityStop() = playbackState.onActivityStop()
 
     fun onKeyDown(keyCode: Int) = when (keyCode) {
         KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
@@ -125,12 +126,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        viewModel.onStart()
+        viewModel.onActivityStart(this)
     }
 
     override fun onStop() {
         super.onStop()
-        viewModel.onStop()
+        viewModel.onActivityStop()
     }
 
     @Suppress("OVERRIDE_DEPRECATION")
