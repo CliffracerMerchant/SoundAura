@@ -285,12 +285,18 @@ enum class AddButtonTarget { Playlist, Preset }
     if (uris == null)
         LaunchedEffect(Unit) { launcher.launch(arrayOf("audio/*", "application/ogg")) }
     else {
+        /** A false value means the uris are being added as individual tracks.
+         * A true value means the uris are being added collectively as a playlist.
+         * A null value means the user has not chosen yet. */
         var addingUrisAsPlaylist by rememberSaveable {
-            // false means the uris are being added as individual tracks
-            // null means the user has not chosen yet
-            // If there is only one Uri, we default to false (an
-            // individual track) to skip the user needing to choose
-            mutableStateOf(if (uris.size == 1) false else null)
+            assert(uris.isNotEmpty())
+            mutableStateOf(if (uris.size > 1) null else {
+                // If there is only one Uri, we default to false (add as an
+                // individual track) to skip the user needing to choose. But, we
+                // need to call the vm's onAddAsIndividualTracksClick manually.
+                vm.onAddAsIndividualTracksClick(uris)
+                false
+            })
         }
         SoundAuraDialog(
             modifier = Modifier.restrictWidthAccordingToSizeClass(),
