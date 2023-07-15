@@ -11,29 +11,32 @@ import androidx.annotation.StringRes
 class StringResource(
     private val string: String?,
     @StringRes val stringResId: Int = 0,
-    private val args: ArrayList<Any>?
+    vararg args: Any
 ) {
     data class Id(@StringRes val id: Int)
+    @Suppress("CanBePrimaryConstructorProperty")
+    private val args = args
 
-    constructor(string: String): this(string, 0, null)
-    constructor(@StringRes stringResId: Int): this(null, stringResId, null)
+    constructor(@StringRes stringResId: Int): this(null, stringResId)
     constructor(@StringRes stringResId: Int, stringVar: String):
-            this(null, stringResId, arrayListOf(stringVar))
+            this(null, stringResId, stringVar)
     constructor(@StringRes stringResId: Int, intVar: Int):
-            this(null, stringResId, arrayListOf(intVar))
+            this(null, stringResId, intVar)
     constructor(@StringRes stringResId: Int, stringVarId: Id):
-            this(null, stringResId, arrayListOf(stringVarId))
+            this(null, stringResId, stringVarId)
+    constructor(@StringRes stringResId: Int, vararg args: Any):
+            this(null, stringResId, args)
 
     fun resolve(context: Context?) = string ?: when {
         context == null -> ""
-        args == null -> context.getString(stringResId)
+        args.isEmpty() -> context.getString(stringResId)
         else -> {
-            for (i in args.indices) {
-                val it = args[i]
-                if (it is Id)
-                    args[i] = context.getString(it.id)
+            val resolvedArgs = Array<Any>(args.size) {
+                val arg = args[it]
+                if (arg !is Id) it
+                else context.getString(arg.id)
             }
-            context.getString(stringResId, *args.toArray())
+            context.getString(stringResId, *resolvedArgs)
         }
     }
 }
