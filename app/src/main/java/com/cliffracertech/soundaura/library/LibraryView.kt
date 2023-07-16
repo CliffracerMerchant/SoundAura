@@ -44,6 +44,7 @@ import com.cliffracertech.soundaura.collectAsState
 import com.cliffracertech.soundaura.dialog.RenameDialog
 import com.cliffracertech.soundaura.enumPreferenceFlow
 import com.cliffracertech.soundaura.model.MessageHandler
+import com.cliffracertech.soundaura.model.PlaybackState
 import com.cliffracertech.soundaura.model.SearchQueryState
 import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.Validator
@@ -51,7 +52,6 @@ import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.PlaylistNameValidator
 import com.cliffracertech.soundaura.model.database.Track
 import com.cliffracertech.soundaura.preferenceFlow
-import com.cliffracertech.soundaura.model.PlaybackState
 import com.cliffracertech.soundaura.settings.PrefKeys
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.ImmutableList
@@ -212,7 +212,7 @@ sealed class PlaylistDialog(
         scope.launch { playlistDao.setVolume(playlist.name, volume) }
     }
 
-    private val nameValidator = PlaylistNameValidator(playlistDao, "", scope)
+    private val nameValidator = PlaylistNameValidator(playlistDao, scope, "")
 
     fun onPlaylistRenameClick(playlist: Playlist) {
         nameValidator.reset(playlist.name)

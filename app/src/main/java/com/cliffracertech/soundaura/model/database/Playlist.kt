@@ -6,21 +6,18 @@ package com.cliffracertech.soundaura.model.database
 import android.net.Uri
 import androidx.annotation.FloatRange
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.net.toUri
 import androidx.room.*
 import com.cliffracertech.soundaura.R
-import com.cliffracertech.soundaura.collectAsState
-import com.cliffracertech.soundaura.containsBlanks
 import com.cliffracertech.soundaura.model.ListValidator
 import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.Validator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 typealias LibraryPlaylist = com.cliffracertech.soundaura.library.Playlist
 
@@ -264,16 +261,17 @@ data class Playlist(
 
 class TrackNamesValidator(
     private val playlistDao: PlaylistDao,
-    names: List<String>,
     coroutineScope: CoroutineScope,
+    names: List<String>,
 ) : ListValidator<String>(names, coroutineScope) {
 
-    private val existingNames by playlistDao
-        .getPlaylistNames()
-        .map(List<String>::toSet)
-        .collectAsState(emptySet(), coroutineScope)
+    private var existingNames: Set<String>? = null
+    init { coroutineScope.launch {
+        existingNames = playlistDao.getPlaylistNames().first().toSet()
+    }}
 
-    override fun isValid(value: String) = value !in existingNames || value.isBlank()
+    override fun isValid(value: String) =
+        existingNames?.contains(value) == false && value.isNotBlank()
 
     override suspend fun messageFor(values: List<Pair<String, Boolean>>) =
         if (values.find { it.second } == null) null
@@ -289,12 +287,16 @@ class TrackNamesValidator(
             else -> names
         }
     }
+
+    /** Return whether the list contains any strings that are blank
+     * (i.e. are either empty or consist of only whitespace characters). */
+    private fun List<String>.containsBlanks() = find { it.isBlank() } != null
 }
 
 class PlaylistNameValidator(
     private val playlistDao: PlaylistDao,
-    private val initialName: String,
     coroutineScope: CoroutineScope,
+    private val initialName: String,
 ) : Validator<String>(initialName, coroutineScope) {
     private val blankNameErrorMessage = Message.Error(
         StringResource(R.string.add_playlist_blank_name_error_message))
