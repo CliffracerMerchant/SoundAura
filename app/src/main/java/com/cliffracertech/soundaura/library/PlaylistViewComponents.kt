@@ -4,8 +4,6 @@
 package com.cliffracertech.soundaura.library
 
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.AnimationConstants.DefaultDurationMillis
@@ -40,9 +38,7 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.listSaver
@@ -62,6 +58,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.cliffracertech.soundaura.R
+import com.cliffracertech.soundaura.addbutton.FileChooser
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
 import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
 import com.cliffracertech.soundaura.ui.HorizontalDivider
@@ -130,7 +127,7 @@ import java.io.File
     // and counterclockwise.
     val angleMod by animateFloatAsState(if (added) 90f else 0f)
     val angle = if (added) 90f + angleMod
-    else       90f - angleMod
+                else       90f - angleMod
 
     val iconTint by animateColorAsState(
         if (added) backgroundColor else tint)
@@ -162,7 +159,7 @@ import java.io.File
     Row(modifier = modifier
             .height(56.dp)
             .clickable(role = Role.Switch, onClick = onShuffleSwitchClick)
-            .padding(start = 16.dp, end = 8.dp),
+            .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(stringResource(R.string.playlist_shuffle_switch_title),
@@ -218,10 +215,9 @@ import java.io.File
 @Preview @Composable fun PlaylistOptionsPreview() = SoundAuraTheme {
     var tempShuffleEnabled by remember { mutableStateOf(false) }
     val tempTrackOrder: MutableList<Uri> = remember {
-        val tracks = List(5) {
+        List(5) {
             "directory/subdirectory/extra_super_duper_really_long_file_$it".toUri()
-        }.toTypedArray()
-        mutableStateListOf(*tracks)
+        }.toMutableStateList()
     }
     Surface { Column(Modifier.padding(vertical = 16.dp)) {
         PlaylistOptions(tempShuffleEnabled, tempTrackOrder) {
@@ -260,25 +256,19 @@ import java.io.File
     var chosenUris by remember { mutableStateOf<List<Uri>?>(null) }
 
     if (playlist.isSingleTrack && chosenUris == null) {
-        val launcher = rememberLauncherForActivityResult(
-            ActivityResultContracts.OpenMultipleDocuments()
-        ) { uris ->
+        FileChooser { uris ->
             if (uris.isEmpty())
                 onDismissRequest()
             chosenUris = uris
         }
-        LaunchedEffect(Unit) {
-            launcher.launch(arrayOf("audio/*", "application/ogg"))
-        }
     } else {
         var tempShuffleEnabled by rememberSaveable { mutableStateOf(shuffleEnabled) }
         val tempTrackOrder: MutableList<Uri> = rememberSaveable(
-                /* inputs =*/ tracks,
+                /* inputs =*/ tracks, chosenUris,
                 saver = listSaver({ it }, List<Uri>::toMutableStateList)
             ) {
-                val existingTracks = tracks.toTypedArray()
-                val newTracks = chosenUris?.toTypedArray() ?: emptyArray()
-                mutableStateListOf(*existingTracks, *newTracks)
+                val newTracks = chosenUris ?: emptyList()
+                tracks.toMutableStateList().apply { addAll(newTracks) }
             }
         SoundAuraDialog(
             modifier = modifier.restrictWidthAccordingToSizeClass(),

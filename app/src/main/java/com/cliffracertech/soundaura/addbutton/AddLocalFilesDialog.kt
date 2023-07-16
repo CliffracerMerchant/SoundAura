@@ -3,6 +3,7 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura.addbutton
 
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -175,6 +176,18 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
         }
     }
 
+@Composable fun FileChooser(
+    fileTypeArgs: Array<String> = arrayOf("audio/*", "application/ogg"),
+    onFilesSelected: (List<Uri>) -> Unit,
+) {
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments(),
+        onResult = onFilesSelected)
+    LaunchedEffect(Unit) {
+        launcher.launch(fileTypeArgs)
+    }
+}
+
 /**
  * Open a dialog for the user to select one or more audio files to add to
  * their library.
@@ -186,17 +199,12 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
     step: AddLocalFilesDialogStep,
     onDismissRequest: () -> Unit,
 ) {
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenMultipleDocuments()
-    ) { uris ->
-        if (uris.isEmpty())
-            onDismissRequest()
-        (step as? AddLocalFilesDialogStep.SelectingFiles)
-            ?.onFilesSelected?.invoke(uris)
-    }
-
-    if (step.isSelectingFiles) LaunchedEffect(Unit) {
-        launcher.launch(arrayOf("audio/*", "application/ogg"))
+    if (step is AddLocalFilesDialogStep.SelectingFiles) {
+        FileChooser { uris ->
+            if (uris.isEmpty())
+                onDismissRequest()
+            step.onFilesSelected(uris)
+        }
     } else SoundAuraDialog(
         modifier = Modifier.restrictWidthAccordingToSizeClass(),
         useDefaultWidth = false,

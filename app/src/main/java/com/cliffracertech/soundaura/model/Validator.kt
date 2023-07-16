@@ -5,8 +5,8 @@
 package com.cliffracertech.soundaura.model
 
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.toMutableStateList
 import com.cliffracertech.soundaura.collectAsState
 import com.cliffracertech.soundaura.model.Validator.Message
 import com.cliffracertech.soundaura.model.Validator.Message.Error
@@ -120,14 +120,15 @@ abstract class ListValidator <T>(
     items: List<T>,
     scope: CoroutineScope,
 ) {
-    private val _values = mutableStateListOf(
-        *Array(items.size) { items[it] to false })
+    private val _values = items
+        .map { it to false }
+        .toMutableStateList()
     val values = _values as List<Pair<T, Boolean>>
 
     protected abstract fun isValid(value: T): Boolean
 
     fun setValue(index: Int, value: T) {
-        if (index in values.indices)
+        if (index in _values.indices)
             _values[index] = value to isValid(value)
     }
 
