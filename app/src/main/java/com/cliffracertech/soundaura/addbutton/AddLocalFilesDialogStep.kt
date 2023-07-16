@@ -14,31 +14,60 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
-sealed class AddLocalFilesDialogStep(
-    val goingForward: Boolean
-) {
-    open fun onCancelClick() {}
-    open fun onConfirmClick() {}
+/** A type whose subtypes represent the possible steps in a add local files dialog. */
+sealed class AddLocalFilesDialogStep {
+    /** The callback that should be invoked when the
+     * dialog step's back or cancel button is clicked */
+    open fun onBackClick() {}
 
+    /** The callback that should be invoked when the
+     * dialog step's next or finish button is clicked */
+    open fun onNextClick() {}
+
+    /**
+     * Files are being chosen via the system file picker.
+     *
+     * @param onFilesSelected The callback that will be invoked when files have been chosen
+     */
     class SelectingFiles(
-        val onFilesSelected: (List<Uri>) -> Unit,
-    ): AddLocalFilesDialogStep(goingForward = false)
+        onFilesSelected: (List<Uri>) -> Unit,
+    ): AddLocalFilesDialogStep() {}
 
+    /**
+     * A question about whether to add multiple files as separate tracks
+     * or as files within a single playlist is being presented.
+     *
+     * @param onBack The callback that will be invoked when the dialog's cancel button is clicked
+     * @param onAddIndividuallyClick The callback that will be invoked when
+     *     the dialog's option to add the files as individual tracks is chosen
+     * @param onAddAsPlaylistClick The callback that will be invoked when dialog's
+     *     option to add the files as the contents of a single playlist is chosen
+     */
     class AddIndividuallyOrAsPlaylistQuery(
-        private val onCancel: () -> Unit,
-        val chosenUris: List<Uri>,
+        private val onBack: () -> Unit,
         val onAddIndividuallyClick: () -> Unit,
         val onAddAsPlaylistClick: () -> Unit,
-    ): AddLocalFilesDialogStep(goingForward = false) {
-        override fun onCancelClick() = onCancel()
+    ): AddLocalFilesDialogStep() {
+        override fun onBackClick() = onBack()
     }
 
+    /**
+     * Text fields for each track are being presented to
+     * the user to allow them to name each added track.
+     *
+     * @param onBack The callback that will be invoked when the dialog's back button is clicked
+     * @param validator The [TrackNamesValidator] instance that will be used
+     *     to validate the track names
+     * @param coroutineScope The [CoroutineScope] that will be used for background work
+     * @param onFinish The callback that will be invoked when the dialog's
+     *     finish button is clicked and none of the track names are invalid
+     */
     class NameTracks(
         private val onBack: () -> Unit,
         private val validator: TrackNamesValidator,
         private val coroutineScope: CoroutineScope,
         private val onFinish: (List<String>) -> Unit,
-    ): AddLocalFilesDialogStep(goingForward = true) {
+    ): AddLocalFilesDialogStep() {
         private var confirmJob: Job? = null
 
         val namesAndErrors by validator::values
@@ -48,9 +77,9 @@ sealed class AddLocalFilesDialogStep(
             validator.setValue(index, newName)
         }
 
-        override fun onCancelClick() = onBack()
+        override fun onBackClick() = onBack()
 
-        override fun onConfirmClick() {
+        override fun onNextClick() {
             if (confirmJob != null) return
             confirmJob = coroutineScope.launch {
                 val newTrackNames = validator.validate()
@@ -61,13 +90,23 @@ sealed class AddLocalFilesDialogStep(
         }
     }
 
+    /**
+     * A text field to name a new playlist is being presented.
+     *
+     * @param onBack The callback that will be invoked when the dialog's back button is clicked
+     * @param validator The [PlaylistNameValidator] instance that will be
+     *     used to validate the playlist name
+     * @param coroutineScope The [CoroutineScope] that will be used for background work
+     * @param onFinish The callback that will be invoked when the dialog's
+     *     finish button is clicked and the name is valid
+     */
     class NamePlaylist(
-        goingForward: Boolean,
+        val goingForward: Boolean,
         private val onBack: () -> Unit,
         private val validator: PlaylistNameValidator,
         private val coroutineScope: CoroutineScope,
         private val onFinish: (String) -> Unit,
-    ): AddLocalFilesDialogStep(goingForward) {
+    ): AddLocalFilesDialogStep() {
         private var confirmJob: Job? = null
 
         val name by validator::value
@@ -77,8 +116,8 @@ sealed class AddLocalFilesDialogStep(
             validator.value = newName
         }
 
-        override fun onCancelClick() = onBack()
-        override fun onConfirmClick() {
+        override fun onBackClick() = onBack()
+        override fun onNextClick() {
             if (confirmJob != null) return
             confirmJob = coroutineScope.launch {
                 val newPlaylistName = validator.validate()
@@ -89,11 +128,21 @@ sealed class AddLocalFilesDialogStep(
         }
     }
 
+    /**
+     * A shuffle toggle switch and a reorder track widget are being
+     * presented to allow these playlist settings to be changed.
+     *
+     * @param onBack The callback that will be invoked when the dialog's back button is clicked
+     * @param tracks The [List] of [Uri]s that represent the new playlist's tracks
+     * @param onFinish The callback that will be invoked when the dialog's
+     *     finish button is clicked. The current shuffle and track ordering
+     *     as passed as arguments.
+     */
     class PlaylistOptions(
         private val onBack: () -> Unit,
         tracks: List<Uri>,
         val onFinish: (shuffleEnabled: Boolean, newTrackOrder: List<Uri>) -> Unit,
-    ): AddLocalFilesDialogStep(goingForward = true) {
+    ): AddLocalFilesDialogStep() {
         var shuffleEnabled by mutableStateOf(false)
             private set
 
@@ -101,8 +150,8 @@ sealed class AddLocalFilesDialogStep(
 
         val trackOrder = tracks.toMutableStateList()
 
-        override fun onCancelClick() = onBack()
-        override fun onConfirmClick() = onFinish(shuffleEnabled, trackOrder)
+        override fun onBackClick() = onBack()
+        override fun onNextClick() = onFinish(shuffleEnabled, trackOrder)
     }
 
     val isSelectingFiles get() = this is SelectingFiles
