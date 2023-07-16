@@ -30,7 +30,7 @@ sealed class AddLocalFilesDialogStep {
      * @param onFilesSelected The callback that will be invoked when files have been chosen
      */
     class SelectingFiles(
-        onFilesSelected: (List<Uri>) -> Unit,
+        val onFilesSelected: (List<Uri>) -> Unit,
     ): AddLocalFilesDialogStep() {}
 
     /**
