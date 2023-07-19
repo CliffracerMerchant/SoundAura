@@ -106,16 +106,19 @@ data class Playlist(
     protected abstract suspend fun addToPlaylistTable(playlists: List<Playlist>)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    abstract suspend fun insertTracks(tracks: List<Track>): List<Long>
+    protected abstract suspend fun addTracks(tracks: List<Track>): List<Long>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     protected abstract suspend fun addPlaylistTrack(playlistTrack: PlaylistTrack)
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    protected abstract suspend fun addPlaylistTracks(playlistTracks: List<PlaylistTrack>)
+
     @Query("DELETE FROM playlistTrack WHERE playlistName = :playlistName")
-    protected abstract suspend fun deletePlaylistTrack(playlistName: String)
+    protected abstract suspend fun deletePlaylistTracks(playlistName: String)
 
     @Query("DELETE FROM playlistTrack WHERE playlistName in (:playlistNames)")
-    protected abstract suspend fun deletePlaylistTrack(playlistNames: List<String>)
+    protected abstract suspend fun deletePlaylistTracks(playlistNames: List<String>)
 
     @Transaction
     open suspend fun addPlaylist(
@@ -124,12 +127,12 @@ data class Playlist(
         trackUris: List<Uri>
     ) {
         addToPlaylistTable(Playlist(name))
-        insertTracks(trackUris.map(::Track))
+        addTracks(trackUris.map(::Track))
 
-        deletePlaylistTrack(name)
-        trackUris.forEachIndexed { index, uri ->
-            addPlaylistTrack(PlaylistTrack(name, uri, index))
-        }
+        deletePlaylistTracks(name)
+        addPlaylistTracks(trackUris.mapIndexed { index, uri ->
+            PlaylistTrack(name, uri, index)
+        })
     }
 
     @Transaction
@@ -140,14 +143,23 @@ data class Playlist(
         assert(playlistNames.size == trackUris.size)
 
         addToPlaylistTable(playlistNames.map(::Playlist))
-        insertTracks(trackUris.map(::Track))
+        addTracks(trackUris.map(::Track))
 
-        deletePlaylistTrack(playlistNames)
-        trackUris.forEachIndexed { index, uri ->
-            val name = playlistNames[index]
-            val track = PlaylistTrack(name, uri, index)
-            addPlaylistTrack(track)
-        }
+        deletePlaylistTracks(playlistNames)
+        addPlaylistTracks(trackUris.mapIndexed { index, uri ->
+            PlaylistTrack(playlistNames[index], uri, index)
+        })
+    }
+
+    @Transaction
+    open suspend fun updatePlaylistContents(
+        playlistName: String,
+        trackUris: List<Uri>
+    ) {
+        deletePlaylistTracks(playlistName)
+        addPlaylistTracks(trackUris.mapIndexed { index, uri ->
+            PlaylistTrack(playlistName, uri, index)
+        })
     }
 
     /** Delete the playlist whose name matches [name] from the database. */
@@ -228,7 +240,7 @@ data class Playlist(
 
     @Transaction
     open suspend fun setPlaylistTracks(name: String, newTracks: List<Uri>) {
-        deletePlaylistTrack(listOf(name))
+        deletePlaylistTracks(listOf(name))
         newTracks.forEachIndexed { index, uri ->
             addPlaylistTrack(PlaylistTrack(name, uri, index))
         }
@@ -298,18 +310,15 @@ class TrackNamesValidator(
     override fun isValid(value: String) =
         existingNames?.contains(value) == false && value.isNotBlank()
 
-    override suspend fun messageFor(values: List<Pair<String, Boolean>>) =
-        if (values.find { it.second } == null) null
-        else Validator.Message.Error(StringResource(
-            R.string.add_multiple_tracks_name_error_message))
+    override val errorMessage = Validator.Message.Error(
+        StringResource(R.string.add_multiple_tracks_name_error_message))
 
     override suspend fun validate(): List<String>? {
         val existingNames = playlistDao.getPlaylistNames().first().toSet()
-        val names = values.map { it.first }
         return when {
-            names.intersect(existingNames).isNotEmpty() -> null
-            names.containsBlanks() -> null
-            else -> names
+            values.intersect(existingNames).isNotEmpty() -> null
+            values.containsBlanks() -> null
+            else -> values
         }
     }
 

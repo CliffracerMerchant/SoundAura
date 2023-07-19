@@ -8,10 +8,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.toMutableStateList
 import com.cliffracertech.soundaura.collectAsState
-import com.cliffracertech.soundaura.model.Validator.Message
-import com.cliffracertech.soundaura.model.Validator.Message.Error
-import com.cliffracertech.soundaura.model.Validator.Message.Information
-import com.cliffracertech.soundaura.model.Validator.Message.Warning
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -32,17 +28,15 @@ import kotlinx.coroutines.flow.map
  * user has had a chance to change the value.
  *
  * The suspend function [messageFor] must be overridden in subclasses to return
- * a [StringResource] that becomes the message explaining why the current value
- * is not valid when resolved, or null if the name is valid. The property
- * [message] can be used to access the message for the most recent [value].
+ * a [Message] that explains why the current value is not valid, or null if the
+ * name is valid. The property [message] can be used to access the message for
+ * the most recent [value].
  *
  * Because [message] may not have had time to update after a recent change to
  * [value], and because [value] might change in another thread after being
  * validated, the suspend function [validate] should always be called to ensure
  * that a given value is valid. The current [value] will be validated, and then
  * either the validated value or null if the value was invalid will be returned.
- * If the validator needs to be reused after a successful validation, calling
- * [reset] with a new initial value will reset [valueHasBeenChanged].
  */
 abstract class Validator <T>(initialValue: T, coroutineScope: CoroutineScope) {
     private val flow = MutableStateFlow(initialValue)
@@ -54,11 +48,6 @@ abstract class Validator <T>(initialValue: T, coroutineScope: CoroutineScope) {
               }
     protected var valueHasBeenChanged = false
         private set
-
-    fun reset(newInitialValue: T) {
-        valueHasBeenChanged = false
-        flow.value = newInitialValue
-    }
 
     /** Message's subclasses [Information], [Warning], and [Error] provide
      * information about a proposed value for a value being validated. */
@@ -99,12 +88,11 @@ abstract class Validator <T>(initialValue: T, coroutineScope: CoroutineScope) {
  *
  * ListValidator can be used to validate a list of generic non-null values and
  * return a message explaining why one or more of the values is not valid if
- * necessary. The initial value of the property [values] will be equal to a
- * list containing each value in the provided [items] paired with false. This
- * boolean paired value indicates whether that individual value is invalid.
+ * necessary. The initial value of the property [values] will be equal to the
+ * provided [items]. The [errors] property is a same-sized list of [Boolean]
+ * values that indicates whether each corresponding [items] value is valid.
  * [setValue] should be called to change the proposed value for a particular
- * item. This will also update its paired boolean value indicating whether that
- * value is valid.
+ * item.
  *
  * The property [message] can be observed for to obtain a [Validator.Message]
  * instance that describes why one or more values in the list is invalid, or
@@ -112,30 +100,36 @@ abstract class Validator <T>(initialValue: T, coroutineScope: CoroutineScope) {
  * has been performed, the suspend function [validate] should be called.
  *
  * The method [isValid] should be overridden to return whether or not a given
- * value is invalid. Likewise, the suspend function [messageFor] should be
- * overridden to return a [Validator.Message] that describes why the list of
- * current values is invalid, or null if the values are valid.
+ * value is invalid. The property [errorMessage] should be overridden to be a
+ * [Validator.Message.Error] that describes why the list of current values is
+ * invalid.
  */
 abstract class ListValidator <T>(
     items: List<T>,
     scope: CoroutineScope,
 ) {
-    private val _values = items
-        .map { it to false }
-        .toMutableStateList()
-    val values = _values as List<Pair<T, Boolean>>
+    private val _values = items.toMutableStateList()
+    private val _errors = List(items.size) { false}.toMutableStateList()
 
-    protected abstract fun isValid(value: T): Boolean
+    val values get() = _values as List<T>
+    val errors get() = _errors as List<Boolean>
+
 
     fun setValue(index: Int, value: T) {
-        if (index in _values.indices)
-            _values[index] = value to isValid(value)
+        if (index !in _values.indices) return
+        _values[index] = value
+        _errors[index] = !isValid(value)
     }
 
-    protected abstract suspend fun messageFor(values: List<Pair<T, Boolean>>): Message?
+    protected abstract fun isValid(value: T): Boolean
+    protected abstract val errorMessage: Validator.Message.Error
 
-    val message by snapshotFlow { _values }
-        .map(::messageFor).collectAsState(null, scope)
+    val message by snapshotFlow {
+            _errors.find { it } != null
+        }.map { hasError ->
+            if (hasError) errorMessage
+            else          null
+        }.collectAsState(null, scope)
 
     /** Return the validated list of values if they are all
      * valid, or null if one or more values are invalid. */

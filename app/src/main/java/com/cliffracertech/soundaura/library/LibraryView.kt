@@ -41,16 +41,16 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.collectAsState
+import com.cliffracertech.soundaura.dialog.NamingState
 import com.cliffracertech.soundaura.dialog.RenameDialog
+import com.cliffracertech.soundaura.dialog.ValidatedNamingState
 import com.cliffracertech.soundaura.enumPreferenceFlow
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.PlaybackState
 import com.cliffracertech.soundaura.model.SearchQueryState
 import com.cliffracertech.soundaura.model.StringResource
-import com.cliffracertech.soundaura.model.Validator
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.PlaylistNameValidator
-import com.cliffracertech.soundaura.model.database.Track
 import com.cliffracertech.soundaura.preferenceFlow
 import com.cliffracertech.soundaura.settings.PrefKeys
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -73,12 +73,12 @@ sealed class PlaylistDialog(
     /** The rename dialog for a playlist */
     class Rename(
         target: Playlist,
+        validator: PlaylistNameValidator,
+        coroutineScope: CoroutineScope,
         onDismissRequest: () -> Unit,
-        val onConfirmClick: () -> Unit,
-        val newNameProvider: () -> String,
-        val messageProvider: () -> Validator.Message?,
-        val onNameChange: (String) -> Unit,
-    ): PlaylistDialog(target, onDismissRequest)
+        private val onNameValidated: suspend (String) -> Unit,
+    ): PlaylistDialog(target, onDismissRequest),
+       NamingState by ValidatedNamingState(validator, coroutineScope, onNameValidated)
 
     /** The 'playlist options' dialog for a playlist. */
     class PlaylistOptions(
@@ -149,11 +149,8 @@ sealed class PlaylistDialog(
         is PlaylistDialog.Rename ->
             RenameDialog(
                 title = stringResource(R.string.default_rename_dialog_title),
-                newNameProvider = shownDialog.newNameProvider,
-                onNewNameChange = shownDialog.onNameChange,
-                errorMessageProvider = shownDialog.messageProvider,
-                onDismissRequest = shownDialog.onDismissRequest,
-                onConfirmClick = shownDialog.onConfirmClick)
+                state = shownDialog,
+                onDismissRequest = shownDialog.onDismissRequest)
         is PlaylistDialog.PlaylistOptions ->
             PlaylistOptionsDialog(
                 playlist = shownDialog.target,
@@ -212,21 +209,14 @@ sealed class PlaylistDialog(
         scope.launch { playlistDao.setVolume(playlist.name, volume) }
     }
 
-    private val nameValidator = PlaylistNameValidator(playlistDao, scope, "")
-
     fun onPlaylistRenameClick(playlist: Playlist) {
-        nameValidator.reset(playlist.name)
         shownDialog = PlaylistDialog.Rename(
             target = playlist,
-            newNameProvider = nameValidator::value,
-            onNameChange = { nameValidator.value = it },
-            messageProvider = nameValidator::message,
+            validator = PlaylistNameValidator(playlistDao, scope, playlist.name),
+            coroutineScope = scope,
             onDismissRequest = { shownDialog = null },
-            onConfirmClick = {
-                scope.launch {
-                    val newName = nameValidator.validate() ?: return@launch
-                    playlistDao.rename(playlist.name, newName)
-                }
+            onNameValidated = { validatedName ->
+                playlistDao.rename(playlist.name, validatedName)
                 shownDialog = null
             })
     }
@@ -256,7 +246,7 @@ sealed class PlaylistDialog(
                             else {
                                 for (track in newTrackList)
                                     context.contentResolver.takePersistableUriPermission(track, 0)
-                                playlistDao.insertTracks(newTrackList.map(::Track))
+                                playlistDao.updatePlaylistContents(playlist.name, newTrackList)
                             }
                         }
                         playlistDao.setPlaylistShuffleAndTracks(

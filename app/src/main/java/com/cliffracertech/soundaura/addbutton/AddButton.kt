@@ -27,7 +27,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.collectAsState
+import com.cliffracertech.soundaura.dialog.NamingState
 import com.cliffracertech.soundaura.dialog.RenameDialog
+import com.cliffracertech.soundaura.dialog.ValidatedNamingState
 import com.cliffracertech.soundaura.model.ActivePresetState
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.StringResource
@@ -118,7 +120,7 @@ class AddPlaylistButtonViewModel(
 
     private fun showNamePlaylistDialog(tracks: List<Uri>, goingForward: Boolean) {
         dialogStep = AddLocalFilesDialogStep.NamePlaylist(
-            goingForward = goingForward,
+            isAheadOfPreviousStep = goingForward,
             onBack = { showAddIndividuallyOrAsPlaylistQueryStep(tracks) },
             validator = PlaylistNameValidator(
                 playlistDao, scope, "${tracks.first().getDisplayName(context)} playlist"),
@@ -187,6 +189,13 @@ class AddPlaylistButtonViewModel(
             ?: pathSegments.last().substringBeforeLast('.').replace('_', ' ')
 }
 
+class AddPresetDialogState(
+    private val validator: PresetNameValidator,
+    private val coroutineScope: CoroutineScope,
+    private val onNameValidated: suspend (validatedName: String) -> Unit,
+): NamingState by ValidatedNamingState(
+    validator, coroutineScope, onNameValidated)
+
 @HiltViewModel class AddPresetButtonViewModel(
     private val presetDao: PresetDao,
     private val messageHandler: MessageHandler,
@@ -204,7 +213,7 @@ class AddPlaylistButtonViewModel(
 
     private val scope = coroutineScope ?: viewModelScope
 
-    var showingAddPresetDialog by mutableStateOf(false)
+    var shownDialog by mutableStateOf<AddPresetDialogState?>(null)
         private set
 
     private val activeTracksIsEmpty by playlistDao
@@ -214,29 +223,18 @@ class AddPlaylistButtonViewModel(
     fun onClick() { when {
         activeTracksIsEmpty -> messageHandler.postMessage(
             StringResource(R.string.preset_cannot_be_empty_warning_message))
-        else -> showingAddPresetDialog = true
+        else -> shownDialog = AddPresetDialogState(
+            validator = PresetNameValidator(presetDao, scope),
+            coroutineScope = scope,
+            onNameValidated = { validatedName ->
+                presetDao.savePreset(validatedName)
+                activePresetState.setName(validatedName)
+                onDialogDismissRequest()
+            })
     }}
 
-    private val nameValidator = PresetNameValidator(presetDao, scope)
-    val proposedNewPresetName by nameValidator::value
-    val newPresetNameValidatorMessage by nameValidator::message
-
-    fun onAddPresetDialogDismiss() {
-        showingAddPresetDialog = false
-        nameValidator.reset("")
-    }
-
-    fun onNewPresetNameChange(newName: String) {
-        nameValidator.value = newName
-    }
-
-    fun onAddPresetDialogConfirm() {
-         scope.launch {
-             val name = nameValidator.validate() ?: return@launch
-             showingAddPresetDialog = false
-             presetDao.savePreset(name)
-             activePresetState.setName(name)
-        }
+    fun onDialogDismissRequest() {
+        shownDialog = null
     }
 }
 
@@ -281,12 +279,10 @@ enum class AddButtonTarget { Playlist, Preset }
         AddLocalFilesDialog(it, addPlaylistViewModel::onDialogDismissRequest)
     }
 
-    if (addPresetViewModel.showingAddPresetDialog)
+    addPresetViewModel.shownDialog?.let {
         RenameDialog(
             title = stringResource(R.string.create_new_preset_dialog_title),
-            newNameProvider = addPresetViewModel::proposedNewPresetName,
-            onNewNameChange = addPresetViewModel::onNewPresetNameChange,
-            errorMessageProvider = addPresetViewModel::newPresetNameValidatorMessage,
-            onDismissRequest = addPresetViewModel::onAddPresetDialogDismiss,
-            onConfirmClick = addPresetViewModel::onAddPresetDialogConfirm)
+            state = it,
+            onDismissRequest = addPresetViewModel::onDialogDismissRequest)
+    }
 }

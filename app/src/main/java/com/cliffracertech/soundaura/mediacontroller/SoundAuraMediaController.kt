@@ -35,13 +35,13 @@ import com.cliffracertech.soundaura.edit
 import com.cliffracertech.soundaura.model.ActivePresetState
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.NavigationState
+import com.cliffracertech.soundaura.model.PlaybackState
 import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.Preset
 import com.cliffracertech.soundaura.model.database.PresetDao
 import com.cliffracertech.soundaura.model.database.PresetNameValidator
 import com.cliffracertech.soundaura.preferenceState
-import com.cliffracertech.soundaura.model.PlaybackState
 import com.cliffracertech.soundaura.settings.PrefKeys
 import com.cliffracertech.soundaura.ui.tweenDuration
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -89,7 +89,7 @@ import javax.inject.Inject
     private val playButtonLongClickHintShownKey =
         booleanPreferencesKey(PrefKeys.playButtonLongClickHintShown)
     private val playButtonLongClickHintShown by
-    dataStore.preferenceState(playButtonLongClickHintShownKey, false, scope)
+        dataStore.preferenceState(playButtonLongClickHintShownKey, false, scope)
     private val activePlaylistsIsEmpty by playlistDao
         .getAtLeastOnePlaylistIsActive()
         .collectAsState(true, scope)
@@ -126,18 +126,13 @@ import javax.inject.Inject
     private fun presetListCallback() = object : PresetListCallback {
         override fun getList() = presetList
         override fun onRenameClick(preset: Preset) {
-            nameValidator.reset(preset.name)
             shownDialog = DialogType.RenamePreset(
                 target = preset,
-                newNameProvider = nameValidator::value,
-                onNameChange = { nameValidator.value = it },
-                messageProvider = nameValidator::message,
+                coroutineScope = scope,
+                validator = PresetNameValidator(presetDao, scope, preset.name),
                 onDismissRequest = ::dismissDialog,
-                onConfirmClick = {
-                    scope.launch {
-                        val newName = nameValidator.validate() ?: return@launch
-                        presetDao.renamePreset(preset.name, newName)
-                    }
+                onNameValidated = { validatedName ->
+                    presetDao.renamePreset(preset.name, validatedName)
                     dismissDialog()
                 })
         }
@@ -206,7 +201,6 @@ import javax.inject.Inject
         navigationState.showingPresetSelector = false
     }
 
-    private val nameValidator = PresetNameValidator(presetDao, scope)
     var shownDialog by mutableStateOf<DialogType?>(null)
     private fun dismissDialog() { shownDialog = null }
 

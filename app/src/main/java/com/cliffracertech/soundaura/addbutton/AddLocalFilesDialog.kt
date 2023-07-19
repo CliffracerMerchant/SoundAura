@@ -83,7 +83,7 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
                 onClick = step.onAddAsPlaylistClick)
         } else {
             val namingSingleTrack = step is AddLocalFilesDialogStep.NameTracks &&
-                    step.namesAndErrors.size == 1
+                                    step.names.size == 1
             TextButton(
                 modifier = Modifier.minTouchTargetSize().weight(1f),
                 shape = MaterialTheme.shapes.medium.bottomStartShape(),
@@ -92,21 +92,18 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
                 onClick = step::onBackClick)
 
             VerticalDivider()
-
-            val nextButtonText =
-                if (step.isPlaylistOptions || step.isNameTracks) R.string.finish
-                else                                             R.string.next
-            val nextButtonEnabled =
-                if (step is AddLocalFilesDialogStep.NameTracks)
-                    step.message?.isError ?: true
-                else if (step is AddLocalFilesDialogStep.NamePlaylist)
-                    step.message?.isError ?: true
-                else true
             TextButton(
                 modifier = Modifier.minTouchTargetSize().weight(1f),
-                enabled = nextButtonEnabled,
-                shape = MaterialTheme.shapes.medium.bottomStartShape(),
-                textResId = nextButtonText,
+                enabled = when (step) {
+                    is AddLocalFilesDialogStep.NameTracks ->
+                        step.message?.isError != true
+                    is AddLocalFilesDialogStep.NamePlaylist ->
+                        step.message?.isError != true
+                    else -> true
+                }, shape = MaterialTheme.shapes.medium.bottomStartShape(),
+                textResId = if (step.isPlaylistOptions || step.isNameTracks)
+                                R.string.finish
+                            else R.string.next,
                 onClick = step::onNextClick)
         }
     }
@@ -116,7 +113,7 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
     step: AddLocalFilesDialogStep
 ) = SlideAnimatedContent(
     targetState = step,
-    leftToRight = (step as? AddLocalFilesDialogStep.NamePlaylist)?.goingForward != false,
+    leftToRight = step.isAheadOfPreviousStep,
 ) { step ->
     // This background modifiers gives a border to the content to
     // improve the appearance of the SlideAnimatedContent animations
@@ -135,23 +132,24 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
                 Text(stringResource(R.string.add_local_files_as_playlist_or_tracks_question))
             }
         } is AddLocalFilesDialogStep.NameTracks -> {
-        // We have to restrict the LazyColumn's height to prevent
-        // a crash due to nested infinite height scrollables
+            // We have to restrict the LazyColumn's height to prevent
+            // a crash due to nested infinite height scrollables
             val maxHeight = LocalConfiguration.current.screenHeightDp.dp
-            LazyColumn(
-                modifier = backgroundModifier.heightIn(max = maxHeight),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                content = {
-                    items(step.namesAndErrors.size) { index ->
-                        val value = step.namesAndErrors.getOrNull(index)
+            Column(backgroundModifier.heightIn(max = maxHeight)) {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(step.names.size) { index ->
                         TextField(
-                            value = value?.first ?: "",
+                            value = step.names[index],
                             onValueChange = { step.onNameChange(index, it) },
                             textStyle = MaterialTheme.typography.body1,
                             singleLine = true,
-                            isError = value?.second ?: false,
+                            isError = step.errors[index],
                             modifier = Modifier.fillMaxWidth())
-                    }})
+                    }
+                }
+                AnimatedValidatorMessage(step.message)
+            }
+
         } is AddLocalFilesDialogStep.NamePlaylist -> {
             Column(backgroundModifier) {
                 TextField(
@@ -161,9 +159,7 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
                     singleLine = true,
                     isError = step.message?.isError == true,
                     modifier = Modifier.fillMaxWidth())
-                AnimatedValidatorMessage(
-                    message = step.message,
-                    modifier = Modifier.padding(horizontal = 16.dp))
+                AnimatedValidatorMessage(step.message)
             }
         } is AddLocalFilesDialogStep.PlaylistOptions-> {
             Column(backgroundModifier) {

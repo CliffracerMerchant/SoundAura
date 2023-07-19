@@ -32,6 +32,55 @@ import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.Validator
 import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+
+/** A collection of state and callbacks related to the active naming/renaming of an object. */
+interface NamingState {
+    /** The proposed name */
+    val name: String
+
+    /** A [Validator.Message] concerning the current value
+     * of [name], or null if no message is required */
+    val message: Validator.Message?
+
+    /** The method that is invoked in response to a
+     * desired change in the proposed name to [newName] */
+    fun onNameChange(newName: String)
+
+    /** The method that will be invoked when naming is finished. */
+    fun finalize()
+}
+
+/**
+ * A [NamingState] implementation that uses a [Validator]`<String>` to check
+ * the current value of [name] and to provide messages regarding the value.
+ *
+ * @param validator The [Validator] instance to use
+ * @param coroutineScope A [coroutineScope] to run async methods on
+ * @param onNameValidated The callback that will be invoked
+ *     when the current value of [name] is valid and [finalize]
+ *     is called. The [String] parameter is the validated name.
+ */
+class ValidatedNamingState(
+    private val validator: Validator<String>,
+    private val coroutineScope: CoroutineScope,
+    private val onNameValidated: suspend (String) -> Unit,
+): NamingState {
+    override val name by validator::value
+    override val message by validator::message
+
+    override fun onNameChange(newName: String) {
+        validator.value = newName
+    }
+
+    /** Validate the current value of [name]. If the value is valid,
+     * the constructor parameter onNameValidated will be called with
+     * the validated value. */
+    override fun finalize() { coroutineScope.launch {
+        validator.validate()?.let { onNameValidated(it) }
+    }}
+}
 
 /** Create a view that displays an icon appropriate for the
  * type of [Validator.Message] alongside its text. */
@@ -75,49 +124,40 @@ import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
 }
 
 /**
- * Show a dialog to rename an object.
+ * Show a dialog to rename an object. The 'Confirm' button will call
+ * the [state]'s [NamingState.finalize] method.
  *
  * @param modifier The [Modifier] to use for the root layout
  * @param title The title of the dialog
- * @param newNameProvider A method that returns the currently proposed name when invoked
- * @param onNewNameChange The callback that will be invoked when the user attempts
- *     to change the proposed name to the callback's [String] parameter
- * @param errorMessageProvider A function that returns the error message that should
- *     be displayed given the most recently proposed name, or null if the name is valid
+ * @param state A [NamingState] instance
+ *     the most recently proposed name, or null if the name is valid
  * @param onDismissRequest The callback that will be invoked when the
  *     user attempts to dismiss the dialog
- * @param onConfirmClick The callback that will be invoked when the user clicks the ok button
  */
 @Composable fun RenameDialog(
     modifier: Modifier = Modifier,
     title: String = stringResource(R.string.default_rename_dialog_title),
-    newNameProvider: () -> String,
-    onNewNameChange: (String) -> Unit,
-    errorMessageProvider: () -> Validator.Message?,
+    state: NamingState,
     onDismissRequest: () -> Unit,
-    onConfirmClick: () -> Unit,
+) = SoundAuraDialog(
+    modifier = modifier.restrictWidthAccordingToSizeClass(),
+    useDefaultWidth = false,
+    title = title,
+    onDismissRequest = onDismissRequest,
+    confirmButtonEnabled = state.message !is Validator.Message.Error,
+    onConfirm = state::finalize,
 ) {
-    val errorMessage = errorMessageProvider()
-    SoundAuraDialog(
-        modifier = modifier.restrictWidthAccordingToSizeClass(),
-        useDefaultWidth = false,
-        title = title,
-        onDismissRequest = onDismissRequest,
-        confirmButtonEnabled = errorMessage == null,
-        onConfirm = onConfirmClick
-    ) {
-        TextField(
-            onValueChange = onNewNameChange,
-            value = newNameProvider(),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            isError = errorMessage != null,
-            singleLine = true,
-            textStyle = MaterialTheme.typography.body1)
+    TextField(
+        onValueChange = state::onNameChange,
+        value = state.name,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        isError = state.message is Validator.Message.Error,
+        singleLine = true,
+        textStyle = MaterialTheme.typography.body1)
 
-        AnimatedValidatorMessage(
-            message = errorMessageProvider(),
-            modifier = Modifier.padding(horizontal = 16.dp))
-    }
+    AnimatedValidatorMessage(
+        message = state.message,
+        modifier = Modifier.padding(horizontal = 16.dp))
 }

@@ -14,15 +14,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
+import com.cliffracertech.soundaura.dialog.NamingState
 import com.cliffracertech.soundaura.dialog.RenameDialog
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
+import com.cliffracertech.soundaura.dialog.ValidatedNamingState
 import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.Validator
 import com.cliffracertech.soundaura.model.database.Preset
+import com.cliffracertech.soundaura.model.database.PresetNameValidator
 import com.cliffracertech.soundaura.ui.HorizontalDivider
 import com.cliffracertech.soundaura.ui.TextButton
 import com.cliffracertech.soundaura.ui.bottomShape
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
+import kotlinx.coroutines.CoroutineScope
 import java.time.Duration
 
 /**
@@ -37,27 +41,30 @@ sealed class DialogType(
     val onDismissRequest: () -> Unit,
 ) {
     /**
-     * A [Preset] rename dialog
+     * A [Preset] rename dialog. The property [name] describes the proposed
+     * new name. The [message] property describes the current [Validator.Message]
+     * regarding the current value of [name] (or null if no message is
+     * required). The method [onNameChange] should be invoked when the new
+     * name needs to be changed.
      *
      * @param target The [Preset] that is being renamed
-     * @param onConfirmClick The callback that should be invoked if the dialog's
-     *     confirm button is clicked
-     * @param newNameProvider A lambda that returns the proposed new name for the
-     *     [target] when invoked
-     * @param messageProvider A lambda that returns a nullable Validator.Message
-     *     that describes any problems with the currently proposed new name for
-     *     the [target], or null if the name is valid
-     * @param onNameChange The callback that should be invoked when the user
-     *     attempts to change the proposed new name for the [target]
+     * @param coroutineScope A [CoroutineScope] to run background work on
+     * @param validator A [PresetNameValidator] instance to use for validating
+     *     the entered name
+     * @param onDismissRequest The callback that should be invoked if the
+     *     dialog's cancel button is clicked or the back button/gesture
+     *     is used
+     * @param onNameValidated The callback that will be invoked if the
+     *     dialog's confirm button is clicked and the new name is valid.
      */
     class RenamePreset(
-        onDismissRequest: () -> Unit,
         val target: Preset,
-        val onConfirmClick: () -> Unit,
-        val newNameProvider: () -> String,
-        val messageProvider: () -> Validator.Message?,
-        val onNameChange: (String) -> Unit,
-    ): DialogType(onDismissRequest)
+        coroutineScope: CoroutineScope,
+        validator: PresetNameValidator,
+        onDismissRequest: () -> Unit,
+        onNameValidated: suspend (String) -> Unit,
+    ): DialogType(onDismissRequest),
+       NamingState by ValidatedNamingState(validator, coroutineScope, onNameValidated)
 
     /**
      * A dialog that presents choices regarding the unsaved changes
@@ -115,12 +122,8 @@ sealed class DialogType(
     is DialogType.RenamePreset ->
         RenameDialog(
             modifier = modifier,
-            title = stringResource(R.string.default_rename_dialog_title),
-            newNameProvider = shownDialog.newNameProvider,
-            onNewNameChange = shownDialog.onNameChange,
-            errorMessageProvider = shownDialog.messageProvider,
-            onDismissRequest = shownDialog.onDismissRequest,
-            onConfirmClick = shownDialog.onConfirmClick)
+            state = shownDialog,
+            onDismissRequest = shownDialog.onDismissRequest)
     is DialogType.PresetUnsavedChangesWarning ->
         UnsavedPresetChangesWarningDialog(
             modifier = modifier,

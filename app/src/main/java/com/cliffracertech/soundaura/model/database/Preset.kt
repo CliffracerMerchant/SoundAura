@@ -105,14 +105,15 @@ data class PresetPlaylist(
 class PresetNameValidator(
     private val dao: PresetDao,
     coroutineScope: CoroutineScope,
-) : Validator<String>("", coroutineScope) {
+    private val initialName: String = "",
+) : Validator<String>(initialName, coroutineScope) {
     override suspend fun messageFor(value: String) = when {
-        !valueHasBeenChanged ->
-            null
-        value.isBlank() ->
-            Message.Error(StringResource(R.string.preset_name_cannot_be_blank_error_message))
-        dao.exists(value) ->
-            Message.Error(StringResource(R.string.preset_name_already_in_use_error_message))
+        !valueHasBeenChanged -> null
+        value == initialName -> null
+        value.isBlank() -> Message.Error(
+            StringResource(R.string.preset_name_cannot_be_blank_error_message))
+        dao.exists(value) -> Message.Error(
+            StringResource(R.string.preset_name_already_in_use_error_message))
         else -> null
     }
 }
