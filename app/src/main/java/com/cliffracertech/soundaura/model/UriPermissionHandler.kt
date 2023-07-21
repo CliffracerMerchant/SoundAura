@@ -17,8 +17,8 @@ class UriPermissionHandler @Inject constructor(
 //    private val playlistDao: PlaylistDao,
 ) {
     private val contentResolver = context.contentResolver
-    private val persistedPermissionAllowance =
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) 128 else 512
+    val permissionAllowance = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) 128
+                              else                                               512
 
     /**
      * Take persistable permissions for each [Uri] in [uris], if space permits.
@@ -38,7 +38,7 @@ class UriPermissionHandler @Inject constructor(
         insertPartial: Boolean = true
     ): List<Uri> {
         val permissionsCount = context.contentResolver.persistedUriPermissions.size
-        val remainingSpace = persistedPermissionAllowance - permissionsCount
+        val remainingSpace = permissionAllowance - permissionsCount
         val hasEnoughSpace = remainingSpace >= uris.size
 
         return when {

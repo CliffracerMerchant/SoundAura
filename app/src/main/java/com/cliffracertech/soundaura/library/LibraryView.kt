@@ -3,9 +3,7 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura.library
 
-import android.content.Context
 import android.net.Uri
-import android.os.Build
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,7 +26,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -49,6 +46,7 @@ import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.PlaybackState
 import com.cliffracertech.soundaura.model.SearchQueryState
 import com.cliffracertech.soundaura.model.StringResource
+import com.cliffracertech.soundaura.model.UriPermissionHandler
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.PlaylistNameValidator
 import com.cliffracertech.soundaura.preferenceFlow
@@ -122,28 +120,26 @@ sealed class PlaylistDialog(
     shownDialog: PlaylistDialog?,
     playlistViewCallback: PlaylistViewCallback
 ) {
-    Crossfade(libraryContents?.isEmpty()) { when(it) {
-        null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-            CircularProgressIndicator(Modifier.size(50.dp))
-        } true -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-            Text(stringResource(R.string.empty_track_list_message),
-                 modifier = Modifier.width(300.dp),
-                 textAlign = TextAlign.Justify)
-        } else -> LazyColumn(
-            modifier = modifier,
-            state = state,
-            contentPadding = contentPadding,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(
-                items = libraryContents ?: emptyList(),
-                key = Playlist::name::get
-            ) { playlist ->
-                PlaylistView(playlist, playlistViewCallback,
-                             Modifier.animateItemPlacement())
+    Crossfade(libraryContents?.isEmpty()) {
+        when(it) {
+            null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+                CircularProgressIndicator(Modifier.size(50.dp))
+            } true -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+                Text(stringResource(R.string.empty_track_list_message),
+                     modifier = Modifier.width(300.dp),
+                     textAlign = TextAlign.Justify)
+            } else -> LazyColumn(
+                modifier, state, contentPadding,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val items = libraryContents ?: emptyList()
+                items(items, key = Playlist::name::get) { playlist ->
+                    PlaylistView(playlist, playlistViewCallback,
+                                 Modifier.animateItemPlacement())
+                }
             }
         }
-    }}
+    }
     when (shownDialog) {
         null -> {}
         is PlaylistDialog.Rename ->
@@ -168,6 +164,7 @@ sealed class PlaylistDialog(
 
 @HiltViewModel class LibraryViewModel(
     dataStore: DataStore<Preferences>,
+    private val permissionHandler: UriPermissionHandler,
     private val playlistDao: PlaylistDao,
     private val messageHandler: MessageHandler,
     private val playbackState: PlaybackState,
@@ -177,11 +174,12 @@ sealed class PlaylistDialog(
 
     @Inject constructor(
         dataStore: DataStore<Preferences>,
+        permissionHandler: UriPermissionHandler,
         playlistDao: PlaylistDao,
         messageHandler: MessageHandler,
         playbackState: PlaybackState,
         searchQueryState: SearchQueryState,
-    ) : this(dataStore, playlistDao, messageHandler,
+    ) : this(dataStore, permissionHandler, playlistDao, messageHandler,
              playbackState, searchQueryState, null)
 
     private val scope = coroutineScope ?: viewModelScope
@@ -221,7 +219,7 @@ sealed class PlaylistDialog(
             })
     }
 
-    fun onPlaylistOptionsClick(playlist: Playlist, context: Context) {
+    fun onPlaylistOptionsClick(playlist: Playlist) {
         scope.launch {
             val shuffleEnabled = playlistDao.getPlaylistShuffle(playlist.name)
             val tracks = playlistDao.getPlaylistTracks(playlist.name)
@@ -230,27 +228,9 @@ sealed class PlaylistDialog(
                 playlistShuffleEnabled = shuffleEnabled,
                 playlistTracks = tracks.toImmutableList(),
                 onDismissRequest = { shownDialog = null },
-                onConfirmClick = { newShuffleEnabled, newTrackList ->
+                onConfirmClick = { newShuffle, newTracks ->
                     shownDialog = null
-                    scope.launch {
-                        // If new tracks were added, we also have to take the
-                        // persistable uri permissions for each of the new tracks
-                        if (newTrackList.size > tracks.size) {
-                            val persistedPermissionAllowance =
-                                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) 128 else 512
-                            val permissionsCount = context.contentResolver.persistedUriPermissions.size
-                            val remainingSpace = persistedPermissionAllowance - permissionsCount
-
-                            if (remainingSpace < newTrackList.size)
-                                messageHandler.postMessage(StringResource(
-                                    R.string.cant_add_playlist_warning,
-                                    persistedPermissionAllowance))
-                            else for (track in newTrackList)
-                                context.contentResolver.takePersistableUriPermission(track, 0)
-                        }
-                        playlistDao.setPlaylistShuffleAndTracks(
-                            playlist.name, newShuffleEnabled, newTrackList)
-                    }
+                    savePlaylistTracksAndShuffle(playlist.name, newShuffle, tracks, newTracks)
                 })
         }
     }
@@ -262,8 +242,34 @@ sealed class PlaylistDialog(
             onConfirmClick = {
                 scope.launch { playlistDao.delete(playlist.name) }
                 shownDialog = null
-            }
-        )
+            })
+    }
+
+    private fun savePlaylistTracksAndShuffle(
+        playlistName: String,
+        shuffle: Boolean,
+        originalTracks: List<Uri>,
+        newTracks: List<Uri>
+    ) {
+        scope.launch {
+            val validatedTrackList =
+                // If no new tracks were added, we can simply save the
+                // new track order. Otherwise, we have to check if there
+                // is enough permission space to add all of the tracks
+                if (newTracks.size == originalTracks.size)
+                    newTracks
+                else permissionHandler.takeUriPermissions(
+                    newTracks, insertPartial = false)
+            if (validatedTrackList.isEmpty()) {
+                messageHandler.postMessage(StringResource(
+                    R.string.cant_add_playlist_tracks_warning,
+                    permissionHandler.permissionAllowance))
+                // If there isn't enough space, we ignore the new
+                // track list and only save the new shuffle value
+                playlistDao.setPlaylistShuffle(playlistName, shuffle)
+            } else playlistDao.setPlaylistShuffleAndTracks(
+                playlistName, shuffle, validatedTrackList)
+        }
     }
 }
 
@@ -286,13 +292,12 @@ sealed class PlaylistDialog(
     state: LazyListState = rememberLazyListState(),
 ) = Surface(modifier, color = MaterialTheme.colors.background) {
     val viewModel: LibraryViewModel = viewModel()
-    val context = LocalContext.current
     val itemCallback = rememberPlaylistViewCallback(
         onAddRemoveButtonClick = viewModel::onPlaylistAddRemoveButtonClick,
         onVolumeChange = viewModel::onPlaylistVolumeChange,
         onVolumeChangeFinished = viewModel::onPlaylistVolumeChangeFinished,
         onRenameClick = viewModel::onPlaylistRenameClick,
-        onExtraOptionsClick = { viewModel.onPlaylistOptionsClick(it, context) },
+        onExtraOptionsClick = viewModel::onPlaylistOptionsClick,
         onRemoveClick = viewModel::onPlaylistRemoveClick)
     LibraryView(
         modifier = modifier,
