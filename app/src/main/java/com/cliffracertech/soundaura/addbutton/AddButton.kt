@@ -6,7 +6,6 @@ package com.cliffracertech.soundaura.addbutton
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
-import android.os.Build
 import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.FloatingActionButtonDefaults
 import androidx.compose.material.Icon
@@ -33,6 +32,7 @@ import com.cliffracertech.soundaura.dialog.ValidatedNamingState
 import com.cliffracertech.soundaura.model.ActivePresetState
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.StringResource
+import com.cliffracertech.soundaura.model.UriPermissionHandler
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.PlaylistNameValidator
 import com.cliffracertech.soundaura.model.database.PresetDao
@@ -64,6 +64,7 @@ import javax.inject.Inject
 @HiltViewModel @SuppressLint("StaticFieldLeak")
 class AddPlaylistButtonViewModel(
     private val context: Context,
+    private val permissionHandler: UriPermissionHandler,
     private val playlistDao: PlaylistDao,
     private val messageHandler: MessageHandler,
     coroutineScope: CoroutineScope? = null
@@ -72,9 +73,10 @@ class AddPlaylistButtonViewModel(
     @Inject constructor(
         @ApplicationContext
         context: Context,
+        permissionHandler: UriPermissionHandler,
         playlistDao: PlaylistDao,
         messageHandler: MessageHandler
-    ) : this(context, playlistDao, messageHandler, null)
+    ) : this(context, permissionHandler, playlistDao, messageHandler, null)
 
     private val scope = coroutineScope ?: viewModelScope
 
@@ -145,22 +147,16 @@ class AddPlaylistButtonViewModel(
     private fun addTracks(trackNames: List<String>, trackUris: List<Uri>) {
         scope.launch {
             assert(trackUris.size == trackNames.size)
+            val acceptedTracks = permissionHandler.takeUriPermissions(trackUris)
 
-            val persistedPermissionAllowance =
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) 128 else 512
-            val persistedPermissionsCount = context.contentResolver.persistedUriPermissions.size
-            val remainingSpace = persistedPermissionAllowance - persistedPermissionsCount
-
-            val failureCount = trackUris.size - remainingSpace
+            val failureCount = trackUris.size - acceptedTracks.size
             if (failureCount > 0)
                 messageHandler.postMessage(StringResource(
                     R.string.cant_add_all_tracks_warning,
-                    failureCount, persistedPermissionAllowance))
-
-            if (remainingSpace > 0) {
-                val names = trackNames.subList(0, remainingSpace - 1)
-                val tracks = trackUris.subList(0, remainingSpace - 1)
-                playlistDao.addSingleTrackPlaylists(names, tracks)
+                    failureCount, permissionHandler.permissionAllowance))
+            if (acceptedTracks.isNotEmpty()) {
+                val names = trackNames.subList(0, acceptedTracks.size - 1)
+                playlistDao.addSingleTrackPlaylists(names, acceptedTracks)
             }
             onDialogDismissRequest()
         }
@@ -168,15 +164,13 @@ class AddPlaylistButtonViewModel(
 
     private fun addPlaylist(name: String, shuffle: Boolean, tracks: List<Uri>) {
         scope.launch {
-            val persistedPermissionAllowance =
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) 128 else 512
-            val persistedPermissionsCount = context.contentResolver.persistedUriPermissions.size
-            val remainingSpace = persistedPermissionAllowance - persistedPermissionsCount
-
-            if (remainingSpace < tracks.size)
+            val acceptedTracks = permissionHandler
+                .takeUriPermissions(tracks, insertPartial = false)
+            if (acceptedTracks.isEmpty())
                 messageHandler.postMessage(StringResource(
-                    R.string.cant_add_playlist_warning, persistedPermissionAllowance))
-            else playlistDao.addPlaylist(name, shuffle, tracks)
+                    R.string.cant_add_playlist_warning,
+                    permissionHandler.permissionAllowance))
+            else playlistDao.addPlaylist(name, shuffle, acceptedTracks)
             onDialogDismissRequest()
         }
     }

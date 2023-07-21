@@ -64,13 +64,18 @@
     <string name="some_tracks_already_exist_error_message">
         %1$d of the selected tracks were already in the library.</string>
     <string name="cant_add_all_tracks_warning">
-        %1$d files could not be added because the app is at
-        Android\'s file permission limit of %2$d. You must
-        remove some tracks or playlists in order to add any more.</string>
+        %1$d files could not be added because the app is at Android\'s
+        file permission limit of %2$d. You must remove some tracks or
+        playlists in order to add any more.</string>
     <string name="cant_add_playlist_warning">
-        The playlist could not be added because the app is at
-        Android\'s file permission limit of %2$d. You must
-        remove some tracks or playlists in order to add any more.</string>
+        The playlist could not be added because the app is at Android\'s
+        file permission limit of %2$d. You must remove some tracks or
+        playlists in order to add any more.</string>
+    <string name="cant_add_playlist_tracks_warning">
+        The tracks could not be added to the playlist because the app is at
+        Android\'s file permission limit of %2$d. You must remove some tracks
+        or playlists in order to add any more.
+    </string>
 
     <string name="configure_playlist_dialog_title">Configure playlist options</string>
 
