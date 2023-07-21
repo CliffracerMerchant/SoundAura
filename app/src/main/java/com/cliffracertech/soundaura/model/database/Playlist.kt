@@ -238,14 +238,6 @@ data class Playlist(
     @Query("SELECT trackUri FROM playlistTrack WHERE playlistName = :name ORDER by playlistOrder")
     abstract suspend fun getPlaylistTracks(name: String): List<Uri>
 
-    @Transaction
-    open suspend fun setPlaylistTracks(name: String, newTracks: List<Uri>) {
-        deletePlaylistTracks(listOf(name))
-        newTracks.forEachIndexed { index, uri ->
-            addPlaylistTrack(PlaylistTrack(name, uri, index))
-        }
-    }
-
     /** Rename the [Playlist] whose name matches [oldName] to [newName]. */
     @Query("UPDATE playlist SET name = :newName WHERE name = :oldName")
     abstract suspend fun rename(oldName: String, newName: String)
@@ -292,7 +284,7 @@ data class Playlist(
         tracks: List<Uri>
     ) {
         setPlaylistShuffle(playlistName, shuffleEnabled)
-        setPlaylistTracks(playlistName, tracks)
+        updatePlaylistContents(playlistName, tracks)
     }
 }
 

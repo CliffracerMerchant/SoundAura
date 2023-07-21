@@ -225,15 +225,17 @@ sealed class PlaylistDialog(
         scope.launch {
             val shuffleEnabled = playlistDao.getPlaylistShuffle(playlist.name)
             val tracks = playlistDao.getPlaylistTracks(playlist.name)
-            val wasSingleTrack = tracks.size == 1
             shownDialog = PlaylistDialog.PlaylistOptions(
                 target = playlist,
                 playlistShuffleEnabled = shuffleEnabled,
                 playlistTracks = tracks.toImmutableList(),
                 onDismissRequest = { shownDialog = null },
                 onConfirmClick = { newShuffleEnabled, newTrackList ->
+                    shownDialog = null
                     scope.launch {
-                        if (wasSingleTrack) {
+                        // If new tracks were added, we also have to take the
+                        // persistable uri permissions for each of the new tracks
+                        if (newTrackList.size > tracks.size) {
                             val persistedPermissionAllowance =
                                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) 128 else 512
                             val permissionsCount = context.contentResolver.persistedUriPermissions.size
@@ -243,16 +245,12 @@ sealed class PlaylistDialog(
                                 messageHandler.postMessage(StringResource(
                                     R.string.cant_add_playlist_warning,
                                     persistedPermissionAllowance))
-                            else {
-                                for (track in newTrackList)
-                                    context.contentResolver.takePersistableUriPermission(track, 0)
-                                playlistDao.updatePlaylistContents(playlist.name, newTrackList)
-                            }
+                            else for (track in newTrackList)
+                                context.contentResolver.takePersistableUriPermission(track, 0)
                         }
                         playlistDao.setPlaylistShuffleAndTracks(
                             playlist.name, newShuffleEnabled, newTrackList)
                     }
-                    shownDialog = null
                 })
         }
     }

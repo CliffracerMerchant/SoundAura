@@ -8,6 +8,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.toMutableStateList
 import com.cliffracertech.soundaura.collectAsState
+import com.cliffracertech.soundaura.model.Validator.Message
+import com.cliffracertech.soundaura.model.Validator.Message.Error
+import com.cliffracertech.soundaura.model.Validator.Message.Information
+import com.cliffracertech.soundaura.model.Validator.Message.Warning
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -113,7 +117,6 @@ abstract class ListValidator <T>(
 
     val values get() = _values as List<T>
     val errors get() = _errors as List<Boolean>
-
 
     fun setValue(index: Int, value: T) {
         if (index !in _values.indices) return
