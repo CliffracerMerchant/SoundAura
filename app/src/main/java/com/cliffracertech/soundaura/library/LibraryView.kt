@@ -162,6 +162,15 @@ sealed class PlaylistDialog(
     }
 }
 
+/**
+ * A [ViewModel] to provide state and callbacks for an instance of LibraryView.
+ *
+ * The most recent list of all playlists is provided via the property
+ * [playlists]. The [PlaylistViewCallback] that should be used for item
+ * interactions is provided via the property [itemCallback]. The state
+ * of any dialogs that should be shown are provided via the property
+ * [shownDialog].
+ */
 @HiltViewModel class LibraryViewModel(
     dataStore: DataStore<Preferences>,
     private val permissionHandler: UriPermissionHandler,
@@ -196,53 +205,51 @@ sealed class PlaylistDialog(
 
     var shownDialog by mutableStateOf<PlaylistDialog?>(null)
 
-    fun onPlaylistAddRemoveButtonClick(playlist: Playlist) {
-        scope.launch { playlistDao.toggleIsActive(playlist.name) }
-    }
-
-    fun onPlaylistVolumeChange(playlist: Playlist, volume: Float) =
-        playbackState.setPlaylistVolume(playlist.name, volume)
-
-    fun onPlaylistVolumeChangeFinished(playlist: Playlist, volume: Float) {
-        scope.launch { playlistDao.setVolume(playlist.name, volume) }
-    }
-
-    fun onPlaylistRenameClick(playlist: Playlist) {
-        shownDialog = PlaylistDialog.Rename(
-            target = playlist,
-            validator = PlaylistNameValidator(playlistDao, scope, playlist.name),
-            coroutineScope = scope,
-            onDismissRequest = { shownDialog = null },
-            onNameValidated = { validatedName ->
-                playlistDao.rename(playlist.name, validatedName)
-                shownDialog = null
-            })
-    }
-
-    fun onPlaylistOptionsClick(playlist: Playlist) {
-        scope.launch {
-            val shuffleEnabled = playlistDao.getPlaylistShuffle(playlist.name)
-            val tracks = playlistDao.getPlaylistTracks(playlist.name)
-            shownDialog = PlaylistDialog.PlaylistOptions(
+    val itemCallback = object : PlaylistViewCallback {
+        override fun onAddRemoveButtonClick(playlist: Playlist) {
+            scope.launch { playlistDao.toggleIsActive(playlist.name) }
+        }
+        override fun onVolumeChange(playlist: Playlist, volume: Float) {
+            playbackState.setPlaylistVolume(playlist.name, volume)
+        }
+        override fun onVolumeChangeFinished(playlist: Playlist, volume: Float) {
+            scope.launch { playlistDao.setVolume(playlist.name, volume) }
+        }
+        override fun onRenameClick(playlist: Playlist) {
+            shownDialog = PlaylistDialog.Rename(
                 target = playlist,
-                playlistShuffleEnabled = shuffleEnabled,
-                playlistTracks = tracks.toImmutableList(),
+                validator = PlaylistNameValidator(playlistDao, scope, playlist.name),
+                coroutineScope = scope,
                 onDismissRequest = { shownDialog = null },
-                onConfirmClick = { newShuffle, newTracks ->
+                onNameValidated = { validatedName ->
+                    playlistDao.rename(playlist.name, validatedName)
                     shownDialog = null
-                    savePlaylistTracksAndShuffle(playlist.name, newShuffle, tracks, newTracks)
                 })
         }
-    }
-
-    fun onPlaylistRemoveClick(playlist: Playlist) {
-        shownDialog = PlaylistDialog.Remove(
-            target = playlist,
-            onDismissRequest = { shownDialog = null },
-            onConfirmClick = {
-                scope.launch { playlistDao.delete(playlist.name) }
-                shownDialog = null
-            })
+        override fun onExtraOptionsClick(playlist: Playlist) {
+            scope.launch {
+                val shuffleEnabled = playlistDao.getPlaylistShuffle(playlist.name)
+                val tracks = playlistDao.getPlaylistTracks(playlist.name)
+                shownDialog = PlaylistDialog.PlaylistOptions(
+                    target = playlist,
+                    playlistShuffleEnabled = shuffleEnabled,
+                    playlistTracks = tracks.toImmutableList(),
+                    onDismissRequest = { shownDialog = null },
+                    onConfirmClick = { newShuffle, newTracks ->
+                        shownDialog = null
+                        savePlaylistTracksAndShuffle(playlist.name, newShuffle, tracks, newTracks)
+                    })
+            }
+        }
+        override fun onRemoveClick(playlist: Playlist) {
+            shownDialog = PlaylistDialog.Remove(
+                target = playlist,
+                onDismissRequest = { shownDialog = null },
+                onConfirmClick = {
+                    scope.launch { playlistDao.delete(playlist.name) }
+                    shownDialog = null
+                })
+        }
     }
 
     private fun savePlaylistTracksAndShuffle(
@@ -292,18 +299,11 @@ sealed class PlaylistDialog(
     state: LazyListState = rememberLazyListState(),
 ) = Surface(modifier, color = MaterialTheme.colors.background) {
     val viewModel: LibraryViewModel = viewModel()
-    val itemCallback = rememberPlaylistViewCallback(
-        onAddRemoveButtonClick = viewModel::onPlaylistAddRemoveButtonClick,
-        onVolumeChange = viewModel::onPlaylistVolumeChange,
-        onVolumeChangeFinished = viewModel::onPlaylistVolumeChangeFinished,
-        onRenameClick = viewModel::onPlaylistRenameClick,
-        onExtraOptionsClick = viewModel::onPlaylistOptionsClick,
-        onRemoveClick = viewModel::onPlaylistRemoveClick)
     LibraryView(
         modifier = modifier,
         state = state,
         contentPadding = padding,
         libraryContents = viewModel.playlists,
         shownDialog = viewModel.shownDialog,
-        playlistViewCallback = itemCallback)
+        playlistViewCallback = viewModel.itemCallback)
 }
