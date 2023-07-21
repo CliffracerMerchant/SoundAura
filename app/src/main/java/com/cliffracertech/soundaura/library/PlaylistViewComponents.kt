@@ -14,7 +14,6 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -41,8 +40,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.listSaver
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
@@ -58,14 +55,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.cliffracertech.soundaura.R
-import com.cliffracertech.soundaura.addbutton.FileChooser
-import com.cliffracertech.soundaura.dialog.SoundAuraDialog
-import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
 import com.cliffracertech.soundaura.ui.HorizontalDivider
 import com.cliffracertech.soundaura.ui.MarqueeText
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
-import kotlinx.collections.immutable.ImmutableList
 import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.detectReorder
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
@@ -225,88 +218,3 @@ import java.io.File
         }
     }}
 }
-
-/**
- * Show a dialog that contains an inner [PlaylistOptions] section to alter the
- * [playlist]'s shuffle and track order. If [playlist]'s [Playlist.isSingleTrack]
- * property is true, then a system file picker will show first to allow the
- * user to choose extra files to add to the single track in order to create a
- * multi-track playlist.
- *
- * @param playlist The [Playlist] whose shuffle and track order
- *     are being adjusted
- * @param shuffleEnabled Whether or not the playlist has shuffle enabled
- * @param tracks An [ImmutableList] containing the [Uri]s of the playlist's tracks
- * @param onDismissRequest The callback that will be invoked
- *     when the back button or gesture is activated or the
- *     dialog's cancel button is clicked
- * @param modifier The [Modifier] to use for the dialog window
- * @param onConfirmClick The callback that will be invoked when the dialog's
- *     confirm button is clicked. The Boolean and List<Uri> parameters
- *     are the playlist's requested shuffle value and track order.
- */
-@Composable fun PlaylistOptionsDialog(
-    playlist: Playlist,
-    shuffleEnabled: Boolean,
-    tracks: ImmutableList<Uri>,
-    onDismissRequest: () -> Unit,
-    modifier: Modifier = Modifier,
-    onConfirmClick: (shuffleEnabled: Boolean, newTrackOrder: List<Uri>) -> Unit,
-) {
-    var chosenUris by remember { mutableStateOf<List<Uri>?>(null) }
-
-    if (playlist.isSingleTrack && chosenUris == null) {
-        FileChooser { uris ->
-            if (uris.isEmpty())
-                onDismissRequest()
-            chosenUris = uris
-        }
-    } else {
-        var tempShuffleEnabled by rememberSaveable { mutableStateOf(shuffleEnabled) }
-        val tempTrackOrder: MutableList<Uri> = rememberSaveable(
-                /* inputs =*/ tracks, chosenUris,
-                saver = listSaver({ it }, List<Uri>::toMutableStateList)
-            ) {
-                val newTracks = chosenUris ?: emptyList()
-                tracks.toMutableStateList().apply { addAll(newTracks) }
-            }
-        SoundAuraDialog(
-            modifier = modifier.restrictWidthAccordingToSizeClass(),
-            useDefaultWidth = false,
-            titleLayout = @Composable {
-                Row(modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp, bottom = 12.dp,
-                                 start = 16.dp, end = 16.dp),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    val style = MaterialTheme.typography.h6
-                    MarqueeText(playlist.name, style = style)
-                    Text(stringResource(R.string.playlist_options_dialog_title), style = style)
-                }
-            }, onDismissRequest = onDismissRequest,
-            onConfirm = { onConfirmClick(tempShuffleEnabled, tempTrackOrder) }
-        ) {
-            PlaylistOptions(
-                shuffleEnabled = tempShuffleEnabled,
-                tracks = tempTrackOrder,
-                onShuffleSwitchClick = {
-                    tempShuffleEnabled = !tempShuffleEnabled
-                })
-        }
-    }
-}
-
-@Composable fun ConfirmRemoveDialog(
-    itemName: String,
-    onDismissRequest: () -> Unit,
-    onConfirmClick: () -> Unit
-) = SoundAuraDialog(
-    onDismissRequest = onDismissRequest,
-    title = stringResource(R.string.confirm_remove_title, itemName),
-    text = stringResource(R.string.confirm_remove_message),
-    confirmText = stringResource(R.string.remove),
-    onConfirm = {
-        onConfirmClick()
-        onDismissRequest()
-    })

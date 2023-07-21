@@ -130,7 +130,6 @@ class ValidatedNamingState(
  * @param modifier The [Modifier] to use for the root layout
  * @param title The title of the dialog
  * @param state A [NamingState] instance
- *     the most recently proposed name, or null if the name is valid
  * @param onDismissRequest The callback that will be invoked when the
  *     user attempts to dismiss the dialog
  */

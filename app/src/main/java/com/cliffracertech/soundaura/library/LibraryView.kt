@@ -38,9 +38,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.collectAsState
-import com.cliffracertech.soundaura.dialog.NamingState
-import com.cliffracertech.soundaura.dialog.RenameDialog
-import com.cliffracertech.soundaura.dialog.ValidatedNamingState
 import com.cliffracertech.soundaura.enumPreferenceFlow
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.PlaybackState
@@ -63,40 +60,6 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Playlist.Sort
-
-sealed class PlaylistDialog(
-    val target: Playlist,
-    val onDismissRequest: () -> Unit,
-) {
-    /** The rename dialog for a playlist */
-    class Rename(
-        target: Playlist,
-        validator: PlaylistNameValidator,
-        coroutineScope: CoroutineScope,
-        onDismissRequest: () -> Unit,
-        private val onNameValidated: suspend (String) -> Unit,
-    ): PlaylistDialog(target, onDismissRequest),
-       NamingState by ValidatedNamingState(validator, coroutineScope, onNameValidated)
-
-    /** The 'playlist options' dialog for a playlist. */
-    class PlaylistOptions(
-        target: Playlist,
-        val playlistShuffleEnabled: Boolean,
-        val playlistTracks: ImmutableList<Uri>,
-        onDismissRequest: () -> Unit,
-        val onConfirmClick: (
-                shuffleEnabled: Boolean,
-                newTrackList: List<Uri>,
-            ) -> Unit,
-    ): PlaylistDialog(target, onDismissRequest)
-
-    /** The remove dialog for a playlist */
-    class Remove(
-        target: Playlist,
-        onDismissRequest: () -> Unit,
-        val onConfirmClick: () -> Unit,
-    ): PlaylistDialog(target, onDismissRequest)
-}
 
 /**
  * A [LazyColumn] to display all of the provided [Playlist]s with instances of [PlaylistView].
@@ -140,26 +103,7 @@ sealed class PlaylistDialog(
             }
         }
     }
-    when (shownDialog) {
-        null -> {}
-        is PlaylistDialog.Rename ->
-            RenameDialog(
-                title = stringResource(R.string.default_rename_dialog_title),
-                state = shownDialog,
-                onDismissRequest = shownDialog.onDismissRequest)
-        is PlaylistDialog.PlaylistOptions ->
-            PlaylistOptionsDialog(
-                playlist = shownDialog.target,
-                shuffleEnabled = shownDialog.playlistShuffleEnabled,
-                tracks = shownDialog.playlistTracks,
-                onDismissRequest = shownDialog.onDismissRequest,
-                onConfirmClick = shownDialog.onConfirmClick)
-        is PlaylistDialog.Remove ->
-            ConfirmRemoveDialog(
-                itemName = shownDialog.target.name,
-                onDismissRequest = shownDialog.onDismissRequest,
-                onConfirmClick = shownDialog.onConfirmClick)
-    }
+    PlaylistDialogShower(shownDialog)
 }
 
 /**
