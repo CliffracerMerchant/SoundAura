@@ -156,7 +156,7 @@ class AddPlaylistButtonViewModel(
                     failureCount, permissionHandler.permissionAllowance))
             if (acceptedTracks.isNotEmpty()) {
                 val names = trackNames.subList(0, acceptedTracks.size - 1)
-                playlistDao.addSingleTrackPlaylists(names, acceptedTracks)
+                playlistDao.insertSingleTrackPlaylists(names, acceptedTracks)
             }
             onDialogDismissRequest()
         }
@@ -170,7 +170,7 @@ class AddPlaylistButtonViewModel(
                 messageHandler.postMessage(StringResource(
                     R.string.cant_add_playlist_warning,
                     permissionHandler.permissionAllowance))
-            else playlistDao.addPlaylist(name, shuffle, acceptedTracks)
+            else playlistDao.insertPlaylist(name, shuffle, acceptedTracks)
             onDialogDismissRequest()
         }
     }

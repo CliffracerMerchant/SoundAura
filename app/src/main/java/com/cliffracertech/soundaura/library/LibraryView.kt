@@ -190,7 +190,7 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
                 target = playlist,
                 onDismissRequest = { shownDialog = null },
                 onConfirmClick = {
-                    scope.launch { playlistDao.delete(playlist.name) }
+                    scope.launch { playlistDao.deletePlaylist(playlist.name) }
                     shownDialog = null
                 })
         }
@@ -218,7 +218,7 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
                 // If there isn't enough space, we ignore the new
                 // track list and only save the new shuffle value
                 playlistDao.setPlaylistShuffle(playlistName, shuffle)
-            } else playlistDao.setPlaylistShuffleAndTracks(
+            } else playlistDao.setPlaylistShuffleAndContents(
                 playlistName, shuffle, validatedTrackList)
         }
     }

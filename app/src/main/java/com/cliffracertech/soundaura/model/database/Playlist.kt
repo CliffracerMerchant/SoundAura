@@ -134,6 +134,17 @@ data class Playlist(
     @Query("DELETE FROM playlistTrack WHERE playlistName in (:playlistNames)")
     protected abstract suspend fun deleteAllPlaylistTracks(playlistNames: List<String>)
 
+    @Query("DELETE FROM track WHERE uri IN (:uris)")
+    protected abstract suspend fun deleteTracks(uris: List<Uri>)
+
+    @Query("SELECT shuffle FROM playlist " +
+            "WHERE playlist.name = :playlistName LIMIT 1")
+    abstract suspend fun getPlaylistShuffle(playlistName: String): Boolean
+
+    @Query("UPDATE playlist SET shuffle = :enabled " +
+            "WHERE name = :playlistName")
+    abstract suspend fun setPlaylistShuffle(playlistName: String, enabled: Boolean)
+
     @Transaction
     open suspend fun insertPlaylist(
         playlistName: String,
@@ -161,7 +172,7 @@ data class Playlist(
     }
 
     @Transaction
-    open suspend fun updatePlaylistContents(
+    open suspend fun setPlaylistContents(
         playlistName: String,
         trackUris: List<Uri>
     ) {
@@ -171,13 +182,56 @@ data class Playlist(
         })
     }
 
-    /** Delete the playlist whose name matches [name] from the database. */
-    @Query("DELETE FROM playlist WHERE name = :name")
-    abstract suspend fun delete(name: String)
+    @Transaction
+    open suspend fun setPlaylistShuffleAndContents(
+        playlistName: String,
+        shuffleEnabled: Boolean,
+        tracks: List<Uri>
+    ) {
+        setPlaylistShuffle(playlistName, shuffleEnabled)
+        setPlaylistContents(playlistName, tracks)
+    }
 
-    /** Delete the [Playlist]s whose names are in [names] from the database. */
-    @Query("DELETE FROM playlist WHERE name in (:names)")
-    abstract suspend fun delete(names: List<String>)
+    /** Return the track uris of the [Playlist] identified by
+     * [playlistName] that are not in any other [Playlist]s. */
+    @Query("SELECT trackUri FROM playlistTrack " +
+           "WHERE COUNT(playlistName) = 1 AND playlistName = :playlistName " +
+           "GROUP BY trackUri")
+    protected abstract suspend fun getUniqueTracks(playlistName: String): List<Uri>
+
+    /** Return the uris that match these conditions:
+     *  - Are in the provided [trackUris]
+     *  - Are in the [Playlist] identified by [playlistName]
+     *  - Do not exist in any other [Playlist]s. */
+    @Query("SELECT trackUri FROM playlistTrack " +
+            "WHERE COUNT(playlistName) = 1 AND playlistName = :playlistName " +
+            "GROUP BY trackUri")
+    protected abstract suspend fun filterUniqueTracks(
+        playlistName: String,
+        trackUris: List<Uri>
+    ): List<Uri>
+
+    /** Delete the [Playlist] whose name matches [name] along with its contents.
+     * @return the [List] of [Uri]s that are no longer a part of any playlist */
+    @Transaction
+    open suspend fun deletePlaylist(name: String): List<Uri> {
+         val tracks = getUniqueTracks(name)
+        deletePlaylistName(name)
+        // playlistTrack.playlistName has a on delete: cascade policy,
+        // so the playlistTrack rows don't need to be deleted manually
+        deleteTracks(tracks)
+        return tracks
+    }
+
+    /** Delete the [Playlist] whose name matches [playlistName] along with its contents.
+     * @return the [List] of [Uri]s that are no longer a part of any playlist */
+    @Transaction
+    open suspend fun deletePlaylistTracks(playlistName: String, tracks: List<Uri>): List<Uri> {
+        val uniqueTracks = filterUniqueTracks(playlistName, tracks)
+        deletePlaylistTracksPrivate(playlistName, tracks)
+        deleteTracks(tracks)
+        return uniqueTracks
+    }
 
     /** Return whether or not a [Playlist] whose name matches [name] exists. */
     @Query("SELECT EXISTS(SELECT name FROM playlist WHERE name = :name)")
@@ -235,8 +289,8 @@ data class Playlist(
     abstract fun getActivePlaylistsAndContents(): Flow<Map<Playlist, List<Uri>>>
 
     /** Return a [Flow] that updates with the latest [List] of
-     * [com.cliffracertech.soundaura.model.PresetPlaylist]s. This represents
-     * the contents of a new [Preset], were it to be saved now. */
+     * [com.cliffracertech.soundaura.model.PresetPlaylist]s. This
+     * represents the contents of a [Preset] if it was created now. */
     @Query("SELECT name, volume FROM playlist WHERE isActive")
     abstract fun getTempPresetPlaylists():
         Flow<List<com.cliffracertech.soundaura.model.PresetPlaylist>>
@@ -276,24 +330,6 @@ data class Playlist(
         setTracksHaveError(trackUris)
         if (playlistHasNoValidTracks(playlistName))
             setPlaylistHasError(playlistName)
-    }
-
-    @Query("SELECT shuffle FROM playlist " +
-           "WHERE playlist.name = :playlistName LIMIT 1")
-    abstract suspend fun getPlaylistShuffle(playlistName: String): Boolean
-
-    @Query("UPDATE playlist SET shuffle = :enabled " +
-           "WHERE name = :playlistName")
-    abstract suspend fun setPlaylistShuffle(playlistName: String, enabled: Boolean)
-
-    @Transaction
-    open suspend fun setPlaylistShuffleAndTracks(
-        playlistName: String,
-        shuffleEnabled: Boolean,
-        tracks: List<Uri>
-    ) {
-        setPlaylistShuffle(playlistName, shuffleEnabled)
-        updatePlaylistContents(playlistName, tracks)
     }
 }
 
