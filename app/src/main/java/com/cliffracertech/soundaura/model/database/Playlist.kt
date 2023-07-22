@@ -45,17 +45,19 @@ data class Track(
 
 @Entity(tableName = "playlistTrack",
         primaryKeys = ["playlistName", "trackUri"],
-    foreignKeys = [
-        ForeignKey(entity = Playlist::class,
-            parentColumns=["name"],
-            childColumns=["playlistName"],
-            onUpdate=ForeignKey.CASCADE,
-            onDelete=ForeignKey.CASCADE),
-        ForeignKey(entity = Track::class,
-            parentColumns=["uri"],
-            childColumns=["trackUri"],
-            onUpdate=ForeignKey.CASCADE,
-            onDelete=ForeignKey.CASCADE)])
+        foreignKeys = [
+            ForeignKey(
+                entity = Playlist::class,
+                parentColumns=["name"],
+                childColumns=["playlistName"],
+                onUpdate=ForeignKey.CASCADE,
+                onDelete=ForeignKey.CASCADE),
+            ForeignKey(
+                entity = Track::class,
+                parentColumns=["uri"],
+                childColumns=["trackUri"],
+                onUpdate=ForeignKey.CASCADE,
+                onDelete=ForeignKey.CASCADE)])
 data class PlaylistTrack(
     val playlistName: String,
     val trackUri: Uri,
@@ -100,53 +102,60 @@ data class Playlist(
 
 @Dao abstract class PlaylistDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    protected abstract suspend fun addToPlaylistTable(playlist: Playlist)
+    protected abstract suspend fun insertPlaylistName(playlist: Playlist)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    protected abstract suspend fun addToPlaylistTable(playlists: List<Playlist>)
+    protected abstract suspend fun insertPlaylistNames(playlists: List<Playlist>)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    protected abstract suspend fun addTracks(tracks: List<Track>): List<Long>
+    protected abstract suspend fun insertTracks(tracks: List<Track>): List<Long>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    protected abstract suspend fun addPlaylistTrack(playlistTrack: PlaylistTrack)
+    protected abstract suspend fun insertPlaylistTrack(playlistTrack: PlaylistTrack)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    protected abstract suspend fun addPlaylistTracks(playlistTracks: List<PlaylistTrack>)
+    protected abstract suspend fun insertPlaylistTracks(playlistTracks: List<PlaylistTrack>)
+
+    /** Delete the playlist whose name matches [name] from the database. */
+    @Query("DELETE FROM playlist WHERE name = :name")
+    protected abstract suspend fun deletePlaylistName(name: String)
+
+    /** Delete the [Playlist]s whose names are in [names] from the database. */
+    @Query("DELETE FROM playlist WHERE name in (:names)")
+    protected abstract suspend fun deletePlaylistNames(names: List<String>)
+
+    @Query("DELETE FROM playlistTrack WHERE playlistName = :playlistName " +
+                                     "AND trackUri in (:trackUris)")
+    protected abstract suspend fun deletePlaylistTracksPrivate(playlistName: String, trackUris: List<Uri>)
 
     @Query("DELETE FROM playlistTrack WHERE playlistName = :playlistName")
-    protected abstract suspend fun deletePlaylistTracks(playlistName: String)
+    protected abstract suspend fun deleteAllPlaylistTracks(playlistName: String)
 
     @Query("DELETE FROM playlistTrack WHERE playlistName in (:playlistNames)")
-    protected abstract suspend fun deletePlaylistTracks(playlistNames: List<String>)
+    protected abstract suspend fun deleteAllPlaylistTracks(playlistNames: List<String>)
 
     @Transaction
-    open suspend fun addPlaylist(
-        name: String,
+    open suspend fun insertPlaylist(
+        playlistName: String,
         shuffle: Boolean,
         trackUris: List<Uri>
     ) {
-        addToPlaylistTable(Playlist(name))
-        addTracks(trackUris.map(::Track))
-
-        deletePlaylistTracks(name)
-        addPlaylistTracks(trackUris.mapIndexed { index, uri ->
-            PlaylistTrack(name, uri, index)
+        insertPlaylistName(Playlist(playlistName))
+        insertTracks(trackUris.map(::Track))
+        insertPlaylistTracks(trackUris.mapIndexed { index, uri ->
+            PlaylistTrack(playlistName, uri, index)
         })
     }
 
     @Transaction
-    open suspend fun addSingleTrackPlaylists(
+    open suspend fun insertSingleTrackPlaylists(
         playlistNames: List<String>,
         trackUris: List<Uri>
     ) {
         assert(playlistNames.size == trackUris.size)
-
-        addToPlaylistTable(playlistNames.map(::Playlist))
-        addTracks(trackUris.map(::Track))
-
-        deletePlaylistTracks(playlistNames)
-        addPlaylistTracks(trackUris.mapIndexed { index, uri ->
+        insertPlaylistNames(playlistNames.map(::Playlist))
+        insertTracks(trackUris.map(::Track))
+        insertPlaylistTracks(trackUris.mapIndexed { index, uri ->
             PlaylistTrack(playlistNames[index], uri, index)
         })
     }
@@ -156,8 +165,8 @@ data class Playlist(
         playlistName: String,
         trackUris: List<Uri>
     ) {
-        deletePlaylistTracks(playlistName)
-        addPlaylistTracks(trackUris.mapIndexed { index, uri ->
+        deleteAllPlaylistTracks(playlistName)
+        insertPlaylistTracks(trackUris.mapIndexed { index, uri ->
             PlaylistTrack(playlistName, uri, index)
         })
     }
