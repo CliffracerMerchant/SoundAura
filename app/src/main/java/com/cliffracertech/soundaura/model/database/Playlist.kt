@@ -190,18 +190,15 @@ data class Playlist(
     /** Return the track uris of the [Playlist] identified by
      * [playlistName] that are not in any other [Playlist]s. */
     @Query("SELECT trackUri FROM playlistTrack " +
-           "WHERE COUNT(playlistName) = 1 AND " +
-                 "playlistName = :playlistName " +
-           "GROUP BY trackUri")
+           "WHERE playlistName = :playlistName " +
+           "GROUP BY trackUri HAVING COUNT(playlistName) = 1")
     protected abstract suspend fun getUniqueTracks(playlistName: String): List<Uri>
 
     /** Return the track uris of the [Playlist] identified by [playlistName]
      * that are not in any other [Playlist] and are not in [exceptions]. */
     @Query("SELECT trackUri FROM playlistTrack " +
-           "WHERE COUNT(playlistName) = 1 AND " +
-                 "playlistName = :playlistName AND " +
-                 "trackUri NOT IN (:exceptions) " +
-           "GROUP BY trackUri")
+           "WHERE playlistName = :playlistName AND trackUri NOT IN (:exceptions) " +
+           "GROUP BY trackUri HAVING COUNT(playlistName) = 1")
     protected abstract suspend fun getUniqueTracksNotIn(
         exceptions: List<Uri>,
         playlistName: String
