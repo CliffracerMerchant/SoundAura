@@ -120,14 +120,6 @@ data class Playlist(
     @Query("DELETE FROM playlist WHERE name = :name")
     protected abstract suspend fun deletePlaylistName(name: String)
 
-    /** Delete the [Playlist]s whose names are in [names] from the database. */
-    @Query("DELETE FROM playlist WHERE name in (:names)")
-    protected abstract suspend fun deletePlaylistNames(names: List<String>)
-
-    @Query("DELETE FROM playlistTrack WHERE playlistName = :playlistName " +
-                                     "AND trackUri in (:trackUris)")
-    protected abstract suspend fun deletePlaylistTracksPrivate(playlistName: String, trackUris: List<Uri>)
-
     @Query("DELETE FROM playlistTrack WHERE playlistName = :playlistName")
     protected abstract suspend fun deleteAllPlaylistTracks(playlistName: String)
 
@@ -151,7 +143,7 @@ data class Playlist(
         shuffle: Boolean,
         trackUris: List<Uri>
     ) {
-        insertPlaylistName(Playlist(playlistName))
+        insertPlaylistName(Playlist(playlistName, shuffle))
         insertTracks(trackUris.map(::Track))
         insertPlaylistTracks(trackUris.mapIndexed { index, uri ->
             PlaylistTrack(playlistName, uri, index)
@@ -175,11 +167,14 @@ data class Playlist(
     open suspend fun setPlaylistContents(
         playlistName: String,
         trackUris: List<Uri>
-    ) {
+    ): List<Uri> {
+        val removableTracks = getUniqueTracksNotIn(trackUris, playlistName)
         deleteAllPlaylistTracks(playlistName)
         insertPlaylistTracks(trackUris.mapIndexed { index, uri ->
             PlaylistTrack(playlistName, uri, index)
         })
+        deleteTracks(removableTracks)
+        return removableTracks
     }
 
     @Transaction
@@ -187,28 +182,29 @@ data class Playlist(
         playlistName: String,
         shuffleEnabled: Boolean,
         tracks: List<Uri>
-    ) {
+    ): List<Uri> {
         setPlaylistShuffle(playlistName, shuffleEnabled)
-        setPlaylistContents(playlistName, tracks)
+        return setPlaylistContents(playlistName, tracks)
     }
 
     /** Return the track uris of the [Playlist] identified by
      * [playlistName] that are not in any other [Playlist]s. */
     @Query("SELECT trackUri FROM playlistTrack " +
-           "WHERE COUNT(playlistName) = 1 AND playlistName = :playlistName " +
+           "WHERE COUNT(playlistName) = 1 AND " +
+                 "playlistName = :playlistName " +
            "GROUP BY trackUri")
     protected abstract suspend fun getUniqueTracks(playlistName: String): List<Uri>
 
-    /** Return the uris that match these conditions:
-     *  - Are in the provided [trackUris]
-     *  - Are in the [Playlist] identified by [playlistName]
-     *  - Do not exist in any other [Playlist]s. */
+    /** Return the track uris of the [Playlist] identified by [playlistName]
+     * that are not in any other [Playlist] and are not in [exceptions]. */
     @Query("SELECT trackUri FROM playlistTrack " +
-            "WHERE COUNT(playlistName) = 1 AND playlistName = :playlistName " +
-            "GROUP BY trackUri")
-    protected abstract suspend fun filterUniqueTracks(
-        playlistName: String,
-        trackUris: List<Uri>
+           "WHERE COUNT(playlistName) = 1 AND " +
+                 "playlistName = :playlistName AND " +
+                 "trackUri NOT IN (:exceptions) " +
+           "GROUP BY trackUri")
+    protected abstract suspend fun getUniqueTracksNotIn(
+        exceptions: List<Uri>,
+        playlistName: String
     ): List<Uri>
 
     /** Delete the [Playlist] whose name matches [name] along with its contents.
@@ -221,16 +217,6 @@ data class Playlist(
         // so the playlistTrack rows don't need to be deleted manually
         deleteTracks(tracks)
         return tracks
-    }
-
-    /** Delete the [Playlist] whose name matches [playlistName] along with its contents.
-     * @return the [List] of [Uri]s that are no longer a part of any playlist */
-    @Transaction
-    open suspend fun deletePlaylistTracks(playlistName: String, tracks: List<Uri>): List<Uri> {
-        val uniqueTracks = filterUniqueTracks(playlistName, tracks)
-        deletePlaylistTracksPrivate(playlistName, tracks)
-        deleteTracks(tracks)
-        return uniqueTracks
     }
 
     /** Return whether or not a [Playlist] whose name matches [name] exists. */
