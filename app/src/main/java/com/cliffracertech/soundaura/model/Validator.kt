@@ -126,29 +126,29 @@ abstract class ListValidator <T>(
     val values get() = _values as List<T>
     val errors get() = _errors as List<Boolean>
 
-    fun setValue(index: Int, value: T) {
-        if (index !in _values.indices) return
-        val oldValue = _values[index]
-        val hadError = _errors[index]
+    fun setValue(index: Int, newValue: T) {
+        if (index !in values.indices) return
+        val oldValue = values[index]
 
-        _values[index] = value
-        _errors[index] = hasError(value)
+        _values[index] = newValue
+        _errors[index] = hasError(newValue)
         if (allowDuplicates)
             return
 
-        for (i in values.indices) when {
-            values[i] == value && i != index -> {
-                // If there is a duplicate and allowDuplicates is false, we set
-                // the value being set and the duplicate value as having an error
+        values.forEachIndexed { i, value -> when {
+            value == newValue && i != index -> {
+                // If there is a duplicate we set the value being
+                // set and the duplicate value as having an error
                 _errors[i] = true
                 _errors[index] = true
-            } hadError && values[i] == oldValue ->
+            } value == oldValue -> {
                 // We have to recheck all values that are equal to oldValue
-                // in case they were marked as having errors only because they were
-                // duplicate values (which will not be the case now that values[index]
-                // has been changed).
-                _errors[i] = hasError(_values[i])
-        }
+                // in case they were marked as having errors only because
+                // they were duplicate values (which will not be the case
+                // now that values[index] has been changed).
+                _errors[i] = hasError(values[i])
+            }
+        }}
     }
 
     protected abstract fun hasError(value: T): Boolean
@@ -167,7 +167,7 @@ abstract class ListValidator <T>(
      * as an else branch in an override if no other errors are detected. */
     open suspend fun validate(): List<T>? {
         val isValid = allowDuplicates ||
-            _values.toSet().size < values.size
+            values.toSet().size == values.size
         return if (isValid) values
                else         null
     }

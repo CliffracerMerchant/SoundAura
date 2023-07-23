@@ -100,7 +100,7 @@ class AddPlaylistButtonViewModel(
         dialogStep = AddLocalFilesDialogStep.AddIndividuallyOrAsPlaylistQuery(
             onBack = ::onDialogDismissRequest,
             onAddIndividuallyClick = { showNameTracksStep(chosenUris) },
-            onAddAsPlaylistClick = { showNamePlaylistDialog(chosenUris, goingForward = true) })
+            onAddAsPlaylistClick = { showNamePlaylistStep(chosenUris, goingForward = true) })
     }
 
     private fun showNameTracksStep(trackUris: List<Uri>) {
@@ -120,7 +120,7 @@ class AddPlaylistButtonViewModel(
             })
     }
 
-    private fun showNamePlaylistDialog(tracks: List<Uri>, goingForward: Boolean) {
+    private fun showNamePlaylistStep(tracks: List<Uri>, goingForward: Boolean) {
         dialogStep = AddLocalFilesDialogStep.NamePlaylist(
             isAheadOfPreviousStep = goingForward,
             onBack = { showAddIndividuallyOrAsPlaylistQueryStep(tracks) },
@@ -128,16 +128,16 @@ class AddPlaylistButtonViewModel(
                 playlistDao, scope, "${tracks.first().getDisplayName(context)} playlist"),
             coroutineScope = scope,
             onFinish = { validatedPlaylistName ->
-                showPlaylistOptionsDialog(validatedPlaylistName, tracks)
+                showPlaylistOptionsStep(validatedPlaylistName, tracks)
             })
     }
 
-    private fun showPlaylistOptionsDialog(
+    private fun showPlaylistOptionsStep(
         validatedPlaylistName: String,
         tracks: List<Uri>
     ) {
         dialogStep = AddLocalFilesDialogStep.PlaylistOptions(
-            onBack = { showNamePlaylistDialog(tracks, goingForward = false) },
+            onBack = { showNamePlaylistStep(tracks, goingForward = false) },
             tracks = tracks,
             onFinish = { shuffle, newTrackOrder ->
                 addPlaylist(validatedPlaylistName, shuffle, newTrackOrder)
