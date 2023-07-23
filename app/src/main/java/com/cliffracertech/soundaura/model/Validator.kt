@@ -15,6 +15,7 @@ import com.cliffracertech.soundaura.model.Validator.Message.Warning
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 
 /**
  * An abstract value validator.
@@ -73,7 +74,7 @@ abstract class Validator <T>(initialValue: T, coroutineScope: CoroutineScope) {
 
     protected abstract suspend fun messageFor(value: T): Message?
 
-    val message by flow.map(::messageFor).collectAsState(null, coroutineScope)
+    val message by flow.mapLatest(::messageFor).collectAsState(null, coroutineScope)
 
     suspend fun validate(): T? {
         val value = this.value
@@ -88,43 +89,69 @@ abstract class Validator <T>(initialValue: T, coroutineScope: CoroutineScope) {
 }
 
 /**
- * A validator for a list of values, all of which must individually be valid.
+ * A validator for a list of values, all of which must be valid.
  *
  * ListValidator can be used to validate a list of generic non-null values and
  * return a message explaining why one or more of the values is not valid if
- * necessary. The initial value of the property [values] will be equal to the
- * provided [items]. The [errors] property is a same-sized list of [Boolean]
- * values that indicates whether each corresponding [items] value is valid.
+ * necessary. The property [values] will initially be equal to the constructor
+ * provided [values]. The [errors] property is a same-sized list of [Boolean]
+ * values that indicates whether each corresponding [values] element is valid.
+ * The property [allowDuplicates] can be used to mark all duplicate values as
+ * being errors.
+ *
  * [setValue] should be called to change the proposed value for a particular
- * item.
+ * item, and will also mark the value at that index as having an error if the
+ * [hasError] override returns true for the new value.
  *
  * The property [message] can be observed for to obtain a [Validator.Message]
  * instance that describes why one or more values in the list is invalid, or
  * null if all values are valid. Once all desired changes to the list of values
  * has been performed, the suspend function [validate] should be called.
  *
- * The method [isValid] should be overridden to return whether or not a given
- * value is invalid. The property [errorMessage] should be overridden to be a
- * [Validator.Message.Error] that describes why the list of current values is
- * invalid.
+ * The method [hasError] should be overridden to return whether or not a given
+ * value is invalid at the provided index. Note that ListValidator will already
+ * check for and mark duplicate values as errors if [allowDuplicates] is false,
+ * so the [hasError] override does not need to take duplicates into account.
+ * The property [errorMessage] should be overridden to be a [Validator.Message.Error]
+ * that describes why the list of current values is invalid.
  */
 abstract class ListValidator <T>(
-    items: List<T>,
+    values: List<T>,
     scope: CoroutineScope,
+    private val allowDuplicates: Boolean = true,
 ) {
-    private val _values = items.toMutableStateList()
-    private val _errors = List(items.size) { false}.toMutableStateList()
+    private val _values = values.toMutableStateList()
+    private val _errors = List(values.size) { false}.toMutableStateList()
 
     val values get() = _values as List<T>
     val errors get() = _errors as List<Boolean>
 
     fun setValue(index: Int, value: T) {
         if (index !in _values.indices) return
+        val oldValue = _values[index]
+        val hadError = _errors[index]
+
         _values[index] = value
-        _errors[index] = !isValid(value)
+        _errors[index] = hasError(value)
+        if (allowDuplicates)
+            return
+
+        for (i in values.indices) when {
+            values[i] == value && i != index -> {
+                // If there is a duplicate and allowDuplicates is false, we set
+                // the value being set and the duplicate value as having an error
+                _errors[i] = true
+                _errors[index] = true
+            } hadError && values[i] == oldValue ->
+                // We have to recheck all values that are equal to oldValue
+                // in case they were marked as having errors only because they were
+                // duplicate values (which will not be the case now that values[index]
+                // has been changed).
+                _errors[i] = hasError(_values[i])
+        }
     }
 
-    protected abstract fun isValid(value: T): Boolean
+    protected abstract fun hasError(value: T): Boolean
     protected abstract val errorMessage: Validator.Message.Error
 
     val message by snapshotFlow {
@@ -134,7 +161,14 @@ abstract class ListValidator <T>(
             else          null
         }.collectAsState(null, scope)
 
-    /** Return the validated list of values if they are all
-     * valid, or null if one or more values are invalid. */
-    abstract suspend fun validate(): List<T>?
+    /** Return the validated list of values if they are all valid, or null if
+     * one or more values are invalid. The default implementation only checks
+     * for duplicate values if [allowDuplicates] is false, and can be used
+     * as an else branch in an override if no other errors are detected. */
+    open suspend fun validate(): List<T>? {
+        val isValid = allowDuplicates ||
+            _values.toSet().size < values.size
+        return if (isValid) values
+               else         null
+    }
 }
