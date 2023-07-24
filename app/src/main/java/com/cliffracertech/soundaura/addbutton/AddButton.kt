@@ -26,7 +26,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.collectAsState
-import com.cliffracertech.soundaura.dialog.NamingState
 import com.cliffracertech.soundaura.dialog.RenameDialog
 import com.cliffracertech.soundaura.dialog.ValidatedNamingState
 import com.cliffracertech.soundaura.model.ActivePresetState
@@ -41,6 +40,7 @@ import com.cliffracertech.soundaura.model.database.TrackNamesValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -183,13 +183,14 @@ class AddPlaylistButtonViewModel(
             ?: pathSegments.last().substringBeforeLast('.').replace('_', ' ')
 }
 
-class AddPresetDialogState(
-    private val validator: PresetNameValidator,
-    private val coroutineScope: CoroutineScope,
-    private val onNameValidated: suspend (validatedName: String) -> Unit,
-): NamingState by ValidatedNamingState(
-    validator, coroutineScope, onNameValidated)
-
+/**
+ * A [ViewModel] that contains state and callbacks for a button to add presets.
+ *
+ * The method [onClick] should be used as the onClick callback for the
+ * button being used to add presets. If the property [newPresetDialogState]
+ * is not null, then its [ValidatedNamingState] value should be used as
+ * the state parameter for a shown [RenameDialog].
+ */
 @HiltViewModel class AddPresetButtonViewModel(
     private val presetDao: PresetDao,
     private val messageHandler: MessageHandler,
@@ -207,29 +208,28 @@ class AddPresetDialogState(
 
     private val scope = coroutineScope ?: viewModelScope
 
-    var shownDialog by mutableStateOf<AddPresetDialogState?>(null)
+    var newPresetDialogState by mutableStateOf<ValidatedNamingState?>(null)
         private set
 
     private val activeTracksIsEmpty by playlistDao
         .getAtLeastOnePlaylistIsActive()
+        .map(Boolean::not)
         .collectAsState(true, scope)
 
     fun onClick() { when {
         activeTracksIsEmpty -> messageHandler.postMessage(
             StringResource(R.string.preset_cannot_be_empty_warning_message))
-        else -> shownDialog = AddPresetDialogState(
+        else -> newPresetDialogState = ValidatedNamingState(
             validator = PresetNameValidator(presetDao, scope),
             coroutineScope = scope,
             onNameValidated = { validatedName ->
+                newPresetDialogState = null
                 presetDao.savePreset(validatedName)
                 activePresetState.setName(validatedName)
-                onDialogDismissRequest()
+            }, onCancel = {
+                newPresetDialogState = null
             })
     }}
-
-    fun onDialogDismissRequest() {
-        shownDialog = null
-    }
 }
 
 /** An enum whose values describe the entities that can be added by the [AddButton]. */
@@ -273,10 +273,7 @@ enum class AddButtonTarget { Playlist, Preset }
         AddLocalFilesDialog(it, addPlaylistViewModel::onDialogDismissRequest)
     }
 
-    addPresetViewModel.shownDialog?.let {
-        RenameDialog(
-            title = stringResource(R.string.create_new_preset_dialog_title),
-            state = it,
-            onDismissRequest = addPresetViewModel::onDialogDismissRequest)
+    addPresetViewModel.newPresetDialogState?.let {
+        RenameDialog(it, title = stringResource(R.string.create_new_preset_dialog_title))
     }
 }

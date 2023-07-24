@@ -64,7 +64,8 @@ sealed class DialogType(
         onDismissRequest: () -> Unit,
         onNameValidated: suspend (String) -> Unit,
     ): DialogType(onDismissRequest),
-       NamingState by ValidatedNamingState(validator, coroutineScope, onNameValidated)
+       NamingState by ValidatedNamingState(
+           validator, coroutineScope, onNameValidated, onDismissRequest)
 
     /**
      * A dialog that presents choices regarding the unsaved changes
@@ -120,10 +121,7 @@ sealed class DialogType(
             onDismissRequest = shownDialog.onDismissRequest,
             onConfirm = shownDialog.onConfirmClick)
     is DialogType.RenamePreset ->
-        RenameDialog(
-            modifier = modifier,
-            state = shownDialog,
-            onDismissRequest = shownDialog.onDismissRequest)
+        RenameDialog(state = shownDialog, modifier = modifier)
     is DialogType.PresetUnsavedChangesWarning ->
         UnsavedPresetChangesWarningDialog(
             modifier = modifier,

@@ -124,9 +124,9 @@ sealed class AddLocalFilesDialogStep {
         private val coroutineScope: CoroutineScope,
         private val onFinish: (String) -> Unit,
     ): AddLocalFilesDialogStep(),
-       NamingState by ValidatedNamingState(validator, coroutineScope, onFinish)
+       NamingState by ValidatedNamingState(validator, coroutineScope, onFinish, onBack)
     {
-        override fun onBackClick() = onBack()
+        override fun onBackClick() = cancel()
         override fun onNextClick() = finalize()
     }
 

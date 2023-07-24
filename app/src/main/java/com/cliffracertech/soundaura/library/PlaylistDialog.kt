@@ -64,7 +64,8 @@ sealed class PlaylistDialog(
         onDismissRequest: () -> Unit,
         private val onNameValidated: suspend (String) -> Unit,
     ): PlaylistDialog(target, onDismissRequest),
-       NamingState by ValidatedNamingState(validator, coroutineScope, onNameValidated)
+       NamingState by ValidatedNamingState(
+           validator, coroutineScope, onNameValidated, onDismissRequest)
 
     /**
      * The 'playlist options' dialog for a playlist.
@@ -114,8 +115,7 @@ sealed class PlaylistDialog(
     is Rename -> RenameDialog(
         modifier = modifier,
         title = stringResource(R.string.default_rename_dialog_title),
-        state = dialogState,
-        onDismissRequest = dialogState.onDismissRequest)
+        state = dialogState)
     is PlaylistOptions -> PlaylistOptionsDialog(
         modifier = modifier,
         playlist = dialogState.target,

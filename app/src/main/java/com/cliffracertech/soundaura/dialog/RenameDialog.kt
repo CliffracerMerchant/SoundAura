@@ -48,6 +48,10 @@ interface NamingState {
      * desired change in the proposed name to [newName] */
     fun onNameChange(newName: String)
 
+    /** The method that will be invoked when the naming is canceled
+     * (e.g. through a cancel button click or a back button/gesture use). */
+    fun cancel()
+
     /** The method that will be invoked when naming is finished. */
     fun finalize()
 }
@@ -66,6 +70,7 @@ class ValidatedNamingState(
     private val validator: Validator<String>,
     private val coroutineScope: CoroutineScope,
     private val onNameValidated: suspend (String) -> Unit,
+    private val onCancel: () -> Unit
 ): NamingState {
     override val name by validator::value
     override val message by validator::message
@@ -73,6 +78,8 @@ class ValidatedNamingState(
     override fun onNameChange(newName: String) {
         validator.value = newName
     }
+
+    override fun cancel() = onCancel()
 
     /** Validate the current value of [name]. If the value is valid,
      * the constructor parameter onNameValidated will be called with
@@ -125,24 +132,22 @@ class ValidatedNamingState(
 
 /**
  * Show a dialog to rename an object. The 'Confirm' button will call
- * the [state]'s [NamingState.finalize] method.
+ * the [state]'s [NamingState.finalize] method, while the 'Cancel'
+ * button will call the [state]'s [NamingState.cancel] method.
  *
+ * @param state A [NamingState] instance
  * @param modifier The [Modifier] to use for the root layout
  * @param title The title of the dialog
- * @param state A [NamingState] instance
- * @param onDismissRequest The callback that will be invoked when the
- *     user attempts to dismiss the dialog
  */
 @Composable fun RenameDialog(
+    state: NamingState,
     modifier: Modifier = Modifier,
     title: String = stringResource(R.string.default_rename_dialog_title),
-    state: NamingState,
-    onDismissRequest: () -> Unit,
 ) = SoundAuraDialog(
     modifier = modifier.restrictWidthAccordingToSizeClass(),
     useDefaultWidth = false,
     title = title,
-    onDismissRequest = onDismissRequest,
+    onDismissRequest = state::cancel,
     confirmButtonEnabled = state.message !is Validator.Message.Error,
     onConfirm = state::finalize,
 ) {
