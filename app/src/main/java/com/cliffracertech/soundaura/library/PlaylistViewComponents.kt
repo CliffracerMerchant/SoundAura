@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -36,6 +35,7 @@ import androidx.compose.material.Switch
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -151,14 +152,17 @@ import java.io.File
     HorizontalDivider(Modifier.padding(horizontal = 8.dp))
     Row(modifier = modifier
             .height(56.dp)
-            .clickable(role = Role.Switch, onClick = onShuffleSwitchClick)
-            .padding(horizontal = 16.dp),
+            .clip(MaterialTheme.shapes.small)
+            .clickable(role = Role.Switch, onClick = onShuffleSwitchClick),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        Icon(Icons.Default.Shuffle, null,
+             Modifier.minTouchTargetSize().padding(12.dp))
         Text(stringResource(R.string.playlist_shuffle_switch_title),
-             style = MaterialTheme.typography.h6)
-        Spacer(modifier = Modifier.weight(1f))
-        Switch(shuffleEnabled, { onShuffleSwitchClick() })
+             style = MaterialTheme.typography.h6,
+             modifier = Modifier.weight(1f))
+        Switch(shuffleEnabled, { onShuffleSwitchClick() },
+               Modifier.padding(end = 8.dp))
     }
     HorizontalDivider(Modifier.padding(horizontal = 8.dp))
 
@@ -166,11 +170,14 @@ import java.io.File
         tracks.add(to.index, tracks.removeAt(from.index))
     })
     // The track list ordering must have its height restricted to
-    // prevent a crash due to nested infinite height layouts
-    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    // prevent a crash due to nested infinite height layouts. The
+    // dialog's title, shuffle switch, and button row should all
+    // have heights of 56.dp, for a total height of 56.dp * 3. An
+    // extra 56.dp padding added to it makes it 56.dp * 4 = 224.dp.
+    val maxHeight = LocalConfiguration.current.screenHeightDp.dp  - 224.dp
     LazyColumn(
         modifier = Modifier
-            .heightIn(max = screenHeight - 224.dp)
+            .heightIn(max = maxHeight)
             .reorderable(reorderableState),
         state = reorderableState.listState,
     ) {
