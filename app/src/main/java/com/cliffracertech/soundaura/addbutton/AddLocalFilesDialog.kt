@@ -162,7 +162,9 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
                 AnimatedValidatorMessage(step.message)
             }
         } is AddLocalFilesDialogStep.PlaylistOptions-> {
-            Column(backgroundModifier) {
+            // PlaylistOptions already has its own horizontal padding, so we avoid
+            // using backgroundModifier here to prevent doubling up on the padding
+            Column(Modifier.background(MaterialTheme.colors.surface)) {
                 PlaylistOptions(
                     shuffleEnabled = step.shuffleEnabled,
                     tracks = step.trackOrder,
