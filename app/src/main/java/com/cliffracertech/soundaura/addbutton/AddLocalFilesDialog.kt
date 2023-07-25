@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.dialog.AnimatedValidatorMessage
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
-import com.cliffracertech.soundaura.library.PlaylistOptions
+import com.cliffracertech.soundaura.library.PlaylistOptionsView
 import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
 import com.cliffracertech.soundaura.ui.HorizontalDivider
 import com.cliffracertech.soundaura.ui.SlideAnimatedContent
@@ -165,11 +165,12 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
             // PlaylistOptions already has its own horizontal padding, so we avoid
             // using backgroundModifier here to prevent doubling up on the padding
             Column(Modifier.background(MaterialTheme.colors.surface)) {
-                PlaylistOptions(
+                PlaylistOptionsView(
                     shuffleEnabled = step.shuffleEnabled,
-                    tracks = step.trackOrder,
-                    onShuffleSwitchClick = step::onShuffleSwitchClick,
-                    modifier = Modifier.fillMaxWidth())
+                    onShuffleSwitchClick = step.onShuffleSwitchClick,
+                    mutablePlaylist = step.mutablePlaylist,
+                    modifier = Modifier.fillMaxWidth(),
+                    allowTrackRemoval = false)
             }
         }
     }

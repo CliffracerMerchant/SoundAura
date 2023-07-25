@@ -176,12 +176,12 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
                 val tracks = playlistDao.getPlaylistTracks(playlist.name)
                 shownDialog = PlaylistDialog.PlaylistOptions(
                     target = playlist,
-                    playlistShuffleEnabled = shuffleEnabled,
-                    playlistTracks = tracks.toImmutableList(),
+                    shuffleEnabled = shuffleEnabled,
+                    playlistTracks = tracks,
                     onDismissRequest = { shownDialog = null },
-                    onConfirmClick = { newShuffle, newTracks ->
+                    onConfirm = { newShuffle, newTracks ->
                         shownDialog = null
-                        savePlaylistTracksAndShuffle(playlist.name, newShuffle, tracks, newTracks)
+                        savePlaylistShuffleAndTracks(playlist.name, newShuffle, tracks, newTracks)
                     })
             }
         }
@@ -199,7 +199,7 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
         }
     }
 
-    private fun savePlaylistTracksAndShuffle(
+    private fun savePlaylistShuffleAndTracks(
         playlistName: String,
         shuffle: Boolean,
         originalTracks: List<Uri>,

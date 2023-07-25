@@ -18,13 +18,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
@@ -34,8 +36,10 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Switch
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Undo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,6 +62,7 @@ import androidx.core.net.toUri
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.ui.HorizontalDivider
 import com.cliffracertech.soundaura.ui.MarqueeText
+import com.cliffracertech.soundaura.ui.SimpleIconButton
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import org.burnoutcrew.reorderable.ReorderableItem
@@ -134,30 +139,79 @@ import java.io.File
     Icon(minusIcon, contentDescription, Modifier.rotate(angle), iconTint)
 }
 
+/** A representation of a track in a mutable playlist. The Boolean
+ * parameter represents whether the track will be removed from the
+ * playlist once changes are applied. */
+typealias RemovablePlaylistTrack = Pair<Uri, Boolean>
+val RemovablePlaylistTrack.uri get() = first
+val RemovablePlaylistTrack.markedForRemoval get() = second
+
+/**
+ * MutablePlaylist represents the state of a list of reorderable [RemovablePlaylistTrack]s.
+ *
+ * The current list of tracks can be accessed via [tracks]. The method
+ * [moveTrack] can be used to to reorder tracks, while [toggleTrackRemoval]
+ * can be used  or to toggle the 'to be removed' state for each track. The
+ * method [applyChanges] will return a [List] of the [Uri]s in their new
+ * order and without the tracks that were marked for removal.
+ */
+class MutablePlaylist(trackUris: List<Uri>) {
+    private val mutableTracks = trackUris.map { it to false }.toMutableStateList()
+    private var trackCount = trackUris.size
+    val tracks get() = mutableTracks as List<RemovablePlaylistTrack>
+
+    fun moveTrack(fromIndex: Int, toIndex: Int) {
+        if (fromIndex in mutableTracks.indices && toIndex in mutableTracks.indices)
+            mutableTracks.add(toIndex, mutableTracks.removeAt(fromIndex))
+    }
+
+    /** Toggle the 'to be removed' state for the track at [index]. If [index]
+     * points to the last remaining track in [tracks], the operation will fail. */
+    fun toggleTrackRemoval(index: Int) {
+        if (index !in tracks.indices) return
+        val removing = !mutableTracks[index].markedForRemoval
+        if (removing && trackCount == 1) return
+
+        if (removing) trackCount--
+        else          trackCount++
+        val uri = mutableTracks[index].uri
+        mutableTracks[index] = uri to removing
+    }
+
+    fun applyChanges() = mutableTracks
+        .mapNotNull { if (it.markedForRemoval) null else it.uri }
+}
+
 /**
  * Show a toggle shuffle switch and a reorderable list of tracks for a playlist.
  *
  * @param shuffleEnabled Whether or not shuffle is currently enabled
- * @param tracks A [MutableList] of the playlist's tracks' [Uri]s
+ * @param mutablePlaylist A [MutablePlaylist] representing the playlist's contents
  * @param modifier The [Modifier] to use for the root layout
+ * @param allowTrackRemoval Whether delete icons for each track should be shown
  * @param onShuffleSwitchClick The callback that will be invoked when
  *     the switch indicating the current shuffleEnabled value is clicked
  */
-@Composable fun ColumnScope.PlaylistOptions(
+@Composable fun ColumnScope.PlaylistOptionsView(
     shuffleEnabled: Boolean,
-    tracks: MutableList<Uri>,
-    modifier: Modifier = Modifier,
     onShuffleSwitchClick: () -> Unit,
+    mutablePlaylist: MutablePlaylist,
+    modifier: Modifier = Modifier,
+    allowTrackRemoval: Boolean = true,
 ) {
     HorizontalDivider(Modifier.padding(horizontal = 8.dp))
     Row(modifier = modifier
             .height(56.dp)
             .clip(MaterialTheme.shapes.small)
-            .clickable(role = Role.Switch, onClick = onShuffleSwitchClick),
+            .clickable(
+                onClickLabel = stringResource(
+                    R.string.playlist_shuffle_switch_description),
+                role = Role.Switch,
+                onClick = onShuffleSwitchClick),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(Icons.Default.Shuffle, null,
-             Modifier.minTouchTargetSize().padding(12.dp))
+            Modifier.minTouchTargetSize().padding(12.dp))
         Text(stringResource(R.string.playlist_shuffle_switch_title),
              style = MaterialTheme.typography.h6,
              modifier = Modifier.weight(1f))
@@ -167,7 +221,7 @@ import java.io.File
     HorizontalDivider(Modifier.padding(horizontal = 8.dp))
 
     val reorderableState = rememberReorderableLazyListState(onMove = { from, to ->
-        tracks.add(to.index, tracks.removeAt(from.index))
+        mutablePlaylist.moveTrack(from.index, to.index)
     })
     // The track list ordering must have its height restricted to
     // prevent a crash due to nested infinite height layouts. The
@@ -181,16 +235,21 @@ import java.io.File
             .reorderable(reorderableState),
         state = reorderableState.listState,
     ) {
-        items(tracks, key = { it }) { uri ->
+        itemsIndexed(
+            items = mutablePlaylist.tracks,
+            key = { _, track -> track.uri }
+        ) { index, (uri, markedForRemoval) ->
             ReorderableItem(reorderableState, key = uri) {isDragging ->
                 val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp)
+                val color by animateColorAsState(
+                    if (markedForRemoval) MaterialTheme.colors.error
+                    else                  MaterialTheme.colors.surface)
                 val shape = MaterialTheme.shapes.small
 
                 Row(modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(elevation, shape)
-                        .background(MaterialTheme.colors.surface, shape)
-                        .padding(end = 16.dp),
+                    .fillMaxWidth()
+                    .shadow(elevation, shape)
+                    .background(color, shape),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Uri.lastPathSegment seems to not work with some Uris for some reason
@@ -205,7 +264,17 @@ import java.io.File
 
                     if (uri.path.orEmpty().length > lastPathSegment.length)
                         Text("…${File.separatorChar}")
-                    MarqueeText(lastPathSegment)
+                    MarqueeText(lastPathSegment, Modifier.weight(1f))
+
+                    if (!allowTrackRemoval)
+                        Spacer(Modifier.width(16.dp))
+                    else SimpleIconButton(
+                        icon = if (markedForRemoval) Icons.Default.Undo
+                               else                  Icons.Default.Delete,
+                        contentDescription = stringResource(
+                            R.string.playlist_track_delete_description),
+                        iconPadding = 14.dp,
+                        onClick = { mutablePlaylist.toggleTrackRemoval(index) })
                 }
             }
         }
@@ -213,15 +282,19 @@ import java.io.File
 }
 
 @Preview @Composable fun PlaylistOptionsPreview() = SoundAuraTheme {
-    var tempShuffleEnabled by remember { mutableStateOf(false) }
-    val tempTrackOrder: MutableList<Uri> = remember {
-        List(5) {
-            "directory/subdirectory/extra_super_duper_really_long_file_$it".toUri()
-        }.toMutableStateList()
+    var shuffleEnabled by remember { mutableStateOf(false) }
+    val mutablePlaylist = remember {
+        MutablePlaylist(List(5) {
+            // For some reason the Uri path segment methods don't work
+            // properly if the Uri was created directly from a string
+            // instead of from a File
+            File("file:/directory/subdirectory/extra_super_duper_really_long_file_$it").toUri()
+        })
     }
     Surface { Column(Modifier.padding(vertical = 16.dp)) {
-        PlaylistOptions(tempShuffleEnabled, tempTrackOrder) {
-            tempShuffleEnabled = !tempShuffleEnabled
-        }
+        PlaylistOptionsView(
+            shuffleEnabled = shuffleEnabled,
+            onShuffleSwitchClick = { shuffleEnabled = !shuffleEnabled },
+            mutablePlaylist = mutablePlaylist)
     }}
 }

@@ -26,12 +26,14 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.ButtonColors
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.ButtonElevation
+import androidx.compose.material.Icon
 import androidx.compose.material.LocalContentColor
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
@@ -39,6 +41,7 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextLayoutResult
@@ -143,7 +147,7 @@ fun Modifier.minTouchTargetSize() =
     val content = @Composable { maxWidth: Dp ->
         val scrollState = rememberScrollState()
         var shouldAnimate by remember { mutableStateOf(true) }
-        var animationDuration by remember { mutableStateOf(0) }
+        var animationDuration by remember { mutableIntStateOf(0) }
         if (animationDuration > 0)
             LaunchedEffect(shouldAnimate) {
                 scrollState.animateScrollTo(scrollState.maxValue,
@@ -163,13 +167,10 @@ fun Modifier.minTouchTargetSize() =
                 animationDuration = overflowAmount.coerceAtLeast(0) * 10
             }, style = style)
     }
-    if (maxWidth != null)
-        Box(modifier, Alignment.Center) {
-            content(maxWidth)
-        }
-    else BoxWithConstraints(modifier, Alignment.Center) {
-        content(this.maxWidth)
-    }
+    if (maxWidth == null)
+        BoxWithConstraints(modifier) { content(this.maxWidth) }
+    else Box(modifier) { content(maxWidth) }
+
 }
 
 /** The same as an [androidx.compose.material.TextButton], except that the
@@ -190,9 +191,9 @@ fun Modifier.minTouchTargetSize() =
     elevation, shape, border, colors, contentPadding
 ) { Text(text) }
 
-/** The same as an [androidx.compose.material.TextButton], except that the
- * inner contents are set to be a [Text] composable that displays the string
- * pointed to by [textResId]. */
+/** The same as an [androidx.compose.material.TextButton], except that
+ * the inner contents are set to be a [Text] composable that displays
+ * the string pointed to by [textResId]. */
 @Composable fun TextButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
@@ -208,3 +209,22 @@ fun Modifier.minTouchTargetSize() =
     modifier, enabled, interactionSource, elevation,
     shape, border, colors, contentPadding,
     stringResource(textResId), onClick)
+
+/** The same as an [androidx.compose.material.IconButton], except
+ * tht the inner contents are set to be an [Icon] composable that
+ * uses [icon], [contentDescription], and [tint]. */
+@Composable fun SimpleIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    tint: Color = LocalContentColor.current,
+    iconPadding: Dp = 10.dp,
+    onClick: () -> Unit,
+) = androidx.compose.material.IconButton(
+    onClick, modifier, enabled, interactionSource,
+) {
+    Icon(icon, contentDescription,
+         Modifier.padding(iconPadding), tint)
+}

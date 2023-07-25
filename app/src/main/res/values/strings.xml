@@ -44,7 +44,9 @@
          playlist's name so that a marquee text can be used instead -->
     <string name="playlist_options_dialog_title">\u0020options</string>
     <string name="playlist_shuffle_switch_title">Shuffle</string>
+    <string name="playlist_shuffle_switch_description">Toggle shuffle on/off</string>
     <string name="playlist_track_handle_description">Reorder track %1$s</string>
+    <string name="playlist_track_delete_description">Remove %1$s</string>
 
     <string name="add_local_files_button_description">Add tracks or playlists from local files</string>
     <string name="add_local_files_dialog_title">Confirm added file(s)</string>

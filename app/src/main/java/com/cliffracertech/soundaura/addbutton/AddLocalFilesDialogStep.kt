@@ -7,9 +7,9 @@ import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.toMutableStateList
 import com.cliffracertech.soundaura.dialog.NamingState
 import com.cliffracertech.soundaura.dialog.ValidatedNamingState
+import com.cliffracertech.soundaura.library.MutablePlaylist
 import com.cliffracertech.soundaura.model.database.PlaylistNameValidator
 import com.cliffracertech.soundaura.model.database.TrackNamesValidator
 import kotlinx.coroutines.CoroutineScope
@@ -150,7 +150,7 @@ sealed class AddLocalFilesDialogStep {
 
         fun onShuffleSwitchClick() { shuffleEnabled = !shuffleEnabled }
 
-        val trackOrder = tracks.toMutableStateList()
+        val mutablePlaylist = MutablePlaylist(tracks)
 
         override val isAheadOfPreviousStep = true
         override fun onBackClick() = onBack()
