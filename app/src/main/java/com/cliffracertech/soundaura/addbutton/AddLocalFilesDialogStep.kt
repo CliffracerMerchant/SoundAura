@@ -29,11 +29,11 @@ sealed class AddLocalFilesDialogStep {
 
     /** The callback that should be invoked when the
      * dialog step's back or cancel button is clicked */
-    open fun onBackClick() {}
+    open val onBackClick = {}
 
     /** The callback that should be invoked when the
      * dialog step's next or finish button is clicked */
-    open fun onNextClick() {}
+    open val onNextClick = {}
 
     /**
      * Files are being chosen via the system file picker.
@@ -48,60 +48,52 @@ sealed class AddLocalFilesDialogStep {
      * A question about whether to add multiple files as separate tracks
      * or as files within a single playlist is being presented.
      *
-     * @param onBack The callback invoked when the dialog's cancel button is clicked
+     * @param onBackClick The callback invoked when the dialog's back button is clicked
      * @param onAddIndividuallyClick The callback that is invoked when the
      *     dialog's option to add the files as individual tracks is chosen
      * @param onAddAsPlaylistClick The callback that is invoked when dialog's
      *     option to add the files as the contents of a single playlist is chosen
      */
     class AddIndividuallyOrAsPlaylistQuery(
-        private val onBack: () -> Unit,
+        override val onBackClick: () -> Unit,
         val onAddIndividuallyClick: () -> Unit,
         val onAddAsPlaylistClick: () -> Unit,
-    ): AddLocalFilesDialogStep() {
-        override fun onBackClick() = onBack()
-    }
+    ): AddLocalFilesDialogStep()
 
     /**
      * Text fields for each track are being presented to
      * the user to allow them to name each added track.
      *
-     * @param onBack The callback that is invoked when the dialog's back button is clicked
      * @param validator The [TrackNamesValidator] instance that will be used
      *     to validate the track names
      * @param coroutineScope The [CoroutineScope] that will be used for background work
+     * @param onBackClick The callback that is invoked when the dialog's back button is clicked
      * @param onFinish The callback that will be invoked when the dialog's
      *     finish button is clicked and none of the track names are invalid
      */
     class NameTracks(
-        private val onBack: () -> Unit,
         private val validator: TrackNamesValidator,
         private val coroutineScope: CoroutineScope,
+        override val onBackClick: () -> Unit,
         private val onFinish: (List<String>) -> Unit,
     ): AddLocalFilesDialogStep() {
+        override val isAheadOfPreviousStep = true
         private var confirmJob: Job? = null
 
         val names by validator::values
         val errors by validator::errors
         val message by validator::message
 
-        fun onNameChange(index: Int, newName: String) {
-            validator.setValue(index, newName)
-        }
+        val onNameChange = validator::setValue
 
-        override fun onBackClick() = onBack()
-
-        override fun onNextClick() {
-            if (confirmJob != null) return
-            confirmJob = coroutineScope.launch {
+        override val onNextClick = {
+            confirmJob = confirmJob ?: coroutineScope.launch {
                 val newTrackNames = validator.validate()
                 if (newTrackNames != null)
                     onFinish(newTrackNames)
                 confirmJob = null
             }
         }
-
-        override val isAheadOfPreviousStep = true
     }
 
     /**
@@ -109,52 +101,54 @@ sealed class AddLocalFilesDialogStep {
      *
      * @param isAheadOfPreviousStep Whether the step was reached by
      *     proceeding from from a previous step (as opposed to going
-     *     backwards from a successive step
-     * @param onBack The callback that will be invoked when the dialog's back button is clicked
+     *     backwards from a successive step)
      * @param validator The [PlaylistNameValidator] instance that will be
      *     used to validate the playlist name
      * @param coroutineScope The [CoroutineScope] that will be used for background work
-     * @param onFinish The callback that will be invoked when the dialog's
-     *     finish button is clicked and the name is valid
+     * @param onBackClick The callback that will be invoked when the dialog's back button is clicked
+     * @param onNameValidated The callback that will be invoked when the
+     *     dialog's finish button is clicked and the name is valid
      */
     class NamePlaylist(
         override val isAheadOfPreviousStep: Boolean,
-        private val onBack: () -> Unit,
-        private val validator: PlaylistNameValidator,
-        private val coroutineScope: CoroutineScope,
-        private val onFinish: (String) -> Unit,
-    ): AddLocalFilesDialogStep(),
-       NamingState by ValidatedNamingState(validator, coroutineScope, onFinish, onBack)
-    {
-        override fun onBackClick() = cancel()
-        override fun onNextClick() = finalize()
-    }
+        validator: PlaylistNameValidator,
+        coroutineScope: CoroutineScope,
+        override val onBackClick: () -> Unit,
+        onNameValidated: (String) -> Unit,
+    ): AddLocalFilesDialogStep(), NamingState by ValidatedNamingState(
+            validator, coroutineScope, onNameValidated, onBackClick)
+       {
+           override val onNextClick = ::finalize
+       }
 
     /**
-     * A shuffle toggle switch and a reorder track widget are being
-     * presented to allow these playlist settings to be changed.
+     * A shuffle toggle switch and a reorder/remove track widget are being
+     * presented to allow these playlist settings to be changed. The provided
+     * [mutablePlaylist] can be used in a [com.cliffracertech.soundaura.library.PlaylistOptionsView].
+     * Clicks on the back and finish buttons of the displayed dialog should be
+     * connected to [onBackClick] and [onFinishClick] respectively.
      *
-     * @param onBack The callback that will be invoked when the dialog's back button is clicked
      * @param tracks The [List] of [Uri]s that represent the new playlist's tracks
+     * @param onBackClick The callback that will be invoked when the dialog's back button is clicked
      * @param onFinish The callback that will be invoked when the dialog's
      *     finish button is clicked. The current shuffle and track ordering
      *     as passed as arguments.
      */
     class PlaylistOptions(
-        private val onBack: () -> Unit,
         tracks: List<Uri>,
-        val onFinish: (shuffleEnabled: Boolean, newTrackOrder: List<Uri>) -> Unit,
+        override val onBackClick: () -> Unit,
+        private val onFinish: (shuffleEnabled: Boolean, newTrackList: List<Uri>) -> Unit,
     ): AddLocalFilesDialogStep() {
         var shuffleEnabled by mutableStateOf(false)
             private set
 
-        fun onShuffleSwitchClick() { shuffleEnabled = !shuffleEnabled }
+        val onShuffleSwitchClick = { shuffleEnabled = !shuffleEnabled }
 
         val mutablePlaylist = MutablePlaylist(tracks)
 
         override val isAheadOfPreviousStep = true
-        override fun onBackClick() = onBack()
-        override fun onNextClick() = onFinish(shuffleEnabled, trackOrder)
+
+        val onFinishClick = { onFinish(shuffleEnabled, mutablePlaylist.applyChanges()) }
     }
 
     val isSelectingFiles get() = this is SelectingFiles
@@ -162,4 +156,10 @@ sealed class AddLocalFilesDialogStep {
     val isNameTracks get() = this is NameTracks
     val isNamePlaylist get() = this is NamePlaylist
     val isPlaylistOptions get() = this is PlaylistOptions
+
+    val nextButtonIsEnabled get() = when (this) {
+        is NameTracks ->   message?.isError != true
+        is NamePlaylist -> message?.isError != true
+        else ->            true
+    }
 }

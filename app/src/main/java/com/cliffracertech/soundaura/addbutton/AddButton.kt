@@ -98,14 +98,14 @@ class AddPlaylistButtonViewModel(
 
     private fun showAddIndividuallyOrAsPlaylistQueryStep(chosenUris: List<Uri>) {
         dialogStep = AddLocalFilesDialogStep.AddIndividuallyOrAsPlaylistQuery(
-            onBack = ::onDialogDismissRequest,
+            onBackClick = ::onDialogDismissRequest,
             onAddIndividuallyClick = { showNameTracksStep(chosenUris) },
             onAddAsPlaylistClick = { showNamePlaylistStep(chosenUris, goingForward = true) })
     }
 
     private fun showNameTracksStep(trackUris: List<Uri>) {
         dialogStep = AddLocalFilesDialogStep.NameTracks(
-            onBack = {
+            onBackClick = {
                 // if uris.size == 1, then the question of whether to add as
                 // a track or as a playlist should have been skipped. In this
                 // case, the dialog will be dismissed instead of going back.
@@ -123,11 +123,11 @@ class AddPlaylistButtonViewModel(
     private fun showNamePlaylistStep(tracks: List<Uri>, goingForward: Boolean) {
         dialogStep = AddLocalFilesDialogStep.NamePlaylist(
             isAheadOfPreviousStep = goingForward,
-            onBack = { showAddIndividuallyOrAsPlaylistQueryStep(tracks) },
+            onBackClick = { showAddIndividuallyOrAsPlaylistQueryStep(tracks) },
             validator = PlaylistNameValidator(
                 playlistDao, scope, "${tracks.first().getDisplayName(context)} playlist"),
             coroutineScope = scope,
-            onFinish = { validatedPlaylistName ->
+            onNameValidated = { validatedPlaylistName ->
                 showPlaylistOptionsStep(validatedPlaylistName, tracks)
             })
     }
@@ -137,7 +137,7 @@ class AddPlaylistButtonViewModel(
         tracks: List<Uri>
     ) {
         dialogStep = AddLocalFilesDialogStep.PlaylistOptions(
-            onBack = { showNamePlaylistStep(tracks, goingForward = false) },
+            onBackClick = { showNamePlaylistStep(tracks, goingForward = false) },
             tracks = tracks,
             onFinish = { shuffle, newTrackOrder ->
                 addPlaylist(validatedPlaylistName, shuffle, newTrackOrder)

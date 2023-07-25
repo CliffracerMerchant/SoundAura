@@ -42,7 +42,7 @@ import com.cliffracertech.soundaura.ui.bottomEndShape
 import com.cliffracertech.soundaura.ui.bottomStartShape
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 
-@Composable private fun AddLocalFilesDialogTitle(
+@Composable private fun addLocalFilesDialogTitle(
     step: AddLocalFilesDialogStep
 ) = when (step) {
     is AddLocalFilesDialogStep.AddIndividuallyOrAsPlaylistQuery ->
@@ -66,7 +66,7 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
                 modifier = Modifier.minTouchTargetSize().weight(1f),
                 shape = MaterialTheme.shapes.medium.bottomStartShape(),
                 textResId = R.string.cancel,
-                onClick = step::onBackClick)
+                onClick = step.onBackClick)
 
             VerticalDivider()
             TextButton(
@@ -89,22 +89,17 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
                 shape = MaterialTheme.shapes.medium.bottomStartShape(),
                 textResId = if (namingSingleTrack) R.string.cancel
                             else                   R.string.back,
-                onClick = step::onBackClick)
+                onClick = step.onBackClick)
 
             VerticalDivider()
             TextButton(
                 modifier = Modifier.minTouchTargetSize().weight(1f),
-                enabled = when (step) {
-                    is AddLocalFilesDialogStep.NameTracks ->
-                        step.message?.isError != true
-                    is AddLocalFilesDialogStep.NamePlaylist ->
-                        step.message?.isError != true
-                    else -> true
-                }, shape = MaterialTheme.shapes.medium.bottomStartShape(),
+                enabled = step.nextButtonIsEnabled,
+                shape = MaterialTheme.shapes.medium.bottomStartShape(),
                 textResId = if (step.isPlaylistOptions || step.isNameTracks)
                                 R.string.finish
                             else R.string.next,
-                onClick = step::onNextClick)
+                onClick = step.onNextClick)
         }
     }
 }
@@ -217,7 +212,7 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
     } else SoundAuraDialog(
         modifier = Modifier.restrictWidthAccordingToSizeClass(),
         useDefaultWidth = false,
-        title = AddLocalFilesDialogTitle(step),
+        title = addLocalFilesDialogTitle(step),
         onDismissRequest = onDismissRequest,
         buttons = { AddLocalFilesDialogButtons(step) },
         content = { AddLocalFilesDialogContent(step) })
