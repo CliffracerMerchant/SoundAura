@@ -8,7 +8,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.with
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -137,7 +138,7 @@ interface PlaylistViewCallback {
             })
 
         val volumeSliderInteractionSource = remember { MutableInteractionSource() }
-        var volumeSliderValue by remember(playlist.volume) { mutableStateOf(playlist.volume) }
+        var volumeSliderValue by remember(playlist.volume) { mutableFloatStateOf(playlist.volume) }
         val volumeSliderIsBeingPressed by volumeSliderInteractionSource.collectIsPressedAsState()
         val volumeSliderIsBeingDragged by volumeSliderInteractionSource.collectIsDraggedAsState()
 
@@ -239,7 +240,7 @@ interface PlaylistViewCallback {
 ) = AnimatedContent(
     targetState = errorMessage != null,
     modifier = modifier,
-    transitionSpec = { fadeIn() with fadeOut() },
+    transitionSpec = { fadeIn() togetherWith fadeOut() },
 ) { hasError ->
     if (hasError) {
         // 0.5dp start padding is required to make the text

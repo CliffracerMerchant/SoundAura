@@ -30,8 +30,6 @@ package com.cliffracertech.soundaura.library
  * limitations under the License.
  */
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.TweenSpec
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.MutatorMutex
@@ -40,12 +38,8 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.DragScope
 import androidx.compose.foundation.gestures.DraggableState
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.awaitHorizontalTouchSlopOrCancellation
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.forEachGesture
-import androidx.compose.foundation.gestures.horizontalDrag
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.Interaction
@@ -73,6 +67,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -87,12 +82,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.input.pointer.AwaitPointerEventScope
-import androidx.compose.ui.input.pointer.PointerId
-import androidx.compose.ui.input.pointer.PointerInputChange
-import androidx.compose.ui.input.pointer.consumePositionChange
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.disabled
@@ -104,9 +94,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.ColorUtils
 import com.google.android.material.math.MathUtils.lerp
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 /**
@@ -306,8 +294,9 @@ private fun SliderThumb(
     onValueChangeFinished: (() -> Unit)? = null,
 ) {
     fun scaleToOffset(userValue: Float) = scale(userValue, valueRange, pixelRange)
-    val rawOffset = remember { mutableStateOf(scaleToOffset(value)) }
-    CorrectValueSideEffect(::scaleToOffset, valueRange, rawOffset, value)
+    val rawOffsetState = remember { mutableFloatStateOf(scaleToOffset(value)) }
+    var rawOffset by rawOffsetState
+    CorrectValueSideEffect(::scaleToOffset, valueRange, rawOffsetState, value)
 
     fun scaleToUserValue(offset: Float) =
         scale(pixelRange.start, pixelRange.endInclusive, offset,
@@ -317,8 +306,8 @@ private fun SliderThumb(
     val onValueChangeState = rememberUpdatedState(onValueChange)
     val draggableState = remember(pixelRange, valueRange) {
         SliderDraggableState {
-            rawOffset.value = (rawOffset.value + it).coerceIn(pixelRange)
-            onValueChangeState.value.invoke(scaleToUserValue(rawOffset.value))
+            rawOffset = (rawOffset + it).coerceIn(pixelRange)
+            onValueChangeState.value.invoke(scaleToUserValue(rawOffset))
         }
     }
     val gestureEndAction = rememberUpdatedState { velocity: Float ->
@@ -419,35 +408,6 @@ private fun Track(
     }
 }
 
-private fun snapValueToTick(
-    current: Float,
-    tickFractions: List<Float>,
-    minPx: Float,
-    maxPx: Float
-): Float {
-    // target is a closest anchor to the `current`, if exists
-    return tickFractions
-        .minByOrNull { abs(lerp(minPx, maxPx, it) - current) }
-        ?.run { lerp(minPx, maxPx, this) }
-        ?: current
-}
-
-private suspend fun AwaitPointerEventScope.awaitSlop(
-    id: PointerId
-): Pair<PointerInputChange, Float>? {
-    var initialDelta = 0f
-    val postTouchSlop = { pointerInput: PointerInputChange, offset: Float ->
-        pointerInput.consumePositionChange()
-        initialDelta = offset
-    }
-    val afterSlopResult = awaitHorizontalTouchSlopOrCancellation(id, postTouchSlop)
-    return if (afterSlopResult != null) afterSlopResult to initialDelta else null
-}
-
-private fun stepsToTickFractions(steps: Int): List<Float> {
-    return if (steps == 0) emptyList() else List(steps + 2) { it.toFloat() / (steps + 1) }
-}
-
 // Scale x1 from a1..b1 range to a2..b2 range
 private fun scale(a1: Float, b1: Float, x1: Float, a2: Float, b2: Float) =
     lerp(a2, b2, calcFraction(a1, b1, x1))
@@ -458,10 +418,6 @@ private fun scale(
     range1: ClosedFloatingPointRange<Float>,
     range2: ClosedFloatingPointRange<Float>
 ) = scale(range1.start, range1.endInclusive, x1, range2.start, range2.endInclusive)
-
-// Scale x.start, x.endInclusive from a1..b1 range to a2..b2 range
-private fun scale(a1: Float, b1: Float, x: ClosedFloatingPointRange<Float>, a2: Float, b2: Float) =
-    scale(a1, b1, x.start, a2, b2)..scale(a1, b1, x.endInclusive, a2, b2)
 
 // Calculate the 0..1 fraction that `pos` value represents between `a` and `b`
 private fun calcFraction(a: Float, b: Float, pos: Float) =
@@ -530,150 +486,6 @@ private fun Modifier.sliderPressModifier(
             interactionSource.emit(finishInteraction)
         })
     }
-
-private suspend fun animateToTarget(
-    draggableState: DraggableState,
-    current: Float,
-    target: Float,
-    velocity: Float
-) {
-    draggableState.drag {
-        var latestValue = current
-        Animatable(initialValue = current).animateTo(target, SliderToTickAnimation, velocity) {
-            dragBy(this.value - latestValue)
-            latestValue = this.value
-        }
-    }
-}
-
-private fun Modifier.rangeSliderPressDragModifier(
-    startInteractionSource: MutableInteractionSource,
-    endInteractionSource: MutableInteractionSource,
-    rawOffsetStart: State<Float>,
-    rawOffsetEnd: State<Float>,
-    enabled: Boolean,
-    isRtl: Boolean,
-    maxPx: Float,
-    valueRange: ClosedFloatingPointRange<Float>,
-    gestureEndAction: State<(Boolean) -> Unit>,
-    onDrag: (Boolean, Float) -> Unit,
-): Modifier =
-    if (enabled) {
-        pointerInput(startInteractionSource, endInteractionSource, maxPx, isRtl, valueRange) {
-            val rangeSliderLogic = RangeSliderLogic(
-                startInteractionSource,
-                endInteractionSource,
-                rawOffsetStart,
-                rawOffsetEnd,
-                onDrag
-            )
-            coroutineScope {
-                forEachGesture {
-                    awaitPointerEventScope {
-                        var thumbCaptured = false
-                        // If we are dragging the start thumb, false if we are dragging end thumb.
-                        var draggingStart = true
-                        val pointerEvent = awaitFirstDown(requireUnconsumed = false)
-                        val interaction = PressInteraction.Press(pointerEvent.position)
-                        val slop = viewConfiguration.touchSlop
-                        val posX =
-                            if (isRtl) maxPx - pointerEvent.position.x else pointerEvent.position.x
-
-                        if (abs(rawOffsetEnd.value - posX) > slop ||
-                            abs(rawOffsetStart.value - posX) > slop
-                        ) {
-                            // We have enough distance we can start dragging right away
-                            draggingStart = rangeSliderLogic.shouldCaptureStartThumb(posX)
-                            rangeSliderLogic.captureThumb(
-                                draggingStart,
-                                posX,
-                                interaction,
-                                this@coroutineScope
-                            )
-                            thumbCaptured = true
-                        }
-
-                        awaitSlop(pointerEvent.id)?.let {
-                            if (thumbCaptured) {
-                                onDrag(draggingStart, if (isRtl) -it.second else it.second)
-                            } else {
-                                // Determine which thumb to drag based on the direction the user
-                                // is dragging
-                                val dir = it.second
-                                draggingStart = if (isRtl) dir >= 0f else dir < 0f
-                            }
-                        }
-
-                        if (!thumbCaptured) {
-                            rangeSliderLogic.captureThumb(
-                                draggingStart,
-                                posX,
-                                interaction,
-                                this@coroutineScope
-                            )
-                        }
-
-                        val finishInteraction = try {
-                            val success = horizontalDrag(pointerId = pointerEvent.id) {
-                                val deltaX = it.positionChange().x
-                                onDrag(draggingStart, if (isRtl) -deltaX else deltaX)
-                            }
-                            if (success) {
-                                PressInteraction.Release(interaction)
-                            } else {
-                                PressInteraction.Cancel(interaction)
-                            }
-                        } catch (e: CancellationException) {
-                            PressInteraction.Cancel(interaction)
-                        }
-
-                        gestureEndAction.value.invoke(draggingStart)
-                        launch {
-                            rangeSliderLogic
-                                .activeInteraction(draggingStart)
-                                .emit(finishInteraction)
-                        }
-                    }
-                }
-            }
-        }
-    } else {
-        this
-    }
-
-private class RangeSliderLogic(
-    val startInteractionSource: MutableInteractionSource,
-    val endInteractionSource: MutableInteractionSource,
-    val rawOffsetStart: State<Float>,
-    val rawOffsetEnd: State<Float>,
-    val onDrag: (Boolean, Float) -> Unit,
-) {
-    fun activeInteraction(draggingStart: Boolean): MutableInteractionSource =
-        if (draggingStart) startInteractionSource else endInteractionSource
-
-    fun shouldCaptureStartThumb(eventX: Float): Boolean {
-        val diffStart = abs(rawOffsetStart.value - eventX)
-        val diffEnd = abs(rawOffsetEnd.value - eventX)
-        return if (diffEnd == diffStart)
-            rawOffsetStart.value > eventX
-        else diffStart < diffEnd
-    }
-
-    fun captureThumb(
-        draggingStart: Boolean,
-        posX: Float,
-        interaction: Interaction,
-        scope: CoroutineScope
-    ) {
-        onDrag(
-            draggingStart,
-            posX - if (draggingStart) rawOffsetStart.value else rawOffsetEnd.value
-        )
-        scope.launch {
-            activeInteraction(draggingStart).emit(interaction)
-        }
-    }
-}
 
 @Immutable
 private class DefaultGradientSliderColors(
@@ -748,8 +560,6 @@ private val DefaultSliderConstraints =
     Modifier
         .widthIn(min = SliderMinWidth)
         .heightIn(max = SliderHeight)
-
-private val SliderToTickAnimation = TweenSpec<Float>(durationMillis = 100)
 
 private class SliderDraggableState(
     val onDelta: (Float) -> Unit

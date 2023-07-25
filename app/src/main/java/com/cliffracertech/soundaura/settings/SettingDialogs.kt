@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -279,7 +280,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
     modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit
 ) {
-    var currentPageIndex by rememberSaveable { mutableStateOf(0) }
+    var currentPageIndex by rememberSaveable { mutableIntStateOf(0) }
     MultiStepDialog(
         modifier = modifier.restrictWidthAccordingToSizeClass(),
         useDefaultWidth = false,

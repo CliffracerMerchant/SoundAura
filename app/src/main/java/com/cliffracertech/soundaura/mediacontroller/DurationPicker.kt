@@ -28,6 +28,8 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -60,8 +62,8 @@ import java.time.Duration
     onAmountChangeRequest: (Int) -> Unit,
 ) {
     val density = LocalDensity.current
-    var dragPx by remember { mutableStateOf(0f) }
-    var lastRequestedValue by remember { mutableStateOf(currentValue) }
+    var dragPx by remember { mutableFloatStateOf(0f) }
+    var lastRequestedValue by remember { mutableIntStateOf(currentValue) }
     val pxThreshold = remember { with (density) { 20.dp.roundToPx() }}
 
     Box(modifier

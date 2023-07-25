@@ -17,7 +17,7 @@ import androidx.compose.material.ProvideTextStyle
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -75,7 +75,7 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
     pages: @Composable AnimatedVisibilityScope.(Modifier, Int) -> Unit
 ) {
     require(currentPageIndex in 0 until numPages)
-    var previousPageIndex by rememberSaveable { mutableStateOf(currentPageIndex) }
+    var previousPageIndex by rememberSaveable { mutableIntStateOf(currentPageIndex) }
 
     SoundAuraDialog(
         modifier = modifier,
