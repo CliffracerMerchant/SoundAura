@@ -223,7 +223,7 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
                 playlistDao.setPlaylistShuffle(playlistName, shuffle)
             } else {
                 val removedUris = playlistDao.setPlaylistShuffleAndContents(
-                    playlistName, shuffle, validatedTrackList)
+                    playlistName, shuffle, originalTracks, validatedTrackList)
                 permissionHandler.releasePermissions(removedUris)
             }
         }
