@@ -12,9 +12,9 @@ import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.dialog.NamingState
 import com.cliffracertech.soundaura.dialog.ValidatedNamingState
 import com.cliffracertech.soundaura.library.MutablePlaylist
+import com.cliffracertech.soundaura.model.Validator
 import com.cliffracertech.soundaura.model.database.PlaylistNameValidator
 import com.cliffracertech.soundaura.model.database.TrackNamesValidator
-import com.cliffracertech.soundaura.model.Validator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -124,7 +124,9 @@ sealed class AddLocalFilesDialogStep {
 
         override val titleResId = R.string.add_local_files_as_tracks_dialog_title
         override val buttons = listOf(
-            ButtonInfo(R.string.back, onClick = onBackClick),
+            if (validator.values.size == 1)
+                ButtonInfo(R.string.cancel, onClick = onDismissRequest)
+            else ButtonInfo(R.string.back, onClick = onBackClick),
             ButtonInfo(
                 textResId = R.string.finish,
                 isEnabledProvider = { message?.isError != true},
