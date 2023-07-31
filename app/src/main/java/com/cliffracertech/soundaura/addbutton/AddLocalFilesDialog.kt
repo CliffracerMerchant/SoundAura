@@ -29,7 +29,6 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.dialog.AnimatedValidatorMessage
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
 import com.cliffracertech.soundaura.library.PlaylistOptionsView
@@ -37,142 +36,36 @@ import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
 import com.cliffracertech.soundaura.ui.HorizontalDivider
 import com.cliffracertech.soundaura.ui.SlideAnimatedContent
 import com.cliffracertech.soundaura.ui.TextButton
-import com.cliffracertech.soundaura.ui.VerticalDivider
 import com.cliffracertech.soundaura.ui.bottomEndShape
+import com.cliffracertech.soundaura.ui.bottomShape
 import com.cliffracertech.soundaura.ui.bottomStartShape
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
-
-@Composable private fun addLocalFilesDialogTitle(
-    step: AddLocalFilesDialogStep
-) = when (step) {
-    is AddLocalFilesDialogStep.AddIndividuallyOrAsPlaylistQuery ->
-        stringResource(R.string.add_local_files_dialog_title)
-    is AddLocalFilesDialogStep.NameTracks ->
-        stringResource(R.string.add_local_files_as_tracks_dialog_title)
-    is AddLocalFilesDialogStep.NamePlaylist ->
-        stringResource(R.string.add_local_files_as_playlist_dialog_title)
-    is AddLocalFilesDialogStep.PlaylistOptions ->
-        stringResource(R.string.configure_playlist_dialog_title)
-    is AddLocalFilesDialogStep.SelectingFiles -> ""
-}
 
 @Composable private fun ColumnScope.AddLocalFilesDialogButtons(
     step: AddLocalFilesDialogStep
 ) {
     HorizontalDivider(Modifier.padding(top = 12.dp))
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
-        if (step is AddLocalFilesDialogStep.AddIndividuallyOrAsPlaylistQuery) {
+        step.buttons.forEachIndexed { index, button ->
             TextButton(
                 modifier = Modifier.minTouchTargetSize().weight(1f),
-                shape = MaterialTheme.shapes.medium.bottomStartShape(),
-                textResId = R.string.cancel,
-                onClick = step.onBackClick)
-
-            VerticalDivider()
-            TextButton(
-                modifier = Modifier.minTouchTargetSize().weight(1f),
-                shape = RectangleShape,
-                textResId = R.string.add_local_files_individually_option,
-                onClick = step.onAddIndividuallyClick)
-
-            VerticalDivider()
-            TextButton(
-                modifier = Modifier.minTouchTargetSize().weight(1f),
-                shape = MaterialTheme.shapes.medium.bottomEndShape(),
-                textResId = R.string.add_local_files_as_playlist_option,
-                onClick = step.onAddAsPlaylistClick)
-        } else {
-            val namingSingleTrack = step is AddLocalFilesDialogStep.NameTracks &&
-                                    step.names.size == 1
-            TextButton(
-                modifier = Modifier.minTouchTargetSize().weight(1f),
-                shape = MaterialTheme.shapes.medium.bottomStartShape(),
-                textResId = if (namingSingleTrack) R.string.cancel
-                            else                   R.string.back,
-                onClick = step.onBackClick)
-
-            VerticalDivider()
-            TextButton(
-                modifier = Modifier.minTouchTargetSize().weight(1f),
-                enabled = step.nextButtonIsEnabled,
-                shape = MaterialTheme.shapes.medium.bottomStartShape(),
-                textResId = if (step.isPlaylistOptions || step.isNameTracks)
-                                R.string.finish
-                            else R.string.next,
-                onClick = step.onNextClick)
-        }
-    }
-}
-
-@Composable private fun AddLocalFilesDialogContent(
-    step: AddLocalFilesDialogStep
-) = SlideAnimatedContent(
-    targetState = step,
-    leftToRight = step.isAheadOfPreviousStep,
-) { step ->
-    // This background modifiers gives a border to the content to
-    // improve the appearance of the SlideAnimatedContent animations
-    val backgroundModifier = Modifier
-        .background(MaterialTheme.colors.surface)
-        .padding(horizontal = 16.dp)
-    when (step) {
-        is AddLocalFilesDialogStep.SelectingFiles -> {}
-        is AddLocalFilesDialogStep.AddIndividuallyOrAsPlaylistQuery -> {
-            Box(modifier = backgroundModifier.padding(vertical = 16.dp),
-                // The vertical padding is set to match the TextField decoration box's
-                // vertical padding. This reduces the amount that the dialog box height
-                // has to be animated when switching between steps of the dialog.
-                contentAlignment = Alignment.CenterStart
-            ) {
-                Text(stringResource(R.string.add_local_files_as_playlist_or_tracks_question))
-            }
-        } is AddLocalFilesDialogStep.NameTracks -> {
-            // We have to restrict the LazyColumn's height to prevent
-            // a crash due to nested infinite height scrollables
-            val maxHeight = LocalConfiguration.current.screenHeightDp.dp
-            Column(backgroundModifier.heightIn(max = maxHeight)) {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(step.names.size) { index ->
-                        TextField(
-                            value = step.names[index],
-                            onValueChange = { step.onNameChange(index, it) },
-                            textStyle = MaterialTheme.typography.body1,
-                            singleLine = true,
-                            isError = step.errors[index],
-                            modifier = Modifier.fillMaxWidth())
-                    }
-                }
-                AnimatedValidatorMessage(step.message)
-            }
-
-        } is AddLocalFilesDialogStep.NamePlaylist -> {
-            Column(backgroundModifier) {
-                TextField(
-                    value = step.name,
-                    onValueChange = step::onNameChange,
-                    textStyle = MaterialTheme.typography.body1,
-                    singleLine = true,
-                    isError = step.message?.isError == true,
-                    modifier = Modifier.fillMaxWidth())
-                AnimatedValidatorMessage(step.message)
-            }
-        } is AddLocalFilesDialogStep.PlaylistOptions-> {
-            // PlaylistOptions already has its own horizontal padding, so we avoid
-            // using backgroundModifier here to prevent doubling up on the padding
-            Column(Modifier.background(MaterialTheme.colors.surface)) {
-                PlaylistOptionsView(
-                    shuffleEnabled = step.shuffleEnabled,
-                    onShuffleSwitchClick = step.onShuffleSwitchClick,
-                    mutablePlaylist = step.mutablePlaylist,
-                    modifier = Modifier.fillMaxWidth(),
-                    allowTrackRemoval = false)
-            }
+                enabled = button.isEnabledProvider(),
+                shape = when {
+                    step.buttons.size == 1 ->
+                        MaterialTheme.shapes.medium.bottomShape()
+                    index == 0 ->
+                        MaterialTheme.shapes.medium.bottomStartShape()
+                    index == step.buttons.lastIndex ->
+                        MaterialTheme.shapes.medium.bottomEndShape()
+                    else -> RectangleShape
+                }, textResId = button.textResId,
+                onClick = button.onClick)
         }
     }
 }
 
 /**
- * When [FileChooser] enters the composition, a system file picker
+ * When [FileChooser] enters the composition a system file picker
  * will be shown to allow the user to pick one or more files.
  *
  * @param fileTypeArgs An [Array] of [String]s that describes which
@@ -190,30 +83,84 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
     LaunchedEffect(Unit) { launcher.launch(fileTypeArgs) }
 }
 
-/**
- * Open a dialog for the user to select one or more audio files to add
- * to their library.
- *
- * @param step A [AddLocalFilesDialogStep] instance that represents the
- *     current step of the dialog
- * @param onDismissRequest The callback that will be invoked when the user
- *     clicks outside the dialog or taps the cancel button
- */
-@Composable fun AddLocalFilesDialog(
-    step: AddLocalFilesDialogStep,
-    onDismissRequest: () -> Unit,
-) {
+/** Open a multi-step dialog for the user to select one or more audio files
+ * to add to their library. The shown step will change according to [step]. */
+@Composable fun AddLocalFilesDialog(step: AddLocalFilesDialogStep) {
     if (step is AddLocalFilesDialogStep.SelectingFiles) {
         FileChooser { uris ->
             if (uris.isEmpty())
-                onDismissRequest()
+                step.onDismissRequest()
             step.onFilesSelected(uris)
         }
     } else SoundAuraDialog(
         modifier = Modifier.restrictWidthAccordingToSizeClass(),
         useDefaultWidth = false,
-        title = addLocalFilesDialogTitle(step),
-        onDismissRequest = onDismissRequest,
-        buttons = { AddLocalFilesDialogButtons(step) },
-        content = { AddLocalFilesDialogContent(step) })
+        title = stringResource(step.titleResId),
+        onDismissRequest = step.onDismissRequest,
+        buttons = { AddLocalFilesDialogButtons(step) }
+    ) {
+        SlideAnimatedContent(
+            targetState = step,
+            leftToRight = step.wasNavigatedForwardTo,
+        ) { step ->
+            // This background modifiers gives a border to the content to
+            // improve the appearance of the SlideAnimatedContent animations
+            val backgroundModifier = Modifier
+                .background(MaterialTheme.colors.surface)
+                .padding(horizontal = 16.dp)
+            when (step) {
+                is AddLocalFilesDialogStep.SelectingFiles -> {}
+                is AddLocalFilesDialogStep.AddIndividuallyOrAsPlaylistQuery -> {
+                    Box(modifier = backgroundModifier.padding(vertical = 16.dp),
+                        // The vertical padding is set to match the TextField decoration box's
+                        // vertical padding. This reduces the amount that the dialog box height
+                        // has to be animated when switching between steps of the dialog.
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Text(stringResource(step.textResId))
+                    }
+                } is AddLocalFilesDialogStep.NameTracks -> {
+                    // We have to restrict the LazyColumn's height to prevent
+                    // a crash due to nested infinite height scrollables
+                    val maxHeight = LocalConfiguration.current.screenHeightDp.dp
+                    Column(backgroundModifier.heightIn(max = maxHeight)) {
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(step.names.size) { index ->
+                                TextField(
+                                    value = step.names[index],
+                                    onValueChange = { step.onNameChange(index, it) },
+                                    textStyle = MaterialTheme.typography.body1,
+                                    singleLine = true,
+                                    isError = step.errors[index],
+                                    modifier = Modifier.fillMaxWidth())
+                            }
+                        }
+                        AnimatedValidatorMessage(step.message)
+                    }
+                } is AddLocalFilesDialogStep.NamePlaylist -> {
+                    Column(backgroundModifier) {
+                        TextField(
+                            value = step.name,
+                            onValueChange = step::onNameChange,
+                            textStyle = MaterialTheme.typography.body1,
+                            singleLine = true,
+                            isError = step.message?.isError == true,
+                            modifier = Modifier.fillMaxWidth())
+                        AnimatedValidatorMessage(step.message)
+                    }
+                } is AddLocalFilesDialogStep.PlaylistOptions-> {
+                    // PlaylistOptions already has its own horizontal padding, so we avoid
+                    // using backgroundModifier here to prevent doubling up on the padding
+                    Column(Modifier.background(MaterialTheme.colors.surface)) {
+                        PlaylistOptionsView(
+                            shuffleEnabled = step.shuffleEnabled,
+                            onShuffleSwitchClick = step.onShuffleSwitchClick,
+                            mutablePlaylist = step.mutablePlaylist,
+                            modifier = Modifier.fillMaxWidth(),
+                            allowTrackRemoval = false)
+                    }
+                }
+            }
+        }
+    }
 }

@@ -49,7 +49,7 @@
     <string name="playlist_track_delete_description">Remove %1$s</string>
 
     <string name="add_local_files_button_description">Add tracks or playlists from local files</string>
-    <string name="add_local_files_dialog_title">Confirm added file(s)</string>
+    <string name="add_local_files_as_playlist_or_tracks_title">Add local file(s)</string>
     <string name="add_local_files_as_playlist_or_tracks_question">
         Add files as individual tracks, or as a playlist?</string>
     <string name="add_local_files_individually_option">Individually</string>

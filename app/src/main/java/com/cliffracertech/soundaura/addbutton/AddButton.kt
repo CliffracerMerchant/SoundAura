@@ -44,6 +44,13 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/** Return a suitable display name for a file [Uri] (i.e. the file name minus
+ * the file type extension, and with underscores replaced with spaces). */
+fun Uri.getDisplayName(context: Context) =
+    DocumentFile.fromSingleUri(context, this)
+        ?.name?.substringBeforeLast('.')?.replace('_', ' ')
+        ?: pathSegments.last().substringBeforeLast('.').replace('_', ' ')
+
 /**
  * A [ViewModel] that contains state and callbacks for a button to add playlists.
  *
@@ -51,11 +58,7 @@ import javax.inject.Inject
  * provided [onClick] method. The property [dialogStep] can then be observed
  * to access the current [AddLocalFilesDialogStep] that should be shown to the
  * user. State and callbacks for each dialog step are contained inside the
- * current [AddLocalFilesDialogStep] value of the [dialogStep] property. User
- * attempts to back out of the dialog via system back button presses or back
- * gestures (but not dialog back button presses, which should be connected to
- * the [AddLocalFilesDialogStep.onBackClick] for the current step instead)
- * should be connected to the [onDialogDismissRequest] method.
+ * current [AddLocalFilesDialogStep] value of the [dialogStep] property.
  *
  * Note that the [Context] argument passed in the constructor will be saved
  * for the lifetime of the view model, and therefore should not be a [Context]
@@ -83,10 +86,11 @@ class AddPlaylistButtonViewModel(
     var dialogStep by mutableStateOf<AddLocalFilesDialogStep?>(null)
         private set
 
-    fun onDialogDismissRequest() { dialogStep = null }
+    private fun onDialogDismissRequest() { dialogStep = null }
 
     fun onClick() {
         dialogStep = AddLocalFilesDialogStep.SelectingFiles(
+            onDismissRequest = ::onDialogDismissRequest,
             onFilesSelected = { chosenUris ->
                 // If uris.size == 1, we can skip straight to the name
                 // track dialog step to skip the user needing to choose
@@ -98,13 +102,15 @@ class AddPlaylistButtonViewModel(
 
     private fun showAddIndividuallyOrAsPlaylistQueryStep(chosenUris: List<Uri>) {
         dialogStep = AddLocalFilesDialogStep.AddIndividuallyOrAsPlaylistQuery(
-            onBackClick = ::onDialogDismissRequest,
+            onDismissRequest = ::onDialogDismissRequest,
+            onCancelClick = ::onDialogDismissRequest,
             onAddIndividuallyClick = { showNameTracksStep(chosenUris) },
             onAddAsPlaylistClick = { showNamePlaylistStep(chosenUris, goingForward = true) })
     }
 
     private fun showNameTracksStep(trackUris: List<Uri>) {
         dialogStep = AddLocalFilesDialogStep.NameTracks(
+            onDismissRequest = ::onDialogDismissRequest,
             onBackClick = {
                 // if uris.size == 1, then the question of whether to add as
                 // a track or as a playlist should have been skipped. In this
@@ -122,7 +128,8 @@ class AddPlaylistButtonViewModel(
 
     private fun showNamePlaylistStep(tracks: List<Uri>, goingForward: Boolean) {
         dialogStep = AddLocalFilesDialogStep.NamePlaylist(
-            isAheadOfPreviousStep = goingForward,
+            wasNavigatedForwardTo = goingForward,
+            onDismissRequest = ::onDialogDismissRequest,
             onBackClick = { showAddIndividuallyOrAsPlaylistQueryStep(tracks) },
             validator = PlaylistNameValidator(
                 playlistDao, scope, "${tracks.first().getDisplayName(context)} playlist"),
@@ -137,6 +144,7 @@ class AddPlaylistButtonViewModel(
         tracks: List<Uri>
     ) {
         dialogStep = AddLocalFilesDialogStep.PlaylistOptions(
+            onDismissRequest = ::onDialogDismissRequest,
             onBackClick = { showNamePlaylistStep(tracks, goingForward = false) },
             tracks = tracks,
             onFinish = { shuffle, newTrackOrder ->
@@ -174,13 +182,6 @@ class AddPlaylistButtonViewModel(
             onDialogDismissRequest()
         }
     }
-
-    /** Return a suitable display name for a file [Uri] (i.e. the file name minus
-     * the file type extension, and with underscores replaced with spaces). */
-    private fun Uri.getDisplayName(context: Context) =
-        DocumentFile.fromSingleUri(context, this)
-            ?.name?.substringBeforeLast('.')?.replace('_', ' ')
-            ?: pathSegments.last().substringBeforeLast('.').replace('_', ' ')
 }
 
 /**
@@ -270,7 +271,7 @@ enum class AddButtonTarget { Playlist, Preset }
     }
 
     addPlaylistViewModel.dialogStep?.let {
-        AddLocalFilesDialog(it, addPlaylistViewModel::onDialogDismissRequest)
+        AddLocalFilesDialog(it)
     }
 
     addPresetViewModel.newPresetDialogState?.let {
