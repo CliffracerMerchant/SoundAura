@@ -4,6 +4,7 @@
 package com.cliffracertech.soundaura
 
 import android.support.v4.media.session.PlaybackStateCompat
+import android.util.Log
 import androidx.core.content.ContextCompat
 import com.cliffracertech.soundaura.service.PlayerService
 import com.cliffracertech.soundaura.service.TogglePlaybackTileService
@@ -27,3 +28,5 @@ class SoundAuraApplication : android.app.Application() {
         }
     }
 }
+
+fun logd(message: String) = Log.d("SoundAuraTag", message)

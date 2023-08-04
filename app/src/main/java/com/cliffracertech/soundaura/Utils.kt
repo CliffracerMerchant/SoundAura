@@ -2,7 +2,6 @@
  * License 2.0. See license.md in the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import android.util.Log
 import android.view.ViewTreeObserver
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -230,31 +229,4 @@ fun PaddingValues(
         top = original.calculateTopPadding() + additionalTop,
         end = original.calculateEndPadding(layoutDirection) + additionalEnd,
         bottom = original.calculateBottomPadding() + additionalBottom)
-}
-
-suspend fun <T> Flow<T>.waitUntil(
-    timeOut: Long = 2000L,
-    condition: (T) -> Boolean
-): T {
-    val start = System.currentTimeMillis()
-    var value = first()
-    while (!condition(value) && System.currentTimeMillis() - start < timeOut) {
-        Thread.sleep(50L)
-        value = first()
-    }
-    return value
-}
-
-suspend fun waitUntil(
-    timeOut: Long = 1000L,
-    condition: suspend () -> Boolean,
-) {
-    val start = System.currentTimeMillis()
-    while (!condition()) {
-        if (System.currentTimeMillis() - start >= timeOut) {
-            Log.d("SoundAuraTag", "waitUntil timed out after $timeOut milliseconds")
-            return
-        }
-        Thread.sleep(50L)
-    }
 }
