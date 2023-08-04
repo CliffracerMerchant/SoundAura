@@ -4,8 +4,10 @@
  */
 package com.cliffracertech.soundaura.model
 
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import com.cliffracertech.soundaura.collectAsState
 import com.cliffracertech.soundaura.model.Validator.Message
@@ -14,7 +16,6 @@ import com.cliffracertech.soundaura.model.Validator.Message.Information
 import com.cliffracertech.soundaura.model.Validator.Message.Warning
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 
 /**
@@ -117,28 +118,48 @@ abstract class Validator <T>(initialValue: T, coroutineScope: CoroutineScope) {
  */
 abstract class ListValidator <T>(
     values: List<T>,
-    scope: CoroutineScope,
     private val allowDuplicates: Boolean = true,
 ) {
     private val _values = values.toMutableStateList()
-    private val _errors = List(values.size) { false}.toMutableStateList()
-
     val values get() = _values as List<T>
+
+    private var errorCount by mutableIntStateOf(0)
+    private val _errors = List(values.size) { errorIndex ->
+            val value = values[errorIndex]
+            val hasOtherError = hasError(value)
+            val hasDuplicateError = if (allowDuplicates) false else run {
+                for (i in errorIndex..values.lastIndex)
+                    if (i != errorIndex && values[i] == value)
+                        return@run true
+                false
+            }
+            if (hasOtherError || hasDuplicateError)
+                errorCount++
+            hasOtherError || hasDuplicateError
+        }.toMutableStateList()
     val errors get() = _errors as List<Boolean>
+
+    protected abstract fun hasError(value: T): Boolean
+    protected abstract val errorMessage: Validator.Message.Error
 
     fun setValue(index: Int, newValue: T) {
         if (index !in values.indices) return
         val oldValue = values[index]
-
+        if (oldValue == newValue) return
         _values[index] = newValue
-        _errors[index] = hasError(newValue)
-        if (allowDuplicates)
-            return
 
-        values.forEachIndexed { i, value -> when {
+        val hadError = _errors[index]
+        val hasError = hasError(newValue)
+        if (hasError && !hadError)      errorCount++
+        else if (hadError && !hasError) errorCount--
+        _errors[index] = hasError
+
+        if (!allowDuplicates) values.forEachIndexed { i, value -> when {
             value == newValue && i != index -> {
                 // If there is a duplicate we set the value being
                 // set and the duplicate value as having an error
+                if (!_errors[i])     errorCount++
+                if (!_errors[index]) errorCount++
                 _errors[i] = true
                 _errors[index] = true
             } value == oldValue -> {
@@ -146,20 +167,19 @@ abstract class ListValidator <T>(
                 // in case they were marked as having errors only because
                 // they were duplicate values (which will not be the case
                 // now that values[index] has been changed).
-                _errors[i] = hasError(values[i])
+                val hasError = hasError(values[i])
+                val hadError = _errors[i]
+                if (hasError && !hadError)      errorCount++
+                else if (hadError && !hasError) errorCount--
+                _errors[i] = hasError
             }
         }}
     }
 
-    protected abstract fun hasError(value: T): Boolean
-    protected abstract val errorMessage: Validator.Message.Error
-
-    val message by snapshotFlow {
-            _errors.find { it } != null
-        }.map { hasError ->
-            if (hasError) errorMessage
-            else          null
-        }.collectAsState(null, scope)
+    val message by derivedStateOf {
+        if (errorCount > 0) errorMessage
+        else                null
+    }
 
     /** Return the validated list of values if they are all valid, or null if
      * one or more values are invalid. The default implementation only checks

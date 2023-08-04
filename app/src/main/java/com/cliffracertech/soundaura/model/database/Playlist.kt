@@ -338,7 +338,7 @@ class TrackNamesValidator(
     private val playlistDao: PlaylistDao,
     coroutineScope: CoroutineScope,
     names: List<String>,
-) : ListValidator<String>(names, coroutineScope, allowDuplicates = false) {
+) : ListValidator<String>(names, allowDuplicates = false) {
 
     private var existingNames: Set<String>? = null
     init { coroutineScope.launch {
@@ -346,7 +346,7 @@ class TrackNamesValidator(
     }}
 
     override fun hasError(value: String) =
-        value.isBlank() || existingNames?.contains(value) != false
+        value.isBlank() || existingNames?.contains(value) == true
 
     override val errorMessage = Validator.Message.Error(
         StringResource(R.string.add_multiple_tracks_name_error_message))
