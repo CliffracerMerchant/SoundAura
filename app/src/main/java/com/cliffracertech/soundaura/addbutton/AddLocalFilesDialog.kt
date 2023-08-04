@@ -36,6 +36,7 @@ import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
 import com.cliffracertech.soundaura.ui.HorizontalDivider
 import com.cliffracertech.soundaura.ui.SlideAnimatedContent
 import com.cliffracertech.soundaura.ui.TextButton
+import com.cliffracertech.soundaura.ui.VerticalDivider
 import com.cliffracertech.soundaura.ui.bottomEndShape
 import com.cliffracertech.soundaura.ui.bottomShape
 import com.cliffracertech.soundaura.ui.bottomStartShape
@@ -60,6 +61,8 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
                     else -> RectangleShape
                 }, textResId = button.textResId,
                 onClick = button.onClick)
+            if (index != step.buttons.lastIndex)
+                VerticalDivider()
         }
     }
 }
