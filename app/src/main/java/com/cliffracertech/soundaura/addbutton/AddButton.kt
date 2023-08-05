@@ -164,7 +164,7 @@ class AddPlaylistButtonViewModel(
                     R.string.cant_add_all_tracks_warning,
                     failureCount, permissionHandler.permissionAllowance))
             if (acceptedTracks.isNotEmpty()) {
-                val names = trackNames.subList(0, acceptedTracks.size - 1)
+                val names = trackNames.subList(0, acceptedTracks.size)
                 playlistDao.insertSingleTrackPlaylists(names, acceptedTracks)
             }
         }
