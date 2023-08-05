@@ -29,6 +29,7 @@ import com.cliffracertech.soundaura.collectAsState
 import com.cliffracertech.soundaura.dialog.RenameDialog
 import com.cliffracertech.soundaura.dialog.ValidatedNamingState
 import com.cliffracertech.soundaura.model.ActivePresetState
+import com.cliffracertech.soundaura.model.AndroidUriPermissionHandler
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.UriPermissionHandler
@@ -76,7 +77,7 @@ class AddPlaylistButtonViewModel(
     @Inject constructor(
         @ApplicationContext
         context: Context,
-        permissionHandler: UriPermissionHandler,
+        permissionHandler: AndroidUriPermissionHandler,
         playlistDao: PlaylistDao,
         messageHandler: MessageHandler
     ) : this(context, permissionHandler, playlistDao, messageHandler, null)
@@ -153,10 +154,10 @@ class AddPlaylistButtonViewModel(
     }
 
     private fun addTracks(trackNames: List<String>, trackUris: List<Uri>) {
+        onDialogDismissRequest()
         scope.launch {
             assert(trackUris.size == trackNames.size)
-            val acceptedTracks = permissionHandler.takeUriPermissions(trackUris)
-
+            val acceptedTracks = permissionHandler.acquirePermissionsFor(trackUris)
             val failureCount = trackUris.size - acceptedTracks.size
             if (failureCount > 0)
                 messageHandler.postMessage(StringResource(
@@ -166,20 +167,19 @@ class AddPlaylistButtonViewModel(
                 val names = trackNames.subList(0, acceptedTracks.size - 1)
                 playlistDao.insertSingleTrackPlaylists(names, acceptedTracks)
             }
-            onDialogDismissRequest()
         }
     }
 
     private fun addPlaylist(name: String, shuffle: Boolean, tracks: List<Uri>) {
+        onDialogDismissRequest()
         scope.launch {
             val acceptedTracks = permissionHandler
-                .takeUriPermissions(tracks, insertPartial = false)
+                .acquirePermissionsFor(tracks, allowPartial = false)
             if (acceptedTracks.isEmpty())
                 messageHandler.postMessage(StringResource(
                     R.string.cant_add_playlist_warning,
                     permissionHandler.permissionAllowance))
             else playlistDao.insertPlaylist(name, shuffle, acceptedTracks)
-            onDialogDismissRequest()
         }
     }
 }

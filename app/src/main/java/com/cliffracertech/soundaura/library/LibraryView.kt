@@ -39,6 +39,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.collectAsState
 import com.cliffracertech.soundaura.enumPreferenceFlow
+import com.cliffracertech.soundaura.model.AndroidUriPermissionHandler
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.PlaybackState
 import com.cliffracertech.soundaura.model.SearchQueryState
@@ -83,7 +84,10 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
     shownDialog: PlaylistDialog?,
     playlistViewCallback: PlaylistViewCallback
 ) {
-    Crossfade(libraryContents?.isEmpty()) {
+    Crossfade(
+        targetState = libraryContents?.isEmpty(),
+        label = "LibraryView content/empty crossfade",
+    ) {
         when(it) {
             null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                 CircularProgressIndicator(Modifier.size(50.dp))
@@ -127,13 +131,13 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
 
     @Inject constructor(
         dataStore: DataStore<Preferences>,
-        permissionHandler: UriPermissionHandler,
+        permissionHandler: AndroidUriPermissionHandler,
         playlistDao: PlaylistDao,
         messageHandler: MessageHandler,
         playbackState: PlaybackState,
         searchQueryState: SearchQueryState,
-    ) : this(dataStore, permissionHandler, playlistDao, messageHandler,
-             playbackState, searchQueryState, null)
+    ) : this(dataStore, permissionHandler, playlistDao,
+        messageHandler, playbackState, searchQueryState, null)
 
     private val scope = coroutineScope ?: viewModelScope
     private val showActiveTracksFirstKey = booleanPreferencesKey(PrefKeys.showActivePlaylistsFirst)
@@ -142,8 +146,10 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
     private val playlistSort = dataStore.enumPreferenceFlow<PlaylistSort>(playlistSortKey)
 
     private val searchQueryFlow = snapshotFlow { searchQueryState.query.value }
-    val playlists by combine(playlistSort, showActiveTracksFirst, searchQueryFlow, playlistDao::getAllPlaylists)
-        .transformLatest { emitAll(it) }
+    val playlists by combine(
+           playlistSort, showActiveTracksFirst,
+           searchQueryFlow, playlistDao::getAllPlaylists
+        ).transformLatest { emitAll(it) }
         .map(List<Playlist>::toImmutableList)
         .collectAsState(null, scope)
 
@@ -193,7 +199,7 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
                     shownDialog = null
                     scope.launch {
                         val unusedTracks = playlistDao.deletePlaylist(playlist.name)
-                        permissionHandler.releasePermissions(unusedTracks)
+                        permissionHandler.releasePermissionsFor(unusedTracks)
                     }
                 })
         }
@@ -212,8 +218,8 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
                 // is enough permission space to add all of the tracks
                 if (newTracks.size == originalTracks.size)
                     newTracks
-                else permissionHandler.takeUriPermissions(
-                    newTracks, insertPartial = false)
+                else permissionHandler.acquirePermissionsFor(
+                    newTracks, allowPartial = false)
             if (validatedTrackList.isEmpty()) {
                 messageHandler.postMessage(StringResource(
                     R.string.cant_add_playlist_tracks_warning,
@@ -224,7 +230,7 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
             } else {
                 val removedUris = playlistDao.setPlaylistShuffleAndContents(
                     playlistName, shuffle, originalTracks, validatedTrackList)
-                permissionHandler.releasePermissions(removedUris)
+                permissionHandler.releasePermissionsFor(removedUris)
             }
         }
     }
