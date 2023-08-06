@@ -26,7 +26,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.collectAsState
-import com.cliffracertech.soundaura.dialog.RenameDialog
+import com.cliffracertech.soundaura.dialog.NamingDialog
 import com.cliffracertech.soundaura.dialog.ValidatedNamingState
 import com.cliffracertech.soundaura.model.ActivePresetState
 import com.cliffracertech.soundaura.model.AndroidUriPermissionHandler
@@ -198,7 +198,7 @@ class AddPlaylistButtonViewModel(
  * The method [onClick] should be used as the onClick callback for the
  * button being used to add presets. If the property [newPresetDialogState]
  * is not null, then its [ValidatedNamingState] value should be used as
- * the state parameter for a shown [RenameDialog].
+ * the state parameter for a shown [NamingDialog].
  */
 @HiltViewModel class AddPresetButtonViewModel(
     private val presetDao: PresetDao,
@@ -283,6 +283,6 @@ enum class AddButtonTarget { Playlist, Preset }
     }
 
     addPresetViewModel.newPresetDialogState?.let {
-        RenameDialog(it, title = stringResource(R.string.create_new_preset_dialog_title))
+        NamingDialog(it, title = stringResource(R.string.create_new_preset_dialog_title))
     }
 }

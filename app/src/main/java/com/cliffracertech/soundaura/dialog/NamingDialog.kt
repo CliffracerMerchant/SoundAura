@@ -122,24 +122,29 @@ class ValidatedNamingState(
     var lastMessage: Validator.Message = remember {
         Validator.Message.Error(StringResource(""))
     }
-    AnimatedVisibility(message != null, modifier) {
-        Crossfade(message ?: lastMessage) {
-            ValidatorMessageView(it)
-        }
+    AnimatedVisibility(
+        visible = message != null,
+        label = "Validator message appearance/disappearance",
+        modifier = modifier
+    ) {
+        Crossfade(
+            targetState = message ?: lastMessage,
+            label = "Validator message change crossfade"
+        ) { ValidatorMessageView(it) }
     }
     message?.let { lastMessage = it }
 }
 
 /**
- * Show a dialog to rename an object. The 'Confirm' button will call
- * the [state]'s [NamingState.finalize] method, while the 'Cancel'
+ * Show a dialog to name or rename an object. The 'Confirm' button will
+ * call the [state]'s [NamingState.finalize] method, while the 'Cancel'
  * button will call the [state]'s [NamingState.cancel] method.
  *
  * @param state A [NamingState] instance
  * @param modifier The [Modifier] to use for the root layout
  * @param title The title of the dialog
  */
-@Composable fun RenameDialog(
+@Composable fun NamingDialog(
     state: NamingState,
     modifier: Modifier = Modifier,
     title: String = stringResource(R.string.default_rename_dialog_title),

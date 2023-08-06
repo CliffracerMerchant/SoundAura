@@ -19,8 +19,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.addbutton.FileChooser
+import com.cliffracertech.soundaura.dialog.NamingDialog
 import com.cliffracertech.soundaura.dialog.NamingState
-import com.cliffracertech.soundaura.dialog.RenameDialog
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
 import com.cliffracertech.soundaura.dialog.ValidatedNamingState
 import com.cliffracertech.soundaura.library.PlaylistDialog.PlaylistOptions
@@ -41,7 +41,7 @@ sealed class PlaylistDialog(
 ) {
     /**
      * The rename dialog for a playlist. Rename implements [NamingState], and
-     * can therefore be used as the state parameter for a [RenameDialog].
+     * can therefore be used as the state parameter for a [NamingDialog].
      *
      * @param target The [Playlist] that is the target of the dialog
      * @param validator The [Validator] to use for validation of the new name
@@ -135,7 +135,7 @@ sealed class PlaylistDialog(
     modifier: Modifier = Modifier,
 ) = when (dialogState) {
     null -> {}
-    is Rename -> RenameDialog(
+    is Rename -> NamingDialog(
         modifier = modifier,
         title = stringResource(R.string.default_rename_dialog_title),
         state = dialogState)
@@ -156,12 +156,12 @@ sealed class PlaylistDialog(
  * will show first to allow the user to choose extra files to add to the
  * single track in order to create a multi-track playlist.
  *
- * @param state A [PlaylistDialog.PlaylistOptions] instance containing
+ * @param state A [PlaylistOptions] instance containing
  *     the state and callbacks to use for the dialog
  * @param modifier The [Modifier] to use for the dialog window
  */
 @Composable fun PlaylistOptionsDialog(
-    state: PlaylistDialog.PlaylistOptions,
+    state: PlaylistOptions,
     modifier: Modifier = Modifier,
 ) {
     val mutablePlaylist = state.mutablePlaylist

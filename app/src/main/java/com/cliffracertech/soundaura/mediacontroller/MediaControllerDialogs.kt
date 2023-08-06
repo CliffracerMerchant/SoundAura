@@ -14,8 +14,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
+import com.cliffracertech.soundaura.dialog.NamingDialog
 import com.cliffracertech.soundaura.dialog.NamingState
-import com.cliffracertech.soundaura.dialog.RenameDialog
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
 import com.cliffracertech.soundaura.dialog.ValidatedNamingState
 import com.cliffracertech.soundaura.model.StringResource
@@ -119,7 +119,7 @@ sealed class DialogType(
             onDismissRequest = shownDialog.onDismissRequest,
             onConfirm = shownDialog.onConfirmClick)
     is DialogType.RenamePreset ->
-        RenameDialog(state = shownDialog, modifier = modifier)
+        NamingDialog(state = shownDialog, modifier = modifier)
     is DialogType.PresetUnsavedChangesWarning ->
         UnsavedPresetChangesWarningDialog(
             modifier = modifier,
