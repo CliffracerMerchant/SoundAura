@@ -127,14 +127,17 @@ class AddPlaylistButtonViewModel(
             })
     }
 
-    private fun showNamePlaylistStep(tracks: List<Uri>, goingForward: Boolean) {
+    private fun showNamePlaylistStep(
+        tracks: List<Uri>,
+        goingForward: Boolean,
+        playlistName: String = "${tracks.first().getDisplayName(context)} playlist"
+    ) {
         dialogStep = AddLocalFilesDialogStep.NamePlaylist(
             wasNavigatedForwardTo = goingForward,
             onDismissRequest = ::onDialogDismissRequest,
             onBackClick = { showAddIndividuallyOrAsPlaylistQueryStep(tracks) },
             validator = playlistNameValidator(
-                playlistDao, scope,
-                "${tracks.first().getDisplayName(context)} playlist",
+                playlistDao, scope, playlistName,
                 ignoreInitialValue = false),
             coroutineScope = scope,
             onNameValidated = { validatedPlaylistName ->
@@ -148,8 +151,11 @@ class AddPlaylistButtonViewModel(
     ) {
         dialogStep = AddLocalFilesDialogStep.PlaylistOptions(
             onDismissRequest = ::onDialogDismissRequest,
-            onBackClick = { showNamePlaylistStep(tracks, goingForward = false) },
-            tracks = tracks,
+            onBackClick = {
+                showNamePlaylistStep(
+                    tracks, goingForward = false,
+                    playlistName = validatedPlaylistName)
+            }, tracks = tracks,
             onFinish = { shuffle, newTrackOrder ->
                 addPlaylist(validatedPlaylistName, shuffle, newTrackOrder)
             })
