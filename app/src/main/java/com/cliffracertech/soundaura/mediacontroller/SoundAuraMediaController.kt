@@ -40,7 +40,7 @@ import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.Preset
 import com.cliffracertech.soundaura.model.database.PresetDao
-import com.cliffracertech.soundaura.model.database.PresetNameValidator
+import com.cliffracertech.soundaura.model.database.presetNameValidator
 import com.cliffracertech.soundaura.preferenceState
 import com.cliffracertech.soundaura.settings.PrefKeys
 import com.cliffracertech.soundaura.ui.tweenDuration
@@ -129,7 +129,7 @@ import javax.inject.Inject
             shownDialog = DialogType.RenamePreset(
                 target = preset,
                 coroutineScope = scope,
-                validator = PresetNameValidator(presetDao, scope, preset.name),
+                validator = presetNameValidator(presetDao, scope, preset.name),
                 onDismissRequest = ::dismissDialog,
                 onNameValidated = { validatedName ->
                     presetDao.renamePreset(preset.name, validatedName)

@@ -13,7 +13,6 @@ import com.cliffracertech.soundaura.dialog.NamingState
 import com.cliffracertech.soundaura.dialog.ValidatedNamingState
 import com.cliffracertech.soundaura.library.MutablePlaylist
 import com.cliffracertech.soundaura.model.Validator
-import com.cliffracertech.soundaura.model.database.PlaylistNameValidator
 import com.cliffracertech.soundaura.model.database.TrackNamesValidator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -151,8 +150,7 @@ sealed class AddLocalFilesDialogStep {
      * @param wasNavigatedForwardTo Whether the step was reached by proceeding
      *     forward from a previous step (as opposed to going backwards from a
      *     following step)
-     * @param validator The [PlaylistNameValidator] instance that will be
-     *     used to validate the playlist name
+     * @param validator The [Validator] instance that will be used to validate the playlist name
      * @param coroutineScope The [CoroutineScope] that will be used for background work
      * @param onBackClick The callback that will be invoked when the dialog's back button is clicked
      * @param onNameValidated The callback that will be invoked when the
@@ -160,7 +158,7 @@ sealed class AddLocalFilesDialogStep {
      */
     class NamePlaylist(
         override val wasNavigatedForwardTo: Boolean,
-        validator: PlaylistNameValidator,
+        validator: Validator<String>,
         coroutineScope: CoroutineScope,
         override val onDismissRequest: () -> Unit,
         onBackClick: () -> Unit,

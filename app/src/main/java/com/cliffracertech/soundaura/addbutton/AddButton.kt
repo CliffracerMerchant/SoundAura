@@ -34,10 +34,10 @@ import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.UriPermissionHandler
 import com.cliffracertech.soundaura.model.database.PlaylistDao
-import com.cliffracertech.soundaura.model.database.PlaylistNameValidator
 import com.cliffracertech.soundaura.model.database.PresetDao
-import com.cliffracertech.soundaura.model.database.PresetNameValidator
 import com.cliffracertech.soundaura.model.database.TrackNamesValidator
+import com.cliffracertech.soundaura.model.database.playlistNameValidator
+import com.cliffracertech.soundaura.model.database.presetNameValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -132,8 +132,10 @@ class AddPlaylistButtonViewModel(
             wasNavigatedForwardTo = goingForward,
             onDismissRequest = ::onDialogDismissRequest,
             onBackClick = { showAddIndividuallyOrAsPlaylistQueryStep(tracks) },
-            validator = PlaylistNameValidator(
-                playlistDao, scope, "${tracks.first().getDisplayName(context)} playlist"),
+            validator = playlistNameValidator(
+                playlistDao, scope,
+                "${tracks.first().getDisplayName(context)} playlist",
+                ignoreInitialValue = false),
             coroutineScope = scope,
             onNameValidated = { validatedPlaylistName ->
                 showPlaylistOptionsStep(validatedPlaylistName, tracks)
@@ -221,7 +223,7 @@ class AddPlaylistButtonViewModel(
         activeTracksIsEmpty -> messageHandler.postMessage(
             StringResource(R.string.preset_cannot_be_empty_warning_message))
         else -> newPresetDialogState = ValidatedNamingState(
-            validator = PresetNameValidator(presetDao, scope),
+            validator = presetNameValidator(presetDao, scope),
             coroutineScope = scope,
             onNameValidated = { validatedName ->
                 newPresetDialogState = null

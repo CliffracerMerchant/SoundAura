@@ -46,7 +46,7 @@ import com.cliffracertech.soundaura.model.SearchQueryState
 import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.UriPermissionHandler
 import com.cliffracertech.soundaura.model.database.PlaylistDao
-import com.cliffracertech.soundaura.model.database.PlaylistNameValidator
+import com.cliffracertech.soundaura.model.database.playlistNameValidator
 import com.cliffracertech.soundaura.preferenceFlow
 import com.cliffracertech.soundaura.settings.PrefKeys
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -168,11 +168,14 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
         override fun onRenameClick(playlist: Playlist) {
             shownDialog = PlaylistDialog.Rename(
                 target = playlist,
-                validator = PlaylistNameValidator(playlistDao, scope, playlist.name),
+                validator = playlistNameValidator(
+                    playlistDao, scope, playlist.name,
+                    ignoreInitialValue = true),
                 coroutineScope = scope,
                 onDismissRequest = { shownDialog = null },
                 onNameValidated = { validatedName ->
-                    playlistDao.rename(playlist.name, validatedName)
+                    if (validatedName != playlist.name)
+                        playlistDao.rename(playlist.name, validatedName)
                     shownDialog = null
                 })
         }

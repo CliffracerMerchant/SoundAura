@@ -21,7 +21,6 @@ import com.cliffracertech.soundaura.dialog.ValidatedNamingState
 import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.Validator
 import com.cliffracertech.soundaura.model.database.Preset
-import com.cliffracertech.soundaura.model.database.PresetNameValidator
 import com.cliffracertech.soundaura.ui.HorizontalDivider
 import com.cliffracertech.soundaura.ui.TextButton
 import com.cliffracertech.soundaura.ui.bottomShape
@@ -49,8 +48,7 @@ sealed class DialogType(
      *
      * @param target The [Preset] that is being renamed
      * @param coroutineScope A [CoroutineScope] to run background work on
-     * @param validator A [PresetNameValidator] instance to use for validating
-     *     the entered name
+     * @param validator A [Validator] instance to use for validating the entered name
      * @param onDismissRequest The callback that should be invoked if the
      *     dialog's cancel button is clicked or the back button/gesture
      *     is used
@@ -60,7 +58,7 @@ sealed class DialogType(
     class RenamePreset(
         val target: Preset,
         coroutineScope: CoroutineScope,
-        validator: PresetNameValidator,
+        validator: Validator<String>,
         onDismissRequest: () -> Unit,
         onNameValidated: suspend (String) -> Unit,
     ): DialogType(onDismissRequest),

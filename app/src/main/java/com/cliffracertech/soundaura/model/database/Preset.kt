@@ -11,7 +11,6 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Transaction
 import com.cliffracertech.soundaura.R
-import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.Validator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
@@ -102,18 +101,33 @@ data class PresetPlaylist(
     }
 }
 
-class PresetNameValidator(
-    private val dao: PresetDao,
+/**
+ * Return a [Validator] that validates [Preset] names.
+ *
+ * Blank names are not permitted, although no error message will be shown for
+ * blank names unless [Validator.value] has been changed at least once. This
+ * is to prevent a new [Preset] name dialog with an initially blank name from
+ * immediately showing a 'no blank names' error message before the user has
+ * had a chance to change the name.
+ *
+ * Names that match an existing [Preset] are not permitted, unless it is equal
+ * to the provided [initialName]. This is to prevent an error message for a
+ * rename [Preset] dialog from immediately being shown when the dialog is
+ * opened.
+ */
+fun presetNameValidator(
+    dao: PresetDao,
     coroutineScope: CoroutineScope,
-    private val initialName: String = "",
-) : Validator<String>(initialName, coroutineScope) {
-    override suspend fun messageFor(value: String) = when {
-        !valueHasBeenChanged -> null
-        value == initialName -> null
-        value.isBlank() -> Message.Error(
-            StringResource(R.string.preset_name_cannot_be_blank_error_message))
-        dao.exists(value) -> Message.Error(
-            StringResource(R.string.preset_name_already_in_use_error_message))
+    initialName: String = "",
+) = Validator(
+    initialValue = initialName,
+    coroutineScope = coroutineScope,
+    messageFor = { name, hasBeenChanged -> when {
+        name.isBlank() && hasBeenChanged ->
+            Validator.Message.Error(R.string.preset_name_cannot_be_blank_error_message)
+        name == initialName ->
+            null
+        dao.exists(name) ->
+            Validator.Message.Error(R.string.preset_name_already_in_use_error_message)
         else -> null
-    }
-}
+    }})

@@ -365,21 +365,37 @@ class TrackNamesValidator(
     private fun List<String>.containsBlanks() = find { it.isBlank() } != null
 }
 
-class PlaylistNameValidator(
-    private val playlistDao: PlaylistDao,
+/**
+ * Return a [Validator] that validates [Playlist] names.
+ *
+ * Blank names are not permitted, although no error message will be shown for
+ * blank names unless [Validator.value] has been changed at least once. This
+ * is to prevent a new [Playlist] name dialog with an initially blank name
+ * from immediately showing a 'no blank names' error message before the user
+ * has had a chance to change the name.
+ *
+ * Names that match an existing [Playlist]'s name are not permitted, unless
+ * it is equal to the provided [initialName] and [ignoreInitialValue] is true.
+ * This is to prevent an error message for a rename [Playlist] dialog from
+ * immediately being shown when the dialog is opened. Dialogs to name a new
+ * [Playlist] would usually set [ignoreInitialValue] to false so that the
+ * initial name will cause an error to be shown immediately if it matches an
+ * existing [Playlist]'s name.
+ */
+fun playlistNameValidator(
+    playlistDao: PlaylistDao,
     coroutineScope: CoroutineScope,
-    private val initialName: String,
-) : Validator<String>(initialName, coroutineScope) {
-    private val blankNameErrorMessage = Message.Error(
-        StringResource(R.string.add_playlist_blank_name_error_message))
-    private val duplicateNameErrorMessage = Message.Error(
-        StringResource(R.string.add_playlist_duplicate_name_error_message))
-
-    override suspend fun messageFor(value: String) = when {
-        !valueHasBeenChanged ->      null
-        value == initialName ->      null
-        value.isBlank() ->           blankNameErrorMessage
-        playlistDao.exists(value) -> duplicateNameErrorMessage
-        else ->                      null
-    }
-}
+    initialName: String,
+    ignoreInitialValue: Boolean,
+) = Validator(
+    initialValue = initialName,
+    coroutineScope = coroutineScope,
+    messageFor = { name, hasBeenChanged ->  when {
+        ignoreInitialValue && name == initialName ->
+            null
+        name.isBlank() && hasBeenChanged ->
+            Validator.Message.Error(R.string.add_playlist_blank_name_error_message)
+        playlistDao.exists(name) ->
+            Validator.Message.Error(R.string.add_playlist_duplicate_name_error_message)
+        else -> null
+    }})

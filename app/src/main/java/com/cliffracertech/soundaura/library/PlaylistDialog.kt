@@ -26,7 +26,7 @@ import com.cliffracertech.soundaura.dialog.ValidatedNamingState
 import com.cliffracertech.soundaura.library.PlaylistDialog.PlaylistOptions
 import com.cliffracertech.soundaura.library.PlaylistDialog.Remove
 import com.cliffracertech.soundaura.library.PlaylistDialog.Rename
-import com.cliffracertech.soundaura.model.database.PlaylistNameValidator
+import com.cliffracertech.soundaura.model.Validator
 import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
 import com.cliffracertech.soundaura.ui.MarqueeText
 import kotlinx.coroutines.CoroutineScope
@@ -44,7 +44,7 @@ sealed class PlaylistDialog(
      * can therefore be used as the state parameter for a [RenameDialog].
      *
      * @param target The [Playlist] that is the target of the dialog
-     * @param validator The [PlaylistNameValidator] to use for validation of the new name
+     * @param validator The [Validator] to use for validation of the new name
      * @param coroutineScope A [CoroutineScope] to use for background work.
      * @param onDismissRequest The callback that should be invoked when the dialog's
      *     cancel button is clicked or a back button click or gesture is performed
@@ -54,7 +54,7 @@ sealed class PlaylistDialog(
      */
     class Rename(
         target: Playlist,
-        validator: PlaylistNameValidator,
+        validator: Validator<String>,
         coroutineScope: CoroutineScope,
         onDismissRequest: () -> Unit,
         private val onNameValidated: suspend (String) -> Unit,

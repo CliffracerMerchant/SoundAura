@@ -4,78 +4,73 @@
  */
 package com.cliffracertech.soundaura.model
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
-import com.cliffracertech.soundaura.collectAsState
 import com.cliffracertech.soundaura.model.Validator.Message
 import com.cliffracertech.soundaura.model.Validator.Message.Error
 import com.cliffracertech.soundaura.model.Validator.Message.Information
 import com.cliffracertech.soundaura.model.Validator.Message.Warning
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 /**
  * An abstract value validator.
  *
- * Validator can be used to validate generic non-null values and return
- * messages explaining why the value is not valid if necessary. The initial
- * value of the mutable property [value] will be equal to the provided
- * [initialValue]. The property [valueHasBeenChanged] is visible to sub-classes,
- * and can be used in case different error messages are desired before or after
- * [value] has been changed at least once. For example, a [String] property
- * would mostly likely be initialized to a blank [String]. If blank [String]s
- * are invalid, [valueHasBeenChanged] can be utilized to only show a 'value
- * must not be blank' error message after it has been changed at least once.
- * This would prevent the message from being immediately displayed before the
- * user has had a chance to change the value.
+ * Validator can be used to validate generic non-null values. When the [value]
+ * property is changed, the [message] property will update after a delay to a
+ * new [Message] concerning the value if necessary, or null if no [Message] is
+ * required for the new value. Because [message] may not have had time to
+ * update after a recent change to [value], and because [value] might change in
+ * another thread after being validated, the suspend function [validate] should
+ * always be called to ensure that a given value is valid. The current [value]
+ * will be validated, and then either the validated value or null if the value
+ * was invalid will be returned.
  *
- * The suspend function [messageFor] must be overridden in subclasses to return
- * a [Message] that explains why the current value is not valid, or null if the
- * name is valid. The property [message] can be used to access the message for
- * the most recent [value].
- *
- * Because [message] may not have had time to update after a recent change to
- * [value], and because [value] might change in another thread after being
- * validated, the suspend function [validate] should always be called to ensure
- * that a given value is valid. The current [value] will be validated, and then
- * either the validated value or null if the value was invalid will be returned.
+ * @param initialValue The initial value for the [value] property
+ * @param coroutineScope A [CoroutineScope] to run background work on
+ * @param messageFor A method that will return a [Message] describing why the
+ *     provided T value is invalid, or null if the value is valid. The second
+ *     Boolean parameter indicates whether the value has been changed at least
+ *     once. This can be useful when, e.g., an initial blank name is invalid,
+ *     but the 'no blank names' error message should only be shown after the
+ *     value has been changed at least once.
  */
-abstract class Validator <T>(initialValue: T, coroutineScope: CoroutineScope) {
-    private val flow = MutableStateFlow(initialValue)
-    private val _value by flow.collectAsState(initialValue, coroutineScope)
-    var value get() = _value
-              set(value) {
-                  flow.value = value
-                  valueHasBeenChanged = true
-              }
-    protected var valueHasBeenChanged = false
+class Validator <T>(
+    initialValue: T,
+    private val coroutineScope: CoroutineScope,
+    private val messageFor: suspend (value: T, hasBeenChanged: Boolean) -> Message?,
+) {
+    // Meta-note: This class was designed as a final class with messageFor
+    // being passed as a functional parameter in the constructor instead of
+    // as an abstract class with messageFor being an abstract method so that
+    // would-be subclasses can access whatever captured values they want in
+    // their passed messageFor value. If messageFor were an abstract method,
+    // would-be subclasses accessing their members in their messageFor
+    // override could cause NullPointerExceptions due to their members not
+    // yet being initialized.
+    var message by mutableStateOf<Message?>(null)
         private set
-
-    /** Message's subclasses [Information], [Warning], and [Error] provide
-     * information about a proposed value for a value being validated. */
-    sealed class Message(val stringResource: StringResource) {
-        /** An informational message that does not indicate
-         * that there is a problem with the proposed value. */
-        class Information(stringResource: StringResource): Message(stringResource)
-        /** A message that warns about a potential problem with the
-         * proposed value. It is left up to the user to heed or ignore. */
-        class Warning(stringResource: StringResource): Message(stringResource)
-        /** A message that describes a critical error with the proposed
-         * value that requires the value to be changed before proceeding. */
-        class Error(stringResource: StringResource): Message(stringResource)
-
-        val isInformational get() = this is Information
-        val isWarning get() = this is Warning
-        val isError get() = this is Error
+    private var updateMessageJob: Job? = coroutineScope.launch {
+        message = messageFor(initialValue, false)
+        updateMessageJob = null
     }
 
-    protected abstract suspend fun messageFor(value: T): Message?
-
-    val message by flow.mapLatest(::messageFor).collectAsState(null, coroutineScope)
+    private var _value by mutableStateOf(initialValue)
+    var value get() = _value
+        set(value) {
+            _value = value
+            updateMessageJob?.cancel()
+            updateMessageJob = coroutineScope.launch {
+                message = messageFor(value, true)
+                updateMessageJob = null
+            }
+        }
 
     suspend fun validate(): T? {
         val value = this.value
@@ -83,9 +78,32 @@ abstract class Validator <T>(initialValue: T, coroutineScope: CoroutineScope) {
         // valueHasBeenChanged to true so that subclasses that don't
         // provide an error message for an invalid initial value do
         // provide an error message here
-        valueHasBeenChanged = true
-        val isValid = messageFor(value)?.isError != true
+        val isValid = messageFor(value, true)?.isError != true
         return if (isValid) value else null
+    }
+
+    /** Message's subclasses [Information], [Warning], and [Error] provide
+     * information about a proposed value for a value being validated. */
+    sealed class Message(val stringResource: StringResource) {
+        /** An informational message that does not indicate
+         * that there is a problem with the proposed value. */
+        class Information(stringResource: StringResource): Message(stringResource) {
+            constructor(@StringRes stringResId: Int) : this(StringResource(stringResId))
+        }
+        /** A message that warns about a potential problem with the
+         * proposed value. It is left up to the user to heed or ignore. */
+        class Warning(stringResource: StringResource): Message(stringResource) {
+            constructor(@StringRes stringResId: Int) : this(StringResource(stringResId))
+        }
+        /** A message that describes a critical error with the proposed
+         * value that requires the value to be changed before proceeding. */
+        class Error(stringResource: StringResource): Message(stringResource) {
+            constructor(@StringRes stringResId: Int) : this(StringResource(stringResId))
+        }
+
+        val isInformational get() = this is Information
+        val isWarning get() = this is Warning
+        val isError get() = this is Error
     }
 }
 
