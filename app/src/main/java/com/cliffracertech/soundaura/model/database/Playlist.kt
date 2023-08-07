@@ -3,11 +3,9 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura.model.database
 
+import android.content.Context
 import android.net.Uri
 import androidx.annotation.FloatRange
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import androidx.core.net.toUri
 import androidx.room.*
 import com.cliffracertech.soundaura.R
@@ -93,12 +91,10 @@ data class Playlist(
     val hasError: Boolean = false,
 ) {
     enum class Sort { NameAsc, NameDesc, OrderAdded;
-        companion object {
-            @Composable fun stringValues() = with(LocalContext.current) {
-                remember { arrayOf(getString(R.string.name_ascending),
-                                   getString(R.string.name_descending),
-                                   getString(R.string.order_added)) }
-            }
+        fun name(context: Context) = when (this) {
+            NameAsc -> context.getString(R.string.name_ascending)
+            NameDesc -> context.getString(R.string.name_descending)
+            OrderAdded -> context.getString(R.string.order_added)
         }
     }
 }
