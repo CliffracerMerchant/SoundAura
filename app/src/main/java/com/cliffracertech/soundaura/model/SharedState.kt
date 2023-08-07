@@ -41,6 +41,12 @@ class NavigationState @Inject constructor() {
     }}
 }
 
+/** A state holder for a search query entry. */
+@ActivityRetainedScoped
+class SearchQueryState @Inject constructor() {
+    var query by mutableStateOf<String?>(null)
+}
+
 /** A reference to a [Playlist] within a [Preset],
  * containing only the [Playlist]'s [name] and [volume]. */
 // This PresetPlaylist mirrors the database package PresetPlaylist, except

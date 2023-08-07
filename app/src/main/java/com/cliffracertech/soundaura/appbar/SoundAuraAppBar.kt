@@ -15,7 +15,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -68,8 +67,7 @@ import javax.inject.Inject
     ) : this(dataStore, navigationState, searchQueryState, null)
 
     private val scope = coroutineScope ?: viewModelScope
-
-    private var searchQuery by searchQueryState.query
+    private var searchQuery by searchQueryState::query
 
     val onBackButtonClick get() = when {
         navigationState.willConsumeBackButtonClick ->
@@ -87,10 +85,12 @@ import javax.inject.Inject
     val showIconButtons get() = !navigationState.showingAppSettings
 
     val searchQueryViewState = SearchQueryViewState(
-        getQuery = { searchQuery },
-        onQueryChange = { searchQuery = it },
-        onButtonClick = { searchQuery = if (searchQuery == null) "" else null },
-        getIcon = {
+        getQuery = searchQueryState::query,
+        onQueryChange = searchQueryState::query::set,
+        onButtonClick = {
+            searchQuery = if (searchQuery == null) ""
+                          else                     null
+        }, getIcon = {
             if (searchQuery == null) SearchQueryViewState.Icon.Search
             else                     SearchQueryViewState.Icon.Close
         })

@@ -7,23 +7,15 @@ import android.content.Context
 import androidx.compose.material.SnackbarDuration
 import androidx.compose.material.SnackbarHostState
 import androidx.compose.material.SnackbarResult
-import androidx.compose.runtime.mutableStateOf
 import com.cliffracertech.soundaura.R
 import com.google.android.material.snackbar.BaseTransientBottomBar
 import com.google.android.material.snackbar.Snackbar
-import dagger.hilt.android.scopes.ActivityRetainedScoped
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import javax.inject.Inject
 import javax.inject.Singleton
-
-/** A state holder for a search query entry. */
-@ActivityRetainedScoped
-class SearchQueryState @Inject constructor() {
-    val query = mutableStateOf<String?>(null)
-}
 
 /**
  * A manager of messages to be displayed to the user, e.g. through a [Snackbar].

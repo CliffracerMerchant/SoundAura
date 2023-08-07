@@ -145,7 +145,7 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
     private val playlistSortKey = intPreferencesKey(PrefKeys.playlistSort)
     private val playlistSort = dataStore.enumPreferenceFlow<PlaylistSort>(playlistSortKey)
 
-    private val searchQueryFlow = snapshotFlow { searchQueryState.query.value }
+    private val searchQueryFlow = snapshotFlow { searchQueryState.query }
     val playlists by combine(
            playlistSort, showActiveTracksFirst,
            searchQueryFlow, playlistDao::getAllPlaylists
