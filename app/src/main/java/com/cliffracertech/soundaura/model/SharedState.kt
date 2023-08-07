@@ -29,15 +29,16 @@ class NavigationState @Inject constructor() {
     var showingAppSettings by mutableStateOf(false)
     var showingPresetSelector by mutableStateOf(false)
 
-    fun onBackButtonClick() = when {
+    val willConsumeBackButtonClick get() =
+        showingAppSettings || showingPresetSelector
+
+    fun onBackButtonClick() { when {
         showingAppSettings -> {
             showingAppSettings = false
-            true
         } showingPresetSelector -> {
             showingPresetSelector = false
-            true
-        } else -> false
-    }
+        }
+    }}
 }
 
 /** A reference to a [Playlist] within a [Preset],

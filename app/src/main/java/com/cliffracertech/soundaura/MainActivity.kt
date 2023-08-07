@@ -34,9 +34,9 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.cliffracertech.soundaura.actionbar.SoundAuraActionBar
 import com.cliffracertech.soundaura.addbutton.AddButton
 import com.cliffracertech.soundaura.addbutton.AddButtonTarget
+import com.cliffracertech.soundaura.appbar.SoundAuraAppBar
 import com.cliffracertech.soundaura.library.SoundAuraLibraryView
 import com.cliffracertech.soundaura.mediacontroller.MediaControllerSizes
 import com.cliffracertech.soundaura.mediacontroller.SoundAuraMediaController
@@ -89,7 +89,11 @@ import javax.inject.Inject
         dataStore.awaitEnumPreferenceState<AppTheme>(appThemeKey, scope)
     }
 
-    fun onBackButtonClick() = navigationState.onBackButtonClick()
+    fun onBackButtonClick() = with(navigationState) {
+        if (willConsumeBackButtonClick) {
+            onBackButtonClick(); true
+        } else false
+    }
 
     fun onActivityStart(context: Context) = playbackState.onActivityStart(context)
 
@@ -139,7 +143,7 @@ class MainActivity : ComponentActivity() {
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
         @Suppress("DEPRECATION")
-        if (!viewModel.onBackButtonClick())
+        if (viewModel.onBackButtonClick())
             super.onBackPressed()
     }
 
@@ -163,10 +167,7 @@ class MainActivity : ComponentActivity() {
                         // statusBarsPadding, so we have to use applyTop = false
                         // here to prevent the top padding from being doubled.
                         insets = insets.systemBars, applyTop = false, applyBottom = false)
-                    @Suppress("DEPRECATION")
-                    SoundAuraActionBar(
-                        onUnhandledBackButtonClick = ::onBackPressed,
-                        modifier = Modifier.padding(padding))
+                    SoundAuraAppBar(modifier = Modifier.padding(padding))
                 }, bottomBar = {
                     Spacer(Modifier.navigationBarsHeight().fillMaxWidth())
                 }, floatingActionButton = {
