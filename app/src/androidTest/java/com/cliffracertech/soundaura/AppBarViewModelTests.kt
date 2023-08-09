@@ -114,10 +114,10 @@ class AppBarViewModelTests {
     }
 
     @Test fun show_active_tracks_first_reflects_underlying_state() = runTest{
-        dataStore.edit(showActivePlaylistsFirstKey, true, this)
+        dataStore.edit(showActivePlaylistsFirstKey, true)
         advanceUntilIdle()
         assertThat(instance.showActivePlaylistsFirstSwitchState.checked).isTrue()
-        dataStore.edit(showActivePlaylistsFirstKey, false, this)
+        dataStore.edit(showActivePlaylistsFirstKey, false)
         advanceUntilIdle()
         assertThat(instance.showActivePlaylistsFirstSwitchState.checked).isFalse()
     }
@@ -132,11 +132,11 @@ class AppBarViewModelTests {
     }
 
     @Test fun current_playlistSort_reflects_underlying_state() = runTest {
-        dataStore.edit(playlistSortKey, Playlist.Sort.NameDesc.ordinal, this)
+        dataStore.edit(playlistSortKey, Playlist.Sort.NameDesc.ordinal)
         advanceUntilIdle()
         assertThat(instance.sortMenuState.currentOptionIndex)
             .isEqualTo(Playlist.Sort.NameDesc.ordinal)
-        dataStore.edit(playlistSortKey, Playlist.Sort.NameAsc.ordinal, this)
+        dataStore.edit(playlistSortKey, Playlist.Sort.NameAsc.ordinal)
         advanceUntilIdle()
         assertThat(instance.sortMenuState.currentOptionIndex)
             .isEqualTo(Playlist.Sort.NameAsc.ordinal)
