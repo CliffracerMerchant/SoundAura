@@ -42,7 +42,6 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
@@ -60,6 +59,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.cliffracertech.soundaura.R
+import com.cliffracertech.soundaura.rememberMutableStateOf
 import com.cliffracertech.soundaura.ui.HorizontalDivider
 import com.cliffracertech.soundaura.ui.MarqueeText
 import com.cliffracertech.soundaura.ui.SimpleIconButton
@@ -124,12 +124,15 @@ import java.io.File
     // The combination of the two angles allows the icon to always
     // rotate clockwise, instead of alternating between clockwise
     // and counterclockwise.
-    val angleMod by animateFloatAsState(if (added) 90f else 0f)
+    val angleMod by animateFloatAsState(
+        targetValue = if (added) 90f else 0f,
+        label = "playlist add/remove icon rotation transition")
     val angle = if (added) 90f + angleMod
                 else       90f - angleMod
 
     val iconTint by animateColorAsState(
-        if (added) backgroundColor else tint)
+        targetValue = if (added) backgroundColor else tint,
+        label = "playlist add/remove icon color transition")
     val minusIcon = painterResource(R.drawable.minus)
 
     // One minus icon always appears horizontally, while the other
@@ -282,7 +285,7 @@ class MutablePlaylist(trackUris: List<Uri>) {
 }
 
 @Preview @Composable fun PlaylistOptionsPreview() = SoundAuraTheme {
-    var shuffleEnabled by remember { mutableStateOf(false) }
+    var shuffleEnabled by rememberMutableStateOf(false)
     val mutablePlaylist = remember {
         MutablePlaylist(List(5) {
             // For some reason the Uri path segment methods don't work

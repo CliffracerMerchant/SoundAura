@@ -28,9 +28,6 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -40,6 +37,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
+import com.cliffracertech.soundaura.rememberMutableFloatStateOf
+import com.cliffracertech.soundaura.rememberMutableIntStateOf
+import com.cliffracertech.soundaura.rememberMutableStateOf
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import java.time.Duration
 
@@ -62,8 +62,8 @@ import java.time.Duration
     onAmountChangeRequest: (Int) -> Unit,
 ) {
     val density = LocalDensity.current
-    var dragPx by remember { mutableFloatStateOf(0f) }
-    var lastRequestedValue by remember { mutableIntStateOf(currentValue) }
+    var dragPx by rememberMutableFloatStateOf(0f)
+    var lastRequestedValue by rememberMutableIntStateOf(currentValue)
     val pxThreshold = remember { with (density) { 20.dp.roundToPx() }}
 
     Box(modifier
@@ -170,7 +170,7 @@ import java.time.Duration
 
 @Composable @Preview
 fun DurationPickerPreview() = SoundAuraTheme {
-    var currentDuration by remember { mutableStateOf(Duration.ZERO) }
+    var currentDuration by rememberMutableStateOf(Duration.ZERO)
     val bounds = Range(Duration.ZERO, Duration.ofHours(100).minusSeconds(1))
 
     DurationPicker(
@@ -200,7 +200,7 @@ fun DurationPickerPreview() = SoundAuraTheme {
     onDismissRequest: () -> Unit,
     onConfirm: (Duration) -> Unit,
 ) {
-    var currentDuration by remember { mutableStateOf(Duration.ZERO) }
+    var currentDuration by rememberMutableStateOf(Duration.ZERO)
 
     SoundAuraDialog(
         modifier = modifier,

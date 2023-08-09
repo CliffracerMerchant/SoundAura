@@ -41,8 +41,6 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -63,6 +61,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import com.cliffracertech.soundaura.rememberMutableIntStateOf
+import com.cliffracertech.soundaura.rememberMutableStateOf
 import kotlinx.coroutines.delay
 
 internal const val tweenDuration = 250
@@ -146,8 +146,8 @@ fun Modifier.minTouchTargetSize() =
 ) {
     val content = @Composable { maxWidth: Dp ->
         val scrollState = rememberScrollState()
-        var shouldAnimate by remember { mutableStateOf(true) }
-        var animationDuration by remember { mutableIntStateOf(0) }
+        var shouldAnimate by rememberMutableStateOf(true)
+        var animationDuration by rememberMutableIntStateOf(0)
         if (animationDuration > 0)
             LaunchedEffect(shouldAnimate) {
                 scrollState.animateScrollTo(scrollState.maxValue,
@@ -170,7 +170,6 @@ fun Modifier.minTouchTargetSize() =
     if (maxWidth == null)
         BoxWithConstraints(modifier) { content(this.maxWidth) }
     else Box(modifier) { content(maxWidth) }
-
 }
 
 /** The same as an [androidx.compose.material.TextButton], except that the

@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -200,9 +201,14 @@ fun Modifier.restrictWidthAccordingToSizeClass(
     this.then(modifier)
 }
 
+@Composable fun <T> rememberMutableStateOf(value: T) = remember { mutableStateOf(value) }
+@Composable fun rememberMutableIntStateOf(value: Int) = remember { mutableIntStateOf(value) }
+@Composable fun rememberMutableFloatStateOf(value: Float) = remember { mutableFloatStateOf(value) }
+@Composable fun <T> rememberDerivedStateOf(calculation: () -> T) = remember { derivedStateOf(calculation) }
+
 /** Returns a [State]`<Boolean>` that indicates whether or not the soft keyboard is open. */
 @Composable fun imeIsOpen(): State<Boolean> {
-    val imeIsOpen = remember { mutableStateOf(false) }
+    val imeIsOpen = rememberMutableStateOf(false)
     val view = LocalView.current
     DisposableEffect(view) {
         val listener = ViewTreeObserver.OnGlobalLayoutListener {
@@ -231,9 +237,3 @@ fun PaddingValues(
         end = original.calculateEndPadding(layoutDirection) + additionalEnd,
         bottom = original.calculateBottomPadding() + additionalBottom)
 }
-
-@Composable fun <T> rememberMutableStateOf(value: T) = remember { mutableStateOf(value) }
-@Composable fun rememberMutableIntStateOf(value: Int) = remember { mutableIntStateOf(value) }
-
-@Composable fun <T> rememberDerivedStateOf(calculation: () -> T) =
-    remember { derivedStateOf(calculation) }

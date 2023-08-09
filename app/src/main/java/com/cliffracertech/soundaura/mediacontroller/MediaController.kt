@@ -36,7 +36,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -137,7 +136,7 @@ class ActivePresetViewState(
     val stopTime = stopTimeProvider()
     // lastNonNullStopTime is used so that the StopTimerDisplay will
     // fade out with its last non-null value when it changes to null.
-    var lastNonNullStopTime by remember { mutableStateOf(Instant.MIN) }
+    var lastNonNullStopTime by rememberMutableStateOf(Instant.MIN)
     stopTime?.let { lastNonNullStopTime = it }
 
     val appearanceProgress by animateFloatAsState(
