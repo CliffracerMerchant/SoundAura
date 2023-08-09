@@ -257,7 +257,7 @@ class SettingsViewModel(
         }
     }
 
-    val autoPauseDuringCallSettingVisible by derivedStateOf { playInBackground }
+    val autoPauseDuringCallSettingVisible by ::playInBackground
 
     // This value should always be up to date due to granting or revoking
     // permissions outside of the app causing an app restart. If the user
@@ -274,11 +274,10 @@ class SettingsViewModel(
             initialValue = false,
             scope = scope)
 
-    val autoPauseDuringCall by derivedStateOf {
+    val autoPauseDuringCall get() =
         autoPauseDuringCallPreference &&
         hasReadPhoneStatePermission &&
         autoPauseDuringCallSettingVisible
-    }
 
     var showingPhoneStatePermissionDialog by mutableStateOf(false)
         private set

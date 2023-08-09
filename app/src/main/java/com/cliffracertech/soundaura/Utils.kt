@@ -92,7 +92,7 @@ fun <T> DataStore<Preferences>.edit(
     value: T,
     scope: CoroutineScope
 ) {
-    scope.launch { edit { it[key] = value } }
+    scope.launch { edit(key, value) }
 }
 
 /** Return a [State]`<T>` that contains the most recent value for the
@@ -121,11 +121,12 @@ inline fun <reified T: Enum<T>> DataStore<Preferences>.enumPreferenceState(
     scope: CoroutineScope,
     initialValue: T = enumValues<T>()[0],
 ): State<T> {
-    val indexState = preferenceState(key, initialValue.ordinal, scope)
     val values = enumValues<T>()
-    return derivedStateOf {
-        values.getOrElse(indexState.value) { initialValue }
-    }
+    val state = mutableStateOf(initialValue)
+    data.map { it[key] ?: initialValue.ordinal }
+        .onEach { state.value = values.getOrElse(it) { initialValue } }
+        .launchIn(scope)
+    return state
 }
 
 /** Return a [State]`<T>` that contains the most recent enum value for the
@@ -141,11 +142,13 @@ suspend inline fun <reified T: Enum<T>> DataStore<Preferences>.awaitEnumPreferen
     scope: CoroutineScope,
     defaultValue: T = enumValues<T>()[0],
 ): State<T> {
-    val indexState = awaitPreferenceState(key, defaultValue.ordinal, scope)
     val values = enumValues<T>()
-    return derivedStateOf {
-        values.getOrElse(indexState.value) { defaultValue }
-    }
+    val initialValue = values[data.first()[key] ?: defaultValue.ordinal]
+    val state = mutableStateOf(initialValue)
+    data.map { it[key] ?: defaultValue.ordinal }
+        .onEach { state.value = values.getOrElse(it) { defaultValue } }
+        .launchIn(scope)
+    return state
 }
 
 /** Return a [Flow]`<T>` that contains the most recent value for the [DataStore]

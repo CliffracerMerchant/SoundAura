@@ -5,7 +5,6 @@
 package com.cliffracertech.soundaura.model
 
 import androidx.annotation.StringRes
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -194,10 +193,8 @@ abstract class ListValidator <T>(
         }}
     }
 
-    val message by derivedStateOf {
-        if (errorCount > 0) errorMessage
-        else                null
-    }
+    val message get() = if (errorCount > 0) errorMessage
+                        else                null
 
     /** Return the validated list of values if they are all valid, or null if
      * one or more values are invalid. The default implementation only checks
