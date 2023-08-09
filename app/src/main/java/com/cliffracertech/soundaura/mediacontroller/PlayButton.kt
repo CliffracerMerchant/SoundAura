@@ -15,51 +15,44 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.cliffracertech.soundaura.R
 
-/** A collection of callbacks replayed to the display and function
- * of a combination play/pause button with a long click action. */
-interface PlayButtonCallback {
-    /** A function that returns the media play/pause state that the button should
-     * use to determine its icon, which will be the opposite of the current state */
-    fun getIsPlaying(): Boolean
-    /** The callback that will be invoked when the button is clicked */
-    fun onClick()
-    /** A method that returns the [Int] resource id for the [String] that will be
-     * used as the label for the click action, given [getIsPlaying]'s return value */
-    fun getClickLabelResId(isPlaying: Boolean): Int
-    /** The callback that will be invoked when the button is long clicked */
-    fun onLongClick()
-    /** The [Int] resource id for the [String] that will
-     * be used as the label for the long click action */
+/** A collection of state and callbacks related to a play/pause button.
+ * The icon for the button should be chosen depending on the value of the
+ * property [isPlaying]. The onClick action, onClick label resource id, the
+ * onLongClick action, and the onLongClick label resource id can be accessed
+ * through the properties [onClick], [clickLabelResId], [onLongClick], and
+ * [longClickLabelResId], respectively. */
+class PlayButtonState(
+    private val getIsPlaying: () -> Boolean,
+    val onClick: () -> Unit,
+    private val getClickLabelResId: (isPlaying: Boolean) -> Int,
+    val onLongClick: () -> Unit,
     val longClickLabelResId: Int
+) {
+    val isPlaying get() = getIsPlaying()
+    val clickLabelResId get() = getClickLabelResId(isPlaying)
 }
 
 /**
  * A combination play/pause button with both click and long click actions.
  *
- * @param callback The [PlayButtonCallback] used for the state of the button
+ * @param state The [PlayButtonState] used for the state of the button
  * @param modifier The [Modifier] to use for the button
  */
 @Composable fun PlayButton(
-    callback: PlayButtonCallback,
+    state: PlayButtonState,
     modifier: Modifier = Modifier,
+) = Box(contentAlignment = Alignment.Center,
+    modifier = modifier.combinedClickable(
+        onClick = state.onClick,
+        onClickLabel = stringResource(state.clickLabelResId),
+        onLongClick = state.onLongClick,
+        onLongClickLabel = stringResource(state.longClickLabelResId)),
 ) {
-    val isPlaying = callback.getIsPlaying()
-    val clickLabel = stringResource(callback.getClickLabelResId(isPlaying))
-    val longClickLabel = stringResource(callback.longClickLabelResId)
-
-    Box(contentAlignment = Alignment.Center,
-        modifier = modifier.combinedClickable(
-            onClick = callback::onClick,
-            onClickLabel = clickLabel,
-            onLongClick = callback::onLongClick,
-            onLongClickLabel = longClickLabel),
-    ) {
-        val playToPause = AnimatedImageVector.animatedVectorResource(R.drawable.play_to_pause)
-        val playToPausePainter = rememberAnimatedVectorPainter(playToPause, atEnd = isPlaying)
-        val pauseToPlay = AnimatedImageVector.animatedVectorResource(R.drawable.pause_to_play)
-        val pauseToPlayPainter = rememberAnimatedVectorPainter(pauseToPlay, atEnd = !isPlaying)
-        val painter = if (isPlaying) playToPausePainter
-                      else           pauseToPlayPainter
-        Icon(painter, null)
-    }
+    val playToPause = AnimatedImageVector.animatedVectorResource(R.drawable.play_to_pause)
+    val playToPausePainter = rememberAnimatedVectorPainter(playToPause, atEnd = state.isPlaying)
+    val pauseToPlay = AnimatedImageVector.animatedVectorResource(R.drawable.pause_to_play)
+    val pauseToPlayPainter = rememberAnimatedVectorPainter(pauseToPlay, atEnd = !state.isPlaying)
+    val painter = if (state.isPlaying) playToPausePainter
+                  else                 pauseToPlayPainter
+    Icon(painter, null)
 }

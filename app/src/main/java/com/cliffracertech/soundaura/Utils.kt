@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -230,3 +231,9 @@ fun PaddingValues(
         end = original.calculateEndPadding(layoutDirection) + additionalEnd,
         bottom = original.calculateBottomPadding() + additionalBottom)
 }
+
+@Composable fun <T> rememberMutableStateOf(value: T) = remember { mutableStateOf(value) }
+@Composable fun rememberMutableIntStateOf(value: Int) = remember { mutableIntStateOf(value) }
+
+@Composable fun <T> rememberDerivedStateOf(calculation: () -> T) =
+    remember { derivedStateOf(calculation) }

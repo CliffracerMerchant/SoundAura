@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.SnackbarDuration
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,10 +37,10 @@ import com.cliffracertech.soundaura.model.NavigationState
 import com.cliffracertech.soundaura.model.PlaybackState
 import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.database.PlaylistDao
-import com.cliffracertech.soundaura.model.database.Preset
 import com.cliffracertech.soundaura.model.database.PresetDao
 import com.cliffracertech.soundaura.model.database.presetNameValidator
 import com.cliffracertech.soundaura.preferenceState
+import com.cliffracertech.soundaura.rememberDerivedStateOf
 import com.cliffracertech.soundaura.settings.PrefKeys
 import com.cliffracertech.soundaura.ui.tweenDuration
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -49,7 +48,6 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import java.time.Instant
 import javax.inject.Inject
 
 @HiltViewModel class MediaControllerViewModel(
@@ -80,11 +78,10 @@ import javax.inject.Inject
 
     private val activePresetName by activePresetState.name.collectAsState(null, scope)
     private val activePresetIsModified by activePresetState.isModified.collectAsState(false, scope)
-    private fun activePresetCallback() = object: ActivePresetCallback {
-        override fun getName() = activePresetName
-        override fun getIsModified() = activePresetIsModified
-        override fun onClick() { navigationState.showingPresetSelector = true }
-    }
+    private val activePresetViewState = ActivePresetViewState(
+        getName = ::activePresetName,
+        getIsModified = ::activePresetIsModified,
+        onClick = { navigationState.showingPresetSelector = true })
 
     private val playButtonLongClickHintShownKey =
         booleanPreferencesKey(PrefKeys.playButtonLongClickHintShown)
@@ -93,97 +90,90 @@ import javax.inject.Inject
     private val activePlaylistsIsEmpty by playlistDao
         .getAtLeastOnePlaylistIsActive()
         .collectAsState(true, scope)
-    private fun playButtonCallback() = object: PlayButtonCallback {
-        override fun getIsPlaying() = playbackState.isPlaying
-        override fun onClick() {
+    private val playButtonState = PlayButtonState(
+        getIsPlaying = playbackState::isPlaying,
+        onClick = {
             playbackState.toggleIsPlaying()
-            if (playButtonLongClickHintShown || activePlaylistsIsEmpty)
-                return // We don't want to show the hint if there are no active tracks
-                       // because the PlayerService should show a message about there
-                       // being no active tracks
-            val stringRes = StringResource(R.string.play_button_long_click_hint_text)
-            messageHandler.postMessage(stringRes, SnackbarDuration.Long)
-            dataStore.edit(playButtonLongClickHintShownKey, true, scope)
-        }
-        override fun onLongClick() {
+            // We don't want to show the hint if there are no
+            // active playlists because the PlayerService should
+            // show a message about there being no active playlists
+            if (!playButtonLongClickHintShown && !activePlaylistsIsEmpty) {
+                val stringRes = StringResource(R.string.play_button_long_click_hint_text)
+                messageHandler.postMessage(stringRes, SnackbarDuration.Long)
+                dataStore.edit(playButtonLongClickHintShownKey, true, scope)
+            }
+        }, onLongClick = {
             shownDialog = DialogType.SetAutoStopTimer(
                 onDismissRequest = ::dismissDialog,
                 onConfirmClick = { duration ->
                     playbackState.setTimer(duration)
                     dismissDialog()
                 })
-        }
-        override fun getClickLabelResId(isPlaying: Boolean) =
+        }, getClickLabelResId = { isPlaying: Boolean ->
             if (isPlaying) R.string.pause_button_description
             else           R.string.play_button_description
-        override val longClickLabelResId = R.string.play_pause_button_long_click_description
-    }
+        }, longClickLabelResId = R.string.play_pause_button_long_click_description)
 
     private val presetList by presetDao
         .getPresetList()
         .map { it.toImmutableList() }
         .collectAsState(null, scope)
-    private fun presetListCallback() = object : PresetListCallback {
-        override fun getList() = presetList
-        override fun onRenameClick(preset: Preset) {
+    private val presetListState = PresetListState(
+        getList = ::presetList,
+        onRenameClick = { presetName: String ->
             shownDialog = DialogType.RenamePreset(
-                target = preset,
                 coroutineScope = scope,
-                validator = presetNameValidator(presetDao, scope, preset.name),
+                validator = presetNameValidator(presetDao, scope, presetName),
                 onDismissRequest = ::dismissDialog,
                 onNameValidated = { validatedName ->
-                    presetDao.renamePreset(preset.name, validatedName)
+                    presetDao.renamePreset(presetName, validatedName)
                     dismissDialog()
                 })
-        }
-        override fun onOverwriteClick(preset: Preset) {
+        }, onOverwriteClick = { presetName: String ->
             shownDialog = DialogType.Confirmatory(
                 title = StringResource(R.string.confirm_overwrite_preset_dialog_title),
-                text = StringResource(R.string.confirm_overwrite_preset_dialog_message, preset.name),
+                text = StringResource(R.string.confirm_overwrite_preset_dialog_message, presetName),
                 onDismissRequest = ::dismissDialog,
                 onConfirmClick = {
-                    overwritePreset(preset.name)
+                    overwritePreset(presetName)
                     dismissDialog()
                 })
-        }
-        override fun onDeleteClick(preset: Preset) {
+        }, onDeleteClick = {presetName: String ->
             shownDialog = DialogType.Confirmatory(
-                title = StringResource(R.string.confirm_delete_preset_title, preset.name),
+                title = StringResource(R.string.confirm_delete_preset_title, presetName),
                 text = StringResource(R.string.confirm_delete_preset_message),
                 onDismissRequest = ::dismissDialog,
                 onConfirmClick = {
                     scope.launch {
-                        if (preset.name == activePresetName)
+                        if (presetName == activePresetName)
                             activePresetState.clear()
-                        presetDao.deletePreset(preset.name)
+                        presetDao.deletePreset(presetName)
                     }
                     dismissDialog()
                 })
-        }
-        override fun onClick(preset: Preset) { when {
+        }, onClick = { presetName: String -> when {
             activePresetIsModified -> {
                 shownDialog = DialogType.PresetUnsavedChangesWarning(
-                    target = preset,
+                    targetName = presetName,
                     onDismissRequest = ::dismissDialog,
                     onConfirmClick = { saveFirst ->
                         if (saveFirst)
                             activePresetName?.let(::overwritePreset)
-                        loadPreset(preset)
+                        loadPreset(presetName)
                         dismissDialog()
                     })
-            } preset.name == activePresetName ->
+            } presetName == activePresetName ->
             // This skips a pointless loading of the unmodified active preset
             closePresetSelector()
-            else -> loadPreset(preset)
-        }}
-    }
+            else -> loadPreset(presetName)
+        }})
 
-    val callback = object: MediaControllerCallback {
-        override val activePresetCallback = activePresetCallback()
-        override val playButtonCallback = playButtonCallback()
-        override val presetListCallback = presetListCallback()
-        override fun getStopTime(): Instant? = playbackState.stopTime
-        override fun onStopTimerClick() {
+    val state = MediaControllerState(
+        activePresetState = activePresetViewState,
+        playButtonState = playButtonState,
+        presetListState = presetListState,
+        getStopTime = playbackState::stopTime,
+        onStopTimerClick = {
             shownDialog = DialogType.Confirmatory(
                 onDismissRequest = ::dismissDialog,
                 title = StringResource(R.string.cancel_stop_timer_dialog_title),
@@ -192,10 +182,8 @@ import javax.inject.Inject
                     playbackState.clearTimer()
                     dismissDialog()
                 })
-        }
-        override fun getShowingPresetSelector() = navigationState.showingPresetSelector
-        override fun onCloseButtonClick() = closePresetSelector()
-    }
+        }, getShowingPresetSelector = navigationState::showingPresetSelector,
+        onCloseButtonClick = ::closePresetSelector)
 
     private fun closePresetSelector() {
         navigationState.showingPresetSelector = false
@@ -222,10 +210,10 @@ import javax.inject.Inject
     }}
 
     // TODO: Figure out why UI stutters when selecting new preset
-    private fun loadPreset(preset: Preset) {
+    private fun loadPreset(presetName: String) {
         scope.launch {
-            activePresetState.setName(preset.name)
-            presetDao.loadPreset(preset.name)
+            activePresetState.setName(presetName)
+            presetDao.loadPreset(presetName)
             closePresetSelector()
         }
     }
@@ -253,9 +241,7 @@ import javax.inject.Inject
     val exitSpec = tween<Float>(
         durationMillis = tweenDuration,
         easing = LinearOutSlowInEasing)
-    val hasStopTime by remember { derivedStateOf {
-        viewModel.callback.getStopTime() != null
-    }}
+    val hasStopTime by rememberDerivedStateOf { viewModel.state.stopTime != null }
     val transformOrigin = rememberClippedBrushBoxTransformOrigin(
         alignment, padding, dpSize = sizes.collapsedSize(hasStopTime))
 
@@ -270,7 +256,7 @@ import javax.inject.Inject
             backgroundBrush = backgroundBrush,
             alignment = alignment,
             padding = padding,
-            callback = viewModel.callback)
+            state = viewModel.state)
     }
     DialogShower(viewModel.shownDialog)
 }

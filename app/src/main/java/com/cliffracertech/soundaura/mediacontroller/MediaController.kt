@@ -35,7 +35,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,11 +56,14 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.model.database.Preset
+import com.cliffracertech.soundaura.rememberDerivedStateOf
+import com.cliffracertech.soundaura.rememberMutableStateOf
 import com.cliffracertech.soundaura.ui.MarqueeText
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import com.cliffracertech.soundaura.ui.tweenDuration
 import kotlinx.collections.immutable.toImmutableList
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 val Orientation.isHorizontal get() = this == Orientation.Horizontal
 val Orientation.isVertical get() = this == Orientation.Vertical
@@ -77,29 +79,31 @@ fun Modifier.rotateClockwise() = layout { measurable, constraints ->
     }
 }.rotate(90f)
 
-/** A collection of callbacks related to the display of an active preset. */
-interface ActivePresetCallback {
-    /** A function that returns the actively playing [Preset]'s
-    * name, or null if there isn't one, when invoked */
-    fun getName(): String?
-    /** A function that returns whether or not the
-     * active preset has unsaved changes when invoked */
-    fun getIsModified(): Boolean
-    /** The callback that will be invoked when
-     * the display of the active preset is clicked */
-    fun onClick()
+/** A collection of state related to the display of an active preset. The
+ * name of the active preset, or null if there isn't one, can be accessed
+ * through the [name] property. Whether or not the active preset has been
+ * modified since it was last saved can be accessed through the property
+ * [isModified]. The property [onClick] should be used as the onClick
+ * callback for the active preset display. */
+class ActivePresetViewState(
+    private val getName: () -> String?,
+    private val getIsModified: () -> Boolean,
+    val onClick: () -> Unit,
+) {
+    val name get() = getName()
+    val isModified get() = getIsModified()
 }
 
-@Composable private fun ActivePresetDisplay(
+@Composable private fun ActivePresetView(
     sizes: MediaControllerSizes,
-    callback: ActivePresetCallback,
+    state: ActivePresetViewState,
     modifier: Modifier = Modifier,
 ) {
     val onClickLabel = stringResource(R.string.preset_button_click_label)
     val columnModifier = remember(modifier, sizes.orientation) {
         modifier.size(sizes.activePresetSize)
                 .clip(sizes.activePresetShape)
-                .clickable(true, onClickLabel, Role.Button, callback::onClick)
+                .clickable(true, onClickLabel, Role.Button, state.onClick)
                 .then(if (sizes.orientation.isHorizontal)
                           Modifier.padding(start = 12.dp, end = 8.dp)
                     else Modifier.padding(top = 12.dp, bottom = 8.dp)
@@ -107,17 +111,15 @@ interface ActivePresetCallback {
     }
     Column(columnModifier, Arrangement.Center, Alignment.CenterHorizontally) {
         val style = MaterialTheme.typography.caption
-        val activePresetName = callback.getName()
         Text(text = stringResource(R.string.playing),
              maxLines = 1, style = style, softWrap = false)
         Row {
             MarqueeText(
-                text = activePresetName ?:
-                    stringResource(R.string.unsaved_preset_description),
+                text = state.name ?: stringResource(R.string.unsaved_preset_description),
                 maxWidth = sizes.activePresetLength,
                 modifier = Modifier.weight(1f, false),
                 style = style)
-            AnimatedVisibility(callback.getIsModified()) {
+            AnimatedVisibility(state.isModified) {
                 Text(" *", style = style)
             }
         }
@@ -175,10 +177,9 @@ interface ActivePresetCallback {
  * @param transitionProgressProvider A method that returns the
  *     current progress of the [MediaController]'s show/hide
  *     preset selector transition when invoked
- * @param activePresetCallback The [ActivePresetCallback] that will be used
- *     to determine the display and function of the active preset indicator
- * @param playButtonCallback The [PlayButtonCallback] that will be
- *     used to determine the display and function of the play/pause button
+ * @param activePresetState The [ActivePresetViewState] that
+ *     will be used for the active preset indicator
+ * @param playButtonState The [PlayButtonState] that will be used for the play/pause button
  * @param stopTimeProvider A method that will return the [Instant] at which
  *     media will automatically stop playing, if any, when invoked. This value
  *     is only used for informational display; playback is not affected by
@@ -190,8 +191,8 @@ interface ActivePresetCallback {
 @Composable private fun MediaControllerCollapsedContent(
     sizes: MediaControllerSizes,
     transitionProgressProvider: () -> Float,
-    activePresetCallback: ActivePresetCallback,
-    playButtonCallback: PlayButtonCallback,
+    activePresetState: ActivePresetViewState,
+    playButtonState: PlayButtonState,
     stopTimeProvider: () -> Instant?,
     onStopTimerClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -200,10 +201,10 @@ interface ActivePresetCallback {
     modifier = modifier
         .graphicsLayer { alpha = 1f - transitionProgressProvider() }
 ) {
-    ActivePresetDisplay(sizes, activePresetCallback)
+    ActivePresetView(sizes, activePresetState)
     Divider(sizes.orientation, sizeFraction = 0.8f)
     PlayButton(
-        callback = playButtonCallback,
+        state = playButtonState,
         modifier = Modifier
             .size(sizes.buttonSize)
             .clip(sizes.playButtonShape(stopTimeProvider() != null)))
@@ -253,8 +254,8 @@ interface ActivePresetCallback {
     hasStopTimer: Boolean,
     backgroundBrush: Brush,
     transitionProgressProvider: () -> Float,
-    activePresetCallback: ActivePresetCallback,
-    presetListCallback: PresetListCallback,
+    activePresetState: ActivePresetViewState,
+    presetListState: PresetListState,
 ) {
     val listPadding = 8.dp
     val presetListSize = remember(sizes) {
@@ -279,36 +280,38 @@ interface ActivePresetCallback {
                 }.background(MaterialTheme.colors.surface,
                              MaterialTheme.shapes.large),
             contentPadding = PaddingValues(bottom = 64.dp),
-            activePresetCallback = activePresetCallback,
+            activePresetState = activePresetState,
             selectionBrush = backgroundBrush,
-            callback = presetListCallback)
+            state = presetListState)
 }
 
-/** A collection of state providers and callbacks
- * related to the functionality of a MediaController. */
-interface MediaControllerCallback {
-    val activePresetCallback: ActivePresetCallback
-    val playButtonCallback: PlayButtonCallback
-    val presetListCallback: PresetListCallback
-    /** A method that will return the java.time.Instant at which playback
-     * will be automatically stopped when invoked. MediaController does not
-     * use this information to affect playback; the returned value is only
-     * used to display this information to the user. */
-    fun getStopTime(): Instant?
-    /** The callback that will be invoked when the display of the stop timer is clicked */
-    fun onStopTimerClick()
-    /** A method that returns whether or not the PresetSelector should be shown when invoked */
-    fun getShowingPresetSelector(): Boolean
-    /** The callback that will be invoked when [getShowingPresetSelector]
-     * returns true and the close button is clicked */
-    fun onCloseButtonClick()
+/** A state holder for an expandable media controller. The states for the media
+ * controller's sub-components are exposed through the properties [activePresetState],
+ * [playButtonState], and [presetListState]. The expanded/collapsed state is
+ * accessed through the property [showingPresetSelector]. The onClick callback
+ * for the close button that should be shown when [showingPresetSelector] is
+ * true should be set to the property [onCloseButtonClick]. If the property
+ * [stopTime] returns a non-null [Instant], then the duration remaining until
+ * the stop time should be displayed in a clickable display next to the play/
+ * pause button, with the onClick action set to the property [onStopTimerClick]. */
+class MediaControllerState(
+    val activePresetState: ActivePresetViewState,
+    val playButtonState: PlayButtonState,
+    val presetListState: PresetListState,
+    private val getStopTime: () -> Instant?,
+    val onStopTimerClick: () -> Unit,
+    private val getShowingPresetSelector: () -> Boolean,
+    val onCloseButtonClick: () -> Unit,
+) {
+    val stopTime get() = getStopTime()
+    val showingPresetSelector get() = getShowingPresetSelector()
 }
 
 /**
  * A floating button that shows information about the currently playing
- * [Preset] and a play/pause button. When the [callback]'s
- * [MediaControllerCallback.getShowingPresetSelector] returns true, the button
- * will animate its transformation into a preset selector. In this state it
+ * [Preset] and a play/pause button. When the [state]'s
+ * [MediaControllerState.showingPresetSelector] is true, the button will
+ * animate its transformation into a preset selector. In this state it
  * will contain a [PresetList] to allow the user to choose a new preset.
  *
  * @param modifier The [Modifier] to use for the button / popup
@@ -322,7 +325,7 @@ interface MediaControllerCallback {
  *     not be applied through the [modifier] parameter or it will be applied twice.
  * @param padding The [PaddingValues] to use for placement. This padding should not
  *     be applied through the [modifier] parameter or it will be applied twice.
- * @param callback The [MediaControllerCallback] that will be used for state and callbacks
+ * @param state The [MediaControllerState] that will be used for state and callbacks
  */
 @Composable fun MediaController(
     modifier: Modifier = Modifier,
@@ -331,12 +334,11 @@ interface MediaControllerCallback {
     contentColor: Color = MaterialTheme.colors.onPrimary,
     alignment: BiasAlignment,
     padding: PaddingValues,
-    callback: MediaControllerCallback
+    state: MediaControllerState
 ) = CompositionLocalProvider(LocalContentColor provides contentColor) {
 
-    val showingPresetSelector = callback.getShowingPresetSelector()
-    val isExpanded = remember { MutableTransitionState(showingPresetSelector) }
-    isExpanded.targetState = showingPresetSelector
+    val isExpanded = remember { MutableTransitionState(state.showingPresetSelector) }
+    isExpanded.targetState = state.showingPresetSelector
 
     val expandTransition = updateTransition(
         isExpanded, "MediaController expand transition")
@@ -345,14 +347,12 @@ interface MediaControllerCallback {
         label = "MediaController expand transition progress",
         targetValueByState = { if (it) 1f else 0f })
     val transitionProgressProvider = remember {{ expandTransitionProgress }}
-    val hasStopTime by remember { derivedStateOf {
-        callback.getStopTime() != null
-    }}
+    val hasStopTime by rememberDerivedStateOf { state.stopTime != null }
 
     ClippedBrushBox(
         modifier = modifier,
         brush = backgroundBrush,
-        size = sizes.rememberCurrentSize(showingPresetSelector, hasStopTime),
+        size = sizes.rememberCurrentSize(state.showingPresetSelector, hasStopTime),
         cornerRadius = 28.dp,
         padding = padding,
         alignment = alignment,
@@ -369,37 +369,36 @@ interface MediaControllerCallback {
             Box(Modifier.height(titleHeight)) {
                 if (expandTransitionProgress > 0f)
                     PresetSelectorTitle(
-                        sizes, callback::onCloseButtonClick,
+                        sizes, state.onCloseButtonClick,
                         transitionProgressProvider)
 
                 if (expandTransitionProgress < 1f)
                     MediaControllerCollapsedContent(
                         sizes, transitionProgressProvider,
-                        callback.activePresetCallback,
-                        callback.playButtonCallback,
-                        callback::getStopTime,
-                        callback::onStopTimerClick)
+                        state.activePresetState, state.playButtonState,
+                        state::stopTime, state.onStopTimerClick)
             }
             MediaControllerPresetList(
                 sizes, hasStopTime, backgroundBrush,
                 transitionProgressProvider,
-                callback.activePresetCallback,
-                callback.presetListCallback)
+                state.activePresetState,
+                state.presetListState)
         }
     }
 }
 
 @Preview @Composable
 fun MediaControllerPreview() = SoundAuraTheme {
-    var expanded by remember { mutableStateOf(false) }
-    var playing by remember { mutableStateOf(false) }
+    var expanded by rememberMutableStateOf(false)
+    var playing by rememberMutableStateOf(false)
     val list = remember { listOf(
         Preset("Super duper extra really long preset name 0"),
         Preset("Super duper extra really long preset name 1"),
         Preset("Super duper extra really long preset name 2"),
         Preset("Super duper extra really long preset name 3")
     ).toImmutableList() }
-    val activePresetName = remember { mutableStateOf<String?>(list.first().name) }
+    val activePresetName = rememberMutableStateOf<String?>(list.first().name)
+    var stopTime by rememberMutableStateOf<Instant?>(null)
 
     MediaController(
         sizes = MediaControllerSizes(
@@ -412,31 +411,27 @@ fun MediaControllerPreview() = SoundAuraTheme {
         contentColor = MaterialTheme.colors.onPrimary,
         alignment = Alignment.BottomStart as BiasAlignment,
         padding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 8.dp),
-        callback = object: MediaControllerCallback {
-            override val activePresetCallback = object : ActivePresetCallback {
-                override fun getName() = activePresetName.value
-                override fun getIsModified() = true
-                override fun onClick() { expanded = true }
-            }
-            override val playButtonCallback = object : PlayButtonCallback {
-                override fun getIsPlaying() = playing
-                override fun onClick() { playing = !playing }
-                override fun getClickLabelResId(isPlaying: Boolean) = 0
-                override fun onLongClick() {}
-                override val longClickLabelResId = 0
-            }
-            override val presetListCallback = object: PresetListCallback {
-                override fun getList() = list
-                override fun onRenameClick(preset: Preset) {}
-                override fun onOverwriteClick(preset: Preset) {}
-                override fun onDeleteClick(preset: Preset) {}
-                override fun onClick(preset: Preset) {
-                    activePresetName.value = preset.name
-                }
-            }
-            override fun getStopTime() = null
-            override fun onStopTimerClick() {}
-            override fun getShowingPresetSelector() = expanded
-            override fun onCloseButtonClick() { expanded = false }
-        })
+        state = remember { MediaControllerState(
+            ActivePresetViewState(
+                getName = activePresetName::value,
+                getIsModified = { true },
+                onClick = { expanded = true }),
+            PlayButtonState(
+                getIsPlaying = { playing },
+                onClick = { playing = !playing },
+                getClickLabelResId = { 0 },
+                onLongClick = {
+                    stopTime = Instant.now().plus(1, ChronoUnit.HOURS)
+                }, longClickLabelResId = 0),
+            PresetListState(
+                getList = { list },
+                onRenameClick = {},
+                onOverwriteClick = {},
+                onDeleteClick = {},
+                onClick = { activePresetName.value = it }),
+            getStopTime = { stopTime },
+            onStopTimerClick = { stopTime = null },
+            getShowingPresetSelector = { expanded },
+            onCloseButtonClick = { expanded = false }
+        )})
 }

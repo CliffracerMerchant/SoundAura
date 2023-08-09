@@ -46,7 +46,6 @@ sealed class DialogType(
      * required). The method [onNameChange] should be invoked when the new
      * name needs to be changed.
      *
-     * @param target The [Preset] that is being renamed
      * @param coroutineScope A [CoroutineScope] to run background work on
      * @param validator A [Validator] instance to use for validating the entered name
      * @param onDismissRequest The callback that should be invoked if the
@@ -56,7 +55,6 @@ sealed class DialogType(
      *     dialog's confirm button is clicked and the new name is valid.
      */
     class RenamePreset(
-        val target: Preset,
         coroutineScope: CoroutineScope,
         validator: Validator<String>,
         onDismissRequest: () -> Unit,
@@ -69,14 +67,14 @@ sealed class DialogType(
      * A dialog that presents choices regarding the unsaved changes
      * for a [Preset] that is about to switched away from.
      *
-     * @param target The active [Preset] that has unsaved changes
+     * @param targetName The name of the active [Preset] that has unsaved changes
      * @param onConfirmClick The callback that should be invoked if the dialog's
      *     confirm button is clicked along with whether or not the user requested
      *     for the active preset to be saved first provided
      */
     class PresetUnsavedChangesWarning(
         onDismissRequest: () -> Unit,
-        val target: Preset,
+        val targetName: String,
         val onConfirmClick: (saveFirst: Boolean) -> Unit,
     ): DialogType(onDismissRequest)
 
@@ -123,7 +121,7 @@ sealed class DialogType(
     is DialogType.PresetUnsavedChangesWarning ->
         UnsavedPresetChangesWarningDialog(
             modifier = modifier,
-            unsavedPresetName = shownDialog.target.name,
+            unsavedPresetName = shownDialog.targetName,
             onDismissRequest = shownDialog.onDismissRequest,
             onConfirm = shownDialog.onConfirmClick)
     is DialogType.SetAutoStopTimer ->
@@ -158,27 +156,21 @@ sealed class DialogType(
     buttons = {
         HorizontalDivider(Modifier.padding(top = 12.dp))
         TextButton(
-            modifier = Modifier
-                .minTouchTargetSize()
-                .fillMaxWidth(),
+            modifier = Modifier.minTouchTargetSize().fillMaxWidth(),
             shape = RectangleShape,
             textResId = R.string.cancel,
             onClick = onDismissRequest)
 
         HorizontalDivider()
         TextButton(
-            modifier = Modifier
-                .minTouchTargetSize()
-                .fillMaxWidth(),
+            modifier = Modifier.minTouchTargetSize().fillMaxWidth(),
             shape = RectangleShape,
             textResId = R.string.unsaved_preset_changes_warning_save_first_option,
             onClick = { onConfirm(true) })
 
         HorizontalDivider()
         TextButton(
-            modifier = Modifier
-                .minTouchTargetSize()
-                .fillMaxWidth(),
+            modifier = Modifier.minTouchTargetSize().fillMaxWidth(),
             shape = MaterialTheme.shapes.medium.bottomShape(),
             textResId = R.string.unsaved_preset_changes_warning_load_anyways_option,
             onClick = { onConfirm(false) })
