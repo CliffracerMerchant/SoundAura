@@ -85,11 +85,15 @@ class PlaybackState @Inject constructor() {
     }
 
     val isPlaying get() = serviceBinder?.isPlaying ?: false
+
     val stopTime get() = serviceBinder?.stopTime
 
     /** Toggle the playback state of the sound mix between playing/paused. */
     fun toggleIsPlaying() {
-        serviceBinder?.toggleIsPlaying() ?: context?.let {
+        val binder = serviceBinder
+        if (binder != null)
+            binder.toggleIsPlaying()
+        else context?.let {
             it.startService(PlayerService.playIntent(it))
             it.bindService()
         }
