@@ -8,7 +8,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.with
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -198,7 +198,10 @@ interface PlaylistViewCallback {
     contentDescription: String? = null,
     backgroundColor: Color = MaterialTheme.colors.surface,
     onAddRemoveClick: () -> Unit
-) = AnimatedContent(showError) {
+) = AnimatedContent(
+    targetState = showError,
+    label = "PlaylistView add/remove button / error icon crossfade"
+) {
     if (it) Icon(
         imageVector = Icons.Default.Error,
         contentDescription = contentDescription,
@@ -240,7 +243,8 @@ interface PlaylistViewCallback {
 ) = AnimatedContent(
     targetState = errorMessage != null,
     modifier = modifier,
-    transitionSpec = { fadeIn() togetherWith fadeOut() },
+    transitionSpec = { fadeIn() with fadeOut() },
+    label = "PlaylistView error message fade in/out",
 ) { hasError ->
     if (hasError) {
         // 0.5dp start padding is required to make the text
@@ -318,7 +322,10 @@ private enum class PlaylistViewEndContentType {
     onPlaylistOptionsClick: () -> Unit,
     onRemoveClick: () -> Unit,
     tint: Color = LocalContentColor.current,
-) = Crossfade(content) { when(it) {
+) = Crossfade(
+    targetState = content,
+    label = "PlaylistView end content crossfade"
+) { when(it) {
     PlaylistViewEndContentType.MoreOptionsButton -> {
         var showingOptionsMenu by remember {
             mutableStateOf(false)

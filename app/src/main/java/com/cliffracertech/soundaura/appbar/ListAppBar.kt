@@ -14,7 +14,7 @@ import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.with
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -87,7 +87,7 @@ import kotlinx.collections.immutable.toImmutableList
     // Back button
     AnimatedContent(
         targetState = onBackButtonClick != null,
-        transitionSpec = { slideInHorizontally { -it } + fadeIn() togetherWith
+        transitionSpec = { slideInHorizontally { -it } + fadeIn() with
                            slideOutHorizontally { -it } + fadeOut() },
         contentAlignment = Alignment.Center,
         label = "Action bar back button appearance/disappearance",
@@ -104,7 +104,7 @@ import kotlinx.collections.immutable.toImmutableList
     AnimatedContent(// This outer crossfade is for when the search query appears/disappears.
         targetState = searchQueryState.query != null,
         modifier = Modifier.weight(1f),
-        transitionSpec = { fadeIn(tween(tweenDuration)) togetherWith
+        transitionSpec = { fadeIn(tween(tweenDuration)) with
                            fadeOut(tween(tweenDuration)) },
         contentAlignment = Alignment.CenterStart,
         label = "Action bar search query appearance/disappearance",

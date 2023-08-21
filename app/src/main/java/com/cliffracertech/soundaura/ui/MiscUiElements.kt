@@ -11,7 +11,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.with
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -87,15 +87,15 @@ fun Modifier.minTouchTargetSize() =
     modifier: Modifier = Modifier,
     leftToRight: Boolean,
     content: @Composable (AnimatedVisibilityScope.(S) -> Unit)
-) {
-    val transition = remember(leftToRight) {
+) = AnimatedContent(
+    targetState, modifier,
+    transitionSpec = {
         val enterOffset = { size: Int -> size / if (leftToRight) 1 else -1 }
         val exitOffset = { size: Int -> size / if (leftToRight) -4 else 4 }
-        slideInHorizontally(spring(stiffness = springStiffness), enterOffset) togetherWith
+        slideInHorizontally(spring(stiffness = springStiffness), enterOffset) with
         slideOutHorizontally(spring(stiffness = springStiffness), exitOffset)
-    }
-    AnimatedContent(targetState, modifier, { transition }, content = content)
-}
+    }, label = "SlideAnimatedContent left/right slide transition",
+    content = content)
 
 /** Add a vertical divider to the [Row]. The divider will take
  * up a fraction of the [Row]'s height equal to [heightFraction]. */
