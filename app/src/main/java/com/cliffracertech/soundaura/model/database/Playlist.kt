@@ -377,7 +377,7 @@ fun newPlaylistNameValidator(
 ) = Validator(
     initialValue = initialName,
     coroutineScope = coroutineScope,
-    messageFor = { name, hasBeenChanged ->  when {
+    messageFor = { name, hasBeenChanged -> when {
         name.isBlank() && hasBeenChanged ->
             Validator.Message.Error(R.string.name_dialog_blank_name_error_message)
         dao.exists(name) ->
