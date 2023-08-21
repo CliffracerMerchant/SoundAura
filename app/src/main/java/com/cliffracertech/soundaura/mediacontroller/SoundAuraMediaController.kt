@@ -51,6 +51,18 @@ import kotlinx.coroutines.launch
 import java.time.Duration
 import javax.inject.Inject
 
+/**
+ * A [ViewModel] that contains state and callbacks for a [MediaController].
+ *
+ * The media controller should show/hide itself according to the value of the
+ * property [visible]. If the controller is visible, the value of the [state]
+ * property should be used as the controller's [MediaController.state]
+ * parameter.
+ *
+ * When the property [shownDialog] is not null, a dialog should be shown that
+ * matches the reflects [shownDialog]'s type (i.e. one of the subclasses of
+ * [DialogType]).
+ */
 @HiltViewModel class MediaControllerViewModel(
     private val presetDao: PresetDao,
     private val navigationState: NavigationState,
@@ -107,7 +119,8 @@ import javax.inject.Inject
             shownDialog = DialogType.SetAutoStopTimer(
                 onDismissRequest = ::dismissDialog,
                 onConfirmClick = { duration ->
-                    playbackState.setTimer(duration)
+                    if (duration > Duration.ZERO)
+                        playbackState.setTimer(duration)
                     dismissDialog()
                 })
         }, getClickLabelResId = { isPlaying: Boolean ->
@@ -127,8 +140,13 @@ import javax.inject.Inject
                 validator = presetRenameValidator(presetDao, scope, presetName),
                 onDismissRequest = ::dismissDialog,
                 onNameValidated = { validatedName ->
-                    presetDao.renamePreset(presetName, validatedName)
                     dismissDialog()
+                    if (validatedName != presetName) {
+                        if (activePresetName == presetName)
+                            activePresetState.setName(validatedName)
+                        presetDao.renamePreset(presetName, validatedName)
+                    }
+
                 })
         }, onOverwriteClick = { presetName: String ->
             shownDialog = DialogType.Confirmatory(
