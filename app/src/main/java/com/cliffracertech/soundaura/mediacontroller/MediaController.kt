@@ -28,13 +28,11 @@ import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
-import androidx.compose.material.LocalContentColor
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -44,7 +42,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
@@ -285,8 +282,8 @@ class ActivePresetViewState(
 }
 
 /** A state holder for an expandable media controller. The states for the media
- * controller's sub-components are exposed through the properties [activePresetState],
- * [playButtonState], and [presetListState]. The expanded/collapsed state is
+ * controller's sub-components are exposed through the properties [activePreset],
+ * [playButton], and [presetList]. The expanded/collapsed state is
  * accessed through the property [showingPresetSelector]. The onClick callback
  * for the close button that should be shown when [showingPresetSelector] is
  * true should be set to the property [onCloseButtonClick]. If the property
@@ -294,9 +291,9 @@ class ActivePresetViewState(
  * the stop time should be displayed in a clickable display next to the play/
  * pause button, with the onClick action set to the property [onStopTimerClick]. */
 class MediaControllerState(
-    val activePresetState: ActivePresetViewState,
-    val playButtonState: PlayButtonState,
-    val presetListState: PresetListState,
+    val activePreset: ActivePresetViewState,
+    val playButton: PlayButtonState,
+    val presetList: PresetListState,
     private val getStopTime: () -> Instant?,
     val onStopTimerClick: () -> Unit,
     private val getShowingPresetSelector: () -> Boolean,
@@ -316,6 +313,7 @@ class MediaControllerState(
  * @param modifier The [Modifier] to use for the button / popup
  * @param sizes The [MediaControllerSizes] instance that describes the sizes
  *     of [MediaController]'s internal elements.
+ * @param state The [MediaControllerState] that will be used for state and callbacks
  * @param backgroundBrush A [Brush] to use as the background. This is passed
  *     as a separate parameter instead of allowing the caller to accomplish
  *     this through a [Modifier] so that the [Brush] can be applied across the
@@ -324,18 +322,15 @@ class MediaControllerState(
  *     not be applied through the [modifier] parameter or it will be applied twice.
  * @param padding The [PaddingValues] to use for placement. This padding should not
  *     be applied through the [modifier] parameter or it will be applied twice.
- * @param state The [MediaControllerState] that will be used for state and callbacks
  */
 @Composable fun MediaController(
     modifier: Modifier = Modifier,
     sizes: MediaControllerSizes,
+    state: MediaControllerState,
     backgroundBrush: Brush,
-    contentColor: Color = MaterialTheme.colors.onPrimary,
     alignment: BiasAlignment,
     padding: PaddingValues,
-    state: MediaControllerState
-) = CompositionLocalProvider(LocalContentColor provides contentColor) {
-
+) {
     val isExpanded = remember { MutableTransitionState(state.showingPresetSelector) }
     isExpanded.targetState = state.showingPresetSelector
 
@@ -374,14 +369,14 @@ class MediaControllerState(
                 if (expandTransitionProgress < 1f)
                     MediaControllerCollapsedContent(
                         sizes, transitionProgressProvider,
-                        state.activePresetState, state.playButtonState,
+                        state.activePreset, state.playButton,
                         state::stopTime, state.onStopTimerClick)
             }
             MediaControllerPresetList(
                 sizes, hasStopTime, backgroundBrush,
                 transitionProgressProvider,
-                state.activePresetState,
-                state.presetListState)
+                state.activePreset,
+                state.presetList)
         }
     }
 }
@@ -407,7 +402,6 @@ fun MediaControllerPreview() = SoundAuraTheme {
         backgroundBrush = Brush.horizontalGradient(
             listOf(MaterialTheme.colors.primaryVariant,
                    MaterialTheme.colors.secondaryVariant)),
-        contentColor = MaterialTheme.colors.onPrimary,
         alignment = Alignment.BottomStart as BiasAlignment,
         padding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 8.dp),
         state = remember { MediaControllerState(

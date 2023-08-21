@@ -188,9 +188,9 @@ import javax.inject.Inject
         }})
 
     val state = MediaControllerState(
-        activePresetState = activePresetViewState,
-        playButtonState = playButtonState,
-        presetListState = presetListState,
+        activePreset = activePresetViewState,
+        playButton = playButtonState,
+        presetList = presetListState,
         getStopTime = playbackState::stopTime,
         onStopTimerClick = {
             shownDialog = DialogType.Confirmatory(
