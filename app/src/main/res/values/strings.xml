@@ -58,8 +58,8 @@
     <string name="add_local_files_as_playlist_dialog_title">Confirm playlist name</string>
 
     <string name="add_multiple_tracks_name_error_message">The tracks must have unique, non-blank names</string>
-    <string name="add_playlist_duplicate_name_error_message">The name is already in use</string>
-    <string name="add_playlist_blank_name_error_message">The name must not be blank</string>
+    <string name="name_dialog_blank_name_error_message">The name can not be blank</string>
+    <string name="name_dialog_duplicate_name_error_message">The name is already in use</string>
 
     <string name="track_or_playlist_already_exists_error_message">
         This track is already in the library.</string>
@@ -122,10 +122,6 @@
         Tap a track\'s add button first.</string>
     <string name="add_preset_button_description">Create new preset</string>
     <string name="create_new_preset_dialog_title">Enter new preset name</string>
-    <string name="preset_name_cannot_be_blank_error_message">
-        The preset\'s name cannot be blank</string>
-    <string name="preset_name_already_in_use_error_message">
-        Another preset with the same name already exists.</string>
 
     <string name="unsaved_preset_changes_warning_title">Unsaved changes</string>
     <string name="unsaved_preset_changes_warning_message">The preset %1$s has unsaved changes.

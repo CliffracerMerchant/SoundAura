@@ -379,9 +379,9 @@ fun newPlaylistNameValidator(
     coroutineScope = coroutineScope,
     messageFor = { name, hasBeenChanged ->  when {
         name.isBlank() && hasBeenChanged ->
-            Validator.Message.Error(R.string.add_playlist_blank_name_error_message)
+            Validator.Message.Error(R.string.name_dialog_blank_name_error_message)
         dao.exists(name) ->
-            Validator.Message.Error(R.string.add_playlist_duplicate_name_error_message)
+            Validator.Message.Error(R.string.name_dialog_duplicate_name_error_message)
         else -> null
     }})
 
@@ -402,7 +402,7 @@ fun playlistRenameValidator(
     coroutineScope = coroutineScope,
     messageFor = { name, _ -> when {
         name == oldName ->  null
-        name.isBlank() ->   Validator.Message.Error(R.string.add_playlist_blank_name_error_message)
-        dao.exists(name) -> Validator.Message.Error(R.string.add_playlist_duplicate_name_error_message)
+        name.isBlank() ->   Validator.Message.Error(R.string.name_dialog_blank_name_error_message)
+        dao.exists(name) -> Validator.Message.Error(R.string.name_dialog_duplicate_name_error_message)
         else ->             null
     }})
