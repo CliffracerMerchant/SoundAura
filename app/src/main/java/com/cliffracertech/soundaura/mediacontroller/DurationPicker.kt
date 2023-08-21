@@ -186,7 +186,8 @@ fun DurationPickerPreview() = SoundAuraTheme {
  * @param title The [String] title to use for the dialog
  * @param description An optional [String] that will be displayed before
  *     the [DurationPicker] if not null
- * @param bounds A [Range]`<Duration>` that describes the acceptable range for the [Duration]
+ * @param bounds A [Range]`<Duration>` that describes the acceptable range
+ *     for the [Duration]. Both the upper and lower bounds are exclusive.
  * @param onDismissRequest The callback that will be invoked when the user
  *     attempts to dismiss or cancel the dialog
  * @param onConfirm The callback that will be invoked when the user taps the ok
@@ -206,7 +207,8 @@ fun DurationPickerPreview() = SoundAuraTheme {
         modifier = modifier,
         title = title,
         onDismissRequest = onDismissRequest,
-        confirmButtonEnabled = currentDuration > Duration.ZERO,
+        confirmButtonEnabled = currentDuration > bounds?.lower &&
+                               currentDuration < bounds?.upper,
         onConfirm = {
             if (bounds?.contains(currentDuration) != false)
                 onConfirm(currentDuration)
