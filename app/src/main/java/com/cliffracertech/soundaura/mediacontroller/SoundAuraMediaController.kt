@@ -88,7 +88,7 @@ import javax.inject.Inject
         booleanPreferencesKey(PrefKeys.playButtonLongClickHintShown)
     private val playButtonLongClickHintShown by
         dataStore.preferenceState(playButtonLongClickHintShownKey, false, scope)
-    private val activePlaylistsIsEmpty by playlistDao
+    private val activePlaylistsIsNotEmpty by playlistDao
         .getAtLeastOnePlaylistIsActive()
         .collectAsState(true, scope)
     private val playButtonState = PlayButtonState(
@@ -98,7 +98,7 @@ import javax.inject.Inject
             // We don't want to show the hint if there are no
             // active playlists because the PlayerService should
             // show a message about there being no active playlists
-            if (!playButtonLongClickHintShown && !activePlaylistsIsEmpty) {
+            if (!playButtonLongClickHintShown && activePlaylistsIsNotEmpty) {
                 val stringRes = StringResource(R.string.play_button_long_click_hint_text)
                 messageHandler.postMessage(stringRes, SnackbarDuration.Long)
                 dataStore.edit(playButtonLongClickHintShownKey, true, scope)
@@ -194,7 +194,7 @@ import javax.inject.Inject
     private fun dismissDialog() { shownDialog = null }
 
     private fun overwritePreset(presetName: String) { when {
-        activePlaylistsIsEmpty ->
+        !activePlaylistsIsNotEmpty ->
             messageHandler.postMessage(StringResource(
                 R.string.overwrite_no_active_tracks_error_message))
         presetName == activePresetName && !activePresetIsModified -> {
