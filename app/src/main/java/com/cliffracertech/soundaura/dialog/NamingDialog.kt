@@ -84,9 +84,11 @@ class ValidatedNamingState(
     /** Validate the current value of [name]. If the value is valid,
      * the constructor parameter onNameValidated will be called with
      * the validated value. */
-    override fun finalize() { coroutineScope.launch {
-        validator.validate()?.let { onNameValidated(it) }
-    }}
+    override fun finalize() {
+        coroutineScope.launch {
+            validator.validate()?.let { onNameValidated(it) }
+        }
+    }
 }
 
 /** Create a view that displays an icon appropriate for the

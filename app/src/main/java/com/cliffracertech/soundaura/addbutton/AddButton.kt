@@ -36,8 +36,8 @@ import com.cliffracertech.soundaura.model.UriPermissionHandler
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.PresetDao
 import com.cliffracertech.soundaura.model.database.TrackNamesValidator
-import com.cliffracertech.soundaura.model.database.playlistNameValidator
-import com.cliffracertech.soundaura.model.database.presetNameValidator
+import com.cliffracertech.soundaura.model.database.newPlaylistNameValidator
+import com.cliffracertech.soundaura.model.database.newPresetNameValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -136,9 +136,7 @@ class AddPlaylistButtonViewModel(
             wasNavigatedForwardTo = goingForward,
             onDismissRequest = ::onDialogDismissRequest,
             onBackClick = { showAddIndividuallyOrAsPlaylistQueryStep(tracks) },
-            validator = playlistNameValidator(
-                playlistDao, scope, playlistName,
-                ignoreInitialValue = false),
+            validator = newPlaylistNameValidator(playlistDao, scope, playlistName),
             coroutineScope = scope,
             onNameValidated = { validatedPlaylistName ->
                 showPlaylistOptionsStep(validatedPlaylistName, tracks)
@@ -229,7 +227,7 @@ class AddPlaylistButtonViewModel(
         activeTracksIsEmpty -> messageHandler.postMessage(
             StringResource(R.string.preset_cannot_be_empty_warning_message))
         else -> newPresetDialogState = ValidatedNamingState(
-            validator = presetNameValidator(presetDao, scope),
+            validator = newPresetNameValidator(presetDao, scope),
             coroutineScope = scope,
             onNameValidated = { validatedName ->
                 newPresetDialogState = null

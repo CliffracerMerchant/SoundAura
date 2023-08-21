@@ -38,7 +38,7 @@ import com.cliffracertech.soundaura.model.PlaybackState
 import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.PresetDao
-import com.cliffracertech.soundaura.model.database.presetNameValidator
+import com.cliffracertech.soundaura.model.database.presetRenameValidator
 import com.cliffracertech.soundaura.preferenceState
 import com.cliffracertech.soundaura.rememberDerivedStateOf
 import com.cliffracertech.soundaura.settings.PrefKeys
@@ -48,6 +48,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import java.time.Duration
 import javax.inject.Inject
 
 @HiltViewModel class MediaControllerViewModel(
@@ -123,7 +124,7 @@ import javax.inject.Inject
         onRenameClick = { presetName: String ->
             shownDialog = DialogType.RenamePreset(
                 coroutineScope = scope,
-                validator = presetNameValidator(presetDao, scope, presetName),
+                validator = presetRenameValidator(presetDao, scope, presetName),
                 onDismissRequest = ::dismissDialog,
                 onNameValidated = { validatedName ->
                     presetDao.renamePreset(presetName, validatedName)

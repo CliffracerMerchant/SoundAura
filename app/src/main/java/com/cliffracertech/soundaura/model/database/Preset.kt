@@ -102,32 +102,46 @@ data class PresetPlaylist(
 }
 
 /**
- * Return a [Validator] that validates [Preset] names.
+ * Return a [Validator] that validates a name for a new [Preset].
  *
- * Blank names are not permitted, although no error message will be shown for
- * blank names unless [Validator.value] has been changed at least once. This
- * is to prevent a new [Preset] name dialog with an initially blank name from
- * immediately showing a 'no blank names' error message before the user has
- * had a chance to change the name.
- *
- * Names that match an existing [Preset] are not permitted, unless it is equal
- * to the provided [initialName]. This is to prevent an error message for a
- * rename [Preset] dialog from immediately being shown when the dialog is
- * opened.
+ * Names that match an existing [Preset] are not permitted. Blank names
+ * are also not permitted, although no error message will be shown for
+ * blank names unless [Validator.value] has been changed at least once.
+ * This is to prevent showing a 'no blank names' error message before
+ * the user has had a chance to change the name.
  */
-fun presetNameValidator(
+fun newPresetNameValidator(
     dao: PresetDao,
     coroutineScope: CoroutineScope,
-    initialName: String = "",
 ) = Validator(
-    initialValue = initialName,
+    initialValue = "",
     coroutineScope = coroutineScope,
     messageFor = { name, hasBeenChanged -> when {
         name.isBlank() && hasBeenChanged ->
             Validator.Message.Error(R.string.preset_name_cannot_be_blank_error_message)
-        name == initialName ->
-            null
         dao.exists(name) ->
             Validator.Message.Error(R.string.preset_name_already_in_use_error_message)
         else -> null
+    }})
+
+/**
+ * Return a [Validator] that validates the renaming of an existing [Preset].
+ *
+ * Blank names are not permitted. Names that match an existing [Preset]
+ * are also not permitted, unless it is equal to the provided [oldName].
+ * This is to prevent a 'no duplicate names' error message from being
+ * shown immediately when the dialog is opened.
+ */
+fun presetRenameValidator(
+    dao: PresetDao,
+    coroutineScope: CoroutineScope,
+    oldName: String,
+) = Validator(
+    initialValue = oldName,
+    coroutineScope = coroutineScope,
+    messageFor = { name, _ -> when {
+        name == oldName ->  null
+        name.isBlank() ->   Validator.Message.Error(R.string.preset_name_cannot_be_blank_error_message)
+        dao.exists(name) -> Validator.Message.Error(R.string.preset_name_already_in_use_error_message)
+        else ->             null
     }})

@@ -362,36 +362,47 @@ class TrackNamesValidator(
 }
 
 /**
- * Return a [Validator] that validates [Playlist] names.
+ * Return a [Validator] that validates names for a new [Playlist].
  *
- * Blank names are not permitted, although no error message will be shown for
- * blank names unless [Validator.value] has been changed at least once. This
- * is to prevent a new [Playlist] name dialog with an initially blank name
- * from immediately showing a 'no blank names' error message before the user
- * has had a chance to change the name.
- *
- * Names that match an existing [Playlist]'s name are not permitted, unless
- * it is equal to the provided [initialName] and [ignoreInitialValue] is true.
- * This is to prevent an error message for a rename [Playlist] dialog from
- * immediately being shown when the dialog is opened. Dialogs to name a new
- * [Playlist] would usually set [ignoreInitialValue] to false so that the
- * initial name will cause an error to be shown immediately if it matches an
- * existing [Playlist]'s name.
+ * Names that match an existing [Playlist] are not permitted. Blank names
+ * are also not permitted, although no error message will be shown for
+ * blank names unless [Validator.value] has been changed at least once.
+ * This is to prevent showing a 'no blank names' error message before
+ * the user has had a chance to change the name.
  */
-fun playlistNameValidator(
-    playlistDao: PlaylistDao,
+fun newPlaylistNameValidator(
+    dao: PlaylistDao,
     coroutineScope: CoroutineScope,
-    initialName: String,
-    ignoreInitialValue: Boolean,
+    initialName: String = "",
 ) = Validator(
     initialValue = initialName,
     coroutineScope = coroutineScope,
     messageFor = { name, hasBeenChanged ->  when {
-        ignoreInitialValue && name == initialName ->
-            null
         name.isBlank() && hasBeenChanged ->
             Validator.Message.Error(R.string.add_playlist_blank_name_error_message)
-        playlistDao.exists(name) ->
+        dao.exists(name) ->
             Validator.Message.Error(R.string.add_playlist_duplicate_name_error_message)
         else -> null
+    }})
+
+/**
+ * Return a [Validator] that validates the renaming of an existing [Playlist].
+ *
+ * Blank names are not permitted. Names that match an existing [Playlist]
+ * are also not permitted, unless it is equal to the provided [oldName].
+ * This is to prevent a 'no duplicate names' error message from being shown
+ * immediately when the dialog is opened.
+ */
+fun playlistRenameValidator(
+    dao: PlaylistDao,
+    coroutineScope: CoroutineScope,
+    oldName: String,
+) = Validator(
+    initialValue = oldName,
+    coroutineScope = coroutineScope,
+    messageFor = { name, _ -> when {
+        name == oldName ->  null
+        name.isBlank() ->   Validator.Message.Error(R.string.add_playlist_blank_name_error_message)
+        dao.exists(name) -> Validator.Message.Error(R.string.add_playlist_duplicate_name_error_message)
+        else ->             null
     }})
