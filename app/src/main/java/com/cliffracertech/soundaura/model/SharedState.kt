@@ -75,11 +75,12 @@ class ActivePresetState @Inject constructor(
 
     /** A [Flow]`<Preset>` whose latest value is equal to the [Preset] current
      * marked as the active one. */
-    val name = dataStore.data.map { it[nameKey] }.map { when {
-        it.isNullOrBlank() -> null
-        presetDao.exists(it) -> it
-        else -> null
-    }}
+    val name = dataStore.data.map { prefs ->
+        val value = prefs[nameKey]
+        if (value.isNullOrBlank() || !presetDao.exists(value))
+            null
+        else value
+    }
 
     private val allActivePlaylists = playlistDao
             .getTempPresetPlaylists()
