@@ -5,22 +5,7 @@ package com.cliffracertech.soundaura
 
 import android.util.Log
 import com.google.common.truth.Subject
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlin.reflect.KClass
-
-suspend fun <T> Flow<T>.waitUntil(
-    timeOut: Long = 2000L,
-    condition: (T) -> Boolean
-): T {
-    val start = System.currentTimeMillis()
-    var value = first()
-    while (!condition(value) && System.currentTimeMillis() - start < timeOut) {
-        Thread.sleep(50L)
-        value = first()
-    }
-    return value
-}
 
 suspend fun waitUntil(
     timeOut: Long = 1000L,
