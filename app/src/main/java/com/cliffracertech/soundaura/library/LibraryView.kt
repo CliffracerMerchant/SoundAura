@@ -42,6 +42,7 @@ import com.cliffracertech.soundaura.enumPreferenceFlow
 import com.cliffracertech.soundaura.model.AndroidUriPermissionHandler
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.PlaybackState
+import com.cliffracertech.soundaura.model.PlayerServicePlaybackState
 import com.cliffracertech.soundaura.model.SearchQueryState
 import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.UriPermissionHandler
@@ -134,7 +135,7 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
         permissionHandler: AndroidUriPermissionHandler,
         playlistDao: PlaylistDao,
         messageHandler: MessageHandler,
-        playbackState: PlaybackState,
+        playbackState: PlayerServicePlaybackState,
         searchQueryState: SearchQueryState,
     ) : this(dataStore, permissionHandler, playlistDao,
         messageHandler, playbackState, searchQueryState, null)

@@ -368,7 +368,7 @@ class PlayerService: LifecycleService() {
 
         val stopTime get() = this@PlayerService.stopTime
         fun setStopTimer(stopTimer: Duration) {
-            val stopTimeInstant = Instant.now().plus(stopTimer)
+            val stopTimeInstant = Instant.now() + stopTimer
             setStopTime(stopTimeInstant.toEpochMilli())
         }
         fun clearStopTimer() = setStopTime(null)

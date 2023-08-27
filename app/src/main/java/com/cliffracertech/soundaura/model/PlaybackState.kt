@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
 import android.support.v4.media.session.PlaybackStateCompat.STATE_STOPPED
+import androidx.annotation.FloatRange
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -16,21 +17,34 @@ import androidx.core.app.ComponentActivity
 import com.cliffracertech.soundaura.service.PlayerService
 import dagger.hilt.android.scopes.ActivityRetainedScoped
 import java.time.Duration
+import java.time.Instant
 import javax.inject.Inject
 
+/** An interface that describes the playback state of a set of simultaneously-
+ * playing playlists and an automatic stop timer. The 'is playing' state is
+ * read via the [isPlaying] property and manipulated using the [toggleIsPlaying]
+ * method. The current stop timer is accessed through the property [stopTime]
+ * and changed or cleared using [setTimer] and [clearTimer], respectively. The
+ * volume for a particular playlist can be manipulated using [setPlaylistVolume]. */
+interface PlaybackState {
+    /** The current 'is playing' state of the playback. */
+    val isPlaying: Boolean
+    /** Toggle the playback state of the sound mix between playing/paused. */
+    fun toggleIsPlaying()
+
+    /** The [Instant] at which playback will be automatically stopped, or null if no timer is set. */
+    val stopTime: Instant?
+    /** Set a timer to automatically stop playback after [duration] has elapsed. */
+    fun setTimer(duration: Duration)
+    /** Clear any set stop timer. */
+    fun clearTimer()
+
+    /** Set the playlist whose name matches [playlistName]'s volume to [volume]. */
+    fun setPlaylistVolume(playlistName: String, @FloatRange(0.0, 1.0) volume: Float)
+}
+
 /**
- * A wrapper around a [PlayerService] instance that provides
- * methods to get and alter playback state.
- *
- * The properties [isPlaying] and [stopTime] will reflect the [PlayerService]'s
- * properties of the same name, or will be false and null, respectively, if the
- * [PlayerService] is unbound. The methods [toggleIsPlaying], [setTimer], and
- * [clearTimer] will call the corresponding [PlayerService.Binder] method if
- * the service is already bound, or will start and bind the service and then
- * enact the desired playback change otherwise. The [setPlaylistVolume] will
- * call the [PlayerService.Binder.setPlaylistVolume] method if the service is
- * already bound, but will otherwise do nothing on the assumption that the
- * volume change will be written to the app's database.
+ * An implementation of [PlaybackState] that is backed by a [PlayerService] instance.
  *
  * The methods [onActivityStart] and [onActivityStop] should be called at the
  * app's main activity's [ComponentActivity.onStart] and [ComponentActivity.onStop]
@@ -39,7 +53,7 @@ import javax.inject.Inject
  * reflect the running service's state.
  */
 @ActivityRetainedScoped
-class PlaybackState @Inject constructor() {
+class PlayerServicePlaybackState @Inject constructor(): PlaybackState {
     private var context: Context? = null
 
     private var serviceBinder by mutableStateOf<PlayerService.Binder?>(null)
@@ -84,12 +98,8 @@ class PlaybackState @Inject constructor() {
         this.context = null
     }
 
-    val isPlaying get() = serviceBinder?.isPlaying ?: false
-
-    val stopTime get() = serviceBinder?.stopTime
-
-    /** Toggle the playback state of the sound mix between playing/paused. */
-    fun toggleIsPlaying() {
+    override val isPlaying get() = serviceBinder?.isPlaying ?: false
+    override fun toggleIsPlaying() {
         val binder = serviceBinder
         if (binder != null)
             binder.toggleIsPlaying()
@@ -99,24 +109,48 @@ class PlaybackState @Inject constructor() {
         }
     }
 
-    /** Set the playlist whose name matches [playlistName]'s volume to [volume]. */
-    fun setPlaylistVolume(playlistName: String, volume: Float) {
-        serviceBinder?.setPlaylistVolume(playlistName, volume)
-    }
-
-    /** Set a timer to automatically stop playback after [duration] has elapsed. */
-    fun setTimer(duration: Duration) {
+    override val stopTime get() = serviceBinder?.stopTime
+    override fun setTimer(duration: Duration) {
         serviceBinder?.setStopTimer(duration) ?: context?.let {
             it.startService(PlayerService.setTimerIntent(it, duration))
             it.bindService()
         }
     }
-
-    /** Clear any set stop timer. */
-    fun clearTimer() {
+    override fun clearTimer() {
         serviceBinder?.clearStopTimer() ?: context?.let {
             it.startService(PlayerService.setTimerIntent(it, null))
             it.bindService()
         }
     }
+
+    override fun setPlaylistVolume(playlistName: String, volume: Float) {
+        // If the service is not bound, we do nothing on the assumption that
+        // the volume change will be written to the app's database and will
+        // therefore be reflected next time the service is started and the
+        // active tracks (and their volumes) are read from the database.
+        serviceBinder?.setPlaylistVolume(playlistName, volume)
+    }
+}
+
+/**
+ * An implementation of [PlaybackState] for use in testing.
+ *
+ * The implementation of [PlaybackState] used in the release version of the
+ * app, [PlayerServicePlaybackState], is unreliable during testing due to its
+ * reliance on a bound service. [TestPlaybackState] can be used in tests for
+ * greater reliability. This implementation is used instead of a mock due to
+ * the fact that mocking seems to be incompatible with Compose SnapshotState
+ * objects (which [PlayerServicePlaybackState] uses internally).
+ */
+class TestPlaybackState: PlaybackState {
+    override var isPlaying = false
+        private set
+    override fun toggleIsPlaying() { isPlaying = !isPlaying }
+
+    override var stopTime: Instant? = null
+        private set
+    override fun setTimer(duration: Duration) { stopTime = Instant.now() + duration }
+    override fun clearTimer() { stopTime = null }
+
+    override fun setPlaylistVolume(playlistName: String, volume: Float) = Unit
 }

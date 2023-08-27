@@ -35,6 +35,7 @@ import com.cliffracertech.soundaura.model.ActivePresetState
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.NavigationState
 import com.cliffracertech.soundaura.model.PlaybackState
+import com.cliffracertech.soundaura.model.PlayerServicePlaybackState
 import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.PresetDao
@@ -56,8 +57,7 @@ import javax.inject.Inject
  *
  * The media controller should show/hide itself according to the value of the
  * property [visible]. If the controller is visible, the value of the [state]
- * property should be used as the controller's [MediaController.state]
- * parameter.
+ * property should be used as the controller's [MediaControllerState] parameter.
  *
  * When the property [shownDialog] is not null, a dialog should be shown that
  * matches the reflects [shownDialog]'s type (i.e. one of the subclasses of
@@ -77,7 +77,7 @@ import javax.inject.Inject
     @Inject constructor(
         dao: PresetDao,
         navigationState: NavigationState,
-        playbackState: PlaybackState,
+        playbackState: PlayerServicePlaybackState,
         activePresetState: ActivePresetState,
         messageHandler: MessageHandler,
         dataStore: DataStore<Preferences>,
