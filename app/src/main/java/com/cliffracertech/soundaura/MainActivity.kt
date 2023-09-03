@@ -42,7 +42,7 @@ import com.cliffracertech.soundaura.mediacontroller.MediaControllerSizes
 import com.cliffracertech.soundaura.mediacontroller.SoundAuraMediaController
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.NavigationState
-import com.cliffracertech.soundaura.model.PlaybackState
+import com.cliffracertech.soundaura.model.PlayerServicePlaybackState
 import com.cliffracertech.soundaura.settings.AppSettings
 import com.cliffracertech.soundaura.settings.AppTheme
 import com.cliffracertech.soundaura.settings.PrefKeys
@@ -64,7 +64,7 @@ import javax.inject.Inject
     messageHandler: MessageHandler,
     dataStore: DataStore<Preferences>,
     private val navigationState: NavigationState,
-    private val playbackState: PlaybackState,
+    private val playbackState: PlayerServicePlaybackState,
     coroutineScope: CoroutineScope?
 ) : ViewModel() {
 
@@ -72,7 +72,7 @@ import javax.inject.Inject
         messageHandler: MessageHandler,
         dataStore: DataStore<Preferences>,
         navigationState: NavigationState,
-        playbackState: PlaybackState
+        playbackState: PlayerServicePlaybackState
     ) : this(messageHandler, dataStore, navigationState, playbackState, null)
 
     private val appThemeKey = intPreferencesKey(PrefKeys.appTheme)
