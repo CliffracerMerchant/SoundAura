@@ -10,15 +10,12 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.cliffracertech.soundaura.model.database.Playlist
-import com.cliffracertech.soundaura.model.database.PlaylistDao
+import com.cliffracertech.soundaura.edit
 import com.cliffracertech.soundaura.model.database.Preset
 import com.cliffracertech.soundaura.model.database.PresetDao
 import com.cliffracertech.soundaura.settings.PrefKeys
 import dagger.hilt.android.scopes.ActivityRetainedScoped
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformLatest
@@ -47,17 +44,6 @@ class SearchQueryState @Inject constructor() {
     var query by mutableStateOf<String?>(null)
 }
 
-/** A reference to a [Playlist] within a [Preset],
- * containing only the [Playlist]'s [name] and [volume]. */
-// This PresetPlaylist mirrors the database package PresetPlaylist, except
-// that it omits the preset name. This is because this PresetPlaylist is
-// used to compare the current (possibly unsaved) preset with the active
-// preset to determine whether or not the active preset is modified, and
-// the preset's name is irrelevant in this use case.
-data class PresetPlaylist(
-    val name: String,
-    val volume: Float)
-
 /**
  * ActivePresetState holds the state of a currently active [Preset]. The name
  * of the currently active [Preset] can be collected from the [Flow]`<String?>`
@@ -68,8 +54,7 @@ data class PresetPlaylist(
 @ActivityRetainedScoped
 class ActivePresetState @Inject constructor(
     private val dataStore: DataStore<Preferences>,
-    playlistDao: PlaylistDao,
-    presetDao: PresetDao,
+    private val presetDao: PresetDao,
 ) {
     private val nameKey = stringPreferencesKey(PrefKeys.activePresetName)
 
@@ -82,29 +67,13 @@ class ActivePresetState @Inject constructor(
         else value
     }
 
-    private val allActivePlaylists = playlistDao
-            .getTempPresetPlaylists()
-            .map(List<PresetPlaylist>::toHashSet)
-
-    private val presetPlaylists = name.transformLatest {
-            if (it == null) emptyList<PresetPlaylist>()
-            else emitAll(presetDao.getPresetPlaylists(it))
-        }.map { it.toHashSet() }
-
-    /** A [Flow]`<Boolean>` whose latest value represents
-     * whether or not the active preset is modified. */
-    val isModified = combine(allActivePlaylists, presetPlaylists) { activePlaylists, presetPlaylists ->
-            if (presetPlaylists.isEmpty()) false
-            else activePlaylists != presetPlaylists
-        }.debounce(200) // This debounce prevents isModified from temporarily
-                        // being true when switching to a new preset, before
-                        // activePlaylists has had a chance to update
-        // TODO: Figure out a more elegant way to do this
+    val isModified = name.transformLatest { activePresetName ->
+        if (activePresetName == null) emit(false)
+        else emitAll(presetDao.getPresetIsModified(activePresetName))
+    }
 
     /** Set the active preset to the one whose name matches [name]. */
-    suspend fun setName(name: String) {
-        dataStore.edit { it[nameKey] = name }
-    }
+    suspend fun setName(name: String) = dataStore.edit(nameKey, name)
 
     /** Clear the active preset. */
     suspend fun clear() {

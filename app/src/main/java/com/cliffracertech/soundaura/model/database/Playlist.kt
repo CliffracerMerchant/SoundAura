@@ -285,13 +285,6 @@ data class Playlist(
            "WHERE isActive ORDER by playlistOrder")
     abstract fun getActivePlaylistsAndContents(): Flow<Map<Playlist, List<Uri>>>
 
-    /** Return a [Flow] that updates with the latest [List] of
-     * [com.cliffracertech.soundaura.model.PresetPlaylist]s. This
-     * represents the contents of a [Preset] if it was created now. */
-    @Query("SELECT name, volume FROM playlist WHERE isActive")
-    abstract fun getTempPresetPlaylists():
-        Flow<List<com.cliffracertech.soundaura.model.PresetPlaylist>>
-
     @Query("SELECT name FROM playlist")
     abstract fun getPlaylistNames(): Flow<List<String>>
 

@@ -39,20 +39,29 @@ data class PresetPlaylist(
 
 @Dao abstract class PresetDao {
     /** Return whether or not the [Preset] whose name matches [name] exists. */
-    @Query("SELECT EXISTS(SELECT name FROM preset WHERE name = :name)")
+    @Query("SELECT EXISTS(SELECT 1 FROM preset WHERE name = :name)")
     abstract suspend fun exists(name: String?): Boolean
 
     /** Return a [Flow] that updates with the latest [List] of all [Preset]s. */
     @Query("SELECT name FROM preset")
     abstract fun getPresetList() : Flow<List<Preset>>
 
-    /** Return a [Flow] that updates with the latest [List] of all
-     * [com.cliffracertech.soundaura.model.PresetPlaylist]s in the
+    /** Return a [List] of the names of all of the playlists in the
      * [Preset] whose name matches [presetName]. */
-    @Query("SELECT playlistName AS name, playlistVolume AS volume " +
-           "FROM presetPlaylist WHERE presetName = :presetName")
-    abstract fun getPresetPlaylists(presetName: String):
-        Flow<List<com.cliffracertech.soundaura.model.PresetPlaylist>>
+    @Query("SELECT playlistName FROM presetPlaylist WHERE presetName = :presetName")
+    abstract suspend fun getPlaylistNamesFor(presetName: String): List<String>
+
+    @Query("SELECT EXISTS(" +
+           "WITH presetContents AS (SELECT playlistName " +
+                                   "FROM presetPlaylist " +
+                                   "WHERE presetName = :presetName) " +
+           "SELECT 1 FROM playlist " +
+           "WHERE isActive AND name NOT IN presetContents " +
+           "UNION " +
+           "SELECT 1 FROM playlist " +
+           "INNER JOIN presetPlaylist ON playlist.name = presetPlaylist.playlistName " +
+           "WHERE isActive AND playlist.volume != presetPlaylist.playlistVolume)")
+    abstract fun getPresetIsModified(presetName: String): Flow<Boolean>
 
     /** Delete the [Preset] identified by [presetName]. */
     @Query("DELETE FROM preset WHERE name = :presetName")
@@ -81,7 +90,7 @@ data class PresetPlaylist(
     @Query("UPDATE preset SET name = :newName WHERE name = :oldName")
     abstract suspend fun renamePreset(oldName: String, newName: String)
 
-    @Query("INSERT INTO preset VALUES (:presetName)")
+    @Query("INSERT OR IGNORE INTO preset VALUES (:presetName)")
     protected abstract suspend fun addPresetName(presetName: String)
 
     @Query("DELETE FROM presetPlaylist WHERE presetName = :presetName")
