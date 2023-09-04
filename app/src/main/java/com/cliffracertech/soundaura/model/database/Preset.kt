@@ -51,16 +51,19 @@ data class PresetPlaylist(
     @Query("SELECT playlistName FROM presetPlaylist WHERE presetName = :presetName")
     abstract suspend fun getPlaylistNamesFor(presetName: String): List<String>
 
+    // The first select statement selects playlists that are in the active
+    // preset that are either inactive or whose current volume doesn't
+    // match the one saved in the preset. The second select statement
+    // selects active playlists that are not part of the preset.
     @Query("SELECT EXISTS(" +
-           "WITH presetContents AS (SELECT playlistName " +
-                                   "FROM presetPlaylist " +
-                                   "WHERE presetName = :presetName) " +
-           "SELECT 1 FROM playlist " +
-           "WHERE isActive AND name NOT IN presetContents " +
-           "UNION " +
-           "SELECT 1 FROM playlist " +
-           "INNER JOIN presetPlaylist ON playlist.name = presetPlaylist.playlistName " +
-           "WHERE isActive AND playlist.volume != presetPlaylist.playlistVolume)")
+               "SELECT name, volume FROM playlist " +
+               "JOIN presetPlaylist pp ON playlist.name = pp.playlistName " +
+               "WHERE pp.presetName = :presetName AND " +
+                     "NOT isActive OR volume != pp.playlistVolume " +
+               "UNION " +
+               "SELECT name, volume FROM playlist " +
+               "JOIN presetPlaylist pp ON playlist.name = pp.playlistName " +
+               "WHERE isActive AND pp.presetName != :presetName)")
     abstract fun getPresetIsModified(presetName: String): Flow<Boolean>
 
     /** Delete the [Preset] identified by [presetName]. */

@@ -274,7 +274,7 @@ data class Playlist(
         }
     }
 
-    @Query("SELECT EXISTS(SELECT name FROM playlist WHERE isActive LIMIT 1)")
+    @Query("SELECT EXISTS(SELECT 1 FROM playlist WHERE isActive LIMIT 1)")
     abstract fun getAtLeastOnePlaylistIsActive(): Flow<Boolean>
 
     /** Return a [Flow] that updates with a [Map] of each
@@ -283,7 +283,7 @@ data class Playlist(
     @Query("SELECT * FROM playlist " +
            "JOIN playlistTrack ON playlist.name = playlistTrack.playlistName " +
            "WHERE isActive ORDER by playlistOrder")
-    abstract fun getActivePlaylistsAndContents(): Flow<Map<Playlist, List<Uri>>>
+    abstract fun getActivePlaylistsAndTracks(): Flow<Map<Playlist, List<Uri>>>
 
     @Query("SELECT name FROM playlist")
     abstract fun getPlaylistNames(): Flow<List<String>>

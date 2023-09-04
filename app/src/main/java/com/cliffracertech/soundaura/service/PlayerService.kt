@@ -172,7 +172,7 @@ class PlayerService: LifecycleService() {
                 .onEach { stopInsteadOfPause = it }
                 .launchIn(this)
 
-            playlistDao.getActivePlaylistsAndContents()
+            playlistDao.getActivePlaylistsAndTracks()
                 .map{ it.map(::Playlist) }
                 .onEach(::updatePlayers)
                 .launchIn(this)
