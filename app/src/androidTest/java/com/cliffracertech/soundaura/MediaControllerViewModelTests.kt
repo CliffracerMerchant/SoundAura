@@ -4,416 +4,606 @@
 package com.cliffracertech.soundaura
 
 import android.content.Context
+import androidx.core.net.toUri
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.cliffracertech.soundaura.mediacontroller.DialogType
+import com.cliffracertech.soundaura.mediacontroller.MediaControllerViewModel
+import com.cliffracertech.soundaura.model.ActivePresetState
+import com.cliffracertech.soundaura.model.MessageHandler
+import com.cliffracertech.soundaura.model.NavigationState
+import com.cliffracertech.soundaura.model.TestPlaybackState
+import com.cliffracertech.soundaura.model.database.Playlist
+import com.cliffracertech.soundaura.model.database.PlaylistDao
+import com.cliffracertech.soundaura.model.database.Preset
+import com.cliffracertech.soundaura.model.database.PresetDao
+import com.cliffracertech.soundaura.model.database.SoundAuraDatabase
+import com.cliffracertech.soundaura.settings.PrefKeys
+import com.google.common.collect.Range
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.*
+import kotlinx.coroutines.test.TestCoroutineScope
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.Duration
+import java.time.Instant
 
 @RunWith(AndroidJUnit4::class)
 class MediaControllerViewModelTests {
     private val context = ApplicationProvider.getApplicationContext<Context>()
-    private val coroutineScope = TestCoroutineScope()
-    private val dataStore = PreferenceDataStoreFactory.create(scope = coroutineScope) {
+    private val scope = TestCoroutineScope()
+    private val dataStore = PreferenceDataStoreFactory.create(scope = scope) {
         context.preferencesDataStoreFile("testDatastore")
     }
+    private val activePresetNameKey = stringPreferencesKey(PrefKeys.activePresetName)
+    private val navigationState = NavigationState()
     private val messageHandler = MessageHandler()
-
-    private val testTracks = List(5) { Track("uri $it", "track $it") }
-    private val testPresets = List(3) { Preset("preset $it") }
-    private suspend fun addTestPresets() {
-        trackDao.insert(testTracks)
-        trackDao.toggleIsActive(testTracks[0].uriString)
-        presetDao.savePreset(testPresets[0].name)
-
-        trackDao.toggleIsActive(testTracks[0].uriString)
-        trackDao.toggleIsActive(testTracks[1].uriString)
-        trackDao.toggleIsActive(testTracks[2].uriString)
-        presetDao.savePreset(testPresets[1].name)
-
-        trackDao.toggleIsActive(testTracks[1].uriString)
-        trackDao.toggleIsActive(testTracks[2].uriString)
-        trackDao.toggleIsActive(testTracks[3].uriString)
-        trackDao.toggleIsActive(testTracks[4].uriString)
-        presetDao.savePreset(testPresets[2].name)
-    }
+    private val playbackState = TestPlaybackState()
 
     private lateinit var instance: MediaControllerViewModel
     private lateinit var db: SoundAuraDatabase
     private lateinit var presetDao: PresetDao
-    private lateinit var trackDao: TrackDao
-    private lateinit var navigationState: MainActivityNavigationState
+    private lateinit var playlistDao: PlaylistDao
     private lateinit var activePresetState: ActivePresetState
+
+    private val testPlaylistNames = List(5) { "playlist $it" }
+    private val testTrackUris = List(5) { "uri $it".toUri() }
+    private val testPresetNames = List(3) { "preset $it" }
+
+    private val presetList get() = instance.state.presetList
+    private val currentPresets get() = presetList.list
+    private val currentPresetNames get() = presetList.list?.map(Preset::name)
+    private val activePreset get() = instance.state.activePreset
+    private val playButton get() = instance.state.playButton
+    private val stopTime get() = instance.state.stopTime
+    private suspend fun getActivePlaylistNames() =
+        playlistDao.getActivePlaylistsAndTracks().first().keys.map(Playlist::name)
+
+    private val renameDialog get() = instance.shownDialog as DialogType.RenamePreset
+    private val confirmatoryDialog get() = instance.shownDialog as DialogType.Confirmatory
+    private val unsavedChangesWarningDialog get() = instance.shownDialog as DialogType.PresetUnsavedChangesWarning
+    private val setStopTimeDialog get() = instance.shownDialog as DialogType.SetAutoStopTimer
+
+    private suspend fun addTestPresets() {
+        playlistDao.insertSingleTrackPlaylists(testPlaylistNames, testTrackUris)
+        playlistDao.toggleIsActive(testPlaylistNames[0])
+        presetDao.savePreset(testPresetNames[0])
+
+        playlistDao.toggleIsActive(testPlaylistNames[0])
+        playlistDao.toggleIsActive(testPlaylistNames[1])
+        playlistDao.toggleIsActive(testPlaylistNames[2])
+        presetDao.savePreset(testPresetNames[1])
+
+        playlistDao.toggleIsActive(testPlaylistNames[1])
+        playlistDao.toggleIsActive(testPlaylistNames[2])
+        playlistDao.toggleIsActive(testPlaylistNames[3])
+        playlistDao.toggleIsActive(testPlaylistNames[4])
+        presetDao.savePreset(testPresetNames[2])
+        waitUntil { currentPresets?.isNotEmpty() == true }
+    }
 
     @Before fun init() {
         db = Room.inMemoryDatabaseBuilder(context, SoundAuraDatabase::class.java).build()
         presetDao = db.presetDao()
-        trackDao = db.trackDao()
-        navigationState = MainActivityNavigationState()
-        activePresetState = ActivePresetState(dataStore, trackDao, presetDao)
-        instance = MediaControllerViewModel(presetDao, navigationState,
-                                            activePresetState, messageHandler,
-                                            dataStore, trackDao)
+        playlistDao = db.playlistDao()
+        activePresetState = ActivePresetState(dataStore, presetDao)
+        instance = MediaControllerViewModel(
+            presetDao, navigationState, playbackState,
+            activePresetState, messageHandler,
+            dataStore, playlistDao, scope)
     }
 
     @After fun clean_up() {
         db.close()
-        coroutineScope.cancel()
+        scope.cancel()
     }
 
-    @Test fun initial_state() = runTest {
-        assertThat(instance.presetList).isNull()
-        assertThat(instance.activePresetIsModified).isFalse()
-        assertThat(instance.showingPresetSelector).isFalse()
-        assertThat(instance.proposedPresetName).isNull()
-        assertThat(instance.proposedPresetNameErrorMessage).isNull()
-        assertThat(instance.showingUnsavedChangesWarning).isFalse()
-
-        waitUntil { instance.presetList != null }
-        assertThat(instance.presetList).isEmpty()
+    @Test fun no_dialog_is_initially_shown() {
+        assertThat(instance.shownDialog).isNull()
     }
 
-    @Test fun preset_list_updates() = runTest {
-        presetDao.savePreset(testPresets[0].name)
-        waitUntil { instance.presetList?.isEmpty() == false }
-        assertThat(instance.presetList)
-            .containsExactly(testPresets[0])
-        presetDao.savePreset(testPresets[1].name)
-        presetDao.savePreset(testPresets[2].name)
-        waitUntil { instance.presetList?.size == 3 }
-        assertThat(instance.presetList)
-            .containsExactlyElementsIn(testPresets).inOrder()
-    }
-
-    @Test fun active_preset_name_updates() = runTest {
+    @Test fun active_preset_name_matches_underlying_state() = runTest {
+        assertThat(activePreset.name).isNull()
         addTestPresets()
-        assertThat(instance.activePresetName).isNull()
-        activePresetState.setName(testPresets[1].name)
-        waitUntil { instance.activePresetName != null }
-        assertThat(instance.activePresetName).isEqualTo(testPresets[1].name)
+        activePresetState.setName(testPresetNames[1])
+        waitUntil { activePreset.name == testPresetNames[1] }
+        assertThat(activePreset.name).isEqualTo(testPresetNames[1])
+
+        activePresetState.clear()
+        waitUntil { activePreset.name == null }
+        assertThat(activePreset.name).isNull()
     }
 
-    @Test fun active_preset_is_modified_updates() = runTest {
+    @Test fun active_preset_is_modified_matches_underlying_state() = runTest {
+        assertThat(activePreset.isModified).isFalse()
         addTestPresets()
-        activePresetState.setName(testPresets[2].name)
-        waitUntil { instance.activePresetName != null }
-        assertThat(instance.activePresetName).isEqualTo(testPresets[2].name)
-        assertThat(instance.activePresetIsModified).isFalse()
 
-        trackDao.toggleIsActive(testTracks[2].uriString)
-        waitUntil { instance.activePresetIsModified }
-        assertThat(instance.activePresetIsModified).isTrue()
+        dataStore.edit(activePresetNameKey, testPresetNames[2])
+        waitUntil { dataStore.data.first()[activePresetNameKey] != null }
+        assertThat(activePreset.isModified).isFalse()
 
-        trackDao.toggleIsActive(testTracks[1].uriString)
-        trackDao.toggleIsActive(testTracks[3].uriString)
-        trackDao.toggleIsActive(testTracks[4].uriString)
-        activePresetState.setName(testPresets[1].name)
-        waitUntil { instance.activePresetName == testPresets[1].name }
-        assertThat(instance.activePresetIsModified).isFalse()
+        playlistDao.toggleIsActive(testPlaylistNames[2])
+        waitUntil { getActivePlaylistNames().size == 3 }
+        waitUntil { activePreset.isModified }
+        assertThat(activePreset.isModified).isTrue()
+
+        playlistDao.toggleIsActive(testPlaylistNames[1])
+        playlistDao.toggleIsActive(testPlaylistNames[3])
+        playlistDao.toggleIsActive(testPlaylistNames[4])
+        activePresetState.setName(testPresetNames[1])
+        waitUntil { dataStore.data.first()[activePresetNameKey] == testPresetNames[1] }
+        waitUntil { !activePreset.isModified }
+        assertThat(activePreset.isModified).isFalse()
+
+        playlistDao.setVolume(testPlaylistNames[2], 0.5f)
+        waitUntil { activePreset.isModified }
+        assertThat(activePreset.isModified).isTrue()
+    }
+
+    @Test fun clicking_active_preset_opens_preset_selector() {
+        assertThat(instance.state.showingPresetSelector).isFalse()
+        activePreset.onClick()
+        assertThat(instance.state.showingPresetSelector).isTrue()
+    }
+
+    @Test fun play_button_isPlaying_matches_underlying_state() = runTest {
+        assertThat(playButton.isPlaying).isFalse()
+
+        addTestPresets()
+        playbackState.toggleIsPlaying()
+        waitUntil { playbackState.isPlaying }
+        assertThat(playButton.isPlaying).isTrue()
+
+        playbackState.toggleIsPlaying()
+        waitUntil { !playbackState.isPlaying }
+        assertThat(playButton.isPlaying).isFalse()
+    }
+
+    @Test fun play_button_clicks_affect_underlying_state() = runTest {
+        playButton.onClick()
+        assertThat(playbackState.isPlaying).isTrue()
+
+        playButton.onClick()
+        assertThat(playbackState.isPlaying).isFalse()
     }
 
     @Test fun play_button_long_click_hint_not_shown_with_no_active_tracks() = runTest {
-        dataStore.edit { it.remove(
-            booleanPreferencesKey(PrefKeys.playButtonLongClickHintShown)
-        )}
+        val prefKey = booleanPreferencesKey(PrefKeys.playButtonLongClickHintShown)
+        dataStore.edit { it.remove(prefKey) }
+
         var latestMessage: MessageHandler.Message? = null
-        coroutineScope.launch {
+        val job = scope.launch {
             latestMessage = messageHandler.messages.first()
         }
 
-        instance.onPlayButtonClick()
-        waitUntil { latestMessage != null } // Should time out
-        assertThat(latestMessage).isNull()
-    }
-
-    @Test fun play_button_long_click_hint_shows_once() = runTest {
-        dataStore.edit { it.remove(
-            booleanPreferencesKey(PrefKeys.playButtonLongClickHintShown)
-        )}
-        var latestMessage: MessageHandler.Message? = null
-        coroutineScope.launch {
-            latestMessage = messageHandler.messages.first()
-        }
-
-        addTestPresets()
-        instance.onPlayButtonClick()
-        assertThat(latestMessage?.stringResource?.stringResId)
-            .isEqualTo(R.string.play_button_long_click_hint_text)
-
-        latestMessage = null
-        val job = coroutineScope.launch {
-            latestMessage = messageHandler.messages.first()
-        }
-        waitUntil { false } // To give the long click hint shown preference a chance to update
-        instance.onPlayButtonClick()
+        playButton.onClick()
         waitUntil { latestMessage != null } // Should time out
         assertThat(latestMessage).isNull()
         job.cancel()
     }
 
-    @Test fun showing_and_closing_preset_selector() {
-        instance.onActivePresetClick()
-        assertThat(instance.showingPresetSelector).isTrue()
-        instance.onCloseButtonClick()
-        assertThat(instance.showingPresetSelector).isFalse()
+    @Test fun play_button_long_click_hint_shows_once() = runTest {
+        val prefKey = booleanPreferencesKey(PrefKeys.playButtonLongClickHintShown)
+        dataStore.edit { it.remove(prefKey) }
+        var latestMessage: MessageHandler.Message? = null
+        val job = scope.launch {
+            messageHandler.messages.collect { latestMessage = it }
+        }
 
-        instance.onActivePresetClick()
-        assertThat(instance.showingPresetSelector).isTrue()
+        addTestPresets()
+        waitUntil { getActivePlaylistNames().isNotEmpty() }
+        playButton.onClick()
+        waitUntil { latestMessage != null }
+        assertThat(latestMessage?.stringResource?.stringResId)
+            .isEqualTo(R.string.play_button_long_click_hint_text)
+
+        latestMessage = null
+        waitUntil { dataStore.data.first()[prefKey] == true }
+        playButton.onClick()
+        waitUntil { latestMessage != null } // Should time out
+        assertThat(latestMessage).isNull()
+        job.cancel()
+    }
+
+    @Test fun stop_time_matches_underlying_state() = runTest {
+        val startTime = Instant.now()
+        val duration = Duration.ofMinutes(1)
+        assertThat(stopTime).isNull()
+
+        playbackState.setTimer(duration)
+        waitUntil { stopTime != null }
+        assertThat(stopTime).isIn(Range.closed(
+            startTime + duration, startTime + duration + Duration.ofSeconds(1)))
+
+        playbackState.clearTimer()
+        waitUntil { stopTime == null }
+        assertThat(stopTime).isNull()
+    }
+
+    @Test fun play_button_long_click_opens_set_stop_timer_dialog() = runTest {
+        playButton.onLongClick()
+        waitUntil { instance.shownDialog != null }
+        assertThat(instance.shownDialog).isInstanceOf(DialogType.SetAutoStopTimer::class)
+    }
+
+    @Test fun set_stop_timer_dialog_no_ops_for_zero_duration() = runTest {
+        playButton.onLongClick()
+        waitUntil { instance.shownDialog != null }
+        setStopTimeDialog.onConfirmClick(Duration.ZERO)
+        waitUntil { instance.shownDialog == null && stopTime == null }
+        assertThat(instance.shownDialog).isNull()
+        assertThat(stopTime).isNull()
+    }
+
+    @Test fun set_stop_timer_dialog_dismissal() = runTest {
+        playButton.onLongClick()
+        waitUntil { instance.shownDialog != null }
+        setStopTimeDialog.onDismissRequest()
+        waitUntil { instance.shownDialog == null && stopTime == null }
+        assertThat(instance.shownDialog).isNull()
+        assertThat(stopTime).isNull()
+    }
+
+    @Test fun set_stop_timer_dialog_confirm() = runTest {
+        val startTime = Instant.now()
+        val duration = Duration.ofMinutes(1)
+        val acceptableRange = Range.closed(
+            startTime + duration,
+            startTime + duration + Duration.ofSeconds(1))
+
+        playButton.onLongClick()
+        waitUntil { instance.shownDialog != null }
+        setStopTimeDialog.onConfirmClick(duration)
+        waitUntil { instance.shownDialog == null && stopTime != null }
+        assertThat(instance.shownDialog).isNull()
+        assertThat(stopTime).isIn(acceptableRange)
+    }
+
+    @Test fun cancel_stop_timer_dialog_appearance() = runTest {
+        playButton.onLongClick()
+        waitUntil { instance.shownDialog != null }
+        setStopTimeDialog.onConfirmClick(Duration.ofMinutes(1))
+        waitUntil { instance.shownDialog == null && stopTime != null }
+
+        instance.state.onStopTimerClick()
+        waitUntil { instance.shownDialog != null }
+        assertThat(instance.shownDialog).isInstanceOf(DialogType.Confirmatory::class)
+        assertThat((instance.shownDialog as DialogType.Confirmatory).text.stringResId)
+            .isEqualTo(R.string.cancel_stop_timer_dialog_text)
+    }
+
+    @Test fun cancel_stop_timer_dialog_dismissal() = runTest {
+        val startTime = Instant.now()
+        val duration = Duration.ofMinutes(1)
+        val acceptableRange = Range.closed(
+            startTime + duration,
+            startTime + duration + Duration.ofSeconds(1))
+        playButton.onLongClick()
+        waitUntil { instance.shownDialog != null }
+        setStopTimeDialog.onConfirmClick(duration)
+        waitUntil { instance.shownDialog == null && stopTime != null }
+
+        instance.state.onStopTimerClick()
+        waitUntil { instance.shownDialog != null }
+        confirmatoryDialog.onDismissRequest()
+        waitUntil { stopTime == null } // should time out
+        assertThat(instance.shownDialog).isNull()
+        assertThat(stopTime).isIn(acceptableRange)
+    }
+
+    @Test fun cancel_stop_timer_dialog_confirm() = runTest {
+        playButton.onLongClick()
+        waitUntil { instance.shownDialog != null }
+        setStopTimeDialog.onConfirmClick(Duration.ofMinutes(1))
+        waitUntil { instance.shownDialog == null && stopTime != null }
+
+        instance.state.onStopTimerClick()
+        waitUntil { instance.shownDialog != null }
+        confirmatoryDialog.onConfirmClick()
+        waitUntil { instance.shownDialog == null && stopTime == null }
+        assertThat(instance.shownDialog).isNull()
+        assertThat(stopTime).isNull()
+    }
+
+    @Test fun preset_selector_close_button_and_back_button_closes_selector() {
+        activePreset.onClick()
+        instance.state.onCloseButtonClick()
+        assertThat(instance.state.showingPresetSelector).isFalse()
+
+        activePreset.onClick()
         navigationState.onBackButtonClick()
-        assertThat(instance.showingPresetSelector).isFalse()
+        assertThat(instance.state.showingPresetSelector).isFalse()
     }
 
-    @Test fun renaming_presets() = runTest {
-        addTestPresets()
-        instance.onPresetRenameClick(testPresets[1])
-        assertThat(instance.renameDialogTarget).isEqualTo(testPresets[1])
-        assertThat(instance.proposedPresetNameErrorMessage).isNull()
+    @Test fun preset_list_matches_underlying_state() = runTest {
+        waitUntil { !currentPresets.isNullOrEmpty() } // should time out
+        assertThat(currentPresets.isNullOrEmpty()).isTrue()
 
-        instance.onPresetRenameConfirm()
-        waitUntil { instance.renameDialogTarget == null }
-        assertThat(instance.renameDialogTarget).isNull()
-        assertThat(instance.proposedPresetNameErrorMessage).isNull()
+        presetDao.savePreset(testPresetNames[0])
+        waitUntil { currentPresets?.isEmpty() == false }
+        assertThat(currentPresetNames).containsExactly(testPresetNames[0])
+        presetDao.savePreset(testPresetNames[1])
+        presetDao.savePreset(testPresetNames[2])
+        waitUntil { currentPresets?.size == 3 }
+        assertThat(currentPresetNames).containsExactlyElementsIn(testPresetNames)
 
-        instance.onPresetRenameClick(testPresets[1])
-        val newName = testPresets[1].name + " new name"
-        instance.onProposedPresetNameChange(newName)
-        waitUntil { instance.proposedPresetNameErrorMessage != null } // should time out
-        assertThat(instance.proposedPresetNameErrorMessage).isNull()
-
-        activePresetState.setName(testPresets[1].name)
-        waitUntil { instance.activePresetName == testPresets[1].name }
-        instance.onPresetRenameConfirm()
-        waitUntil { instance.activePresetName == newName }
-        assertThat(instance.renameDialogTarget).isNull()
-        assertThat(instance.presetList?.get(1)?.name).isEqualTo(newName)
-        assertThat(instance.activePresetName).isEqualTo(newName)
+        presetDao.deletePreset(testPresetNames[1])
+        waitUntil { currentPresets?.size == 2 }
+        assertThat(currentPresetNames).containsExactly(testPresetNames[0], testPresetNames[2])
     }
 
-    @Test fun blank_names_are_rejected() = runTest {
+    @Test fun rename_dialog_appearance() = runTest {
         addTestPresets()
-        instance.onPresetRenameClick(testPresets[1])
-        assertThat(instance.renameDialogTarget).isEqualTo(testPresets[1])
-        assertThat(instance.proposedPresetNameErrorMessage).isNull()
-
-        instance.onProposedPresetNameChange("")
-        waitUntil { instance.proposedPresetNameErrorMessage != null }
-        assertThat(instance.proposedPresetNameErrorMessage?.resolve(context))
-            .isEqualTo(context.getString(R.string.preset_name_cannot_be_blank_error_message))
-
-        instance.onPresetRenameConfirm()
-        waitUntil { instance.proposedPresetNameErrorMessage == null } // should time out
-        assertThat(instance.proposedPresetNameErrorMessage?.resolve(context))
-            .isEqualTo(context.getString(R.string.preset_name_cannot_be_blank_error_message))
-        assertThat(instance.renameDialogTarget).isEqualTo(testPresets[1])
-        assertThat(instance.presetList?.get(1)?.name).isEqualTo(testPresets[1].name)
-
-        instance.onProposedPresetNameChange("a")
-        waitUntil { instance.proposedPresetNameErrorMessage == null }
-        assertThat(instance.proposedPresetNameErrorMessage).isNull()
+        presetList.onRenameClick(testPresetNames[1])
+        assertThat(instance.shownDialog).isInstanceOf(DialogType.RenamePreset::class)
+        assertThat(renameDialog.name).isEqualTo(testPresetNames[1])
+        assertThat(renameDialog.message).isNull()
     }
 
-    @Test fun duplicate_names_are_rejected() = runTest {
+    @Test fun rename_dialog_dismissal() = runTest {
         addTestPresets()
-        instance.onPresetRenameClick(testPresets[1])
-        assertThat(instance.renameDialogTarget).isEqualTo(testPresets[1])
-        assertThat(instance.proposedPresetNameErrorMessage).isNull()
+        presetList.onRenameClick(testPresetNames[1])
+        val newName = "new name"
+        renameDialog.onNameChange(newName)
+        renameDialog.onDismissRequest()
 
-        instance.onProposedPresetNameChange(testPresets[0].name)
-        waitUntil { instance.proposedPresetNameErrorMessage != null }
-        assertThat(instance.proposedPresetNameErrorMessage?.resolve(context))
-            .isEqualTo(context.getString(R.string.preset_name_already_in_use_error_message))
+        waitUntil { currentPresetNames?.contains(newName) == true } // should time out
+        assertThat(instance.shownDialog).isNull()
+        assertThat(currentPresetNames?.get(1)).isEqualTo(testPresetNames[1])
+    }
 
-        instance.onPresetRenameConfirm()
-        waitUntil { instance.proposedPresetNameErrorMessage == null } // should time out
-        assertThat(instance.proposedPresetNameErrorMessage?.resolve(context))
-            .isEqualTo(context.getString(R.string.preset_name_already_in_use_error_message))
-        assertThat(instance.renameDialogTarget).isEqualTo(testPresets[1])
-        assertThat(instance.presetList?.get(1)?.name).isEqualTo(testPresets[1].name)
+    @Test fun rename_dialog_confirm() = runTest {
+        addTestPresets()
+        presetList.onRenameClick(testPresetNames[1])
+        renameDialog.finalize()
+        waitUntil { currentPresetNames?.get(1) != testPresetNames[1] } // should time out
+        assertThat(instance.shownDialog).isNull()
+        assertThat(currentPresetNames?.get(1)).isEqualTo(testPresetNames[1])
 
-        instance.onProposedPresetNameChange("a")
-        waitUntil { instance.proposedPresetNameErrorMessage == null }
-        assertThat(instance.proposedPresetNameErrorMessage).isNull()
+        presetList.onRenameClick(testPresetNames[1])
+        val newName = "new name"
+        renameDialog.onNameChange(newName)
+        waitUntil { renameDialog.message == null } // should time out
+        assertThat(renameDialog.message).isNull()
+
+        renameDialog.finalize()
+        waitUntil { currentPresetNames?.get(1) == newName }
+        assertThat(instance.shownDialog).isNull()
+        assertThat(currentPresetNames?.get(1)).isEqualTo(newName)
+    }
+
+    @Test fun renaming_active_preset_updates_active_preset_name() = runTest {
+        addTestPresets()
+        activePresetState.setName(testPresetNames[1])
+        waitUntil { activePreset.name != null }
+
+        presetList.onRenameClick(testPresetNames[1])
+        renameDialog.onNameChange("new name")
+        renameDialog.finalize()
+        waitUntil { currentPresetNames?.contains("new name") == true }
+        waitUntil { activePresetState.name.first() == "new name" }
+        assertThat(activePresetState.name.first()).isEqualTo("new name")
+    }
+
+    @Test fun overwrite_dialog_appearance() = runTest {
+        addTestPresets()
+        presetList.onOverwriteClick(testPresetNames[0])
+        waitUntil { instance.shownDialog != null }
+        assertThat(instance.shownDialog).isInstanceOf(DialogType.Confirmatory::class)
+        assertThat(confirmatoryDialog.title.stringResId).isEqualTo(R.string.confirm_overwrite_preset_dialog_title)
+        assertThat(confirmatoryDialog.text.stringResId).isEqualTo(R.string.confirm_overwrite_preset_dialog_message)
+    }
+
+    @Test fun overwrite_dialog_dismissal() = runTest {
+        addTestPresets()
+        presetList.onOverwriteClick(testPresetNames[0])
+        waitUntil { instance.shownDialog != null }
+        confirmatoryDialog.onDismissRequest()
+
+        assertThat(instance.shownDialog).isNull()
+        assertThat(presetDao.getPlaylistNamesFor(testPresetNames[0]))
+            .containsExactly(testPlaylistNames[0])
     }
 
     @Test fun overwriting_not_allowed_with_no_active_tracks() = runTest {
         addTestPresets()
-        activePresetState.setName(testPresets[2].name)
-        trackDao.toggleIsActive(testTracks[3].uriString)
-        trackDao.toggleIsActive(testTracks[4].uriString)
-        waitUntil { instance.activePresetName != null }
-        waitUntil { trackDao.getActiveTracks().first().isEmpty() }
-        assertThat(instance.activePresetIsModified).isTrue()
+        activePresetState.setName(testPresetNames[2])
+        waitUntil { activePreset.name != null }
+        playlistDao.toggleIsActive(testPlaylistNames[3])
+        playlistDao.toggleIsActive(testPlaylistNames[4])
+        waitUntil { getActivePlaylistNames().isEmpty() }
 
-        instance.onPresetOverwriteRequest(testPresets[2])
-        waitUntil { !instance.activePresetIsModified } // should time out
-        assertThat(presetDao.getPresetTracks(testPresets[2].name).first())
-            .containsExactly(testTracks[3].toActiveTrack(), testTracks[4].toActiveTrack())
-        assertThat(instance.activePresetIsModified).isTrue()
-
-        instance.onPresetOverwriteRequest(testPresets[0])
-        waitUntil { instance.activePresetName == testPresets[0].name } // should time out
-        assertThat(instance.activePresetName).isNotEqualTo(testPresets[0].name)
-        assertThat(presetDao.getPresetTracks(testPresets[0].name).first())
-            .containsExactly(testTracks[0].toActiveTrack())
+        presetList.onOverwriteClick(testPresetNames[2])
+        waitUntil { instance.shownDialog != null }
+        confirmatoryDialog.onConfirmClick()
+        waitUntil { !activePreset.isModified } // should time out
+        assertThat(presetDao.getPlaylistNamesFor(testPresetNames[2]))
+            .containsExactly(testPlaylistNames[3], testPlaylistNames[4])
+        assertThat(activePreset.isModified).isTrue()
     }
 
-    @Test fun overwriting_presets() = runTest {
+    @Test fun overwrite_dialog_confirm() = runTest {
         addTestPresets()
-        instance.onPresetOverwriteRequest(testPresets[2])
-        waitUntil { instance.activePresetName == testPresets[2].name }
-        assertThat(instance.activePresetName).isEqualTo(testPresets[2].name)
+        presetList.onOverwriteClick(testPresetNames[1])
+        waitUntil { instance.shownDialog != null }
+        confirmatoryDialog.onConfirmClick()
+        waitUntil { !activePreset.isModified }
 
-        instance.onPresetOverwriteRequest(testPresets[2])
-        waitUntil { instance.activePresetName != testPresets[2].name } // should time out
-        assertThat(instance.activePresetName).isEqualTo(testPresets[2].name)
-
-        instance.onPresetOverwriteRequest(testPresets[0])
-        waitUntil { instance.activePresetName != testPresets[2].name }
-        assertThat(instance.activePresetName).isEqualTo(testPresets[0].name)
-        assertThat(trackDao.getActiveTracks().first()).containsExactly(
-            testTracks[3].toActiveTrack(), testTracks[4].toActiveTrack())
+        assertThat(instance.shownDialog).isNull()
+        assertThat(presetDao.getPlaylistNamesFor(testPresetNames[1]))
+            .containsExactly(testPlaylistNames[3], testPlaylistNames[4])
+        assertThat(activePreset.isModified).isFalse()
     }
 
-    @Test fun deleting_presets() = runTest {
+    @Test fun overwriting_preset_makes_it_active() = runTest {
         addTestPresets()
-        var presets = presetDao.getPresetList().first()
-        assertThat(presets).containsExactlyElementsIn(testPresets)
-                           .inOrder()
+        activePresetState.setName(testPresetNames[2])
+        waitUntil { activePreset.name != null }
 
-        instance.onPresetDeleteRequest(testPresets[1])
-        waitUntil { presetDao.getPresetList().first().size < 3 }
-        presets = presetDao.getPresetList().first()
-        assertThat(presets).containsExactlyElementsIn(testPresets
-                           .minus(testPresets[1])).inOrder()
+        presetList.onOverwriteClick(testPresetNames[1])
+        waitUntil { instance.shownDialog != null }
+        confirmatoryDialog.onConfirmClick()
+        waitUntil { !activePreset.isModified }
 
-        activePresetState.setName(testPresets[0].name)
-        waitUntil { instance.activePresetName == testPresets[0].name }
-        instance.onPresetDeleteRequest(testPresets[0])
-        waitUntil { presetDao.getPresetList().first().size < 2 }
-        presets = presetDao.getPresetList().first()
-        assertThat(presets).containsExactly(testPresets[2])
-        assertThat(instance.activePresetName).isNull()
+        assertThat(activePresetState.name.first()).isEqualTo(testPresetNames[2])
     }
 
-    @Test fun clicking_presets_without_unsaved_changes() = runTest {
+    @Test fun delete_dialog_appearance() = runTest {
         addTestPresets()
-        instance.onActivePresetClick()
-        instance.onPresetSelectorPresetClick(testPresets[1])
-        waitUntil { instance.activePresetName != null }
-        assertThat(instance.activePresetName).isEqualTo(testPresets[1].name)
-        assertThat(trackDao.getActiveTracks().first()).containsExactly(
-            testTracks[1].toActiveTrack(), testTracks[2].toActiveTrack())
-        assertThat(instance.showingPresetSelector).isFalse()
-
-        instance.onActivePresetClick()
-        instance.onPresetSelectorPresetClick(testPresets[0])
-        waitUntil { instance.activePresetName != testPresets[1].name }
-        assertThat(instance.activePresetName).isEqualTo(testPresets[0].name)
-        assertThat(trackDao.getActiveTracks().first())
-            .containsExactly(testTracks[0].toActiveTrack())
-        assertThat(instance.showingPresetSelector).isFalse()
-    }
-    // 310 showingPresetSelector still false
-    @Test fun unsaved_changes_dialog_shows() = runTest {
-        addTestPresets()
-        instance.onPresetSelectorPresetClick(testPresets[1])
-        waitUntil { instance.activePresetName != null }
-        trackDao.toggleIsActive(testTracks[3].uriString)
-        waitUntil { instance.activePresetIsModified }
-        assertThat(instance.activePresetIsModified).isTrue()
-
-        instance.onActivePresetClick()
-        instance.onPresetSelectorPresetClick(testPresets[2])
-        waitUntil { !instance.activePresetIsModified } // should time out
-        assertThat(instance.showingUnsavedChangesWarning).isTrue()
-        assertThat(instance.showingPresetSelector).isTrue()
-        assertThat(instance.activePresetIsModified).isTrue()
-        assertThat(trackDao.getActiveTracks().first()).containsExactly(
-            testTracks[1].toActiveTrack(),
-            testTracks[2].toActiveTrack(),
-            testTracks[3].toActiveTrack())
+        presetList.onDeleteClick(testPresetNames[1])
+        waitUntil { instance.shownDialog != null }
+        assertThat(instance.shownDialog).isInstanceOf(DialogType.Confirmatory::class)
+        assertThat(confirmatoryDialog.title.stringResId).isEqualTo(R.string.confirm_delete_preset_title)
+        assertThat(confirmatoryDialog.text.stringResId).isEqualTo(R.string.confirm_delete_preset_message)
     }
 
-    @Test fun canceling_after_clicking_preset_with_unsaved_changes() = runTest {
+    @Test fun delete_dialog_dismissal() = runTest {
         addTestPresets()
-        instance.onPresetSelectorPresetClick(testPresets[1])
-        waitUntil { instance.activePresetName != null }
-        trackDao.toggleIsActive(testTracks[3].uriString)
-        waitUntil { trackDao.getActiveTracks().first().size > 2 }
-
-        instance.onActivePresetClick()
-        instance.onPresetSelectorPresetClick(testPresets[2])
-        instance.onUnsavedChangesWarningCancel()
-        waitUntil { !instance.activePresetIsModified } // should time out
-        assertThat(instance.showingUnsavedChangesWarning).isFalse()
-        assertThat(instance.showingPresetSelector).isTrue()
-        assertThat(instance.activePresetIsModified).isTrue()
-        assertThat(trackDao.getActiveTracks().first()).containsExactly(
-            testTracks[1].toActiveTrack(),
-            testTracks[2].toActiveTrack(),
-            testTracks[3].toActiveTrack())
+        presetList.onDeleteClick(testPresetNames[1])
+        waitUntil { instance.shownDialog != null }
+        instance.shownDialog?.onDismissRequest?.invoke()
+        waitUntil { currentPresets?.size == 2 } // should time out
+        assertThat(instance.shownDialog).isNull()
+        assertThat(currentPresetNames).containsExactlyElementsIn(testPresetNames)
     }
 
-    @Test fun dropping_changes_after_clicking_preset_with_unsaved_changes() = runTest {
+    @Test fun delete_dialog_confirm() = runTest {
         addTestPresets()
-        instance.onPresetSelectorPresetClick(testPresets[1])
-        waitUntil { instance.activePresetName != null }
-        trackDao.toggleIsActive(testTracks[3].uriString)
-        waitUntil { trackDao.getActiveTracks().first().size > 2 }
+        presetList.onDeleteClick(testPresetNames[1])
+        waitUntil { instance.shownDialog != null }
+        confirmatoryDialog.onConfirmClick()
+        waitUntil { (currentPresets?.size ?: 0) < 3 }
+        assertThat(currentPresetNames).containsExactlyElementsIn(
+            testPresetNames - testPresetNames[1]).inOrder()
+    }
 
-        instance.onActivePresetClick()
-        instance.onPresetSelectorPresetClick(testPresets[2])
-        instance.onUnsavedChangesWarningConfirm(saveFirst = false)
-        waitUntil { !instance.activePresetIsModified }
-        assertThat(instance.activePresetIsModified).isFalse()
-        assertThat(instance.showingUnsavedChangesWarning).isFalse()
-        assertThat(instance.showingPresetSelector).isFalse()
+    @Test fun deleting_active_preset_makes_active_preset_null() = runTest {
+        addTestPresets()
+        activePresetState.setName(testPresetNames[0])
+        waitUntil { activePreset.name == testPresetNames[0] }
+        presetList.onDeleteClick(testPresetNames[0])
+        waitUntil { instance.shownDialog != null }
+        confirmatoryDialog.onConfirmClick()
+        waitUntil { activePreset.name == null }
+        assertThat(activePreset.name).isNull()
+    }
+
+    @Test fun clicking_presets_without_unsaved_changes_skips_dialog() = runTest {
+        addTestPresets()
+        activePreset.onClick()
+        presetList.onClick(testPresetNames[1])
+        waitUntil { activePreset.name != null }
+        assertThat(activePreset.name).isEqualTo(testPresetNames[1])
+        assertThat(getActivePlaylistNames()).containsExactly(
+            testPlaylistNames[1], testPlaylistNames[2])
+        assertThat(instance.state.showingPresetSelector).isFalse()
+
+        activePreset.onClick()
+        presetList.onClick(testPresetNames[0])
+        waitUntil { activePreset.name != testPresetNames[1] }
+        assertThat(activePreset.name).isEqualTo(testPresetNames[0])
+        assertThat(getActivePlaylistNames()).containsExactly(testPlaylistNames[0])
+        assertThat(instance.state.showingPresetSelector).isFalse()
+    }
+
+    @Test fun unsaved_changes_dialog_appearance() = runTest {
+        addTestPresets()
+        presetList.onClick(testPresetNames[1])
+        waitUntil { activePreset.name != null }
+        playlistDao.toggleIsActive(testPlaylistNames[3])
+        waitUntil { activePreset.isModified }
+        assertThat(activePreset.isModified).isTrue()
+
+        activePreset.onClick()
+        presetList.onClick(testPresetNames[2])
+        waitUntil { !activePreset.isModified } // should time out
+        assertThat(instance.shownDialog).isInstanceOf(
+            DialogType.PresetUnsavedChangesWarning::class)
+        assertThat(instance.state.showingPresetSelector).isTrue()
+        assertThat(activePreset.isModified).isTrue()
+        assertThat(getActivePlaylistNames()).containsExactly(
+            testPlaylistNames[1], testPlaylistNames[2], testPlaylistNames[3])
+    }
+
+    @Test fun unsaved_changes_dialog_dismissal() = runTest {
+        addTestPresets()
+        presetList.onClick(testPresetNames[1])
+        waitUntil { activePreset.name != null }
+        playlistDao.toggleIsActive(testPlaylistNames[3])
+        waitUntil { getActivePlaylistNames().size > 2 }
+
+        activePreset.onClick()
+        presetList.onClick(testPresetNames[2])
+        unsavedChangesWarningDialog.onDismissRequest()
+        waitUntil { !activePreset.isModified } // should time out
+        assertThat(instance.shownDialog).isNull()
+        assertThat(instance.state.showingPresetSelector).isTrue()
+        assertThat(activePreset.isModified).isTrue()
+        assertThat(getActivePlaylistNames()).containsExactly(
+            testPlaylistNames[1], testPlaylistNames[2], testPlaylistNames[3])
+    }
+
+    @Test fun unsaved_changes_dialog_drop_changes() = runTest {
+        addTestPresets()
+        presetList.onClick(testPresetNames[1])
+        waitUntil { activePreset.name != null }
+        playlistDao.toggleIsActive(testPlaylistNames[3])
+        waitUntil { getActivePlaylistNames().size > 2 }
+
+        activePreset.onClick()
+        presetList.onClick(testPresetNames[2])
+        unsavedChangesWarningDialog.onConfirmClick(false)
+        waitUntil { !activePreset.isModified }
+        assertThat(activePreset.isModified).isFalse()
+        assertThat(instance.shownDialog).isNull()
+        assertThat(instance.state.showingPresetSelector).isFalse()
 
         // Check that new preset was loaded
-        assertThat(instance.activePresetName).isEqualTo(testPresets[2].name)
-        assertThat(trackDao.getActiveTracks().first()).containsExactly(
-            testTracks[3].toActiveTrack(), testTracks[4].toActiveTrack())
+        assertThat(activePreset.name).isEqualTo(testPresetNames[2])
+        assertThat(getActivePlaylistNames())
+            .containsExactly(testPlaylistNames[3], testPlaylistNames[4])
 
         // Check that previous preset's changes were dropped
-        assertThat(presetDao.getPresetTracks(testPresets[1].name).first())
-            .containsExactly(testTracks[1].toActiveTrack(), testTracks[2].toActiveTrack())
+        assertThat(presetDao.getPlaylistNamesFor(testPresetNames[1]))
+            .containsExactly(testPlaylistNames[1], testPlaylistNames[2])
     }
 
-    @Test fun saving_first_after_clicking_preset_with_unsaved_changes() = runTest {
+    @Test fun unsaved_changes_dialog_save_first() = runTest {
         addTestPresets()
-        instance.onActivePresetClick()
-        instance.onPresetSelectorPresetClick(testPresets[1])
-        waitUntil { instance.activePresetName != null }
-        trackDao.toggleIsActive(testTracks[3].uriString)
-        waitUntil { trackDao.getActiveTracks().first().size > 2 }
+        activePreset.onClick()
+        presetList.onClick(testPresetNames[1])
+        waitUntil { activePreset.name != null }
+        playlistDao.toggleIsActive(testPlaylistNames[3])
+        waitUntil { getActivePlaylistNames().size > 2 }
 
-        instance.onPresetSelectorPresetClick(testPresets[2])
-        instance.onUnsavedChangesWarningConfirm(saveFirst = true)
-        waitUntil { !instance.activePresetIsModified }
-        assertThat(instance.activePresetIsModified).isFalse()
-        assertThat(instance.showingUnsavedChangesWarning).isFalse()
-        assertThat(instance.showingPresetSelector).isFalse()
+        presetList.onClick(testPresetNames[2])
+        waitUntil { instance.shownDialog != null }
+        unsavedChangesWarningDialog.onConfirmClick(true)
+        waitUntil { activePreset.name == testPresetNames[2] }
+        waitUntil { !activePreset.isModified }
+        assertThat(activePreset.name).isEqualTo(testPresetNames[2])
+        assertThat(activePreset.isModified).isFalse()
+        assertThat(instance.shownDialog).isNull()
+        assertThat(instance.state.showingPresetSelector).isFalse()
 
         // Check that new preset was loaded
-        assertThat(instance.activePresetName).isEqualTo(testPresets[2].name)
-        assertThat(trackDao.getActiveTracks().first()).containsExactly(
-            testTracks[3].toActiveTrack(), testTracks[4].toActiveTrack())
+        assertThat(activePreset.name).isEqualTo(testPresetNames[2])
+        assertThat(getActivePlaylistNames())
+            .containsExactly(testPlaylistNames[3], testPlaylistNames[4])
 
         // Check that previous preset's changes were saved first
-        val oldPresetContents = presetDao.getPresetTracks(testPresets[1].name).first()
-        assertThat(oldPresetContents).containsExactly(
-            testTracks[1].toActiveTrack(), testTracks[2].toActiveTrack(),
-            testTracks[3].toActiveTrack())
+        assertThat(presetDao.getPlaylistNamesFor(testPresetNames[1]))
+            .containsExactly(testPlaylistNames[1], testPlaylistNames[2], testPlaylistNames[3])
     }
 }
