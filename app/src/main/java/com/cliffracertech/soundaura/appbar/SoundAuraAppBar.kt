@@ -56,7 +56,7 @@ import javax.inject.Inject
 @HiltViewModel class AppBarViewModel(
     private val dataStore: DataStore<Preferences>,
     private val navigationState: NavigationState,
-    searchQueryState: SearchQueryState,
+    private val searchQuery: SearchQueryState,
     coroutineScope: CoroutineScope? = null
 ) : ViewModel() {
 
@@ -67,13 +67,12 @@ import javax.inject.Inject
     ) : this(dataStore, navigationState, searchQueryState, null)
 
     private val scope = coroutineScope ?: viewModelScope
-    private var searchQuery by searchQueryState::query
 
     val onBackButtonClick get() = when {
         navigationState.willConsumeBackButtonClick ->
             navigationState::onBackButtonClick
-        searchQuery != null -> {{
-            searchQuery = null
+        searchQuery.value != null -> {{
+            searchQuery.set(null)
         }} else -> null
     }
 
@@ -85,14 +84,13 @@ import javax.inject.Inject
     val showIconButtons get() = !navigationState.showingAppSettings
 
     val searchQueryViewState = SearchQueryViewState(
-        getQuery = searchQueryState::query,
-        onQueryChange = searchQueryState::query::set,
+        getQuery = searchQuery::value,
+        onQueryChange = searchQuery::set,
         onButtonClick = {
-            searchQuery = if (searchQuery == null) ""
-                          else                     null
+            searchQuery.set(if (searchQuery.value == null) "" else null)
         }, getIcon = {
-            if (searchQuery == null) SearchQueryViewState.Icon.Search
-            else                     SearchQueryViewState.Icon.Close
+            if (searchQuery.value == null) SearchQueryViewState.Icon.Search
+            else                           SearchQueryViewState.Icon.Close
         })
 
     private val playlistSortKey = intPreferencesKey(PrefKeys.playlistSort)
@@ -120,7 +118,7 @@ import javax.inject.Inject
         })
 
     fun onSettingsButtonClick() {
-        searchQuery = null
+        searchQuery.set(null)
         navigationState.showingPresetSelector = false
         navigationState.showingAppSettings = true
     }

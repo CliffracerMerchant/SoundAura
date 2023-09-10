@@ -23,7 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -126,7 +125,7 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
     private val playlistDao: PlaylistDao,
     private val messageHandler: MessageHandler,
     private val playbackState: PlaybackState,
-    searchQueryState: SearchQueryState,
+    searchQuery: SearchQueryState,
     coroutineScope: CoroutineScope? = null
 ) : ViewModel() {
 
@@ -136,9 +135,9 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
         playlistDao: PlaylistDao,
         messageHandler: MessageHandler,
         playbackState: PlayerServicePlaybackState,
-        searchQueryState: SearchQueryState,
+        searchQuery: SearchQueryState,
     ) : this(dataStore, permissionHandler, playlistDao,
-        messageHandler, playbackState, searchQueryState, null)
+        messageHandler, playbackState, searchQuery, null)
 
     private val scope = coroutineScope ?: viewModelScope
     private val showActiveTracksFirstKey = booleanPreferencesKey(PrefKeys.showActivePlaylistsFirst)
@@ -146,10 +145,9 @@ private typealias PlaylistSort = com.cliffracertech.soundaura.model.database.Pla
     private val playlistSortKey = intPreferencesKey(PrefKeys.playlistSort)
     private val playlistSort = dataStore.enumPreferenceFlow<PlaylistSort>(playlistSortKey)
 
-    private val searchQueryFlow = snapshotFlow { searchQueryState.query }
     val playlists by combine(
            playlistSort, showActiveTracksFirst,
-           searchQueryFlow, playlistDao::getAllPlaylists
+           searchQuery.flow, playlistDao::getAllPlaylists
         ).transformLatest { emitAll(it) }
         .map(List<Playlist>::toImmutableList)
         .collectAsState(null, scope)

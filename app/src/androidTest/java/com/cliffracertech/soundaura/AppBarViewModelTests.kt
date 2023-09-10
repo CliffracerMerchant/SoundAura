@@ -84,10 +84,10 @@ class AppBarViewModelTests {
 
     @Test fun search_query_reflects_underlying_state() = runTest {
         val testQuery = "test query"
-        searchQueryState.query = testQuery
+        searchQueryState.set(testQuery)
         assertThat(instance.searchQueryViewState.query).isEqualTo(testQuery)
 
-        searchQueryState.query = null
+        searchQueryState.set(null)
         assertThat(instance.searchQueryViewState.query).isNull()
     }
 
@@ -98,7 +98,7 @@ class AppBarViewModelTests {
         assertThat(instance.searchQueryViewState.query).isNull()
 
         val testQuery = "test query"
-        searchQueryState.query = testQuery
+        searchQueryState.set(testQuery)
         waitUntil { instance.searchQueryViewState.query == testQuery }
         instance.searchQueryViewState.onButtonClick()
         assertThat(instance.searchQueryViewState.query).isNull()
@@ -106,7 +106,7 @@ class AppBarViewModelTests {
 
     @Test fun settings_button_clears_search_query() {
         val testQuery = "test query"
-        searchQueryState.query = testQuery
+        searchQueryState.set(testQuery)
         instance.onSettingsButtonClick()
         assertThat(instance.searchQueryViewState.query).isNull()
         instance.onBackButtonClick?.invoke()

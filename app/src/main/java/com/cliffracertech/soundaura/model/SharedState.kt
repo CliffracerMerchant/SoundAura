@@ -16,6 +16,7 @@ import com.cliffracertech.soundaura.model.database.PresetDao
 import com.cliffracertech.soundaura.settings.PrefKeys
 import dagger.hilt.android.scopes.ActivityRetainedScoped
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformLatest
@@ -41,7 +42,19 @@ class NavigationState @Inject constructor() {
 /** A state holder for a search query entry. */
 @ActivityRetainedScoped
 class SearchQueryState @Inject constructor() {
-    var query by mutableStateOf<String?>(null)
+    // Originally the value was stored only in a MutableState, and entities that
+    // required the value as a Flow could use a snapshotFlow. This caused tests
+    // to fail for some reason, so we just store the value in both a MutableState
+    // and a MutableStateFlow for convenience.
+
+    var value by mutableStateOf<String?>(null)
+        private set
+    val flow = MutableStateFlow<String?>(null)
+
+    fun set(newQuery: String?) {
+        value = newQuery
+        flow.value = newQuery
+    }
 }
 
 /**
