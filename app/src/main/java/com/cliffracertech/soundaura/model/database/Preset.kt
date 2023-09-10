@@ -51,19 +51,21 @@ data class PresetPlaylist(
     @Query("SELECT playlistName FROM presetPlaylist WHERE presetName = :presetName")
     abstract suspend fun getPlaylistNamesFor(presetName: String): List<String>
 
-    // The first select statement selects playlists that are in the active
-    // preset that are either inactive or whose current volume doesn't
-    // match the one saved in the preset. The second select statement
-    // selects active playlists that are not part of the preset.
+    // The first select statement selects active playlists that are not
+    // part of the preset or are not at their preset volume. The second
+    // select statement selects playlists that are in the active preset
+    // that are inactive. Because SQLite gives EXCEPT and UNION equal
+    // precedence, the two select statements must be done in this order.
     @Query("SELECT EXISTS(" +
-               "SELECT name, volume FROM playlist " +
-               "JOIN presetPlaylist pp ON playlist.name = pp.playlistName " +
-               "WHERE pp.presetName = :presetName AND " +
-                     "NOT isActive OR volume != pp.playlistVolume " +
-               "UNION " +
-               "SELECT name, volume FROM playlist " +
-               "JOIN presetPlaylist pp ON playlist.name = pp.playlistName " +
-               "WHERE isActive AND pp.presetName != :presetName)")
+           "SELECT name, volume " +
+           "FROM playlist WHERE isActive " +
+           "EXCEPT SELECT playlistName, playlistVolume " +
+                  "FROM presetPlaylist " +
+                  "WHERE presetName = :presetName " +
+             "UNION " +
+           "SELECT name, volume FROM playlist " +
+           "JOIN presetPlaylist ON playlistName = name " +
+           "WHERE NOT isActive AND presetName = :presetName)")
     abstract fun getPresetIsModified(presetName: String): Flow<Boolean>
 
     /** Delete the [Preset] identified by [presetName]. */
