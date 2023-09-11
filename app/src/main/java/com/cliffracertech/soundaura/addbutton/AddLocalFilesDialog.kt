@@ -93,7 +93,7 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
         FileChooser { uris ->
             if (uris.isEmpty())
                 step.onDismissRequest()
-            step.onFilesSelected(uris)
+            else step.onFilesSelected(uris)
         }
     } else SoundAuraDialog(
         modifier = Modifier.restrictWidthAccordingToSizeClass(),
