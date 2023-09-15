@@ -213,8 +213,7 @@ import javax.inject.Inject
 
     private fun overwritePreset(presetName: String) { when {
         !activePlaylistsIsNotEmpty ->
-            messageHandler.postMessage(StringResource(
-                R.string.overwrite_no_active_tracks_error_message))
+            messageHandler.postMessage(R.string.overwrite_no_active_tracks_error_message)
         presetName == activePresetName && !activePresetIsModified -> {
             // This prevents a pointless saving of the unmodified active preset
         } else -> scope.launch {

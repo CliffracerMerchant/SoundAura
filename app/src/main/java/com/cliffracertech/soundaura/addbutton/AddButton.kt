@@ -225,7 +225,7 @@ class AddPlaylistButtonViewModel(
 
     fun onClick() { when {
         activeTracksIsEmpty -> messageHandler.postMessage(
-            StringResource(R.string.preset_cannot_be_empty_warning_message))
+            R.string.preset_cannot_be_empty_warning_message)
         else -> newPresetDialogState = ValidatedNamingState(
             validator = newPresetNameValidator(presetDao, scope),
             coroutineScope = scope,

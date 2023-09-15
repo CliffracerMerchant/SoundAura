@@ -86,4 +86,15 @@ class MessageHandler @Inject constructor() {
                               duration, onActionClick, onDismiss)
         _messages.tryEmit(message)
     }
+
+    /** Post the message described by the parameters to the message queue. */
+    fun postMessage(
+        stringResId: Int,
+        duration: SnackbarDuration = SnackbarDuration.Short,
+        actionStringResource: StringResource? = null,
+        onActionClick: (() -> Unit)? = null,
+        onDismiss: ((Int) -> Unit)? = null
+    ) = postMessage(
+        StringResource(stringResId), duration,
+        actionStringResource, onActionClick, onDismiss)
 }
