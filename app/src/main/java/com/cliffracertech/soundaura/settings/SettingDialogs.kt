@@ -90,7 +90,11 @@ import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
     onDismissRequest = onDismissRequest,
     showCancelButton = false,
 ) {
-    Column(Modifier.padding(horizontal = 16.dp), Arrangement.spacedBy(8.dp)) {
+    Column(
+        modifier = Modifier.padding(
+            start = 16.dp, end = 16.dp, bottom = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         ProvideTextStyle(MaterialTheme.typography.subtitle1) {
             Text(stringResource(R.string.play_in_background_explanation))
             BulletedList(listOf(
@@ -139,7 +143,11 @@ import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
             showCancelButton = false,
             onConfirm = { explanationDismissed = true }
         ) {
-            Column(Modifier.padding(horizontal = 16.dp), Arrangement.spacedBy(6.dp)) {
+            Column(
+                modifier = Modifier.padding(
+                    start = 16.dp, end = 16.dp, bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
                 Text(stringResource(R.string.request_notification_permission_explanation_p1),
                      style = MaterialTheme.typography.body1)
 
@@ -380,7 +388,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
     }, text = stringResource(R.string.about_app_setting_body),
     onDismissRequest = onDismissRequest,
     buttons = {
-        Divider(Modifier.padding(top = 12.dp))
+        Divider()
         Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
             val uriHandler = LocalUriHandler.current
             val gitHubLink = stringResource(R.string.github_link)

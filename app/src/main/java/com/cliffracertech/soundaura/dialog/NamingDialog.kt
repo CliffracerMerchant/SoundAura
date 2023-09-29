@@ -5,7 +5,7 @@ package com.cliffracertech.soundaura.dialog
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -98,7 +98,7 @@ class ValidatedNamingState(
     message: Validator.Message,
     modifier: Modifier = Modifier
 ) = Row(
-    modifier = modifier.fillMaxWidth().height(48.dp),
+    modifier = modifier.fillMaxWidth().heightIn(min = 48.dp),
     verticalAlignment = Alignment.CenterVertically
 ) {
     val vector = when {
@@ -113,29 +113,32 @@ class ValidatedNamingState(
     }
     Icon(vector, null, tint = tint)
     Spacer(Modifier.width(4.dp))
-    Text(message.stringResource.resolve(LocalContext.current))
+    Text(text = message.stringResource.resolve(LocalContext.current),
+         modifier = Modifier.padding(vertical = 12.dp))
 }
 
 /** A display of a single nullable [Validator.Message], with appearance and/or
  * disappearance animations for when the message changes or becomes null. */
-@Composable fun ColumnScope.AnimatedValidatorMessage(
+@Composable fun AnimatedValidatorMessage(
     message: Validator.Message?,
     modifier: Modifier = Modifier
 ) {
     var lastMessage: Validator.Message = remember {
         Validator.Message.Error(StringResource(""))
     }
-    AnimatedVisibility(
-        visible = message != null,
-        label = "Validator message appearance/disappearance",
-        modifier = modifier
-    ) {
-        Crossfade(
-            targetState = message ?: lastMessage,
-            label = "Validator message change crossfade"
-        ) { ValidatorMessageView(it) }
+    // Setting a min height for the AnimatedVisibility block doesn't work for some reason
+    Column(modifier.heightIn(min = 12.dp)) {
+        AnimatedVisibility(
+            visible = message != null,
+            label = "Validator message appearance/disappearance",
+        ) {
+            Crossfade(
+                targetState = message ?: lastMessage,
+                label = "Validator message change crossfade"
+            ) { ValidatorMessageView(it) }
+        }
+        message?.let { lastMessage = it }
     }
-    message?.let { lastMessage = it }
 }
 
 /**

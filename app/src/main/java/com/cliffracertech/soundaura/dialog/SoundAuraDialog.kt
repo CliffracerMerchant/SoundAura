@@ -171,7 +171,7 @@ sealed class DialogWidth {
     confirmText: String = stringResource(R.string.ok),
     onConfirm: () -> Unit = onDismissRequest,
     buttons: @Composable ColumnScope.() -> Unit = {
-        HorizontalDivider(Modifier.padding(top = 12.dp))
+        HorizontalDivider()
         DialogButtonRow(
             onCancel = if (showCancelButton) onDismissRequest
                        else                  null,
@@ -181,7 +181,8 @@ sealed class DialogWidth {
     },
     content: @Composable ColumnScope.() -> Unit = @Composable {
         Text(text = text ?: "",
-            modifier = Modifier.padding(horizontal = 16.dp),
+            modifier = Modifier.padding(
+                start = 16.dp, end = 16.dp, bottom = 12.dp),
             style = MaterialTheme.typography.body1)
     }
 ) = Dialog(

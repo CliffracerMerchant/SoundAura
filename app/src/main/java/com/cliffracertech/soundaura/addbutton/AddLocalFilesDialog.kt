@@ -47,7 +47,7 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
 @Composable private fun ColumnScope.AddLocalFilesDialogButtons(
     step: AddLocalFilesDialogStep
 ) {
-    HorizontalDivider(Modifier.padding(top = 12.dp))
+    HorizontalDivider()
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
         step.buttons.forEachIndexed { index, button ->
             TextButton(
