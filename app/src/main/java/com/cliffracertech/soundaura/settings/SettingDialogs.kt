@@ -356,9 +356,16 @@ import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
     // and LibrariesContainer apparently uses a LazyColumn, restricting the max
     // height prevents a java.lang.IllegalStateException: Vertically scrollable
     // component was measured with an infinity maximum height constraints crash.
-    LibrariesContainer(Modifier
-        .padding(horizontal = 16.dp)
-        .heightIn(max = config.screenHeightDp.dp))
+    LibrariesContainer(
+        modifier = Modifier
+            .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+            .heightIn(max = config.screenHeightDp.dp),
+        colors = LibraryDefaults.libraryColors(
+            backgroundColor = MaterialTheme.colors.surface,
+            contentColor = MaterialTheme.colors.onSurface,
+            badgeBackgroundColor = MaterialTheme.colors.secondary,
+            badgeContentColor = MaterialTheme.colors.onSecondary
+        ))
 }
 
 /** Show a dialog displaying information about the app to the user. */
