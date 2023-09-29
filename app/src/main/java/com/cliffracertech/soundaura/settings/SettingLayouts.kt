@@ -35,8 +35,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.cliffracertech.soundaura.dialog.DialogWidth
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
-import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
+import com.cliffracertech.soundaura.screenSizeBasedHorizontalPadding
 import com.cliffracertech.soundaura.ui.HorizontalDivider
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
@@ -54,7 +55,7 @@ import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.(Modifier) -> Unit
 ) = Surface(
-    modifier = modifier.restrictWidthAccordingToSizeClass(compactPadding = 0.dp),
+    modifier = modifier.screenSizeBasedHorizontalPadding(0.dp),
     shape = MaterialTheme.shapes.large
 ) {
     val horizontalPaddingModifier = Modifier.padding(horizontal = 20.dp)
@@ -264,9 +265,7 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
  *     setting layout, and will also be used as the title of the dialog
  *     window.
  * @param modifier The [Modifier] to use for the layout
- * @param useDefaultWidth Whether or not to use the platform default
- *     size for the width of the popup dialog window
- * @param dialogModifier The [Modifier] to use for the dialog
+ * @param dialogWidth A [DialogWidth] value to determine the width of the dialog
  * @param description An optional description of the setting. This will
  *     only be displayed in the dialog window, below the title but before
  *     the enum value's radio buttons.
@@ -284,8 +283,7 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
 @Composable fun <T: Enum<T>> EnumDialogSetting(
     title: String,
     modifier: Modifier = Modifier,
-    useDefaultWidth: Boolean = true,
-    dialogModifier: Modifier = Modifier,
+    dialogWidth: DialogWidth = DialogWidth.PlatformDefault,
     description: String? = null,
     values: Array<T>,
     valueNames: Array<String>,
@@ -299,8 +297,8 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
     description = valueNames[currentValue.ordinal]
 ) { onDismissRequest ->
     SoundAuraDialog(
-        modifier = dialogModifier,
-        useDefaultWidth = useDefaultWidth,
+        modifier = modifier,
+        width = dialogWidth,
         title = title,
         onDismissRequest = onDismissRequest,
         buttons = {}

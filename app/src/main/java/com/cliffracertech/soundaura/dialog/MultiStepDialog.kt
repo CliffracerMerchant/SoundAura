@@ -8,8 +8,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
@@ -23,7 +25,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogProperties
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.ui.SlideAnimatedContent
 import com.cliffracertech.soundaura.ui.TextButton
@@ -40,9 +41,8 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
  * be displayed at the top-end corner of the dialog.
  *
  * @param modifier The [Modifier] to use for the dialog window.
- * @param useDefaultWidth The value to use for the [DialogProperties]
- *     usePlatformDefaultWidth value. If false, the size of the dialog
- *     can be set through [modifier] argument instead.
+ * @param width A [DialogWidth] value that describes how the dialog's
+ *     horizontal size will be determined
  * @param title The [String] representing the dialog's title.
  * @param onDismissRequest The callback that will be invoked when the user
  *     taps the cancel button (which will replace the previous button if on
@@ -65,7 +65,7 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
  */
 @Composable fun MultiStepDialog(
     modifier: Modifier = Modifier,
-    useDefaultWidth: Boolean = true,
+    width: DialogWidth = DialogWidth.MatchToScreenSize(WindowInsets.ime),
     title: String,
     onDismissRequest: () -> Unit,
     onFinish: () -> Unit = onDismissRequest,
@@ -79,7 +79,7 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
 
     SoundAuraDialog(
         modifier = modifier,
-        useDefaultWidth = useDefaultWidth,
+        width = width,
         titleLayout = {
             Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp)) {
                 Spacer(Modifier.weight(1f))

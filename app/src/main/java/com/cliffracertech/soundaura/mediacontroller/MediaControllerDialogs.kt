@@ -5,14 +5,12 @@ package com.cliffracertech.soundaura.mediacontroller
 
 import android.util.Range
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.dialog.NamingDialog
 import com.cliffracertech.soundaura.dialog.NamingState
@@ -154,7 +152,7 @@ sealed class DialogType(
     text = stringResource(R.string.unsaved_preset_changes_warning_message, unsavedPresetName),
     onDismissRequest = onDismissRequest,
     buttons = {
-        HorizontalDivider(Modifier.padding(top = 12.dp))
+        HorizontalDivider()
         TextButton(
             modifier = Modifier.minTouchTargetSize().fillMaxWidth(),
             shape = RectangleShape,

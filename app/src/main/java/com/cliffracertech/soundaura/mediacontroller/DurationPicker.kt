@@ -222,7 +222,7 @@ fun DurationPickerPreview() = SoundAuraTheme {
         }
         DurationPicker(
             modifier = Modifier
-                .padding(horizontal = 16.dp)
+                .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
                 .align(Alignment.CenterHorizontally),
             currentDuration = currentDuration,
             onDurationChange = { currentDuration = it },

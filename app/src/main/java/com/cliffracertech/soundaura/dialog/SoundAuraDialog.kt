@@ -3,7 +3,6 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura.dialog
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,27 +10,30 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.cliffracertech.soundaura.R
-import com.cliffracertech.soundaura.imeIsOpen
+import com.cliffracertech.soundaura.dialog.DialogWidth.MatchToScreenSize
+import com.cliffracertech.soundaura.dialog.DialogWidth.PlatformDefault
+import com.cliffracertech.soundaura.screenSizeBasedHorizontalPadding
 import com.cliffracertech.soundaura.ui.HorizontalDivider
 import com.cliffracertech.soundaura.ui.TextButton
 import com.cliffracertech.soundaura.ui.VerticalDivider
@@ -39,7 +41,6 @@ import com.cliffracertech.soundaura.ui.bottomEndShape
 import com.cliffracertech.soundaura.ui.bottomShape
 import com.cliffracertech.soundaura.ui.bottomStartShape
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
-import com.google.accompanist.insets.LocalWindowInsets
 
 /**
  * A row of buttons for an alert dialog containing an optional
@@ -87,10 +88,30 @@ import com.google.accompanist.insets.LocalWindowInsets
 ) = Surface(modifier, MaterialTheme.shapes.medium) {
     Column {
         titleLayout()
-        Column(Modifier.weight(1f, false).verticalScroll(rememberScrollState()),
-            content = content)
+        Column(modifier = Modifier
+                   .weight(1f, false)
+                   .verticalScroll(rememberScrollState()),
+               content = content)
         buttons()
     }
+}
+
+/** A set of values that describe how a dialog will be horizontally sized.
+ * The possible values are [PlatformDefault] and [MatchToScreenSize]. */
+sealed class DialogWidth {
+    /** The dialog will use the platform default width to size itself. */
+    object PlatformDefault : DialogWidth()
+
+    /** The dialog will size itself according to the current [WindowWidthSizeClass]
+     * (see [screenSizeBasedHorizontalPadding]). Note that if this width is
+     * used, the dialog will not vertically move with soft keyboard appearances /
+     * disappearances unless the local ime insets (e.g. using [WindowInsets.ime])
+     * are provided to [imeInsets]. If it is known that the ime will not need to
+     * be shown, then [imeInsets] can be left null. */
+    class MatchToScreenSize(
+        val imeInsets: WindowInsets? = null,
+        val minHorizontalPadding: Dp = 16.dp,
+    ) : DialogWidth()
 }
 
 // SoundAuraDialog was created to have more control over the layout of the dialog
@@ -101,10 +122,9 @@ import com.google.accompanist.insets.LocalWindowInsets
 /**
  * Show an alert dialog.
  *
- * @param modifier The [Modifier] to use for the dialog window.
- * @param useDefaultWidth The value to use for the [DialogProperties]
- *     usePlatformDefaultWidth value. If false, the size of the dialog
- *     can be set through [modifier] argument instead.
+ * @param modifier The [Modifier] to use for the dialog window
+ * @param width A [DialogWidth] value that describes how the dialog's
+ *     horizontal size will be determined
  * @param title The string representing the dialog's title. Can be null, in
  *     which case the title will not be displayed.
  * @param titleLayout The layout that will be used for the dialog's title.
@@ -114,12 +134,12 @@ import com.google.accompanist.insets.LocalWindowInsets
  *     if the [content] parameter is not overridden, in which case it will default
  *     to a composable [Text] containing the value of this parameter.
  * @param onDismissRequest The callback that will be invoked when the user taps
- *     the cancel button, if shown, or when they tap outside the dialog, or when
- *     the back button is pressed.
- * @param showCancelButton Whether or not the cancel button will be shown.
- * @param confirmButtonEnabled Whether the confirm button is enabled.
- * @param confirmText The string used for the confirm button.
- * @param onConfirm The callback that will be invoked when the confirm button is tapped.
+ *     the cancel button, taps outside the dialog, or when the back button press
+ *     or gesture is performed
+ * @param showCancelButton Whether or not the cancel button will be shown
+ * @param confirmButtonEnabled Whether the confirm button is enabled
+ * @param confirmText The string used for the confirm button
+ * @param onConfirm The callback that will be invoked when the confirm button is tapped
  * @param buttons The composable lambda whose contents will be used as the
  *     bottom row of buttons. The default value composes an ok button and an
  *     optional cancel button according to the values of [showCancelButton],
@@ -130,7 +150,7 @@ import com.google.accompanist.insets.LocalWindowInsets
  */
 @Composable fun SoundAuraDialog(
     modifier: Modifier = Modifier,
-    useDefaultWidth: Boolean = true,
+    width: DialogWidth = PlatformDefault,
     title: String? = null,
     titleLayout: @Composable ColumnScope.() -> Unit = {
         if (title != null)
@@ -164,15 +184,13 @@ import com.google.accompanist.insets.LocalWindowInsets
             modifier = Modifier.padding(horizontal = 16.dp),
             style = MaterialTheme.typography.body1)
     }
-) = Dialog(onDismissRequest, DialogProperties(usePlatformDefaultWidth = useDefaultWidth)) {
-    if (!useDefaultWidth) {
-        val imeIsOpen by imeIsOpen()
-        val yOffset by animateFloatAsState(
-            if (!imeIsOpen) 0f
-            else LocalWindowInsets.current
-                .run { ime.bottom - navigationBars.bottom } / -2f)
+) = Dialog(
+    onDismissRequest = onDismissRequest,
+    properties = DialogProperties(
+        usePlatformDefaultWidth = width == PlatformDefault)
+) {
+    if (width is MatchToScreenSize) {
         Box(modifier = Modifier
-                .graphicsLayer { translationY = yOffset }
                 .fillMaxSize()
                 .clickable(onClick = onDismissRequest),
             contentAlignment = Alignment.Center,
@@ -182,7 +200,13 @@ import com.google.accompanist.insets.LocalWindowInsets
             // click outside its bounds is performed like a standard dialog
             SoundAuraDialogContent(
                 titleLayout, content, buttons,
-                modifier.clickable(false) {})
+                modifier = modifier
+                    .screenSizeBasedHorizontalPadding(width.minHorizontalPadding)
+                    .run {
+                        if (width.imeInsets == null) this
+                        else this.windowInsetsPadding(width.imeInsets)
+                    }.clickable(false) {})
         }
-    } else SoundAuraDialogContent(titleLayout, content, buttons, modifier)
+    } else SoundAuraDialogContent(
+        titleLayout, content, buttons, modifier)
 }

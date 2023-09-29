@@ -8,8 +8,10 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.Icon
@@ -31,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.Validator
-import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -151,8 +152,8 @@ class ValidatedNamingState(
     modifier: Modifier = Modifier,
     title: String = stringResource(R.string.default_rename_dialog_title),
 ) = SoundAuraDialog(
-    modifier = modifier.restrictWidthAccordingToSizeClass(),
-    useDefaultWidth = false,
+    modifier = modifier,
+    width = DialogWidth.MatchToScreenSize(WindowInsets.ime),
     title = title,
     onDismissRequest = state::cancel,
     confirmButtonEnabled = state.message !is Validator.Message.Error,
@@ -167,7 +168,6 @@ class ValidatedNamingState(
         isError = state.message is Validator.Message.Error,
         singleLine = true,
         textStyle = MaterialTheme.typography.body1)
-
     AnimatedValidatorMessage(
         message = state.message,
         modifier = Modifier.padding(horizontal = 16.dp))

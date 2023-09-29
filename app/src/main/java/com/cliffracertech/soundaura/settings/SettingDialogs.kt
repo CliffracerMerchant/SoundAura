@@ -62,9 +62,9 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
+import com.cliffracertech.soundaura.dialog.DialogWidth
 import com.cliffracertech.soundaura.dialog.MultiStepDialog
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
-import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
 import com.cliffracertech.soundaura.service.TogglePlaybackTileService
 import com.cliffracertech.soundaura.ui.VerticalDivider
 import com.cliffracertech.soundaura.ui.bottomEndShape
@@ -72,6 +72,7 @@ import com.cliffracertech.soundaura.ui.bottomStartShape
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
+import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
 
 /**
  * Launch a dialog to explain the consequences of the 'Play in background' setting.
@@ -83,8 +84,8 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
     modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
 ) = SoundAuraDialog(
-    modifier = modifier.restrictWidthAccordingToSizeClass(),
-    useDefaultWidth = false,
+    modifier = modifier,
+    width = DialogWidth.MatchToScreenSize(),
     title = stringResource(R.string.play_in_background_setting_title),
     onDismissRequest = onDismissRequest,
     showCancelButton = false,
@@ -131,8 +132,8 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
     var explanationDismissed by rememberSaveable { mutableStateOf(false) }
     if (showExplanationFirst && !explanationDismissed)
         SoundAuraDialog(
-            modifier = modifier.restrictWidthAccordingToSizeClass(),
-            useDefaultWidth = false,
+            modifier = modifier,
+            width = DialogWidth.MatchToScreenSize(),
             title = stringResource(R.string.request_notification_permission_title),
             onDismissRequest = onDismissRequest,
             showCancelButton = false,
@@ -252,7 +253,8 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
         Text(stringResource(R.string.tile_tutorial_add_tile_help_button_text),
              style = style)
         val iconRotation by animateFloatAsState(
-            if (showingAddTileHelp) 180f else 0f)
+            if (showingAddTileHelp) 180f else 0f,
+            label = "expando icon rotation")
         Spacer(Modifier.weight(1f))
         Icon(imageVector = Icons.Default.ExpandMore,
             contentDescription = stringResource(
@@ -282,8 +284,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 ) {
     var currentPageIndex by rememberSaveable { mutableIntStateOf(0) }
     MultiStepDialog(
-        modifier = modifier.restrictWidthAccordingToSizeClass(),
-        useDefaultWidth = false,
+        modifier = modifier,
         title = stringResource(R.string.tile_tutorial_title),
         onDismissRequest = onDismissRequest,
         numPages = 2,
@@ -336,8 +337,8 @@ import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
     modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit
 ) = SoundAuraDialog(
-    modifier = modifier.restrictWidthAccordingToSizeClass(),
-    useDefaultWidth = false,
+    modifier = modifier,
+    width = DialogWidth.MatchToScreenSize(),
     title = stringResource(R.string.open_source_licenses),
     onDismissRequest = onDismissRequest,
     showCancelButton = false,

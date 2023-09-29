@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundaura.R
-import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
+import com.cliffracertech.soundaura.dialog.DialogWidth
 import com.cliffracertech.soundaura.ui.HorizontalDivider
 
 @Composable fun AppSettings(
@@ -154,8 +154,7 @@ import com.cliffracertech.soundaura.ui.HorizontalDivider
         EnumDialogSetting(
             title = stringResource(R.string.on_zero_volume_behavior_setting_title),
             modifier = paddingModifier,
-            useDefaultWidth = false,
-            dialogModifier = Modifier.restrictWidthAccordingToSizeClass(),
+            dialogWidth = DialogWidth.MatchToScreenSize(),
             description = stringResource(R.string.on_zero_volume_behavior_setting_description),
             values = enumValues(),
             valueNames = OnZeroVolumeAudioDeviceBehavior.valueStrings(),

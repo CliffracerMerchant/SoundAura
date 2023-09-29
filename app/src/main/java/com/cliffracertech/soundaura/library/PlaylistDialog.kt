@@ -18,7 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
-import com.cliffracertech.soundaura.addbutton.FileChooser
+import com.cliffracertech.soundaura.addbutton.SystemFileChooser
+import com.cliffracertech.soundaura.dialog.DialogWidth
 import com.cliffracertech.soundaura.dialog.NamingDialog
 import com.cliffracertech.soundaura.dialog.NamingState
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
@@ -27,7 +28,6 @@ import com.cliffracertech.soundaura.library.PlaylistDialog.PlaylistOptions
 import com.cliffracertech.soundaura.library.PlaylistDialog.Remove
 import com.cliffracertech.soundaura.library.PlaylistDialog.Rename
 import com.cliffracertech.soundaura.model.Validator
-import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
 import com.cliffracertech.soundaura.ui.MarqueeText
 import kotlinx.coroutines.CoroutineScope
 

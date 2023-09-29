@@ -13,9 +13,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.MaterialTheme
@@ -30,9 +32,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.dialog.AnimatedValidatorMessage
+import com.cliffracertech.soundaura.dialog.DialogWidth
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
 import com.cliffracertech.soundaura.library.PlaylistOptionsView
-import com.cliffracertech.soundaura.restrictWidthAccordingToSizeClass
 import com.cliffracertech.soundaura.ui.HorizontalDivider
 import com.cliffracertech.soundaura.ui.SlideAnimatedContent
 import com.cliffracertech.soundaura.ui.TextButton
@@ -68,7 +70,7 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
 }
 
 /**
- * When [FileChooser] enters the composition a system file picker
+ * When [SystemFileChooser] enters the composition a system file picker
  * will be shown to allow the user to pick one or more files.
  *
  * @param fileTypeArgs An [Array] of [String]s that describes which
@@ -76,7 +78,7 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
  * @param onFilesSelected The callback that will be invoked when one
  *     or more files are picked, represented in the [List] argument
  */
-@Composable fun FileChooser(
+@Composable fun SystemFileChooser(
     fileTypeArgs: Array<String> = arrayOf("audio/*", "application/ogg"),
     onFilesSelected: (List<Uri>) -> Unit,
 ) {
@@ -90,14 +92,13 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
  * to add to their library. The shown step will change according to [step]. */
 @Composable fun AddLocalFilesDialog(step: AddLocalFilesDialogStep) {
     if (step is AddLocalFilesDialogStep.SelectingFiles) {
-        FileChooser { uris ->
+        SystemFileChooser { uris ->
             if (uris.isEmpty())
                 step.onDismissRequest()
             else step.onFilesSelected(uris)
         }
     } else SoundAuraDialog(
-        modifier = Modifier.restrictWidthAccordingToSizeClass(),
-        useDefaultWidth = false,
+        width = DialogWidth.MatchToScreenSize(WindowInsets.ime),
         title = stringResource(step.titleResId),
         onDismissRequest = step.onDismissRequest,
         buttons = { AddLocalFilesDialogButtons(step) }
