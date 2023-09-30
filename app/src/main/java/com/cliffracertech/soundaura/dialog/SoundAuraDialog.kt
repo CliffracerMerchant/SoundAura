@@ -3,6 +3,7 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura.dialog
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,15 +16,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -191,6 +194,9 @@ sealed class DialogWidth {
         usePlatformDefaultWidth = width == PlatformDefault)
 ) {
     if (width is MatchToScreenSize) {
+        val yOffset by animateFloatAsState(
+            targetValue = (width.imeInsets?.getBottom(LocalDensity.current) ?: 0) / -2f,
+            label = "dialog ime animation")
         Box(modifier = Modifier
                 .fillMaxSize()
                 .clickable(onClick = onDismissRequest),
@@ -203,10 +209,8 @@ sealed class DialogWidth {
                 titleLayout, content, buttons,
                 modifier = modifier
                     .screenSizeBasedHorizontalPadding(width.minHorizontalPadding)
-                    .run {
-                        if (width.imeInsets == null) this
-                        else this.windowInsetsPadding(width.imeInsets)
-                    }.clickable(false) {})
+                    .graphicsLayer { translationY = yOffset }
+                    .clickable(false) {})
         }
     } else SoundAuraDialogContent(
         titleLayout, content, buttons, modifier)
