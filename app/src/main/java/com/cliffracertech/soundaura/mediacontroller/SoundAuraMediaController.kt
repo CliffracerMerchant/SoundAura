@@ -12,9 +12,11 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material.LocalContentColor
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.SnackbarDuration
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -243,7 +245,7 @@ import javax.inject.Inject
     sizes: MediaControllerSizes,
     alignment: BiasAlignment,
     padding: PaddingValues,
-) {
+) = CompositionLocalProvider(LocalContentColor provides MaterialTheme.colors.onPrimary) {
     val viewModel: MediaControllerViewModel = viewModel()
 
     val startColor = MaterialTheme.colors.primaryVariant
