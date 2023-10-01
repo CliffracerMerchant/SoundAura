@@ -14,11 +14,14 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -36,6 +39,7 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Switch
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Shuffle
@@ -63,6 +67,7 @@ import com.cliffracertech.soundaura.rememberMutableStateOf
 import com.cliffracertech.soundaura.ui.HorizontalDivider
 import com.cliffracertech.soundaura.ui.MarqueeText
 import com.cliffracertech.soundaura.ui.SimpleIconButton
+import com.cliffracertech.soundaura.ui.VerticalDivider
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import org.burnoutcrew.reorderable.ReorderableItem
@@ -189,53 +194,103 @@ class MutablePlaylist(trackUris: List<Uri>) {
  * Show a toggle shuffle switch and a reorderable list of tracks for a playlist.
  *
  * @param shuffleEnabled Whether or not shuffle is currently enabled
+ * @param onShuffleClick The callback that will be invoked when the
+ *     switch indicating the current shuffleEnabled value is clicked
  * @param mutablePlaylist A [MutablePlaylist] representing the playlist's contents
- * @param modifier The [Modifier] to use for the root layout
- * @param allowTrackRemoval Whether delete icons for each track should be shown
- * @param onShuffleSwitchClick The callback that will be invoked when
- *     the switch indicating the current shuffleEnabled value is clicked
+ * @param onAddButtonClick The callback that will be invoked when the add
+ *     new tracks button is clicked. If null, the ability to add or remove
+ *     tracks from the playlist will be disabled.
+ *
  */
 @Composable fun ColumnScope.PlaylistOptionsView(
     shuffleEnabled: Boolean,
-    onShuffleSwitchClick: () -> Unit,
+    onShuffleClick: () -> Unit,
     mutablePlaylist: MutablePlaylist,
-    modifier: Modifier = Modifier,
-    allowTrackRemoval: Boolean = true,
+    onAddButtonClick: (() -> Unit)? = null,
 ) {
     HorizontalDivider(Modifier.padding(horizontal = 8.dp))
-    Row(modifier = modifier
-            .height(56.dp)
-            .clip(MaterialTheme.shapes.small)
-            .clickable(
-                onClickLabel = stringResource(
-                    R.string.playlist_shuffle_switch_description),
-                role = Role.Switch,
-                onClick = onShuffleSwitchClick),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(Icons.Default.Shuffle, null,
-            Modifier.minTouchTargetSize().padding(12.dp))
-        Text(stringResource(R.string.playlist_shuffle_switch_title),
-             style = MaterialTheme.typography.h6,
-             modifier = Modifier.weight(1f))
-        Switch(shuffleEnabled, { onShuffleSwitchClick() },
-               Modifier.padding(end = 8.dp))
+    Row(modifier = Modifier.fillMaxWidth().height(48.dp)) {
+        PlaylistOptionsTrackCount(mutablePlaylist.tracks.size, onAddButtonClick)
+        VerticalDivider(heightFraction = 0.8f)
+        PlaylistOptionsShuffleSwitch(shuffleEnabled, onShuffleClick)
     }
     HorizontalDivider(Modifier.padding(horizontal = 8.dp))
-
-    val reorderableState = rememberReorderableLazyListState(onMove = { from, to ->
-        mutablePlaylist.moveTrack(from.index, to.index)
-    })
     // The track list ordering must have its height restricted to
     // prevent a crash due to nested infinite height layouts. The
     // dialog's title, shuffle switch, and button row should all
     // have heights of 56.dp, for a total height of 56.dp * 3. An
     // extra 56.dp padding added to it makes it 56.dp * 4 = 224.dp.
-    val maxHeight = LocalConfiguration.current.screenHeightDp.dp  - 224.dp
+    val maxHeight = LocalConfiguration.current.screenHeightDp.dp - 224.dp
+    PlaylistOptionsTrackList(
+        modifier = Modifier.heightIn(max = maxHeight),
+        mutablePlaylist = mutablePlaylist,
+        allowDeletion = onAddButtonClick != null)
+}
+
+@Composable private fun RowScope.PlaylistOptionsTrackCount(
+    trackCount: Int,
+    onAddButtonClick: (() -> Unit)?
+) = Row(modifier = Modifier.weight(1f).height(48.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.Center
+) {
+    Text(text = stringResource(R.string.playlist_track_count_description, trackCount),
+        modifier = Modifier.padding(end = 4.dp),
+        style = MaterialTheme.typography.h6)
+    onAddButtonClick?.let { onClick ->
+        Box(modifier = Modifier
+            .size(48.dp)
+            .clip(MaterialTheme.shapes.small)
+            .clickable(
+                onClickLabel = stringResource(
+                    R.string.playlist_add_tracks_button_description),
+                role = Role.Button,
+                onClick = onClick)
+            .padding(8.dp)
+            .background(MaterialTheme.colors.primaryVariant,
+                MaterialTheme.shapes.small),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(imageVector = Icons.Default.Add,
+                contentDescription = null,
+                modifier = Modifier.padding(6.dp),
+                tint = MaterialTheme.colors.onPrimary)
+        }
+    }
+}
+
+@Composable private fun RowScope.PlaylistOptionsShuffleSwitch(
+    shuffleEnabled: Boolean,
+    onClick: () -> Unit,
+) = Row(modifier = Modifier
+    .weight(1f)
+    .fillMaxHeight()
+    .clickable(
+        onClickLabel = stringResource(
+            R.string.playlist_shuffle_switch_description),
+        role = Role.Switch,
+        onClick = onClick)
+    .padding(end = 12.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.Center
+) {
+    Icon(Icons.Default.Shuffle, null, Modifier.padding(12.dp))
+    Text(stringResource(R.string.playlist_shuffle_switch_title))
+    Switch(checked = shuffleEnabled,
+        onCheckedChange = { onClick() },
+        modifier = Modifier.padding(start = 8.dp))
+}
+
+@Composable private fun PlaylistOptionsTrackList(
+    modifier: Modifier = Modifier,
+    mutablePlaylist: MutablePlaylist,
+    allowDeletion: Boolean,
+) {
+    val reorderableState = rememberReorderableLazyListState(onMove = { from, to ->
+        mutablePlaylist.moveTrack(from.index, to.index)
+    })
     LazyColumn(
-        modifier = Modifier
-            .heightIn(max = maxHeight)
-            .reorderable(reorderableState),
+        modifier = modifier.reorderable(reorderableState),
         state = reorderableState.listState,
     ) {
         itemsIndexed(
@@ -243,20 +298,25 @@ class MutablePlaylist(trackUris: List<Uri>) {
             key = { _, track -> track.uri }
         ) { index, (uri, markedForRemoval) ->
             ReorderableItem(reorderableState, key = uri) {isDragging ->
-                val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp)
+                val elevation by animateDpAsState(
+                    targetValue = if (isDragging) 8.dp else 0.dp,
+                    label = "playlist track elevation")
                 val color by animateColorAsState(
-                    if (markedForRemoval) MaterialTheme.colors.error
-                    else                  MaterialTheme.colors.surface)
+                    targetValue = if (!markedForRemoval) MaterialTheme.colors.error
+                                  else                   MaterialTheme.colors.surface,
+                    label = "playlist track background color")
                 val shape = MaterialTheme.shapes.small
 
                 Row(modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(elevation, shape)
-                    .background(color, shape),
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .shadow(elevation, shape)
+                        .background(color, shape),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Uri.lastPathSegment seems to not work with some Uris for some reason
-                    val lastPathSegment = uri.path?.substringAfterLast(File.separatorChar).orEmpty()
+                    val lastPathSegment = uri.path
+                        ?.substringAfterLast(File.separatorChar).orEmpty()
                     Icon(imageVector = Icons.Default.DragHandle,
                         contentDescription = stringResource(
                             R.string.playlist_track_handle_description, lastPathSegment),
@@ -269,14 +329,15 @@ class MutablePlaylist(trackUris: List<Uri>) {
                         Text("…${File.separatorChar}")
                     MarqueeText(lastPathSegment, Modifier.weight(1f))
 
-                    if (!allowTrackRemoval)
+                    if (!allowDeletion)
                         Spacer(Modifier.width(16.dp))
                     else SimpleIconButton(
                         icon = if (markedForRemoval) Icons.Default.Undo
                                else                  Icons.Default.Delete,
                         contentDescription = stringResource(
                             R.string.playlist_track_delete_description),
-                        iconPadding = 14.dp,
+                        iconPadding = if (markedForRemoval) 11.dp
+                                      else                  13.dp,
                         onClick = { mutablePlaylist.toggleTrackRemoval(index) })
                 }
             }
@@ -297,7 +358,8 @@ class MutablePlaylist(trackUris: List<Uri>) {
     Surface { Column(Modifier.padding(vertical = 16.dp)) {
         PlaylistOptionsView(
             shuffleEnabled = shuffleEnabled,
-            onShuffleSwitchClick = { shuffleEnabled = !shuffleEnabled },
-            mutablePlaylist = mutablePlaylist)
+            onShuffleClick = { shuffleEnabled = !shuffleEnabled },
+            mutablePlaylist = mutablePlaylist,
+            onAddButtonClick = {})
     }}
 }
