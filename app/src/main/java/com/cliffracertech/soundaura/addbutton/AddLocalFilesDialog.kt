@@ -158,10 +158,9 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
                     Column(Modifier.background(MaterialTheme.colors.surface)) {
                         PlaylistOptionsView(
                             shuffleEnabled = step.shuffleEnabled,
-                            onShuffleSwitchClick = step.onShuffleSwitchClick,
+                            onShuffleClick = step.onShuffleSwitchClick,
                             mutablePlaylist = step.mutablePlaylist,
-                            modifier = Modifier.fillMaxWidth(),
-                            allowTrackRemoval = false)
+                            onAddButtonClick = null)
                     }
                 }
             }
