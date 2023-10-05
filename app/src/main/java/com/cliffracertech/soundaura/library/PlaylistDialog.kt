@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,9 +23,12 @@ import com.cliffracertech.soundaura.dialog.NamingDialog
 import com.cliffracertech.soundaura.dialog.NamingState
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
 import com.cliffracertech.soundaura.dialog.ValidatedNamingState
+import com.cliffracertech.soundaura.library.PlaylistDialog.FileChooser
 import com.cliffracertech.soundaura.library.PlaylistDialog.PlaylistOptions
 import com.cliffracertech.soundaura.library.PlaylistDialog.Remove
 import com.cliffracertech.soundaura.library.PlaylistDialog.Rename
+import com.cliffracertech.soundaura.model.MessageHandler
+import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.Validator
 import com.cliffracertech.soundaura.ui.MarqueeText
 import kotlinx.coroutines.CoroutineScope
@@ -63,28 +65,70 @@ sealed class PlaylistDialog(
            validator, coroutineScope, onNameValidated, onDismissRequest)
 
     /**
+     * The 'file chooser' step. This step can appear when the add button of
+     * the playlist options step is clicked, or when the 'create playlist'
+     * option is selected for a single track playlist. A [List] of the [Uri]s
+     * of the chosen files should be passed to a [onFilesChosen] call.
+     *
+     * @param target The [Playlist] that is the target of the dialog
+     * @param messageHandler A [MessageHandler] instance that will be used to show messages to the user
+     * @param currentTracks A [List] of the [Uri]s of the tracks that are already in the playlist
+     * @param onDismissRequest The callback that should be invoked when
+     *     a back button click or gesture is performed
+     */
+    class FileChooser(
+        target: Playlist,
+        private val messageHandler: MessageHandler,
+        private val currentTracks: List<Uri>,
+        onDismissRequest: () -> Unit,
+        private val onChosenFilesValidated: (List<Uri>) -> Unit,
+    ): PlaylistDialog(target, onDismissRequest) {
+        val onFilesChosen: (List<Uri>) -> Unit = { chosenFiles ->
+            if (chosenFiles.isEmpty())
+                onDismissRequest()
+                // If no files were chosen at all, then the user
+                // must have backed out of the files chooser
+                // intentionally. No error message is required.
+            else {
+                val validatedFiles = chosenFiles - currentTracks.toSet()
+                if (validatedFiles.isEmpty()) {
+                    onDismissRequest()
+                    messageHandler.postMessage(R.string.file_chooser_no_valid_tracks_error_message)
+                } else {
+                    val rejectedCount = chosenFiles.size - validatedFiles.size
+                    if (rejectedCount > 0)
+                        messageHandler.postMessage(StringResource(
+                            R.string.file_chooser_invalid_tracks_warning_message, rejectedCount))
+                    onChosenFilesValidated(validatedFiles)
+                }
+            }
+        }
+    }
+
+    /**
      * The 'playlist options' dialog for a playlist. The properties [shuffleEnabled]
      * and [onShuffleSwitchClick] can be used for the current state of and onClick
      * callback, respectively, for a 'shuffle enabled' toggle. The value of
      * [mutablePlaylist] should be used as the same-named parameter for a
-     * [PlaylistOptionsView] if it is not null. If the value of [mutablePlaylist]
-     * is null, then a file chooser should be shown instead, with the chosen
-     * [Uri]s being passed to a [onExtraFilesChosen] call.
+     * [PlaylistOptionsView].
      *
      * @param target The [Playlist] that is the target of the dialog
      * @param shuffleEnabled Whether shuffle is initially enabled for the [target]
      * @param playlistTracks The [List] of [Uri]s that represents the tracks in the [target]
      * @param onDismissRequest The callback that should be invoked when the dialog's
      *     cancel button is clicked or a back button click or gesture is performed
+     * @param onAddFilesClick The callback that will be invoked when the dialog's
+     *     add files button is clicked.
      * @param onConfirm The callback that will be invoked when [onFinishClick]
      *     is invoked. The new values for the playlist's
      *     shuffle and tracks, as set within the dialog, are provided.
      */
     class PlaylistOptions(
         target: Playlist,
-        shuffleEnabled: Boolean,
         private val playlistTracks: List<Uri>,
+        shuffleEnabled: Boolean,
         onDismissRequest: () -> Unit,
+        val onAddFilesClick: () -> Unit,
         private val onConfirm: (
                 shuffleEnabled: Boolean,
                 newTrackList: List<Uri>,
@@ -92,24 +136,13 @@ sealed class PlaylistDialog(
     ): PlaylistDialog(target, onDismissRequest) {
         var shuffleEnabled by mutableStateOf(shuffleEnabled)
             private set
-
         val onShuffleSwitchClick = { this.shuffleEnabled = !this.shuffleEnabled }
 
-        fun onExtraFilesChosen(files: List<Uri>) {
-            if (files.isEmpty())
-                onDismissRequest()
-            mutablePlaylist = MutablePlaylist(playlistTracks + files)
-        }
-
-        var mutablePlaylist by mutableStateOf(
-                if (target.isSingleTrack) null
-                else MutablePlaylist(playlistTracks))
-            private set
+        val mutablePlaylist = MutablePlaylist(playlistTracks)
 
         val onFinishClick = {
-            val newList = mutablePlaylist?.applyChanges()
-            if (newList != null)
-                onConfirm(this.shuffleEnabled, newList)
+            val newList = mutablePlaylist.applyChanges()
+            onConfirm(this.shuffleEnabled, newList)
         }
     }
 
@@ -139,6 +172,7 @@ sealed class PlaylistDialog(
         modifier = modifier,
         title = stringResource(R.string.default_rename_dialog_title),
         state = dialogState)
+    is FileChooser -> SystemFileChooser(onFilesSelected = dialogState.onFilesChosen)
     is PlaylistOptions -> PlaylistOptionsDialog(
         modifier = modifier,
         state = dialogState)
@@ -163,32 +197,27 @@ sealed class PlaylistDialog(
 @Composable fun PlaylistOptionsDialog(
     state: PlaylistOptions,
     modifier: Modifier = Modifier,
+) = SoundAuraDialog(
+    modifier = modifier,
+    width = DialogWidth.MatchToScreenSize(),
+    titleLayout = @Composable {
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp, bottom = 12.dp,
+                     start = 16.dp, end = 16.dp),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            MarqueeText(text = state.target.name,
+                        style = MaterialTheme.typography.h6)
+        }
+    }, onDismissRequest = state.onDismissRequest,
+    onConfirm = state.onFinishClick,
 ) {
-    val mutablePlaylist = state.mutablePlaylist
-    if (mutablePlaylist == null)
-        FileChooser(onFilesSelected = state::onExtraFilesChosen)
-    else SoundAuraDialog(
-        modifier = modifier.restrictWidthAccordingToSizeClass(),
-        useDefaultWidth = false,
-        titleLayout = @Composable {
-            Row(modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp, bottom = 12.dp,
-                         start = 16.dp, end = 16.dp),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                val style = MaterialTheme.typography.h6
-                MarqueeText(state.target.name, style = style)
-                Text(stringResource(R.string.playlist_options_dialog_title), style = style)
-            }
-        }, onDismissRequest = state.onDismissRequest,
-        onConfirm = state.onFinishClick,
-    ) {
-        PlaylistOptionsView(
-            shuffleEnabled = state.shuffleEnabled,
-            mutablePlaylist = mutablePlaylist,
-            onShuffleSwitchClick = state.onShuffleSwitchClick)
-    }
+    PlaylistOptionsView(
+        shuffleEnabled = state.shuffleEnabled,
+        onShuffleClick = state.onShuffleSwitchClick,
+        mutablePlaylist = state.mutablePlaylist,
+        onAddButtonClick = state.onAddFilesClick)
 }
 
 /** Show a dialog to confirm the removal of the [Playlist] identified by [playlistName]. */
