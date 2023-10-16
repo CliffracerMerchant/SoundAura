@@ -29,14 +29,10 @@ import com.cliffracertech.soundaura.collectAsState
 import com.cliffracertech.soundaura.dialog.NamingDialog
 import com.cliffracertech.soundaura.dialog.ValidatedNamingState
 import com.cliffracertech.soundaura.model.ActivePresetState
-import com.cliffracertech.soundaura.model.AndroidUriPermissionHandler
+import com.cliffracertech.soundaura.model.AddToLibraryUseCase
 import com.cliffracertech.soundaura.model.MessageHandler
-import com.cliffracertech.soundaura.model.StringResource
-import com.cliffracertech.soundaura.model.UriPermissionHandler
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.PresetDao
-import com.cliffracertech.soundaura.model.database.TrackNamesValidator
-import com.cliffracertech.soundaura.model.database.newPlaylistNameValidator
 import com.cliffracertech.soundaura.model.database.newPresetNameValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -68,19 +64,14 @@ fun Uri.getDisplayName(context: Context) =
 @HiltViewModel @SuppressLint("StaticFieldLeak")
 class AddPlaylistButtonViewModel(
     private val context: Context,
-    private val permissionHandler: UriPermissionHandler,
-    private val playlistDao: PlaylistDao,
-    private val messageHandler: MessageHandler,
+    private val addToLibrary: AddToLibraryUseCase,
     coroutineScope: CoroutineScope? = null
 ) : ViewModel() {
 
     @Inject constructor(
-        @ApplicationContext
-        context: Context,
-        permissionHandler: AndroidUriPermissionHandler,
-        playlistDao: PlaylistDao,
-        messageHandler: MessageHandler
-    ) : this(context, permissionHandler, playlistDao, messageHandler, null)
+        @ApplicationContext context: Context,
+        addToLibrary: AddToLibraryUseCase,
+    ) : this(context, addToLibrary, null)
 
     private val scope = coroutineScope ?: viewModelScope
 
@@ -119,11 +110,17 @@ class AddPlaylistButtonViewModel(
                 if (trackUris.size > 1)
                     showAddIndividuallyOrAsPlaylistQueryStep(trackUris)
                 else onDialogDismissRequest()
-            }, validator = TrackNamesValidator(
-                playlistDao, scope, trackUris.map { it.getDisplayName(context) }),
+            }, validator = addToLibrary.trackNamesValidator(
+                scope, trackUris.map { it.getDisplayName(context) }),
             coroutineScope = scope,
-            onFinish = { validatedTrackNames ->
-                addTracks(validatedTrackNames, trackUris)
+            onFinish = { trackNames ->
+                onDialogDismissRequest()
+                scope.launch {
+                    assert(trackUris.size == trackNames.size)
+                    val map = LinkedHashMap<Uri, String>()
+                    map.putAll(trackUris.zip(trackNames))
+                    addToLibrary.addSingleTrackPlaylists(map)
+                }
             })
     }
 
@@ -136,7 +133,7 @@ class AddPlaylistButtonViewModel(
             wasNavigatedForwardTo = goingForward,
             onDismissRequest = ::onDialogDismissRequest,
             onBackClick = { showAddIndividuallyOrAsPlaylistQueryStep(tracks) },
-            validator = newPlaylistNameValidator(playlistDao, scope, playlistName),
+            validator = addToLibrary.newPlaylistNameValidator(scope, playlistName),
             coroutineScope = scope,
             onNameValidated = { validatedPlaylistName ->
                 showPlaylistOptionsStep(validatedPlaylistName, tracks)
@@ -144,7 +141,7 @@ class AddPlaylistButtonViewModel(
     }
 
     private fun showPlaylistOptionsStep(
-        validatedPlaylistName: String,
+        playlistName: String,
         tracks: List<Uri>
     ) {
         dialogStep = AddLocalFilesDialogStep.PlaylistOptions(
@@ -152,41 +149,14 @@ class AddPlaylistButtonViewModel(
             onBackClick = {
                 showNamePlaylistStep(
                     tracks, goingForward = false,
-                    playlistName = validatedPlaylistName)
+                    playlistName = playlistName)
             }, tracks = tracks,
-            onFinish = { shuffle, newTrackOrder ->
-                addPlaylist(validatedPlaylistName, shuffle, newTrackOrder)
+            onFinish = { shuffle, newTracks ->
+                onDialogDismissRequest()
+                scope.launch {
+                    addToLibrary.addPlaylist(playlistName, shuffle, newTracks)
+                }
             })
-    }
-
-    private fun addTracks(trackNames: List<String>, trackUris: List<Uri>) {
-        onDialogDismissRequest()
-        scope.launch {
-            assert(trackUris.size == trackNames.size)
-            val acceptedTracks = permissionHandler.acquirePermissionsFor(trackUris)
-            val failureCount = trackUris.size - acceptedTracks.size
-            if (failureCount > 0)
-                messageHandler.postMessage(StringResource(
-                    R.string.cant_add_all_tracks_warning,
-                    failureCount, permissionHandler.permissionAllowance))
-            if (acceptedTracks.isNotEmpty()) {
-                val names = trackNames.subList(0, acceptedTracks.size)
-                playlistDao.insertSingleTrackPlaylists(names, acceptedTracks)
-            }
-        }
-    }
-
-    private fun addPlaylist(name: String, shuffle: Boolean, tracks: List<Uri>) {
-        onDialogDismissRequest()
-        scope.launch {
-            val acceptedTracks = permissionHandler
-                .acquirePermissionsFor(tracks, allowPartial = false)
-            if (acceptedTracks.isEmpty())
-                messageHandler.postMessage(StringResource(
-                    R.string.cant_add_playlist_warning,
-                    permissionHandler.permissionAllowance))
-            else playlistDao.insertPlaylist(name, shuffle, acceptedTracks)
-        }
     }
 }
 
