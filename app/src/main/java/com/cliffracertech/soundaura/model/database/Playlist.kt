@@ -61,7 +61,7 @@ data class PlaylistTrack(
     val trackUri: Uri,
     val playlistOrder: Int)
 
-internal fun Iterable<Uri>.toPlaylistTrackList(playlistName: String) =
+internal fun List<Uri>.toPlaylistTrackList(playlistName: String) =
     mapIndexed { index, uri -> PlaylistTrack(playlistName, uri, index) }
 
 @Entity(tableName = "playlist")
@@ -104,16 +104,16 @@ data class Playlist(
     protected abstract suspend fun insertPlaylistName(playlist: Playlist)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    protected abstract suspend fun insertPlaylistNames(playlists: Iterable<Playlist>)
+    protected abstract suspend fun insertPlaylistNames(playlists: List<Playlist>)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    protected abstract suspend fun insertTracks(tracks: Iterable<Track>): List<Long>
+    protected abstract suspend fun insertTracks(tracks: List<Track>): List<Long>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     protected abstract suspend fun insertPlaylistTrack(playlistTrack: PlaylistTrack)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    protected abstract suspend fun insertPlaylistTracks(playlistTracks: Iterable<PlaylistTrack>)
+    protected abstract suspend fun insertPlaylistTracks(playlistTracks: List<PlaylistTrack>)
 
     /** Delete the playlist whose name matches [name] from the database. */
     @Query("DELETE FROM playlist WHERE name = :name")
@@ -123,7 +123,7 @@ data class Playlist(
     protected abstract suspend fun deleteAllPlaylistTracks(playlistName: String)
 
     @Query("DELETE FROM track WHERE uri IN (:uris)")
-    protected abstract suspend fun deleteTracks(uris: Iterable<Uri>)
+    protected abstract suspend fun deleteTracks(uris: List<Uri>)
 
     @Query("SELECT shuffle FROM playlist " +
             "WHERE playlist.name = :playlistName LIMIT 1")
@@ -140,7 +140,7 @@ data class Playlist(
     open suspend fun insertPlaylist(
         playlistName: String,
         shuffle: Boolean,
-        trackUris: Iterable<Uri>
+        trackUris: List<Uri>
     ) {
         insertPlaylistName(Playlist(playlistName, shuffle))
         insertTracks(trackUris.map(::Track))
@@ -173,7 +173,7 @@ data class Playlist(
     open suspend fun setPlaylistShuffleAndContents(
         playlistName: String,
         shuffleEnabled: Boolean,
-        newTracks: Iterable<Uri>,
+        newTracks: List<Uri>,
     ): List<Uri> {
         val removableTracks = getUniqueTracksNotIn(newTracks, playlistName)
         deleteTracks(removableTracks)
@@ -199,7 +199,7 @@ data class Playlist(
            "WHERE playlistName = :playlistName AND trackUri NOT IN (:exceptions) " +
            "GROUP BY trackUri HAVING COUNT(playlistName) = 1")
     abstract suspend fun getUniqueTracksNotIn(
-        exceptions: Iterable<Uri>,
+        exceptions: List<Uri>,
         playlistName: String
     ): List<Uri>
 
@@ -207,7 +207,7 @@ data class Playlist(
            "SELECT uri FROM newTrack " +
            "LEFT JOIN track ON track.uri = newTrack.uri " +
            "WHERE track.uri IS NULL")
-    abstract suspend fun filterNewTracks(tracks: Iterable<Uri>): List<Uri>
+    abstract suspend fun filterNewTracks(tracks: List<Uri>): List<Uri>
 
     /** Delete the [Playlist] whose name matches [name] along with its contents.
      * @return the [List] of [Uri]s that are no longer a part of any playlist */
