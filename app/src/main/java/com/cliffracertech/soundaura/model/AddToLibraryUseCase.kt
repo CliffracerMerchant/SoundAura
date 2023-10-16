@@ -13,11 +13,17 @@ import javax.inject.Inject
 
 /** A container of methods that adds playlists (single track
  * or multi-track) to the app's library of playlists. */
-class AddToLibraryUseCase @Inject constructor(
+class AddToLibraryUseCase(
     private val permissionHandler: UriPermissionHandler,
     private val messageHandler: MessageHandler,
     private val dao: PlaylistDao,
 ) {
+    @Inject constructor(
+        permissionHandler: AndroidUriPermissionHandler,
+        messageHandler: MessageHandler,
+        dao: PlaylistDao
+    ): this(permissionHandler as UriPermissionHandler, messageHandler, dao)
+
     fun trackNamesValidator(
         scope: CoroutineScope,
         initialTrackNames: List<String>
@@ -31,7 +37,7 @@ class AddToLibraryUseCase @Inject constructor(
      * one or more of the URIs fail.
      */
     suspend fun addSingleTrackPlaylists(uriNameMap: LinkedHashMap<Uri, String>) {
-        val newTracks = dao.filterNewTracks(uriNameMap.keys)
+        val newTracks = dao.filterNewTracks(uriNameMap.keys.toList())
         val rejectedTracks = permissionHandler
             .acquirePermissionsFor(newTracks, allowPartial = true)
 

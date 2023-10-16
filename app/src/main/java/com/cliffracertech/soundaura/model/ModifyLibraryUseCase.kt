@@ -11,11 +11,17 @@ import kotlinx.coroutines.CoroutineScope
 import javax.inject.Inject
 
 /** A container of methods that modify the app's library of playlists. */
-class ModifyLibraryUseCase @Inject constructor(
+class ModifyLibraryUseCase(
     private val permissionHandler: UriPermissionHandler,
     private val messageHandler: MessageHandler,
     private val dao: PlaylistDao,
 ) {
+    @Inject constructor(
+        permissionHandler: AndroidUriPermissionHandler,
+        messageHandler: MessageHandler,
+        dao: PlaylistDao
+    ): this(permissionHandler as UriPermissionHandler, messageHandler, dao)
+
     suspend fun togglePlaylistIsActive(playlistName: String) {
         dao.toggleIsActive(playlistName)
     }
