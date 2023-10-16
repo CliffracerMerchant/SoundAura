@@ -147,13 +147,15 @@ data class Playlist(
         insertPlaylistTracks(trackUris.toPlaylistTrackList(playlistName))
     }
 
-    /** Insert a collection of new single-track [Playlist]s. The entries
-     * of [uriNameMap] will define the [Uri] of the single track and the
-     * name for each new playlist. The [Playlist.shuffle] value for the
-     * new new playlists will be the default value (i.e. false) due to
-     * shuffle having no meaning for single-track playlists. */
+    /** Insert a collection of new single-track [Playlist]s. The entries of
+     * [uriNameMap] will define the [Uri] of the single track and the name
+     * for each new playlist. The [Playlist.shuffle] value for the new
+     * playlists will be the default value (i.e. false) due to shuffle having
+     * no meaning for single-track playlists. If the order of tracks in the
+     * playlist must be preserved, a [Map] implementation that ensures a
+     * certain iteration order (e.g. [LinkedHashMap]) should be used. */
     @Transaction
-    open suspend fun insertSingleTrackPlaylists(uriNameMap: LinkedHashMap<Uri, String>) {
+    open suspend fun insertSingleTrackPlaylists(uriNameMap: Map<Uri, String>) {
         insertPlaylistNames(uriNameMap.values.map(::Playlist))
         insertTracks(uriNameMap.keys.map(::Track))
         insertPlaylistTracks(
@@ -203,8 +205,8 @@ data class Playlist(
         playlistName: String
     ): List<Uri>
 
-    @Query("WITH newTrack AS (SELECT (:tracks) AS uri )" +
-           "SELECT uri FROM newTrack " +
+    @Query("WITH newTrack AS (SELECT (:tracks) AS uri) " +
+           "SELECT newTrack.uri FROM newTrack " +
            "LEFT JOIN track ON track.uri = newTrack.uri " +
            "WHERE track.uri IS NULL")
     abstract suspend fun filterNewTracks(tracks: List<Uri>): List<Uri>
@@ -249,7 +251,8 @@ data class Playlist(
     /** Return a [Flow] that updates with a [Map] of each
      * active [Playlist] mapped to its list of track [Uri]s. */
     @MapInfo(valueColumn = "trackUri")
-    @Query("SELECT * FROM playlist " +
+    @Query("SELECT name, shuffle, isActive, volume, hasError, trackUri " +
+           "FROM playlist " +
            "JOIN playlistTrack ON playlist.name = playlistTrack.playlistName " +
            "WHERE isActive ORDER by playlistOrder")
     abstract fun getActivePlaylistsAndTracks(): Flow<Map<Playlist, List<Uri>>>
