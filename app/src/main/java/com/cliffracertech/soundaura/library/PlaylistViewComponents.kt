@@ -302,8 +302,8 @@ class MutablePlaylist(trackUris: List<Uri>) {
                     targetValue = if (isDragging) 8.dp else 0.dp,
                     label = "playlist track elevation")
                 val color by animateColorAsState(
-                    targetValue = if (!markedForRemoval) MaterialTheme.colors.error
-                                  else                   MaterialTheme.colors.surface,
+                    targetValue = if (markedForRemoval) MaterialTheme.colors.error
+                                  else                  MaterialTheme.colors.surface,
                     label = "playlist track background color")
                 val shape = MaterialTheme.shapes.small
 

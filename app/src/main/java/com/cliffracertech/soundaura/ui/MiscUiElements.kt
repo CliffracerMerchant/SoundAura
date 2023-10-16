@@ -34,6 +34,7 @@ import androidx.compose.material.ButtonColors
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.ButtonElevation
 import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.LocalContentColor
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
@@ -221,7 +222,7 @@ fun Modifier.minTouchTargetSize() =
     tint: Color = LocalContentColor.current,
     iconPadding: Dp = 10.dp,
     onClick: () -> Unit,
-) = androidx.compose.material.IconButton(
+) = IconButton(
     onClick, modifier, enabled, interactionSource,
 ) {
     Icon(icon, contentDescription,
