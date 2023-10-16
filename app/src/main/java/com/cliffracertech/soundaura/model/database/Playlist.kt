@@ -61,7 +61,7 @@ data class PlaylistTrack(
     val trackUri: Uri,
     val playlistOrder: Int)
 
-internal fun List<Uri>.toPlaylistTrackList(playlistName: String) =
+internal fun Iterable<Uri>.toPlaylistTrackList(playlistName: String) =
     mapIndexed { index, uri -> PlaylistTrack(playlistName, uri, index) }
 
 @Entity(tableName = "playlist")
@@ -104,16 +104,16 @@ data class Playlist(
     protected abstract suspend fun insertPlaylistName(playlist: Playlist)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    protected abstract suspend fun insertPlaylistNames(playlists: List<Playlist>)
+    protected abstract suspend fun insertPlaylistNames(playlists: Iterable<Playlist>)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    protected abstract suspend fun insertTracks(tracks: List<Track>): List<Long>
+    protected abstract suspend fun insertTracks(tracks: Iterable<Track>): List<Long>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     protected abstract suspend fun insertPlaylistTrack(playlistTrack: PlaylistTrack)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    protected abstract suspend fun insertPlaylistTracks(playlistTracks: List<PlaylistTrack>)
+    protected abstract suspend fun insertPlaylistTracks(playlistTracks: Iterable<PlaylistTrack>)
 
     /** Delete the playlist whose name matches [name] from the database. */
     @Query("DELETE FROM playlist WHERE name = :name")
@@ -122,11 +122,8 @@ data class Playlist(
     @Query("DELETE FROM playlistTrack WHERE playlistName = :playlistName")
     protected abstract suspend fun deleteAllPlaylistTracks(playlistName: String)
 
-    @Query("DELETE FROM playlistTrack WHERE playlistName in (:playlistNames)")
-    protected abstract suspend fun deleteAllPlaylistTracks(playlistNames: List<String>)
-
     @Query("DELETE FROM track WHERE uri IN (:uris)")
-    protected abstract suspend fun deleteTracks(uris: List<Uri>)
+    protected abstract suspend fun deleteTracks(uris: Iterable<Uri>)
 
     @Query("SELECT shuffle FROM playlist " +
             "WHERE playlist.name = :playlistName LIMIT 1")
@@ -143,38 +140,32 @@ data class Playlist(
     open suspend fun insertPlaylist(
         playlistName: String,
         shuffle: Boolean,
-        trackUris: List<Uri>
+        trackUris: Iterable<Uri>
     ) {
         insertPlaylistName(Playlist(playlistName, shuffle))
         insertTracks(trackUris.map(::Track))
         insertPlaylistTracks(trackUris.toPlaylistTrackList(playlistName))
     }
 
-    /** Insert a collection of new single-track [Playlist]. The [Playlist.name]
-     * property for each new playlist will be equal to the corresponding
-     * [String] in [playlistNames], while the single track will be equal to the
-     * corresponding [Uri] in [trackUris]. The [Playlist.shuffle] value for the
-     * new playlists will be the default value (i.e. false) due to shuffle
-     * having no meaning for single-track playlists. */
+    /** Insert a collection of new single-track [Playlist]s. The entries
+     * of [uriNameMap] will define the [Uri] of the single track and the
+     * name for each new playlist. The [Playlist.shuffle] value for the
+     * new new playlists will be the default value (i.e. false) due to
+     * shuffle having no meaning for single-track playlists. */
     @Transaction
-    open suspend fun insertSingleTrackPlaylists(
-        playlistNames: List<String>,
-        trackUris: List<Uri>
-    ) {
-        assert(playlistNames.size == trackUris.size)
-        insertPlaylistNames(playlistNames.map(::Playlist))
-        insertTracks(trackUris.map(::Track))
-        insertPlaylistTracks(trackUris.mapIndexed { index, uri ->
-            PlaylistTrack(playlistNames[index], uri, index)
-        })
+    open suspend fun insertSingleTrackPlaylists(uriNameMap: LinkedHashMap<Uri, String>) {
+        insertPlaylistNames(uriNameMap.values.map(::Playlist))
+        insertTracks(uriNameMap.keys.map(::Track))
+        insertPlaylistTracks(
+            uriNameMap.entries.mapIndexed { index, (uri, name) ->
+                PlaylistTrack(name, uri, index)
+            })
     }
 
     /**
      * Set the [Playlist] whose [Playlist.name] property matches [playlistName]
      * to have a [Playlist.shuffle] value equal to [shuffleEnabled], and
-     * overwrite its tracks to be equal to [newTracks]. If the old tracks of
-     * the playlist are already on hand, they can be provided as the value of
-     * [oldTracks] to prevent needing to read them from the database again.
+     * overwrite its tracks to be equal to [newTracks].
      *
      * @return The [List] of [Uri]s that are no longer in any [Playlist].
      */
@@ -182,22 +173,16 @@ data class Playlist(
     open suspend fun setPlaylistShuffleAndContents(
         playlistName: String,
         shuffleEnabled: Boolean,
-        newTracks: List<Uri>,
-        oldTracks: List<Uri>? = null,
+        newTracks: Iterable<Uri>,
     ): List<Uri> {
-        setPlaylistShuffle(playlistName, shuffleEnabled)
-
         val removableTracks = getUniqueTracksNotIn(newTracks, playlistName)
         deleteTracks(removableTracks)
-
-        val newTracksWereAdded = newTracks.size >
-            (oldTracks ?: getPlaylistTracks(playlistName)).size
-        if (newTracksWereAdded)
-            insertTracks(newTracks.map(::Track))
+        insertTracks(newTracks.map(::Track))
 
         deleteAllPlaylistTracks(playlistName)
         insertPlaylistTracks(newTracks.toPlaylistTrackList(playlistName))
 
+        setPlaylistShuffle(playlistName, shuffleEnabled)
         return removableTracks
     }
 
@@ -213,10 +198,16 @@ data class Playlist(
     @Query("SELECT trackUri FROM playlistTrack " +
            "WHERE playlistName = :playlistName AND trackUri NOT IN (:exceptions) " +
            "GROUP BY trackUri HAVING COUNT(playlistName) = 1")
-    protected abstract suspend fun getUniqueTracksNotIn(
-        exceptions: List<Uri>,
+    abstract suspend fun getUniqueTracksNotIn(
+        exceptions: Iterable<Uri>,
         playlistName: String
     ): List<Uri>
+
+    @Query("WITH newTrack AS (SELECT (:tracks) AS uri )" +
+           "SELECT uri FROM newTrack " +
+           "LEFT JOIN track ON track.uri = newTrack.uri " +
+           "WHERE track.uri IS NULL")
+    abstract suspend fun filterNewTracks(tracks: Iterable<Uri>): List<Uri>
 
     /** Delete the [Playlist] whose name matches [name] along with its contents.
      * @return the [List] of [Uri]s that are no longer a part of any playlist */
@@ -235,44 +226,22 @@ data class Playlist(
     abstract suspend fun exists(name: String?): Boolean
 
     @Query("$librarySelect ORDER BY name COLLATE NOCASE ASC")
-    protected abstract fun getAllPlaylistsSortedByNameAsc(filter: String): Flow<List<LibraryPlaylist>>
+    abstract fun getAllPlaylistsSortedByNameAsc(filter: String): Flow<List<LibraryPlaylist>>
 
     @Query("$librarySelect ORDER BY name COLLATE NOCASE DESC")
-    protected abstract fun getAllPlaylistsSortedByNameDesc(filter: String): Flow<List<LibraryPlaylist>>
+    abstract fun getAllPlaylistsSortedByNameDesc(filter: String): Flow<List<LibraryPlaylist>>
 
     @Query(librarySelect)
-    protected abstract fun getAllPlaylistsSortedByOrderAdded(filter: String): Flow<List<LibraryPlaylist>>
+    abstract fun getAllPlaylistsSortedByOrderAdded(filter: String): Flow<List<LibraryPlaylist>>
 
     @Query("$librarySelect ORDER BY isActive DESC, name COLLATE NOCASE ASC")
-    protected abstract fun getAllPlaylistsSortedByActiveThenNameAsc(filter: String): Flow<List<LibraryPlaylist>>
+    abstract fun getAllPlaylistsSortedByActiveThenNameAsc(filter: String): Flow<List<LibraryPlaylist>>
 
     @Query("$librarySelect ORDER BY isActive DESC, name COLLATE NOCASE DESC")
-    protected abstract fun getAllPlaylistsSortedByActiveThenNameDesc(filter: String): Flow<List<LibraryPlaylist>>
+    abstract fun getAllPlaylistsSortedByActiveThenNameDesc(filter: String): Flow<List<LibraryPlaylist>>
 
     @Query("$librarySelect ORDER BY isActive DESC")
-    protected abstract fun getAllPlaylistsSortedByActiveThenOrderAdded(filter: String): Flow<List<LibraryPlaylist>>
-
-    /** Return a [Flow] that updates with the latest [List] of all [Playlist]s
-     * in the database. The returned [List] will be sorted according to the
-     * values of [sort] and [showActiveFirst], and filtered to [Playlist]s
-     * whose names match [searchFilter]. [searchFilter] can be null, in which
-     * case no filtering will be done. */
-    fun getAllPlaylists(
-        sort: Playlist.Sort,
-        showActiveFirst: Boolean,
-        searchFilter: String?
-    ): Flow<List<LibraryPlaylist>> {
-        val filter = "%${searchFilter ?: ""}%"
-        return if (showActiveFirst) when (sort) {
-            Playlist.Sort.NameAsc ->    getAllPlaylistsSortedByActiveThenNameAsc(filter)
-            Playlist.Sort.NameDesc ->   getAllPlaylistsSortedByActiveThenNameDesc(filter)
-            Playlist.Sort.OrderAdded -> getAllPlaylistsSortedByActiveThenOrderAdded(filter)
-        } else when (sort) {
-            Playlist.Sort.NameAsc ->    getAllPlaylistsSortedByNameAsc(filter)
-            Playlist.Sort.NameDesc ->   getAllPlaylistsSortedByNameDesc(filter)
-            Playlist.Sort.OrderAdded -> getAllPlaylistsSortedByOrderAdded(filter)
-        }
-    }
+    abstract fun getAllPlaylistsSortedByActiveThenOrderAdded(filter: String): Flow<List<LibraryPlaylist>>
 
     @Query("SELECT EXISTS(SELECT 1 FROM playlist WHERE isActive LIMIT 1)")
     abstract fun getAtLeastOnePlaylistIsActive(): Flow<Boolean>
