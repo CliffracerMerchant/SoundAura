@@ -4,6 +4,7 @@
 package com.cliffracertech.soundaura
 
 import android.content.Context
+import android.net.Uri
 import androidx.core.net.toUri
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -39,9 +40,11 @@ class PlaylistNameValidatorTests {
         db = Room.inMemoryDatabaseBuilder(context, SoundAuraDatabase::class.java).build()
         playlistDao = db.playlistDao()
         runBlocking {
-            playlistDao.insertSingleTrackPlaylists(
-                playlistNames = listOf(existingName1, existingName2),
-                trackUris = listOf("test uri 1", "test uri 2").map(String::toUri))
+            val map = LinkedHashMap<Uri, String>()
+            val uris = listOf("test uri 1", "test uri 2").map(String::toUri)
+            val names = listOf(existingName1, existingName2)
+            map.putAll(uris.zip(names))
+            playlistDao.insertSingleTrackPlaylists(map)
         }
     }
 
@@ -80,7 +83,7 @@ class PlaylistNameValidatorTests {
             .isEqualTo(R.string.name_dialog_blank_name_error_message)
     }
 
-    @Test fun new_name_validator_fails_validation_and_shows_error_for_blank_name() = runTest {
+    @Test fun new_name_validator_fails_and_shows_error_for_blank_name() = runTest {
         initNewNameValidator()
         val result = instance.validate()
         waitUntil { instance.message != null }
@@ -90,7 +93,7 @@ class PlaylistNameValidatorTests {
             .isEqualTo(R.string.name_dialog_blank_name_error_message)
     }
 
-    @Test fun new_name_validator_fails_validation_for_existing_name() = runTest {
+    @Test fun new_name_validator_fails_for_existing_name() = runTest {
         initNewNameValidator()
         instance.value = existingName1
         val result = instance.validate()
@@ -131,7 +134,7 @@ class PlaylistNameValidatorTests {
             .isEqualTo(R.string.name_dialog_duplicate_name_error_message)
     }
 
-    @Test fun rename_validator_fails_validation_for_blank_name() = runTest {
+    @Test fun rename_validator_fails_for_blank_name() = runTest {
         initRenameValidator()
         instance.value = ""
         waitUntil { instance.message != null }

@@ -4,6 +4,7 @@
 package com.cliffracertech.soundaura
 
 import android.content.Context
+import android.net.Uri
 import androidx.core.net.toUri
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -39,10 +40,10 @@ class PresetNameValidatorTests {
         db = Room.inMemoryDatabaseBuilder(context, SoundAuraDatabase::class.java).build()
         presetDao = db.presetDao()
         runBlocking {
+            val map = LinkedHashMap<Uri, String>()
             val names = listOf("track 1")
-            db.playlistDao().insertSingleTrackPlaylists(
-                playlistNames = names,
-                trackUris = listOf("test uri".toUri()))
+            map["test rui".toUri()] = names.first()
+            db.playlistDao().insertSingleTrackPlaylists(map)
             db.playlistDao().toggleIsActive(names.first())
             presetDao.savePreset(existingName)
             presetDao.savePreset(existingName2)

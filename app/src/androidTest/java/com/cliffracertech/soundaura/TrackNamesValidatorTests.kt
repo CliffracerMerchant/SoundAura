@@ -4,6 +4,7 @@
 package com.cliffracertech.soundaura
 
 import android.content.Context
+import android.net.Uri
 import androidx.core.net.toUri
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -36,9 +37,10 @@ class TrackNamesValidatorTests {
         db = Room.inMemoryDatabaseBuilder(context, SoundAuraDatabase::class.java).build()
         playlistDao = db.playlistDao()
         runBlocking {
-            playlistDao.insertSingleTrackPlaylists(
-                playlistNames = existingNames,
-                trackUris = List(5) { "uri $it".toUri() })
+            val map = LinkedHashMap<Uri, String>()
+            val uris = List(5) { "uri $it".toUri() }
+            map.putAll(uris.zip(existingNames))
+            playlistDao.insertSingleTrackPlaylists(map)
         }
         instance = TrackNamesValidator(playlistDao, coroutineScope, newNames)
     }
