@@ -15,8 +15,8 @@ import javax.inject.Singleton
  * manager of a limited number of persistable file permissions:
  * [acquirePermissionsFor] and [releasePermissionsFor]. */
 interface UriPermissionHandler {
-    val totalPermissionAllowance: Int
-    fun remainingPermissionAllowance(): Int
+    val totalAllowance: Int
+    fun getRemainingAllowance(): Int
 
     /**
      * Acquire permissions for each file [Uri] in [uris], if space permits. If
@@ -26,17 +26,23 @@ interface UriPermissionHandler {
      *
      * @return The list of uris that the app does NOT have permission to use.
      */
-    fun acquirePermissionsFor(uris: List<Uri>, allowPartial: Boolean = true): List<Uri>
+    fun acquirePermissionsFor(
+        uris: List<Uri>,
+        allowPartial: Boolean = true
+    ): List<Uri>
 
     /** Release any persisted permissions for the [Uri]s in [uris]. */
     fun releasePermissionsFor(uris: List<Uri>)
 }
 
 /** A mock [UriPermissionHandler] whose methods do nothing. */
-class TestPermissionHandler(): UriPermissionHandler {
-    override val totalPermissionAllowance = Int.MAX_VALUE
-    override fun remainingPermissionAllowance() = Int.MAX_VALUE
-    override fun acquirePermissionsFor(uris: List<Uri>, allowPartial: Boolean): List<Uri> = emptyList()
+class TestPermissionHandler: UriPermissionHandler {
+    override val totalAllowance = 512
+    override fun getRemainingAllowance() = 512
+    override fun acquirePermissionsFor(
+        uris: List<Uri>,
+        allowPartial: Boolean
+    ): List<Uri> = emptyList()
     override fun releasePermissionsFor(uris: List<Uri>) = Unit
 }
 
@@ -50,15 +56,18 @@ class AndroidUriPermissionHandler @Inject constructor(
 ): UriPermissionHandler {
     private val contentResolver = context.contentResolver
 
-    override val totalPermissionAllowance =
+    override val totalAllowance =
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) 128
         else                                               512
 
-    override fun remainingPermissionAllowance() =
-        totalPermissionAllowance - contentResolver.persistedUriPermissions.size
+    override fun getRemainingAllowance() =
+        totalAllowance - contentResolver.persistedUriPermissions.size
 
-    override fun acquirePermissionsFor(uris: List<Uri>, allowPartial: Boolean): List<Uri> {
-        val remainingSpace = remainingPermissionAllowance()
+    override fun acquirePermissionsFor(
+        uris: List<Uri>,
+        allowPartial: Boolean
+    ): List<Uri> {
+        val remainingSpace = getRemainingAllowance()
         val hasEnoughSpace = remainingSpace >= uris.size
         when {
             hasEnoughSpace -> uris

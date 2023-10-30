@@ -49,7 +49,7 @@ class AddToLibraryUseCase(
             messageHandler.postMessage(StringResource(
                 R.string.cant_add_all_tracks_warning,
                 rejectedTracks.size,
-                permissionHandler.totalPermissionAllowance))
+                permissionHandler.totalAllowance))
     }
 
     fun newPlaylistNameValidator(
@@ -77,6 +77,6 @@ class AddToLibraryUseCase(
             dao.insertPlaylist(name, shuffle, tracks)
         else messageHandler.postMessage(StringResource(
             R.string.cant_add_playlist_warning,
-            permissionHandler.totalPermissionAllowance))
+            permissionHandler.totalAllowance))
     }
 }

@@ -44,13 +44,12 @@ class ModifyLibraryUseCase(
     ) {
         val newTracks = dao.filterNewTracks(tracks)
         val removableTracks = dao.getUniqueTracksNotIn(tracks, name)
-        val postOpPermissionAllowance =
-            permissionHandler.remainingPermissionAllowance() +
-            removableTracks.size - newTracks.size
+        val postOpPermissionAllowance = permissionHandler.getRemainingAllowance() +
+                                        removableTracks.size - newTracks.size
         if (postOpPermissionAllowance < 0) {
             messageHandler.postMessage(StringResource(
                 R.string.cant_modify_playlist_tracks_warning,
-                permissionHandler.totalPermissionAllowance))
+                permissionHandler.totalAllowance))
             dao.setPlaylistShuffle(name, shuffle)
         } else {
             val removedUris = dao.setPlaylistShuffleAndContents(
