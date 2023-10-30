@@ -230,9 +230,9 @@ class PlayerService: LifecycleService() {
                 // STATE_PLAYING and show an explanation message so that the user
                 // understands why their, e.g., play button tap didn't do anything.
                 // If the service was moved directly from a stopped to playing
-                // state then the PlayerSet might be empty because the first new
-                // value for TrackDao's activeTracks won't have been collected yet.
-                // The updatePlayers method will handle this edge case.
+                // state, then the PlayerSet might be empty because the first new
+                // value for TrackDao's activeTracks hasn't have been collected
+                // yet. The updatePlayers method will handle this edge case.
                 showAutoPausePlaybackExplanation()
                 STATE_PAUSED
             } state == STATE_PLAYING && !hasAudioFocus -> {
@@ -314,7 +314,12 @@ class PlayerService: LifecycleService() {
      * automatically paused due to there being no active tracks to play. */
     private fun showAutoPausePlaybackExplanation() {
         val stringResId = R.string.player_no_tracks_warning_message
-        Toast.makeText(this, stringResId, Toast.LENGTH_SHORT).show()
+        // A RuntimeException can be thrown here if the Toast is made outside
+        // of the UI thread. This can occur, e.g., during a test. Because the
+        // message is non-critical, we can ignore it in this case.
+        try {
+            Toast.makeText(this, stringResId, Toast.LENGTH_SHORT).show()
+        } catch(e: RuntimeException) {}
     }
 
     fun setPlaylistVolume(playlistName: String, volume: Float) =
