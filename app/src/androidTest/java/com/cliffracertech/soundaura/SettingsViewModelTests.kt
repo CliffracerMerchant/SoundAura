@@ -13,6 +13,10 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.cliffracertech.soundaura.settings.AppTheme
+import com.cliffracertech.soundaura.settings.OnZeroVolumeAudioDeviceBehavior
+import com.cliffracertech.soundaura.settings.PrefKeys
+import com.cliffracertech.soundaura.settings.SettingsViewModel
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
@@ -35,10 +39,9 @@ import org.junit.runner.RunWith
  */
 class SettingsViewModelTests {
     private val context = ApplicationProvider.getApplicationContext<Context>()
-    private val coroutineScope = TestCoroutineScope()
-    private val dataStore = PreferenceDataStoreFactory.create(scope = coroutineScope) {
-        context.preferencesDataStoreFile("testDatastore")
-    }
+    private val scope = TestCoroutineScope()
+    private val dataStore = PreferenceDataStoreFactory
+        .create(scope = scope) { context.preferencesDataStoreFile("testDatastore") }
     private val appThemeKey = intPreferencesKey(PrefKeys.appTheme)
     private val playInBackgroundKey = booleanPreferencesKey(PrefKeys.playInBackground)
     private val autoPauseDuringCallKey = booleanPreferencesKey(PrefKeys.autoPauseDuringCalls)
@@ -51,12 +54,12 @@ class SettingsViewModelTests {
         context.checkSelfPermission(READ_PHONE_STATE) == PERMISSION_GRANTED
 
     @Before fun init() {
-        instance = SettingsViewModel(context, dataStore, coroutineScope)
+        instance = SettingsViewModel(context, dataStore, scope)
     }
 
     @After fun cleanUp() {
-        coroutineScope.runTest { dataStore.edit { it.clear() } }
-        coroutineScope.cancel()
+        runTest { dataStore.edit { it.clear() } }
+        scope.cancel()
     }
 
     @Test fun default_values() {
