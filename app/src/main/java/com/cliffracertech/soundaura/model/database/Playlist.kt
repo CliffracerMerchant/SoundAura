@@ -205,7 +205,7 @@ data class Playlist(
         playlistName: String
     ): List<Uri>
 
-    @Query("WITH newTrack AS (SELECT (:tracks) AS uri) " +
+    @Query("WITH newTrack AS (SELECT :tracks AS uri) " +
            "SELECT newTrack.uri FROM newTrack " +
            "LEFT JOIN track ON track.uri = newTrack.uri " +
            "WHERE track.uri IS NULL")
