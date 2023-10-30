@@ -143,7 +143,7 @@ class MainActivity : ComponentActivity() {
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
         @Suppress("DEPRECATION")
-        if (viewModel.onBackButtonClick())
+        if (!viewModel.onBackButtonClick())
             super.onBackPressed()
     }
 
