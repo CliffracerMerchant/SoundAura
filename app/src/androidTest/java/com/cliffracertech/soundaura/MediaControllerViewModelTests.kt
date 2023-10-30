@@ -4,6 +4,7 @@
 package com.cliffracertech.soundaura
 
 import android.content.Context
+import android.net.Uri
 import androidx.core.net.toUri
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -76,7 +77,9 @@ class MediaControllerViewModelTests {
     private val setStopTimeDialog get() = instance.shownDialog as DialogType.SetAutoStopTimer
 
     private suspend fun addTestPresets() {
-        playlistDao.insertSingleTrackPlaylists(testPlaylistNames, testTrackUris)
+        val map = LinkedHashMap<Uri, String>()
+        map.putAll(testTrackUris.zip(testPlaylistNames))
+        playlistDao.insertSingleTrackPlaylists(map)
         playlistDao.toggleIsActive(testPlaylistNames[0])
         presetDao.savePreset(testPresetNames[0])
 
