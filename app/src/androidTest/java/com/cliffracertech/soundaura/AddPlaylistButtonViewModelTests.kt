@@ -11,6 +11,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.cliffracertech.soundaura.addbutton.AddLocalFilesDialogStep
 import com.cliffracertech.soundaura.addbutton.AddPlaylistButtonViewModel
 import com.cliffracertech.soundaura.addbutton.getDisplayName
+import com.cliffracertech.soundaura.model.AddToLibraryUseCase
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.TestPermissionHandler
 import com.cliffracertech.soundaura.model.Validator
@@ -41,8 +42,9 @@ class AddPlaylistButtonViewModelTests {
     @Before fun init() {
         db = Room.inMemoryDatabaseBuilder(context, SoundAuraDatabase::class.java).build()
         playlistDao = db.playlistDao()
+        val useCase = AddToLibraryUseCase(permissionHandler, messageHandler, playlistDao)
         instance = AddPlaylistButtonViewModel(
-            context, permissionHandler, playlistDao, messageHandler, coroutineScope)
+            context, useCase, coroutineScope)
     }
 
     @After fun clean_up() {
