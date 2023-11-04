@@ -5,10 +5,8 @@ package com.cliffracertech.soundaura.model.database
 
 import android.content.ContentValues
 import android.content.Context
-import android.util.Log
 import androidx.room.*
 import androidx.room.migration.Migration
-import com.cliffracertech.soundaura.model.database.SoundAuraDatabase.Companion.addAllMigrations
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -62,7 +60,6 @@ abstract class SoundAuraDatabase : RoomDatabase() {
         }
 
         private val migration4to5 = Migration(4,5) { db ->
-            Log.d("SoundAuraTag", "running 4 to 5 db migration")
             db.execSQL("PRAGMA foreign_keys=off")
             db.execSQL("CREATE TABLE temp_track (`uri` TEXT NOT NULL PRIMARY KEY, " +
                                                 "`hasError` INTEGER NOT NULL DEFAULT 0)")
@@ -147,13 +144,9 @@ abstract class SoundAuraDatabase : RoomDatabase() {
 @Module @InstallIn(SingletonComponent::class)
 class DatabaseModule {
     @Singleton @Provides
-    fun provideDatabase(@ApplicationContext app: Context): SoundAuraDatabase {
-        Log.d("SoundAuraTag", "Building Db")
-        val db = Room.databaseBuilder(app, SoundAuraDatabase::class.java, "SoundAuraDb")
-            .also(::addAllMigrations).build()
-        Log.d("SoundAuraTag", "db version = ${db.openHelper.readableDatabase.version}")
-        return db
-    }
+    fun provideDatabase(@ApplicationContext app: Context): SoundAuraDatabase =
+        Room.databaseBuilder(app, SoundAuraDatabase::class.java, "SoundAuraDb")
+            .also(SoundAuraDatabase::addAllMigrations).build()
 
     @Qualifier @Retention(AnnotationRetention.BINARY)
     annotation class InMemoryDatabase
@@ -161,7 +154,7 @@ class DatabaseModule {
     @InMemoryDatabase @Singleton @Provides
     fun provideInMemoryDatabase(@ApplicationContext app: Context) =
         Room.inMemoryDatabaseBuilder(app, SoundAuraDatabase::class.java)
-            .also(::addAllMigrations).build()
+            .also(SoundAuraDatabase::addAllMigrations).build()
 
     @Provides fun providePlaylistDao(db: SoundAuraDatabase) = db.playlistDao()
     @Provides fun providePresetDao(db: SoundAuraDatabase) = db.presetDao()
