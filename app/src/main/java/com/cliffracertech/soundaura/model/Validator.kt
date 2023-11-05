@@ -19,7 +19,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
- * An abstract value validator.
+ * A generic validator.
  *
  * Validator can be used to validate generic non-null values. When the [value]
  * property is changed, the [message] property will update after a delay to a
@@ -110,7 +110,7 @@ class Validator <T>(
 }
 
 /**
- * A validator for a list of values, all of which must be valid.
+ * A validator for a list of values, all of which must be individually valid.
  *
  * ListValidator can be used to validate a list of generic non-null values and
  * return a message explaining why one or more of the values is not valid if
@@ -122,44 +122,59 @@ class Validator <T>(
  *
  * [setValue] should be called to change the proposed value for a particular
  * item, and will also mark the value at that index as having an error if the
- * [hasError] override returns true for the new value.
+ * [isInvalid] override returns true for the new value.
  *
  * The property [message] can be observed for to obtain a [Validator.Message]
  * instance that describes why one or more values in the list is invalid, or
  * null if all values are valid. Once all desired changes to the list of values
  * has been performed, the suspend function [validate] should be called.
  *
- * The method [hasError] should be overridden to return whether or not a given
+ * The method [isInvalid] should be overridden to return whether or not a given
  * value is invalid at the provided index. Note that ListValidator will already
  * check for and mark duplicate values as errors if [allowDuplicates] is false,
- * so the [hasError] override does not need to take duplicates into account.
+ * so the [isInvalid] override does not need to take duplicates into account.
  * The property [errorMessage] should be overridden to be a [Validator.Message.Error]
  * that describes why the list of current values is invalid.
  */
 abstract class ListValidator <T>(
     values: List<T>,
+    coroutineScope: CoroutineScope,
     private val allowDuplicates: Boolean = true,
 ) {
     private val _values = values.toMutableStateList()
     val values get() = _values as List<T>
 
     private var errorCount by mutableIntStateOf(0)
-    private val _errors = List(values.size) { errorIndex ->
-            val value = values[errorIndex]
-            val hasOtherError = hasError(value)
-            val hasDuplicateError = if (allowDuplicates) false else run {
-                for (i in errorIndex..values.lastIndex)
-                    if (i != errorIndex && values[i] == value)
-                        return@run true
-                false
-            }
-            if (hasOtherError || hasDuplicateError)
-                errorCount++
-            hasOtherError || hasDuplicateError
-        }.toMutableStateList()
+    private val _errors = List(values.size) { false }.toMutableStateList()
     val errors get() = _errors as List<Boolean>
+    init {
+        coroutineScope.launch {
+            for (i in _errors.indices) {
+                // If there is already an error at an index, then
+                // it must be a duplicate of an earlier value.
+                if (_errors[i]) continue
 
-    protected abstract fun hasError(value: T): Boolean
+                val hasOtherError = isInvalid(values[i])
+                val hasDuplicateError =
+                    if (allowDuplicates || i == _errors.lastIndex)
+                        false
+                    else run {
+                        var duplicateCount = 0
+                        for (j in i + 1..values.lastIndex)
+                            if (values[j] == values[i]) {
+                                duplicateCount++
+                                _errors[j] = true
+                            }
+                        duplicateCount > 0
+                    }
+                if (hasDuplicateError || hasOtherError)
+                    _errors[i] = true
+            }
+            errorCount = _errors.count { it }
+        }
+    }
+
+    protected abstract fun isInvalid(value: T): Boolean
     protected abstract val errorMessage: Validator.Message.Error
 
     fun setValue(index: Int, newValue: T) {
@@ -169,12 +184,13 @@ abstract class ListValidator <T>(
         _values[index] = newValue
 
         val hadError = _errors[index]
-        val hasError = hasError(newValue)
+        val hasError = isInvalid(newValue)
         if (hasError && !hadError)      errorCount++
         else if (hadError && !hasError) errorCount--
         _errors[index] = hasError
 
-        if (!allowDuplicates) values.forEachIndexed { i, value -> when {
+        if (allowDuplicates) return
+        values.forEachIndexed { i, value -> when {
             value == newValue && i != index -> {
                 // If there is a duplicate we set the value being
                 // set and the duplicate value as having an error
@@ -187,11 +203,11 @@ abstract class ListValidator <T>(
                 // in case they were marked as having errors only because
                 // they were duplicate values (which will not be the case
                 // now that values[index] has been changed).
-                val hasError = hasError(values[i])
-                val hadError = _errors[i]
-                if (hasError && !hadError)      errorCount++
-                else if (hadError && !hasError) errorCount--
-                _errors[i] = hasError
+                val hasDuplicateError = isInvalid(values[i])
+                val hadDuplicateError = _errors[i]
+                if (hasDuplicateError && !hadDuplicateError)      errorCount++
+                else if (hadDuplicateError && !hasDuplicateError) errorCount--
+                _errors[i] = hasDuplicateError
             }
         }}
     }
