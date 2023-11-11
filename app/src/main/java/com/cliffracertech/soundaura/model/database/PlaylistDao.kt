@@ -177,7 +177,7 @@ private const val librarySelect =
     @Query("SELECT name FROM playlist")
     abstract fun getPlaylistNames(): Flow<List<String>>
 
-    @Query("SELECT trackUri, hasError FROM playlistTrack " +
+    @Query("SELECT uri, hasError FROM playlistTrack " +
            "JOIN track on playlistTrack.trackUri = track.uri " +
            "WHERE playlistName = :name ORDER by playlistOrder")
     abstract suspend fun getPlaylistTracks(name: String): List<Track>
