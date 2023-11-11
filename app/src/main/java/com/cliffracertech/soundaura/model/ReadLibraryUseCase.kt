@@ -5,7 +5,6 @@
 
 package com.cliffracertech.soundaura.model
 
-import android.net.Uri
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -13,6 +12,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import com.cliffracertech.soundaura.enumPreferenceFlow
 import com.cliffracertech.soundaura.library.Playlist
 import com.cliffracertech.soundaura.model.database.PlaylistDao
+import com.cliffracertech.soundaura.model.database.Track
 import com.cliffracertech.soundaura.preferenceFlow
 import com.cliffracertech.soundaura.settings.PrefKeys
 import kotlinx.collections.immutable.ImmutableList
@@ -64,9 +64,8 @@ class ReadLibraryUseCase @Inject constructor(
         }.transformLatest { emitAll(it) }
         .map(List<Playlist>::toImmutableList)
 
-    /** Return a [List] of the [Uri]s of all tracks in
-     * the playlist whose name matches [playlistName]. */
-    suspend fun getPlaylistTracks(playlistName: String): List<Uri> =
+    /** Return a [List] of the [Track]s in the playlist whose name matches [playlistName]. */
+    suspend fun getPlaylistTracks(playlistName: String): List<Track> =
         dao.getPlaylistTracks(playlistName)
 
     /** Return whether or not the playlist whose name matches

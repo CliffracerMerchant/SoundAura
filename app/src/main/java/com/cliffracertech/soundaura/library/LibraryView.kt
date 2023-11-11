@@ -3,7 +3,6 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura.library
 
-import android.net.Uri
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,6 +37,7 @@ import com.cliffracertech.soundaura.model.ModifyLibraryUseCase
 import com.cliffracertech.soundaura.model.PlaybackState
 import com.cliffracertech.soundaura.model.PlayerServicePlaybackState
 import com.cliffracertech.soundaura.model.ReadLibraryUseCase
+import com.cliffracertech.soundaura.model.database.Track
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CoroutineScope
@@ -144,8 +144,7 @@ import javax.inject.Inject
                 onNameValidated = { validatedName ->
                     dismissDialog()
                     modifyLibrary.renamePlaylist(
-                        from = playlist.name,
-                        to = validatedName)
+                        from = playlist.name, to = validatedName)
                 })
         }
         override fun onExtraOptionsClick(playlist: Playlist) {
@@ -173,7 +172,7 @@ import javax.inject.Inject
 
     private fun showFileChooser(
         target: Playlist,
-        existingTracks: List<Uri>,
+        existingTracks: List<Track>,
         shuffleEnabled: Boolean = false,
     ) {
         shownDialog = PlaylistDialog.FileChooser(
@@ -189,14 +188,14 @@ import javax.inject.Inject
                     dismissDialog()
                 else showPlaylistOptions(target, existingTracks, shuffleEnabled)
             }, onChosenFilesValidated = { validatedFiles ->
-                showPlaylistOptions(target, existingTracks + validatedFiles, shuffleEnabled)
-            }
-        )
+                val newTrackList = existingTracks + validatedFiles.map(::Track)
+                showPlaylistOptions(target, newTrackList, shuffleEnabled)
+            })
     }
 
     private fun showPlaylistOptions(
         target: Playlist,
-        existingTracks: List<Uri>,
+        existingTracks: List<Track>,
         shuffleEnabled: Boolean,
     ) {
         shownDialog = PlaylistDialog.PlaylistOptions(
@@ -209,8 +208,7 @@ import javax.inject.Inject
                     modifyLibrary.setPlaylistShuffleAndTracks(
                         target.name, newShuffle, newTrackList)
                 }
-            }
-        )
+            })
     }
 }
 

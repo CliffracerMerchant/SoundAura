@@ -90,8 +90,7 @@ private const val librarySelect =
            "WHERE playlist.name = :playlistName")
     abstract suspend fun getPlaylistShuffle(playlistName: String): Boolean
 
-    @Query("UPDATE playlist SET shuffle = :enabled " +
-            "WHERE name = :playlistName")
+    @Query("UPDATE playlist SET shuffle = :enabled WHERE name = :playlistName")
     abstract suspend fun setPlaylistShuffle(playlistName: String, enabled: Boolean)
 
     /**
@@ -178,8 +177,10 @@ private const val librarySelect =
     @Query("SELECT name FROM playlist")
     abstract fun getPlaylistNames(): Flow<List<String>>
 
-    @Query("SELECT trackUri FROM playlistTrack WHERE playlistName = :name ORDER by playlistOrder")
-    abstract suspend fun getPlaylistTracks(name: String): List<Uri>
+    @Query("SELECT trackUri, hasError FROM playlistTrack " +
+           "JOIN track on playlistTrack.trackUri = track.uri " +
+           "WHERE playlistName = :name ORDER by playlistOrder")
+    abstract suspend fun getPlaylistTracks(name: String): List<Track>
 
     /** Rename the [Playlist] whose name matches [oldName] to [newName]. */
     @Query("UPDATE playlist SET name = :newName WHERE name = :oldName")

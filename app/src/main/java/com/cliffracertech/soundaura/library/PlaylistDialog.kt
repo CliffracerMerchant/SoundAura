@@ -30,6 +30,7 @@ import com.cliffracertech.soundaura.library.PlaylistDialog.Rename
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.Validator
+import com.cliffracertech.soundaura.model.database.Track
 import com.cliffracertech.soundaura.ui.MarqueeText
 import kotlinx.coroutines.CoroutineScope
 
@@ -72,14 +73,14 @@ sealed class PlaylistDialog(
      *
      * @param target The [Playlist] that is the target of the dialog
      * @param messageHandler A [MessageHandler] instance that will be used to show messages to the user
-     * @param currentTracks A [List] of the [Uri]s of the tracks that are already in the playlist
+     * @param currentTracks A [List] of the [Track]s that are already in the playlist
      * @param onDismissRequest The callback that should be invoked when
      *     a back button click or gesture is performed
      */
     class FileChooser(
         target: Playlist,
         private val messageHandler: MessageHandler,
-        private val currentTracks: List<Uri>,
+        currentTracks: List<Track>,
         onDismissRequest: () -> Unit,
         private val onChosenFilesValidated: (List<Uri>) -> Unit,
     ): PlaylistDialog(target, onDismissRequest) {
@@ -87,10 +88,9 @@ sealed class PlaylistDialog(
             if (chosenFiles.isEmpty())
                 onDismissRequest()
                 // If no files were chosen at all, then the user
-                // must have backed out of the files chooser
-                // intentionally. No error message is required.
+                // must have backed out of the file chooser intentionally
             else {
-                val validatedFiles = chosenFiles - currentTracks.toSet()
+                val validatedFiles = chosenFiles - currentTracks.map { it.uri }.toSet()
                 if (validatedFiles.isEmpty()) {
                     onDismissRequest()
                     messageHandler.postMessage(R.string.file_chooser_no_valid_tracks_error_message)
@@ -114,7 +114,7 @@ sealed class PlaylistDialog(
      *
      * @param target The [Playlist] that is the target of the dialog
      * @param shuffleEnabled Whether shuffle is initially enabled for the [target]
-     * @param playlistTracks The [List] of [Uri]s that represents the tracks in the [target]
+     * @param playlistTracks The [List] of [Track]s in the target [Playlist]
      * @param onDismissRequest The callback that should be invoked when the dialog's
      *     cancel button is clicked or a back button click or gesture is performed
      * @param onAddFilesClick The callback that will be invoked when the dialog's
@@ -125,14 +125,14 @@ sealed class PlaylistDialog(
      */
     class PlaylistOptions(
         target: Playlist,
-        private val playlistTracks: List<Uri>,
+        private val playlistTracks: List<Track>,
         shuffleEnabled: Boolean,
         onDismissRequest: () -> Unit,
         val onAddFilesClick: () -> Unit,
         private val onConfirm: (
-                shuffleEnabled: Boolean,
-                newTrackList: List<Uri>,
-            ) -> Unit,
+            shuffleEnabled: Boolean,
+            newTrackList: List<Uri>,
+        ) -> Unit,
     ): PlaylistDialog(target, onDismissRequest) {
         var shuffleEnabled by mutableStateOf(shuffleEnabled)
             private set
