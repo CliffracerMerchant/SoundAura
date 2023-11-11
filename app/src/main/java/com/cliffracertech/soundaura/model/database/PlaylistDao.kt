@@ -87,7 +87,7 @@ private const val librarySelect =
     }
 
     @Query("SELECT shuffle FROM playlist " +
-            "WHERE playlist.name = :playlistName LIMIT 1")
+           "WHERE playlist.name = :playlistName")
     abstract suspend fun getPlaylistShuffle(playlistName: String): Boolean
 
     @Query("UPDATE playlist SET shuffle = :enabled " +
@@ -163,7 +163,7 @@ private const val librarySelect =
     @Query("$librarySelect ORDER BY isActive DESC")
     abstract fun getAllPlaylistsSortedByActiveThenOrderAdded(filter: String): Flow<List<LibraryPlaylist>>
 
-    @Query("SELECT EXISTS(SELECT 1 FROM playlist WHERE isActive LIMIT 1)")
+    @Query("SELECT EXISTS(SELECT 1 FROM playlist WHERE isActive)")
     abstract fun getAtLeastOnePlaylistIsActive(): Flow<Boolean>
 
     /** Return a [Flow] that updates with a [Map] of each
@@ -198,15 +198,17 @@ private const val librarySelect =
 
     @Query("SELECT NOT EXISTS(SELECT playlistName FROM playlistTrack " +
                              "JOIN track ON playlistTrack.trackUri = track.uri " +
-                             "WHERE playlistName = :playlistName AND " +
-                                   "track.hasError = 0 LIMIT 1)")
+                             "WHERE playlistName = :playlistName AND NOT track.hasError)")
     protected abstract suspend fun playlistHasNoValidTracks(playlistName: String): Boolean
 
     @Query("UPDATE playlist SET hasError = 1 WHERE name = :playlistName")
     protected abstract suspend fun setPlaylistHasError(playlistName: String)
 
     @Transaction
-    open suspend fun setPlaylistTrackHasError(playlistName: String, trackUris: List<Uri>) {
+    open suspend fun setPlaylistTrackHasError(
+        playlistName: String,
+        trackUris: List<Uri>
+    ) {
         setTracksHaveError(trackUris)
         if (playlistHasNoValidTracks(playlistName))
             setPlaylistHasError(playlistName)
