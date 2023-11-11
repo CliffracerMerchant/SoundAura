@@ -13,6 +13,7 @@ import com.cliffracertech.soundaura.dialog.NamingState
 import com.cliffracertech.soundaura.dialog.ValidatedNamingState
 import com.cliffracertech.soundaura.library.MutablePlaylist
 import com.cliffracertech.soundaura.model.Validator
+import com.cliffracertech.soundaura.model.database.Track
 import com.cliffracertech.soundaura.model.database.TrackNamesValidator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -189,7 +190,7 @@ sealed class AddLocalFilesDialogStep {
      *     as passed as arguments.
      */
     class PlaylistOptions(
-        tracks: List<Uri>,
+        tracks: List<Track>,
         override val onDismissRequest: () -> Unit,
         onBackClick: () -> Unit,
         private val onFinish: (shuffleEnabled: Boolean, newTrackList: List<Uri>) -> Unit,

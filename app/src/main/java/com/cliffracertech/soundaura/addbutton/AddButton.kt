@@ -33,6 +33,7 @@ import com.cliffracertech.soundaura.model.AddToLibraryUseCase
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.PresetDao
+import com.cliffracertech.soundaura.model.database.Track
 import com.cliffracertech.soundaura.model.database.newPresetNameValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -97,7 +98,9 @@ class AddPlaylistButtonViewModel(
             onDismissRequest = ::onDialogDismissRequest,
             onCancelClick = ::onDialogDismissRequest,
             onAddIndividuallyClick = { showNameTracksStep(chosenUris) },
-            onAddAsPlaylistClick = { showNamePlaylistStep(chosenUris, goingForward = true) })
+            onAddAsPlaylistClick = {
+                showNamePlaylistStep(chosenUris, cameFromPlaylistOrTracksQuery = true)
+            })
     }
 
     private fun showNameTracksStep(trackUris: List<Uri>) {
@@ -125,32 +128,32 @@ class AddPlaylistButtonViewModel(
     }
 
     private fun showNamePlaylistStep(
-        tracks: List<Uri>,
-        goingForward: Boolean,
-        playlistName: String = "${tracks.first().getDisplayName(context)} playlist"
+        uris: List<Uri>,
+        cameFromPlaylistOrTracksQuery: Boolean,
+        playlistName: String = "${uris.first().getDisplayName(context)} playlist"
     ) {
         dialogStep = AddLocalFilesDialogStep.NamePlaylist(
-            wasNavigatedForwardTo = goingForward,
+            wasNavigatedForwardTo = cameFromPlaylistOrTracksQuery,
             onDismissRequest = ::onDialogDismissRequest,
-            onBackClick = { showAddIndividuallyOrAsPlaylistQueryStep(tracks) },
+            onBackClick = { showAddIndividuallyOrAsPlaylistQueryStep(uris) },
             validator = addToLibrary.newPlaylistNameValidator(scope, playlistName),
             coroutineScope = scope,
             onNameValidated = { validatedPlaylistName ->
-                showPlaylistOptionsStep(validatedPlaylistName, tracks)
+                showPlaylistOptionsStep(validatedPlaylistName, uris)
             })
     }
 
     private fun showPlaylistOptionsStep(
         playlistName: String,
-        tracks: List<Uri>
+        uris: List<Uri>
     ) {
         dialogStep = AddLocalFilesDialogStep.PlaylistOptions(
             onDismissRequest = ::onDialogDismissRequest,
             onBackClick = {
-                showNamePlaylistStep(
-                    tracks, goingForward = false,
+                showNamePlaylistStep(uris,
+                    cameFromPlaylistOrTracksQuery = false,
                     playlistName = playlistName)
-            }, tracks = tracks,
+            }, tracks = uris.map(::Track),
             onFinish = { shuffle, newTracks ->
                 onDialogDismissRequest()
                 scope.launch {
