@@ -29,6 +29,7 @@ import com.cliffracertech.soundaura.model.TestPlaybackState
 import com.cliffracertech.soundaura.model.UriPermissionHandler
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.SoundAuraDatabase
+import com.cliffracertech.soundaura.model.database.Track
 import com.cliffracertech.soundaura.settings.PrefKeys
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.*
@@ -72,6 +73,9 @@ class LibraryViewModelTests {
     private val fileChooser get() = instance.shownDialog as PlaylistDialog.FileChooser
     private val playlistOptionsDialog get() = instance.shownDialog as PlaylistDialog.PlaylistOptions
     private val removeDialog get() = instance.shownDialog as PlaylistDialog.Remove
+
+    private suspend fun PlaylistDao.getPlaylistUris(name: String) =
+        getPlaylistTracks(name).map(Track::uri)
 
     @Before fun init() {
         db = Room.inMemoryDatabaseBuilder(context, SoundAuraDatabase::class.java).build()
@@ -238,8 +242,8 @@ class LibraryViewModelTests {
         waitUntil { instance.shownDialog == null }
 
         assertThat(instance.shownDialog).isNull()
-        val playlistTracks = dao.getPlaylistTracks(testPlaylistNames[1])
-        assertThat(playlistTracks).containsExactly(testUris[1])
+        val playlistUris = dao.getPlaylistUris(testPlaylistNames[1])
+        assertThat(playlistUris).containsExactly(testUris[1])
     }
     
     @Test fun single_track_playlist_file_chooser_confirm_opens_playlist_options() = runTest {
@@ -283,7 +287,7 @@ class LibraryViewModelTests {
         assertThat(instance.shownDialog).isNull()
         assertThat(dao.getPlaylistShuffle(testPlaylistNames[1])).isTrue()
         val expectedUris = listOf(newUris[1], testUris[1], newUris[0])
-        val actualUris = dao.getPlaylistTracks(testPlaylistNames[1])
+        val actualUris = dao.getPlaylistUris(testPlaylistNames[1])
         assertThat(actualUris).containsExactlyElementsIn(expectedUris).inOrder()
     }
 
@@ -312,7 +316,7 @@ class LibraryViewModelTests {
 
         assertThat(instance.shownDialog).isNull()
         assertThat(dao.getPlaylistShuffle(testPlaylistNames[4])).isTrue()
-        val actualUris = dao.getPlaylistTracks(testPlaylistNames[4])
+        val actualUris = dao.getPlaylistUris(testPlaylistNames[4])
         assertThat(actualUris).containsExactlyElementsIn(testUris).inOrder()
     }
 
@@ -331,7 +335,7 @@ class LibraryViewModelTests {
         assertThat(instance.shownDialog).isNull()
         assertThat(dao.getPlaylistShuffle(testPlaylistNames[4])).isFalse()
         val expectedUris = listOf(testUris[0], testUris[3], testUris[1])
-        val actualUris = dao.getPlaylistTracks(testPlaylistNames[4])
+        val actualUris = dao.getPlaylistUris(testPlaylistNames[4])
         assertThat(actualUris).containsExactlyElementsIn(expectedUris).inOrder()
     }
 
@@ -378,9 +382,8 @@ class LibraryViewModelTests {
         playlistOptionsDialog.onFinishClick()
         waitUntil { instance.shownDialog == null }
         waitUntil { dao.getPlaylistTracks(testPlaylistNames[4]).size > 4 }
-        logd(dao.getPlaylistTracks(testPlaylistNames[4]).joinToString())
         assertThat(instance.shownDialog).isNull()
-        actualUris = dao.getPlaylistTracks(testPlaylistNames[4])
+        actualUris = dao.getPlaylistUris(testPlaylistNames[4])
         assertThat(actualUris).containsExactlyElementsIn(expectedUris).inOrder()
     }
 

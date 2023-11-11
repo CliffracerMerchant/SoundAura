@@ -17,6 +17,7 @@ import com.cliffracertech.soundaura.model.TestPermissionHandler
 import com.cliffracertech.soundaura.model.Validator
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.SoundAuraDatabase
+import com.cliffracertech.soundaura.model.database.Track
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
@@ -53,6 +54,9 @@ class AddPlaylistButtonViewModelTests {
     }
 
     private val testUris = List(3) { "uri $it".toUri() }
+    private suspend fun PlaylistDao.getPlaylistUris(name: String) =
+        getPlaylistTracks(name).map(Track::uri)
+
     private val selectingFilesStep get() = instance.dialogStep as AddLocalFilesDialogStep.SelectingFiles
     private val addIndividuallyOrAsPlaylistStep get() =
         instance.dialogStep as AddLocalFilesDialogStep.AddIndividuallyOrAsPlaylistQuery
@@ -293,8 +297,8 @@ class AddPlaylistButtonViewModelTests {
         assertThat(names).containsExactlyElementsIn(expectedNames)
 
         expectedNames.forEachIndexed { index, name ->
-            val tracks = playlistDao.getPlaylistTracks(name)
-            assertThat(tracks).containsExactly(testUris[index])
+            val uris = playlistDao.getPlaylistUris(name)
+            assertThat(uris).containsExactly(testUris[index])
         }
     }
 
@@ -314,7 +318,7 @@ class AddPlaylistButtonViewModelTests {
         waitUntil { names.isNotEmpty() } // advanceUntilIdle doesn't work here for some reason
         assertThat(names).containsExactly(name1)
         assertThat(playlistDao.getPlaylistShuffle(name1)).isFalse()
-        assertThat(playlistDao.getPlaylistTracks(name1))
+        assertThat(playlistDao.getPlaylistUris(name1))
             .containsExactlyElementsIn(testUris).inOrder()
 
         // non-default playlist name, shuffle, and track order
@@ -333,7 +337,7 @@ class AddPlaylistButtonViewModelTests {
         names = playlistDao.getPlaylistNames().first()
         assertThat(names).containsExactly(name1, name2)
         assertThat(playlistDao.getPlaylistShuffle(name2)).isTrue()
-        assertThat(playlistDao.getPlaylistTracks(name2))
+        assertThat(playlistDao.getPlaylistUris(name2))
             .containsExactly(testUris[2], testUris[0], testUris[1]).inOrder()
     }
 }
