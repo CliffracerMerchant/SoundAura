@@ -164,8 +164,8 @@ sealed class AddLocalFilesDialogStep {
         override val onDismissRequest: () -> Unit,
         onBackClick: () -> Unit,
         onNameValidated: (String) -> Unit,
-    ): AddLocalFilesDialogStep(), NamingState by ValidatedNamingState(
-        validator, coroutineScope, onNameValidated, onBackClick)
+    ): AddLocalFilesDialogStep(),
+       NamingState by ValidatedNamingState(validator, coroutineScope, onNameValidated)
    {
        override val titleResId = R.string.add_local_files_as_playlist_dialog_title
        override val buttons = listOf(

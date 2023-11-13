@@ -20,7 +20,6 @@ import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.addbutton.SystemFileChooser
 import com.cliffracertech.soundaura.dialog.DialogWidth
 import com.cliffracertech.soundaura.dialog.NamingDialog
-import com.cliffracertech.soundaura.dialog.NamingState
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
 import com.cliffracertech.soundaura.dialog.ValidatedNamingState
 import com.cliffracertech.soundaura.library.PlaylistDialog.FileChooser
@@ -29,10 +28,8 @@ import com.cliffracertech.soundaura.library.PlaylistDialog.Remove
 import com.cliffracertech.soundaura.library.PlaylistDialog.Rename
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.StringResource
-import com.cliffracertech.soundaura.model.Validator
 import com.cliffracertech.soundaura.model.database.Track
 import com.cliffracertech.soundaura.ui.MarqueeText
-import kotlinx.coroutines.CoroutineScope
 
 /** The subclasses of PlaylistDialog (i.e. [Rename], [PlaylistOptions],
  * and [Remove]) contain all of the state and callbacks needed to display
@@ -43,27 +40,20 @@ sealed class PlaylistDialog(
     val onDismissRequest: () -> Unit,
 ) {
     /**
-     * The rename dialog for a playlist. Rename implements [NamingState], and
-     * can therefore be used as the state parameter for a [NamingDialog].
+     * The rename dialog for a playlist.
      *
      * @param target The [Playlist] that is the target of the dialog
-     * @param validator The [Validator] to use for validation of the new name
-     * @param coroutineScope A [CoroutineScope] to use for background work.
-     * @param onDismissRequest The callback that should be invoked when the dialog's
-     *     cancel button is clicked or a back button click or gesture is performed
-     * @param onNameValidated The callback that will be invoked upon a successful
-     *     validation of the [Playlist]'s new name after [NamingState.finalize] is
-     *     called with a valid name.
+     * @param namingState A [ValidatedNamingState] instance. This
+     *     can be used for the state parameter in a [RenameDialog].
+     * @param onDismissRequest The callback that should be invoked
+     *     when the dialog's cancel button is clicked or a back
+     *     button click or gesture is performed
      */
     class Rename(
         target: Playlist,
-        validator: Validator<String>,
-        coroutineScope: CoroutineScope,
+        val namingState: ValidatedNamingState,
         onDismissRequest: () -> Unit,
-        private val onNameValidated: suspend (String) -> Unit,
-    ): PlaylistDialog(target, onDismissRequest),
-       NamingState by ValidatedNamingState(
-           validator, coroutineScope, onNameValidated, onDismissRequest)
+    ): PlaylistDialog(target, onDismissRequest)
 
     /**
      * The 'file chooser' step. This step can appear when the add button of
@@ -169,9 +159,10 @@ sealed class PlaylistDialog(
 ) = when (dialogState) {
     null -> {}
     is Rename -> NamingDialog(
+        onDismissRequest = dialogState.onDismissRequest,
         modifier = modifier,
         title = stringResource(R.string.default_rename_dialog_title),
-        state = dialogState)
+        state = dialogState.namingState)
     is FileChooser -> SystemFileChooser(onFilesSelected = dialogState.onFilesChosen)
     is PlaylistOptions -> PlaylistOptionsDialog(
         modifier = modifier,

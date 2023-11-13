@@ -138,14 +138,9 @@ import javax.inject.Inject
         override fun onRenameClick(playlist: Playlist) {
             shownDialog = PlaylistDialog.Rename(
                 target = playlist,
-                validator = modifyLibrary.renameValidator(playlist.name, scope),
-                coroutineScope = scope,
-                onDismissRequest = ::dismissDialog,
-                onNameValidated = { validatedName ->
-                    dismissDialog()
-                    modifyLibrary.renamePlaylist(
-                        from = playlist.name, to = validatedName)
-                })
+                namingState = modifyLibrary.renameState(
+                    playlist.name, scope, ::dismissDialog),
+                onDismissRequest = ::dismissDialog)
         }
         override fun onExtraOptionsClick(playlist: Playlist) {
             scope.launch {

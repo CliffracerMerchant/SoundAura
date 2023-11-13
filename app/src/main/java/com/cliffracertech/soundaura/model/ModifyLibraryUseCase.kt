@@ -4,6 +4,7 @@
 package com.cliffracertech.soundaura.model
 
 import com.cliffracertech.soundaura.R
+import com.cliffracertech.soundaura.dialog.ValidatedNamingState
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.Track
 import com.cliffracertech.soundaura.model.database.playlistRenameValidator
@@ -30,8 +31,22 @@ class ModifyLibraryUseCase(
         dao.setVolume(playlistName, newVolume)
     }
 
-    fun renameValidator(oldName: String, scope: CoroutineScope) =
-        playlistRenameValidator(dao, scope, oldName)
+    /** Return a [ValidatedNamingState] that can be used to rename the
+     * playlist whose old name matches [oldName]. [onFinished] will be
+     * called when the renaming ends, successfully or otherwise, and
+     * can be used, e.g., to dismiss a rename dialog. */
+    fun renameState(
+        oldName: String,
+        scope: CoroutineScope,
+        onFinished: () -> Unit
+    ) = ValidatedNamingState(
+        validator = playlistRenameValidator(dao, oldName, scope),
+        coroutineScope = scope,
+        onNameValidated = { newName ->
+            if (newName != oldName)
+                dao.rename(oldName, newName)
+            onFinished()
+        })
 
     /** Set the playlist whose name matches [name] to have a shuffle on/off
      * state matching [shuffle], and its track list to match [tracks]. While

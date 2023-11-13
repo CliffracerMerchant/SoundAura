@@ -54,9 +54,6 @@ data class PlaylistTrack(
     val trackUri: Uri,
     val playlistOrder: Int)
 
-internal fun List<Uri>.toPlaylistTrackList(playlistName: String) =
-    mapIndexed { index, uri -> PlaylistTrack(playlistName, uri, index) }
-
 @Entity(tableName = "playlist")
 data class Playlist(
     /** The name of the [Playlist]. */
@@ -158,8 +155,8 @@ fun newPlaylistNameValidator(
  */
 fun playlistRenameValidator(
     dao: PlaylistDao,
-    coroutineScope: CoroutineScope,
     oldName: String,
+    coroutineScope: CoroutineScope,
 ) = Validator(
     initialValue = oldName,
     coroutineScope = coroutineScope,

@@ -163,13 +163,18 @@ class AddPlaylistButtonViewModel(
     }
 }
 
+class NewPresetDialogState(
+    val namingState: ValidatedNamingState,
+    val onDismissRequest: () -> Unit)
+
 /**
  * A [ViewModel] that contains state and callbacks for a button to add presets.
  *
  * The method [onClick] should be used as the onClick callback for the
  * button being used to add presets. If the property [newPresetDialogState]
- * is not null, then its [ValidatedNamingState] value should be used as
- * the state parameter for a shown [NamingDialog].
+ * is not null, then its [NewPresetDialogState]'s onDismissRequest and
+ * namingState properties should be used as the onDismissRequest and state
+ * parameters, respectively, for a shown [NamingDialog].
  */
 @HiltViewModel class AddPresetButtonViewModel(
     private val presetDao: PresetDao,
@@ -188,7 +193,7 @@ class AddPlaylistButtonViewModel(
 
     private val scope = coroutineScope ?: viewModelScope
 
-    var newPresetDialogState by mutableStateOf<ValidatedNamingState?>(null)
+    var newPresetDialogState by mutableStateOf<NewPresetDialogState?>(null)
         private set
 
     private val activeTracksIsEmpty by playlistDao
@@ -199,16 +204,16 @@ class AddPlaylistButtonViewModel(
     fun onClick() { when {
         activeTracksIsEmpty -> messageHandler.postMessage(
             R.string.preset_cannot_be_empty_warning_message)
-        else -> newPresetDialogState = ValidatedNamingState(
-            validator = newPresetNameValidator(presetDao, scope),
-            coroutineScope = scope,
-            onNameValidated = { validatedName ->
-                newPresetDialogState = null
-                presetDao.savePreset(validatedName)
-                activePresetState.setName(validatedName)
-            }, onCancel = {
-                newPresetDialogState = null
-            })
+        else -> newPresetDialogState = NewPresetDialogState(
+            namingState = ValidatedNamingState(
+                validator = newPresetNameValidator(presetDao, scope),
+                coroutineScope = scope,
+                onNameValidated = { validatedName ->
+                    newPresetDialogState = null
+                    presetDao.savePreset(validatedName)
+                    activePresetState.setName(validatedName)
+                }),
+            onDismissRequest = { newPresetDialogState = null })
     }}
 }
 
@@ -249,11 +254,12 @@ enum class AddButtonTarget { Playlist, Preset }
 
     }
 
-    addPlaylistViewModel.dialogStep?.let {
-        AddLocalFilesDialog(it)
-    }
+    addPlaylistViewModel.dialogStep?.let { AddLocalFilesDialog(it) }
 
     addPresetViewModel.newPresetDialogState?.let {
-        NamingDialog(it, title = stringResource(R.string.create_new_preset_dialog_title))
+        NamingDialog(
+            onDismissRequest = it.onDismissRequest,
+            state = it.namingState,
+            title = stringResource(R.string.create_new_preset_dialog_title))
     }
 }
