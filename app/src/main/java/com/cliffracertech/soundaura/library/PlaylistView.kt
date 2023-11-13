@@ -6,9 +6,6 @@ package com.cliffracertech.soundaura.library
 import androidx.annotation.FloatRange
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.with
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -142,11 +139,16 @@ interface PlaylistViewCallback {
         val volumeSliderIsBeingPressed by volumeSliderInteractionSource.collectIsPressedAsState()
         val volumeSliderIsBeingDragged by volumeSliderInteractionSource.collectIsDraggedAsState()
 
+        // A Box is used instead of a column so that the MarqueeText for
+        // the playlist name can partially overlap (only the part below
+        // the text baseline) with the volume slider to save space.
         Box(Modifier.weight(1f)) {
             // 1dp start padding is required to make the text align with the volume icon
-            MarqueeText(text = playlist.name, style = MaterialTheme.typography.h5,
-                        modifier = Modifier.padding(start = 1.dp, top = 6.dp)
-                                           .paddingFromBaseline(bottom = 48.dp))
+            MarqueeText(text = playlist.name,
+                        style = MaterialTheme.typography.h5,
+                        modifier = Modifier
+                            .padding(start = 1.dp, top = 10.dp)
+                            .paddingFromBaseline(bottom = 48.dp))
             VolumeSliderOrErrorMessage(
                 volume = volumeSliderValue,
                 onVolumeChange = { volume ->
@@ -242,38 +244,39 @@ interface PlaylistViewCallback {
     onVolumeChangeFinished: (() -> Unit)? = null,
 ) = AnimatedContent(
     targetState = errorMessage != null,
-    modifier = modifier,
-    transitionSpec = { fadeIn() with fadeOut() },
+    modifier = modifier.minTouchTargetSize(),
     label = "PlaylistView error message fade in/out",
 ) { hasError ->
-    if (hasError) {
-        // 0.5dp start padding is required to make the text
-        // align with where the volume icon would appear if
-        // there were no error message.
-        Text(text = errorMessage ?: "",
-             color = MaterialTheme.colors.error,
-             style = MaterialTheme.typography.body1,
-             maxLines = 1, overflow = TextOverflow.Ellipsis,
-             modifier = Modifier.padding(start = (0.5).dp)
-                                .paddingFromBaseline(bottom = 18.dp))
-    } else Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(imageVector = Icons.Default.VolumeUp,
-             contentDescription = null,
-             modifier = Modifier.size(20.dp),
-             tint = MaterialTheme.colors.primaryVariant)
-        GradientSlider(
-            value = volume,
-            onValueChange = onVolumeChange,
-            onValueChangeFinished = { onVolumeChangeFinished?.invoke() },
-            interactionSource = sliderInteractionSource,
-            colors = GradientSliderDefaults.colors(
-                thumbColor = MaterialTheme.colors.primaryVariant,
-                thumbColorEnd = MaterialTheme.colors.secondaryVariant,
-                activeTrackBrush = Brush.horizontalGradient(listOf(
-                    MaterialTheme.colors.primaryVariant,
-                    MaterialTheme.colors.secondaryVariant))
-            ))
-
+    // For some reason setting the contentAlignment on the AnimatedContent doesn't
+    // seem to work, so this inner box is necessary to make the error message
+    // appear vertically centered in the space where the volume slider would be
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (hasError) Text(
+            text = errorMessage ?: "",
+            color = MaterialTheme.colors.error,
+            style = MaterialTheme.typography.body1,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+            // 1dp start padding is required to make the text
+            // align with where the volume icon would appear if
+            // there were no error message.
+            modifier = Modifier.padding(start = 1.dp))
+        else {
+            Icon(imageVector = Icons.Default.VolumeUp,
+                 contentDescription = null,
+                 modifier = Modifier.size(20.dp),
+                 tint = MaterialTheme.colors.primaryVariant)
+            GradientSlider(
+                value = volume,
+                onValueChange = onVolumeChange,
+                onValueChangeFinished = { onVolumeChangeFinished?.invoke() },
+                interactionSource = sliderInteractionSource,
+                colors = GradientSliderDefaults.colors(
+                    thumbColor = MaterialTheme.colors.primaryVariant,
+                    thumbColorEnd = MaterialTheme.colors.secondaryVariant,
+                    activeTrackBrush = Brush.horizontalGradient(
+                        listOf(MaterialTheme.colors.primaryVariant,
+                               MaterialTheme.colors.secondaryVariant))))
+        }
     }
 }
 
@@ -382,7 +385,7 @@ fun LightTrackViewPreview() = SoundAuraTheme(darkTheme = false) {
     PlaylistView(
         callback = rememberPlaylistViewCallback(),
         playlist = Playlist(
-            name = "Track",
+            name = "Playlist 1",
             isActive = false,
             volume = 0.5f,
             hasError = false,
@@ -394,7 +397,7 @@ fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme = true) {
     PlaylistView(
         callback = rememberPlaylistViewCallback(),
         playlist = Playlist(
-            name = "Playlist",
+            name = "Playlist 2",
             isActive = true,
             volume = 0.25f,
             hasError = false,
@@ -406,7 +409,7 @@ fun LightTrackErrorPreview() = SoundAuraTheme(darkTheme = false) {
     PlaylistView(
         callback = rememberPlaylistViewCallback(),
         playlist = Playlist(
-            name = "Track 3",
+            name = "Playlist 3",
             isActive = false,
             volume = 1.00f,
             hasError = true,
@@ -418,7 +421,7 @@ fun DarkTrackErrorPreview() = SoundAuraTheme(darkTheme = true) {
     PlaylistView(
         callback = rememberPlaylistViewCallback(),
         playlist = Playlist(
-            name = "Track 4",
+            name = "Playlist 4",
             isActive = false,
             volume = 1.00f,
             hasError = true,
