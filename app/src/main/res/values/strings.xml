@@ -21,11 +21,11 @@
     <string name="search">Search</string>
     <string name="sort_options_description">Open sorting options</string>
 
-    <string name="empty_track_list_message">Your library is empty. Tap
+    <string name="empty_library_message">Your library is empty. Tap
         the add button below to add local files to your library.</string>
-    <string name="add_track_to_mix_description">Add %1$s to sound mix</string>
-    <string name="remove_track_from_mix_description">Remove %1$s from sound mix</string>
-    <string name="file_error_message">File missing/corrupt</string>
+    <string name="set_playlist_active_description">Add %1$s to sound mix</string>
+    <string name="set_playlist_inactive_description">Remove %1$s from sound mix</string>
+    <string name="playlist_error_message">Files missing/corrupt</string>
     <string name="item_options_button_description">%1$s more options</string>
     <string name="remove_item_description">Remove %1$s</string>
 
@@ -44,6 +44,7 @@
     <string name="playlist_shuffle_switch_title">Shuffle</string>
     <string name="playlist_shuffle_switch_description">Toggle shuffle on/off</string>
     <string name="playlist_track_handle_description">Reorder track %1$s</string>
+    <string name="playlist_track_error_message">File missing/corrupt: %1$s</string>
     <string name="playlist_track_delete_description">Remove %1$s</string>
     <string name="playlist_add_tracks_button_description">Add tracks to %1$s</string>
 

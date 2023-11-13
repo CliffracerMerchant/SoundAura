@@ -74,7 +74,7 @@ import javax.inject.Inject
             null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                 CircularProgressIndicator(Modifier.size(50.dp))
             } true -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                Text(stringResource(R.string.empty_track_list_message),
+                Text(stringResource(R.string.empty_library_message),
                      modifier = Modifier.width(300.dp),
                      textAlign = TextAlign.Justify)
             } else -> LazyColumn(

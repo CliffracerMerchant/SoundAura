@@ -127,8 +127,8 @@ interface PlaylistViewCallback {
             isAdded = playlist.isActive,
             contentDescription = if (playlist.hasError) null else {
                 val id = if (playlist.isActive)
-                             R.string.remove_track_from_mix_description
-                         else R.string.add_track_to_mix_description
+                             R.string.set_playlist_inactive_description
+                         else R.string.set_playlist_active_description
                 stringResource(id, playlist.name)
             }, onAddRemoveClick = {
                 callback.onAddRemoveButtonClick(playlist)
@@ -159,7 +159,7 @@ interface PlaylistViewCallback {
                 }, modifier = Modifier.align(Alignment.BottomStart),
                 sliderInteractionSource = volumeSliderInteractionSource,
                 errorMessage = if (!playlist.hasError) null else
-                    stringResource(R.string.file_error_message))
+                    stringResource(R.string.playlist_error_message))
         }
         PlaylistViewEndContent(
             content = when {
