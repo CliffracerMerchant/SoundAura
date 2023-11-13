@@ -6,6 +6,7 @@ package com.cliffracertech.soundaura.model
 import android.net.Uri
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.model.database.PlaylistDao
+import com.cliffracertech.soundaura.model.database.Track
 import com.cliffracertech.soundaura.model.database.TrackNamesValidator
 import com.cliffracertech.soundaura.model.database.newPlaylistNameValidator
 import kotlinx.coroutines.CoroutineScope
@@ -68,11 +69,12 @@ class AddToLibraryUseCase(
     suspend fun addPlaylist(
         name: String,
         shuffle: Boolean,
-        tracks: List<Uri>
+        tracks: List<Track>
     ) {
-        val newTracks = dao.filterNewTracks(tracks)
+        val trackUris = tracks.map(Track::uri)
+        val newUris = dao.filterNewTracks(trackUris)
         val rejectedTracks = permissionHandler.acquirePermissionsFor(
-            uris = newTracks, allowPartial = false)
+            uris = newUris, allowPartial = false)
         if (rejectedTracks.isEmpty())
             dao.insertPlaylist(name, shuffle, tracks)
         else messageHandler.postMessage(StringResource(

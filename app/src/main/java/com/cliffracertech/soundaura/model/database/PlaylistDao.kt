@@ -35,16 +35,18 @@ private const val librarySelect =
 
     /** Insert a single [Playlist] whose [Playlist.name] and [Playlist.shuffle]
      * vales will be equal to [playlistName] and [shuffle], respectively. The
-     * [Uri]s in [trackUris] will be added as the contents of the playlist. */
+     * [Track]s in [tracks] will be added as the contents of the playlist. */
     @Transaction
     open suspend fun insertPlaylist(
         playlistName: String,
         shuffle: Boolean,
-        trackUris: List<Uri>
+        tracks: List<Track>
     ) {
         insertPlaylistName(Playlist(playlistName, shuffle))
-        insertTracks(trackUris.map(::Track))
-        insertPlaylistTracks(trackUris.toPlaylistTrackList(playlistName))
+        insertTracks(tracks)
+        insertPlaylistTracks(tracks.mapIndexed { index, track ->
+            PlaylistTrack(playlistName, track.uri, index)
+        })
     }
 
     /** Insert a collection of new single-track [Playlist]s. The entries of
@@ -78,7 +80,7 @@ private const val librarySelect =
      * @return the [List] of [Uri]s that are no longer a part of any playlist */
     @Transaction
     open suspend fun deletePlaylist(name: String): List<Uri> {
-        val removableTracks = getUniqueTracks(name)
+        val removableTracks = getUniqueUris(name)
         deletePlaylistName(name)
         // playlistTrack.playlistName has an 'on delete: cascade' policy,
         // so the playlistTrack rows don't need to be deleted manually
@@ -94,27 +96,36 @@ private const val librarySelect =
     abstract suspend fun setPlaylistShuffle(playlistName: String, enabled: Boolean)
 
     /**
-     * Set the [Playlist] whose [Playlist.name] property matches [playlistName]
-     * to have a [Playlist.shuffle] value equal to [shuffleEnabled], and
-     * overwrite its tracks to be equal to [newTracks].
+     * Set the playlist whose [Playlist.name] property matches [playlistName] to
+     * have a [Playlist.shuffle] value equal to [shuffleEnabled], and overwrite
+     * its tracks to be equal to [newTracks]. If the list of tracks that can be
+     * removed (i.e. that aren't in [newTracks] and are not a part of any other
+     * playlist) has already been obtained, it can be passed as [removableUris]
+     * to prevent the database from needing to recalculate this.
      *
-     * @return The [List] of [Uri]s that are no longer in any [Playlist].
+     * @return The [List] of [Uri]s that are no longer in any [Playlist] after the change.
      */
     @Transaction
     open suspend fun setPlaylistShuffleAndContents(
         playlistName: String,
         shuffleEnabled: Boolean,
-        newTracks: List<Uri>,
+        newTracks: List<Track>,
+        removableUris: List<Uri>? = null,
     ): List<Uri> {
-        val removableTracks = getUniqueTracksNotIn(newTracks, playlistName)
-        deleteTracks(removableTracks)
-        insertTracks(newTracks.map(::Track))
+        val removedUris = removableUris ?: run {
+            val newUris = newTracks.map(Track::uri)
+            getUniqueUrisNotIn(newUris, playlistName)
+        }
+        deleteTracks(removedUris)
+        insertTracks(newTracks)
 
         deletePlaylistTracks(playlistName)
-        insertPlaylistTracks(newTracks.toPlaylistTrackList(playlistName))
+        insertPlaylistTracks(newTracks.mapIndexed { index, track ->
+            PlaylistTrack(playlistName, track.uri, index)
+        })
 
         setPlaylistShuffle(playlistName, shuffleEnabled)
-        return removableTracks
+        return removedUris
     }
 
     /** Return the track uris of the [Playlist] identified by
@@ -122,14 +133,14 @@ private const val librarySelect =
     @Query("SELECT trackUri FROM playlistTrack " +
            "WHERE playlistName = :playlistName " +
            "GROUP BY trackUri HAVING COUNT(playlistName) = 1")
-    protected abstract suspend fun getUniqueTracks(playlistName: String): List<Uri>
+    protected abstract suspend fun getUniqueUris(playlistName: String): List<Uri>
 
     /** Return the track uris of the [Playlist] identified by [playlistName]
      * that are not in any other [Playlist]s and are not in [exceptions]. */
     @Query("SELECT trackUri FROM playlistTrack " +
            "WHERE playlistName = :playlistName AND trackUri NOT IN (:exceptions) " +
            "GROUP BY trackUri HAVING COUNT(playlistName) = 1")
-    abstract suspend fun getUniqueTracksNotIn(
+    abstract suspend fun getUniqueUrisNotIn(
         exceptions: List<Uri>,
         playlistName: String
     ): List<Uri>

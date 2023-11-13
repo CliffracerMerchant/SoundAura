@@ -44,7 +44,7 @@
     <string name="playlist_shuffle_switch_title">Shuffle</string>
     <string name="playlist_shuffle_switch_description">Toggle shuffle on/off</string>
     <string name="playlist_track_handle_description">Reorder track %1$s</string>
-    <string name="playlist_track_error_message">File missing/corrupt: %1$s</string>
+    <string name="playlist_track_error_message">File missing/corrupt:</string>
     <string name="playlist_track_delete_description">Remove %1$s</string>
     <string name="playlist_add_tracks_button_description">Add tracks to %1$s</string>
 

@@ -42,6 +42,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.runtime.Composable
@@ -55,14 +56,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
 import com.cliffracertech.soundaura.R
+import com.cliffracertech.soundaura.model.database.Track
 import com.cliffracertech.soundaura.rememberMutableStateOf
 import com.cliffracertech.soundaura.ui.HorizontalDivider
 import com.cliffracertech.soundaura.ui.MarqueeText
@@ -147,11 +152,15 @@ import java.io.File
     Icon(minusIcon, contentDescription, Modifier.rotate(angle), iconTint)
 }
 
-/** A representation of a track in a mutable playlist. The Boolean
- * parameter represents whether the track will be removed from the
- * playlist once changes are applied. */
-typealias RemovablePlaylistTrack = Pair<Uri, Boolean>
-val RemovablePlaylistTrack.uri get() = first
+/** A representation of a track in a mutable playlist. The corresponding
+ * [Track] can be accessed via the [track] property, or the [Track]'s
+ * uri and hasError properties can be accessed through the properties
+ * [uri] and [hasError]. [markedForRemoval] represents whether the track
+ * will be removed from the playlist once changes are applied. */
+typealias RemovablePlaylistTrack = Pair<Track, Boolean>
+val RemovablePlaylistTrack.track get() = first
+val RemovablePlaylistTrack.uri get() = first.uri
+val RemovablePlaylistTrack.hasError get() = first.hasError
 val RemovablePlaylistTrack.markedForRemoval get() = second
 
 /**
@@ -163,9 +172,10 @@ val RemovablePlaylistTrack.markedForRemoval get() = second
  * method [applyChanges] will return a [List] of the [Uri]s in their new
  * order and without the tracks that were marked for removal.
  */
-class MutablePlaylist(trackUris: List<Uri>) {
-    private val mutableTracks = trackUris.map { it to false }.toMutableStateList()
-    private var trackCount = trackUris.size
+class MutablePlaylist(tracks: List<Track>) {
+    private val mutableTracks = tracks.map { it to false }
+                                      .toMutableStateList()
+    private var trackCount = tracks.size
     val tracks get() = mutableTracks as List<RemovablePlaylistTrack>
 
     fun moveTrack(fromIndex: Int, toIndex: Int) {
@@ -174,7 +184,8 @@ class MutablePlaylist(trackUris: List<Uri>) {
     }
 
     /** Toggle the 'to be removed' state for the track at [index]. If [index]
-     * points to the last remaining track in [tracks], the operation will fail. */
+     * points to the last remaining track not already marked for removal, the
+     * operation will fail. */
     fun toggleTrackRemoval(index: Int) {
         if (index !in tracks.indices) return
         val removing = !mutableTracks[index].markedForRemoval
@@ -182,12 +193,13 @@ class MutablePlaylist(trackUris: List<Uri>) {
 
         if (removing) trackCount--
         else          trackCount++
-        val uri = mutableTracks[index].uri
-        mutableTracks[index] = uri to removing
+        val track = mutableTracks[index].track
+        mutableTracks[index] = track to removing
     }
 
-    fun applyChanges() = mutableTracks
-        .mapNotNull { if (it.markedForRemoval) null else it.uri }
+    fun applyChanges() = mutableTracks.mapNotNull {
+        if (it.markedForRemoval) null else it.track
+    }
 }
 
 /**
@@ -211,16 +223,16 @@ class MutablePlaylist(trackUris: List<Uri>) {
     HorizontalDivider(Modifier.padding(horizontal = 8.dp))
     Row(modifier = Modifier.fillMaxWidth().height(48.dp)) {
         PlaylistOptionsTrackCount(mutablePlaylist.tracks.size, onAddButtonClick)
-        VerticalDivider(heightFraction = 0.8f)
+        VerticalDivider(Modifier.padding(vertical = 8.dp))
         PlaylistOptionsShuffleSwitch(shuffleEnabled, onShuffleClick)
     }
     HorizontalDivider(Modifier.padding(horizontal = 8.dp))
     // The track list ordering must have its height restricted to
     // prevent a crash due to nested infinite height layouts. The
     // dialog's title, shuffle switch, and button row should all
-    // have heights of 56.dp, for a total height of 56.dp * 3. An
-    // extra 56.dp padding added to it makes it 56.dp * 4 = 224.dp.
-    val maxHeight = LocalConfiguration.current.screenHeightDp.dp - 224.dp
+    // have heights of 48.dp, for a total height of 48.dp * 3. An
+    // extra 48.dp padding added to it makes it 48.dp * 4 = 192.dp.
+    val maxHeight = LocalConfiguration.current.screenHeightDp.dp - 192.dp
     PlaylistOptionsTrackList(
         modifier = Modifier.heightIn(max = maxHeight),
         mutablePlaylist = mutablePlaylist,
@@ -248,7 +260,7 @@ class MutablePlaylist(trackUris: List<Uri>) {
                 onClick = onClick)
             .padding(8.dp)
             .background(MaterialTheme.colors.primaryVariant,
-                MaterialTheme.shapes.small),
+                        MaterialTheme.shapes.small),
             contentAlignment = Alignment.Center
         ) {
             Icon(imageVector = Icons.Default.Add,
@@ -296,14 +308,15 @@ class MutablePlaylist(trackUris: List<Uri>) {
         itemsIndexed(
             items = mutablePlaylist.tracks,
             key = { _, track -> track.uri }
-        ) { index, (uri, markedForRemoval) ->
-            ReorderableItem(reorderableState, key = uri) {isDragging ->
+        ) { index, (track, markedForRemoval) ->
+            ReorderableItem(reorderableState, key = track.uri) {isDragging ->
                 val elevation by animateDpAsState(
                     targetValue = if (isDragging) 8.dp else 0.dp,
                     label = "playlist track elevation")
                 val color by animateColorAsState(
-                    targetValue = if (markedForRemoval) MaterialTheme.colors.error
-                                  else                  MaterialTheme.colors.surface,
+                    targetValue = MaterialTheme.colors.error
+                        .copy(alpha = if (markedForRemoval) 0.8f else 0f)
+                        .compositeOver(MaterialTheme.colors.surface),
                     label = "playlist track background color")
                 val shape = MaterialTheme.shapes.small
 
@@ -315,19 +328,24 @@ class MutablePlaylist(trackUris: List<Uri>) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Uri.lastPathSegment seems to not work with some Uris for some reason
-                    val lastPathSegment = uri.path
-                        ?.substringAfterLast(File.separatorChar).orEmpty()
-                    Icon(imageVector = Icons.Default.DragHandle,
+                    val name = DocumentFile.fromSingleUri(
+                            LocalContext.current, track.uri
+                        )!!.name.orEmpty()
+                    Icon(imageVector = if (track.hasError) Icons.Default.Error
+                                       else                Icons.Default.DragHandle,
                         contentDescription = stringResource(
-                            R.string.playlist_track_handle_description, lastPathSegment),
+                            R.string.playlist_track_handle_description, name),
                         modifier = Modifier
                             .minTouchTargetSize()
                             .detectReorder(reorderableState)
-                            .padding(10.dp))
+                            .padding(10.dp),
+                        tint = if (track.hasError) MaterialTheme.colors.error
+                               else                LocalContentColor.current)
 
-                    if (uri.path.orEmpty().length > lastPathSegment.length)
-                        Text("…${File.separatorChar}")
-                    MarqueeText(lastPathSegment, Modifier.weight(1f))
+                    val errorMessage = if (!track.hasError) "" else
+                        stringResource(R.string.playlist_track_error_message) + " "
+                    MarqueeText("$errorMessage…${File.separatorChar}$name",
+                                Modifier.weight(1f))
 
                     if (!allowDeletion)
                         Spacer(Modifier.width(16.dp))
@@ -335,7 +353,7 @@ class MutablePlaylist(trackUris: List<Uri>) {
                         icon = if (markedForRemoval) Icons.Default.Undo
                                else                  Icons.Default.Delete,
                         contentDescription = stringResource(
-                            R.string.playlist_track_delete_description),
+                            R.string.playlist_track_delete_description, name),
                         iconPadding = if (markedForRemoval) 11.dp
                                       else                  13.dp,
                         onClick = { mutablePlaylist.toggleTrackRemoval(index) })
@@ -348,11 +366,9 @@ class MutablePlaylist(trackUris: List<Uri>) {
 @Preview @Composable fun PlaylistOptionsPreview() = SoundAuraTheme {
     var shuffleEnabled by rememberMutableStateOf(false)
     val mutablePlaylist = remember {
-        MutablePlaylist(List(5) {
-            // For some reason the Uri path segment methods don't work
-            // properly if the Uri was created directly from a string
-            // instead of from a File
-            File("file:/directory/subdirectory/extra_super_duper_really_long_file_$it").toUri()
+        MutablePlaylist(List(5) { Track(
+            uri = "file:/directory/subdirectory/extra_super_duper_really_long_file_name_$it".toUri(),
+            hasError = it % 2 == 1)
         })
     }
     Surface { Column(Modifier.padding(vertical = 16.dp)) {

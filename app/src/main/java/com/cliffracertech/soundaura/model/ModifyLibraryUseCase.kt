@@ -3,9 +3,9 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura.model
 
-import android.net.Uri
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.model.database.PlaylistDao
+import com.cliffracertech.soundaura.model.database.Track
 import com.cliffracertech.soundaura.model.database.playlistRenameValidator
 import kotlinx.coroutines.CoroutineScope
 import javax.inject.Inject
@@ -33,19 +33,24 @@ class ModifyLibraryUseCase(
     fun renameValidator(oldName: String, scope: CoroutineScope) =
         playlistRenameValidator(dao, scope, oldName)
 
-    suspend fun renamePlaylist(from: String, to: String) {
-        if (from != to) dao.rename(from, to)
-    }
-
+    /** Set the playlist whose name matches [name] to have a shuffle on/off
+     * state matching [shuffle], and its track list to match [tracks]. While
+     * the playlist's shuffle state will always be set, the track list update
+     * operation can fail if the [UriPermissionHandler] in use indicates that
+     * permissions could not be obtained for all of the new tracks (e.g. if
+     * the permitted permission allowance has been used up). In this case,
+     * an explanatory message will be displayed using the [MessageHandler]
+     * provided in the constructor.*/
     suspend fun setPlaylistShuffleAndTracks(
         name: String,
         shuffle: Boolean,
-        tracks: List<Uri>
+        tracks: List<Track>
     ) {
-        val newTracks = dao.filterNewTracks(tracks)
-        val removableTracks = dao.getUniqueTracksNotIn(tracks, name)
+        val uris = tracks.map(Track::uri)
+        val newTracks = dao.filterNewTracks(uris)
+        val removableUris = dao.getUniqueUrisNotIn(uris, name)
         val postOpPermissionAllowance = permissionHandler.getRemainingAllowance() +
-                                        removableTracks.size - newTracks.size
+                                        removableUris.size - newTracks.size
         if (postOpPermissionAllowance < 0) {
             messageHandler.postMessage(StringResource(
                 R.string.cant_modify_playlist_tracks_warning,
@@ -55,14 +60,14 @@ class ModifyLibraryUseCase(
             val removedUris = dao.setPlaylistShuffleAndContents(
                 playlistName = name,
                 shuffleEnabled = shuffle,
-                newTracks = tracks)
+                newTracks = tracks,
+                removableUris = removableUris)
             permissionHandler.releasePermissionsFor(removedUris)
             permissionHandler.acquirePermissionsFor(newTracks, allowPartial = false)
         }
     }
 
-    /** Remove the playlist whose name matches
-     * [name]. This operation always succeeds. */
+    /** Remove the playlist whose name matches [name]. */
     suspend fun removePlaylist(name: String) {
         val unusedTracks = dao.deletePlaylist(name)
         permissionHandler.releasePermissionsFor(unusedTracks)

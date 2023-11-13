@@ -131,7 +131,7 @@ sealed class PlaylistDialog(
         val onAddFilesClick: () -> Unit,
         private val onConfirm: (
             shuffleEnabled: Boolean,
-            newTrackList: List<Uri>,
+            newTrackList: List<Track>,
         ) -> Unit,
     ): PlaylistDialog(target, onDismissRequest) {
         var shuffleEnabled by mutableStateOf(shuffleEnabled)

@@ -193,7 +193,7 @@ sealed class AddLocalFilesDialogStep {
         tracks: List<Track>,
         override val onDismissRequest: () -> Unit,
         onBackClick: () -> Unit,
-        private val onFinish: (shuffleEnabled: Boolean, newTrackList: List<Uri>) -> Unit,
+        private val onFinish: (shuffleEnabled: Boolean, newTrackList: List<Track>) -> Unit,
     ): AddLocalFilesDialogStep() {
         var shuffleEnabled by mutableStateOf(false)
             private set
