@@ -80,11 +80,10 @@ data class Playlist(
     @ColumnInfo(defaultValue = "0")
     val hasError: Boolean = false,
 ) {
-    enum class Sort { NameAsc, NameDesc, OrderAdded;
+    enum class Sort { NameAsc, NameDesc;
         fun name(context: Context) = when (this) {
             NameAsc -> context.getString(R.string.name_ascending)
             NameDesc -> context.getString(R.string.name_descending)
-            OrderAdded -> context.getString(R.string.order_added)
         }
     }
 }

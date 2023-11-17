@@ -161,17 +161,11 @@ private const val librarySelect =
     @Query("$librarySelect ORDER BY name COLLATE NOCASE DESC")
     abstract fun getAllPlaylistsSortedByNameDesc(filter: String): Flow<List<LibraryPlaylist>>
 
-    @Query(librarySelect)
-    abstract fun getAllPlaylistsSortedByOrderAdded(filter: String): Flow<List<LibraryPlaylist>>
-
     @Query("$librarySelect ORDER BY isActive DESC, name COLLATE NOCASE ASC")
     abstract fun getAllPlaylistsSortedByActiveThenNameAsc(filter: String): Flow<List<LibraryPlaylist>>
 
     @Query("$librarySelect ORDER BY isActive DESC, name COLLATE NOCASE DESC")
     abstract fun getAllPlaylistsSortedByActiveThenNameDesc(filter: String): Flow<List<LibraryPlaylist>>
-
-    @Query("$librarySelect ORDER BY isActive DESC")
-    abstract fun getAllPlaylistsSortedByActiveThenOrderAdded(filter: String): Flow<List<LibraryPlaylist>>
 
     @Query("SELECT EXISTS(SELECT 1 FROM playlist WHERE isActive)")
     abstract fun getAtLeastOnePlaylistIsActive(): Flow<Boolean>

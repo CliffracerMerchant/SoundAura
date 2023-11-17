@@ -152,7 +152,6 @@
     <string name="show_active_playlists_first">Show active first</string>
     <string name="name_ascending">Name ascending</string>
     <string name="name_descending">Name descending</string>
-    <string name="order_added">Order added</string>
 
     <string name="play_button_long_click_hint_text">
         Hint: You can long press the play/pause button to set an automatic stop timer</string>

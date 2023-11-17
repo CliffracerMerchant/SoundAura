@@ -129,7 +129,7 @@ class LibraryViewModelTests {
         waitUntil { instance.playlists?.first() == testPlaylists.last() }
         assertThat(instance.playlists).containsExactlyElementsIn(testPlaylists.reversed()).inOrder()
 
-        dataStore.edit(playlistSortKey, PlaylistSort.OrderAdded.ordinal)
+        dataStore.edit(playlistSortKey, PlaylistSort.NameAsc.ordinal)
         waitUntil { instance.playlists?.first() == testPlaylists.first() }
         assertThat(instance.playlists).containsExactlyElementsIn(testPlaylists).inOrder()
     }
