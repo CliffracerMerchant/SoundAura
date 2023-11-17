@@ -27,6 +27,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.collectAsState
 import com.cliffracertech.soundaura.dialog.NamingDialog
+import com.cliffracertech.soundaura.dialog.NamingState
 import com.cliffracertech.soundaura.dialog.ValidatedNamingState
 import com.cliffracertech.soundaura.model.ActivePresetState
 import com.cliffracertech.soundaura.model.AddToLibraryUseCase
@@ -163,9 +164,14 @@ class AddPlaylistButtonViewModel(
     }
 }
 
+/** A state holder for a 'new preset dialog'. [NewPresetDialogState]
+ * implements [NamingState], and can therefore be used as the state
+ * parameter for a [NamingDialog]. The property [onDismissRequest]
+ * should be used for the same named [NamingDialog] parameter.*/
 class NewPresetDialogState(
-    val namingState: ValidatedNamingState,
-    val onDismissRequest: () -> Unit)
+    namingState: ValidatedNamingState,
+    val onDismissRequest: () -> Unit
+): NamingState by namingState
 
 /**
  * A [ViewModel] that contains state and callbacks for a button to add presets.
@@ -259,7 +265,7 @@ enum class AddButtonTarget { Playlist, Preset }
     addPresetViewModel.newPresetDialogState?.let {
         NamingDialog(
             onDismissRequest = it.onDismissRequest,
-            state = it.namingState,
+            state = it,
             title = stringResource(R.string.create_new_preset_dialog_title))
     }
 }

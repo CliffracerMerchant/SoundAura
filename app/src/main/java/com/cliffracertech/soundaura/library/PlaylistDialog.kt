@@ -20,6 +20,7 @@ import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.addbutton.SystemFileChooser
 import com.cliffracertech.soundaura.dialog.DialogWidth
 import com.cliffracertech.soundaura.dialog.NamingDialog
+import com.cliffracertech.soundaura.dialog.NamingState
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
 import com.cliffracertech.soundaura.dialog.ValidatedNamingState
 import com.cliffracertech.soundaura.library.PlaylistDialog.FileChooser
@@ -43,17 +44,19 @@ sealed class PlaylistDialog(
      * The rename dialog for a playlist.
      *
      * @param target The [Playlist] that is the target of the dialog
-     * @param namingState A [ValidatedNamingState] instance. This
-     *     can be used for the state parameter in a [RenameDialog].
+     * @param namingState A [ValidatedNamingState] instance. [Rename]
+     *     will implement [NamingState] using this, and can therefore
+     *     be used for the state parameter in a [RenameDialog].
      * @param onDismissRequest The callback that should be invoked
      *     when the dialog's cancel button is clicked or a back
      *     button click or gesture is performed
      */
     class Rename(
         target: Playlist,
-        val namingState: ValidatedNamingState,
+        namingState: ValidatedNamingState,
         onDismissRequest: () -> Unit,
-    ): PlaylistDialog(target, onDismissRequest)
+    ): PlaylistDialog(target, onDismissRequest),
+       NamingState by namingState
 
     /**
      * The 'file chooser' step. This step can appear when the add button of
@@ -162,7 +165,7 @@ sealed class PlaylistDialog(
         onDismissRequest = dialogState.onDismissRequest,
         modifier = modifier,
         title = stringResource(R.string.default_rename_dialog_title),
-        state = dialogState.namingState)
+        state = dialogState)
     is FileChooser -> SystemFileChooser(onFilesSelected = dialogState.onFilesChosen)
     is PlaylistOptions -> PlaylistOptionsDialog(
         modifier = modifier,

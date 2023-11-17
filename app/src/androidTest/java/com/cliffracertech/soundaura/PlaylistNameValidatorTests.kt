@@ -115,7 +115,7 @@ class PlaylistNameValidatorTests {
     }
 
     private fun initRenameValidator() {
-        instance = playlistRenameValidator(playlistDao, coroutineScope, existingName1)
+        instance = playlistRenameValidator(playlistDao, existingName1, coroutineScope)
     }
 
     @Test fun rename_validator_begins_with_existing_name_without_error() = runTest {

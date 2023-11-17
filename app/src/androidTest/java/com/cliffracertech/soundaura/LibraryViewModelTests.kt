@@ -48,7 +48,9 @@ class LibraryViewModelTests {
     private val scope = TestCoroutineScope()
     private val playlistSortKey = intPreferencesKey(PrefKeys.playlistSort)
     private val showActivePlaylistsFirstKey = booleanPreferencesKey(PrefKeys.showActivePlaylistsFirst)
+
     private val testUris = List(4) { "uri $it".toUri() }
+    private val testTracks = testUris.map(::Track)
     private val testPlaylistNames = List(5) { "playlist $it" }
     private val testPlaylists = List(5) {
         Playlist(
@@ -99,7 +101,7 @@ class LibraryViewModelTests {
             dao.insertPlaylist(
                 playlistName = testPlaylistNames.last(),
                 shuffle = true,
-                trackUris = testUris)
+                tracks = testTracks)
             waitUntil { instance.playlists?.size == 5 }
         }
     }

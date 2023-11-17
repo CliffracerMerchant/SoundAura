@@ -56,6 +56,7 @@ class AddPlaylistButtonViewModelTests {
     private val testUris = List(3) { "uri $it".toUri() }
     private suspend fun PlaylistDao.getPlaylistUris(name: String) =
         getPlaylistTracks(name).map(Track::uri)
+    private val testTracks = testUris.map(::Track)
 
     private val selectingFilesStep get() = instance.dialogStep as AddLocalFilesDialogStep.SelectingFiles
     private val addIndividuallyOrAsPlaylistStep get() =
@@ -217,7 +218,7 @@ class AddPlaylistButtonViewModelTests {
 
     @Test fun validating_track_names() = runTest {
         val existingTrackName = "existing track name"
-        playlistDao.insertPlaylist(existingTrackName, false, testUris)
+        playlistDao.insertPlaylist(existingTrackName, false, testTracks)
         advanceUntilIdle()
 
         goto_name_tracks_step_with_multiple_files()
@@ -263,7 +264,7 @@ class AddPlaylistButtonViewModelTests {
 
     @Test fun validating_playlist_names() = runTest {
         val playlistName = testUris.first().getDisplayName(context) + " playlist"
-        playlistDao.insertPlaylist(playlistName, false, testUris)
+        playlistDao.insertPlaylist(playlistName, false, testTracks)
         waitUntil { playlistDao.getPlaylistNames().first().isNotEmpty() }
 
         goto_name_playlist_step()
