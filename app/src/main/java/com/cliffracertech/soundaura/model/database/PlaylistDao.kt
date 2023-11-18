@@ -5,6 +5,8 @@ package com.cliffracertech.soundaura.model.database
 
 import android.net.Uri
 import androidx.room.*
+import androidx.sqlite.db.SimpleSQLiteQuery
+import androidx.sqlite.db.SupportSQLiteQuery
 import kotlinx.coroutines.flow.Flow
 
 typealias LibraryPlaylist = com.cliffracertech.soundaura.library.Playlist
@@ -131,25 +133,40 @@ private const val librarySelect =
     /** Return the track uris of the [Playlist] identified by
      * [playlistName] that are not in any other [Playlist]s. */
     @Query("SELECT trackUri FROM playlistTrack " +
-           "WHERE playlistName = :playlistName " +
-           "GROUP BY trackUri HAVING COUNT(playlistName) = 1")
+           "GROUP BY trackUri HAVING COUNT(playlistName) = 1 " +
+                             "AND playlistName = :playlistName")
     protected abstract suspend fun getUniqueUris(playlistName: String): List<Uri>
 
     /** Return the track uris of the [Playlist] identified by [playlistName]
      * that are not in any other [Playlist]s and are not in [exceptions]. */
     @Query("SELECT trackUri FROM playlistTrack " +
-           "WHERE playlistName = :playlistName AND trackUri NOT IN (:exceptions) " +
-           "GROUP BY trackUri HAVING COUNT(playlistName) = 1")
+           "WHERE trackUri NOT IN (:exceptions) " +
+           "GROUP BY trackUri HAVING COUNT(playlistName) = 1 " +
+                             "AND playlistName = :playlistName")
     abstract suspend fun getUniqueUrisNotIn(
         exceptions: List<Uri>,
         playlistName: String
     ): List<Uri>
 
-    @Query("WITH newTrack AS (SELECT :tracks AS uri) " +
-           "SELECT newTrack.uri FROM newTrack " +
-           "LEFT JOIN track ON track.uri = newTrack.uri " +
-           "WHERE track.uri IS NULL")
-    abstract suspend fun filterNewTracks(tracks: List<Uri>): List<Uri>
+    @RawQuery
+    protected abstract suspend fun filterNewTracks(query: SupportSQLiteQuery): List<Uri>
+
+    suspend fun filterNewTracks(tracks: List<Uri>): List<Uri> {
+        // The following query requires parentheses around each argument. This
+        // is not supported by Room, so the query must be made manually.
+        val query = StringBuilder()
+            .append("WITH newTrack(uri) AS (VALUES ")
+            .apply {
+                for (i in 0 until tracks.lastIndex)
+                    append("(?), ")
+            }.append("(?)) ")
+            .append("SELECT newTrack.uri FROM newTrack ")
+            .append("LEFT JOIN track ON track.uri = newTrack.uri ")
+            .append("WHERE track.uri IS NULL;")
+            .toString()
+        val args = Array(tracks.size) { tracks[it].toString() }
+        return filterNewTracks(SimpleSQLiteQuery(query, args))
+    }
 
     /** Return whether or not a [Playlist] whose name matches [name] exists. */
     @Query("SELECT EXISTS(SELECT name FROM playlist WHERE name = :name)")
