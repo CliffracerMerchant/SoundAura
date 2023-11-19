@@ -222,7 +222,7 @@ private const val librarySelect =
     @Query("SELECT playlistName FROM playlistTrack " +
            "JOIN track ON playlistTrack.trackUri = track.uri " +
            "GROUP BY playlistTrack.playlistName " +
-           "HAVING COUNT(NOT track.hasError) > 0")
+           "HAVING SUM(track.hasError) = COUNT(track.uri)")
     protected abstract suspend fun getPlaylistsWithNoValidTracks(): List<String>
 
     @Query("UPDATE playlist SET hasError = 1 WHERE name IN (:names)")
