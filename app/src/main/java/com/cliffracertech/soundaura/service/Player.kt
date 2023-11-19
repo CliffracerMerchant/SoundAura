@@ -128,12 +128,13 @@ class Player(
                 failedUris?.add(uri) ?: run {
                     failedUris = mutableListOf(uri)
                 }
-                nextIndex = if (nextIndex == uris.lastIndex) 0 else nextIndex++
+                nextIndex = if (nextIndex == uris.lastIndex) 0
+                            else nextIndex++
                 null
             }
         } while (player == null && nextIndex != startIndex)
 
-        failedUris?.let { onPlaybackFailure(it) }
+        failedUris?.let(onPlaybackFailure)
         return player
     }
 
@@ -164,10 +165,10 @@ class Player(
  * hasn't been called yet.
  *
  * The playing/paused/stopped state can be set for all [Player]s at once with
- * the methods [play], [pause], and [stop], respectively. The volume for
- * individual playlists can be set with the method [setPlayerVolume]. The
- * method [releaseAll] should be called before the PlayerSet is destroyed so
- * that all [Player] instances can be released first.
+ * the methods [play], [pause], and [stop]. The volume for individual playlists
+ * can be set with the method [setPlayerVolume]. The method [releaseAll] should
+ * be called before the PlayerMap is destroyed so that all [Player] instances
+ * can be released first.
  *
  * @param context A [Context] instance. Note that the context instance
  *     will be held onto for the lifetime of the [PlayerSet].
@@ -176,7 +177,7 @@ class Player(
  */
 class PlayerMap(
     private val context: Context,
-    private val onPlaybackFailure: (String, List<Uri>) -> Unit,
+    private val onPlaybackFailure: (uris: List<Uri>) -> Unit,
 ) {
     var isInitialized = false
         private set
@@ -207,10 +208,7 @@ class PlayerMap(
                 ?.apply { update(playlist) }
 
             playerMap[playlist.name] = existingPlayer ?:
-                Player(context, playlist, startPlaying,
-                       onPlaybackFailure = {
-                           onPlaybackFailure(playlist.name, it)
-                       })
+                Player(context, playlist, startPlaying, onPlaybackFailure)
         }
         oldMap.values.forEach(Player::release)
     }

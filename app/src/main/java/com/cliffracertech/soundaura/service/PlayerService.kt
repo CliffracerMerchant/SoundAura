@@ -100,9 +100,9 @@ class PlayerService: LifecycleService() {
     private var autoStopJob: Job? = null
     private var stopTime by mutableStateOf<Instant?>(null)
 
-    private val playerMap = PlayerMap(this) { playlistName, problemUris ->
+    private val playerMap = PlayerMap(this) { problemUris ->
         /* onPlayerCreationFailure = */lifecycleScope.launch {
-            playlistDao.setPlaylistTrackHasError(playlistName, problemUris)
+            playlistDao.setTracksHaveError(problemUris)
         }
     }
 

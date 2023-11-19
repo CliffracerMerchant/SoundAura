@@ -217,23 +217,20 @@ private const val librarySelect =
     abstract suspend fun setVolume(name: String, volume: Float)
 
     @Query("UPDATE track SET hasError = 1 WHERE uri in (:uris)")
-    protected abstract suspend fun setTracksHaveError(uris: List<Uri>)
+    protected abstract suspend fun setTracksHaveErrorPrivate(uris: List<Uri>)
 
-    @Query("SELECT NOT EXISTS(SELECT playlistName FROM playlistTrack " +
-                             "JOIN track ON playlistTrack.trackUri = track.uri " +
-                             "WHERE playlistName = :playlistName AND NOT track.hasError)")
-    protected abstract suspend fun playlistHasNoValidTracks(playlistName: String): Boolean
+    @Query("SELECT playlistName FROM playlistTrack " +
+           "JOIN track ON playlistTrack.trackUri = track.uri " +
+           "GROUP BY playlistTrack.playlistName " +
+           "HAVING COUNT(NOT track.hasError) > 0")
+    protected abstract suspend fun getPlaylistsWithNoValidTracks(): List<String>
 
-    @Query("UPDATE playlist SET hasError = 1 WHERE name = :playlistName")
-    protected abstract suspend fun setPlaylistHasError(playlistName: String)
+    @Query("UPDATE playlist SET hasError = 1 WHERE name IN (:names)")
+    protected abstract suspend fun setPlaylistsHaveError(names: List<String>)
 
     @Transaction
-    open suspend fun setPlaylistTrackHasError(
-        playlistName: String,
-        trackUris: List<Uri>
-    ) {
-        setTracksHaveError(trackUris)
-        if (playlistHasNoValidTracks(playlistName))
-            setPlaylistHasError(playlistName)
+    open suspend fun setTracksHaveError(trackUris: List<Uri>) {
+        setTracksHaveErrorPrivate(trackUris)
+        setPlaylistsHaveError(getPlaylistsWithNoValidTracks())
     }
 }
