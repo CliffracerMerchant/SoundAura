@@ -11,7 +11,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.with
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -69,6 +69,8 @@ import kotlinx.coroutines.delay
 internal const val tweenDuration = 250
 internal const val springStiffness = 600f
 
+fun <T> defaultSpring() = spring<T>(stiffness = springStiffness)
+
 fun Modifier.minTouchTargetSize() =
     sizeIn(minWidth = 48.dp, minHeight = 48.dp)
 
@@ -93,8 +95,8 @@ fun Modifier.minTouchTargetSize() =
     transitionSpec = {
         val enterOffset = { size: Int -> size / if (leftToRight) 1 else -1 }
         val exitOffset = { size: Int -> size / if (leftToRight) -4 else 4 }
-        slideInHorizontally(spring(stiffness = springStiffness), enterOffset) with
-        slideOutHorizontally(spring(stiffness = springStiffness), exitOffset)
+        slideInHorizontally(defaultSpring(), enterOffset) togetherWith
+        slideOutHorizontally(defaultSpring(), exitOffset)
     }, label = "SlideAnimatedContent left/right slide transition",
     content = content)
 

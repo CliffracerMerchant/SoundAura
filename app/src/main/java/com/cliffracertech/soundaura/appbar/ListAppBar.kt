@@ -7,19 +7,19 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.with
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.rememberMutableStateOf
 import com.cliffracertech.soundaura.ui.SimpleIconButton
+import com.cliffracertech.soundaura.ui.defaultSpring
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import com.cliffracertech.soundaura.ui.tweenDuration
 import kotlinx.collections.immutable.toImmutableList
@@ -87,8 +88,8 @@ import kotlinx.collections.immutable.toImmutableList
     // Back button
     AnimatedContent(
         targetState = onBackButtonClick != null,
-        transitionSpec = { slideInHorizontally { -it } + fadeIn() with
-                           slideOutHorizontally { -it } + fadeOut() },
+        transitionSpec = { slideInHorizontally(defaultSpring()) { -it }  togetherWith
+                           slideOutHorizontally(defaultSpring()) { -it } },
         contentAlignment = Alignment.Center,
         label = "Action bar back button appearance/disappearance",
     ) { backButtonVisible ->
@@ -101,27 +102,31 @@ import kotlinx.collections.immutable.toImmutableList
     }
 
     // Title / search query
-    AnimatedContent(// This outer crossfade is for when the search query appears/disappears.
+    Crossfade(
         targetState = searchQueryState.query != null,
         modifier = Modifier.weight(1f),
-        transitionSpec = { fadeIn(tween(tweenDuration)) with
-                           fadeOut(tween(tweenDuration)) },
-        contentAlignment = Alignment.CenterStart,
+        animationSpec = tween(tweenDuration),
         label = "Action bar search query appearance/disappearance",
     ) { queryIsNotNull ->
         if (queryIsNotNull) {
             SearchQueryView(searchQueryState.query ?: "",
                             searchQueryState.onQueryChange)
-        } else Crossfade(title, label = "Action bar title crossfade") {
-            Text(it, style = MaterialTheme.typography.h5, maxLines = 1)
+        } else Crossfade(
+            targetState = title,
+            animationSpec = tween(tweenDuration),
+            label = "Action bar title crossfade"
+        ) {
+            Text(text = it,
+                modifier = Modifier.height(48.dp).wrapContentHeight(),
+                style = MaterialTheme.typography.h5, maxLines = 1)
         } // This inner crossfade is for when the title changes.
     }
 
     // Right aligned content
     AnimatedVisibility(
         visible = showIconButtons,
-        enter = slideInHorizontally { it } + fadeIn(),
-        exit = slideOutHorizontally { it } + fadeOut(),
+        enter = slideInHorizontally(defaultSpring()) { it },
+        exit = slideOutHorizontally(defaultSpring()) { it },
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             // Search button
