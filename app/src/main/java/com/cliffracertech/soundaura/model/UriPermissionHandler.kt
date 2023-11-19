@@ -4,6 +4,7 @@
 package com.cliffracertech.soundaura.model
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import com.cliffracertech.soundaura.logd
@@ -70,12 +71,20 @@ class AndroidUriPermissionHandler @Inject constructor(
     ): List<Uri> {
         val remainingSpace = getRemainingAllowance()
         val hasEnoughSpace = remainingSpace >= uris.size
-        logd("remaining space = $remainingSpace")
+
         when {
             hasEnoughSpace -> uris
             allowPartial ->   uris.subList(0, remainingSpace)
             else ->           emptyList()
-        }.forEach { contentResolver.takePersistableUriPermission(it, 0) }
+        }.forEach {
+            try {
+                contentResolver.takePersistableUriPermission(
+                    it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (e: SecurityException) {
+                logd("Attempted to obtain a persistable permission for " +
+                     "$it when no persistable permission was granted.")
+            }
+        }
 
         return when {
             hasEnoughSpace -> emptyList()
@@ -88,7 +97,7 @@ class AndroidUriPermissionHandler @Inject constructor(
         for (uri in uris) try {
             contentResolver.releasePersistableUriPermission(uri, 0)
         } catch (e: SecurityException) {
-            logd("Attempted to release Uri permission for $uri" +
+            logd("Attempted to release Uri permission for $uri " +
                  "when no permission was previously granted")
         }
     }
