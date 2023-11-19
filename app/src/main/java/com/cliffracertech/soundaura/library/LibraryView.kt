@@ -155,7 +155,9 @@ import javax.inject.Inject
             }
         }
         override fun onRemoveClick(playlist: Playlist) {
-            shownDialog = PlaylistDialog.Remove(
+            if (playlist.hasError)
+                scope.launch { modifyLibrary.removePlaylist(playlist.name) }
+            else shownDialog = PlaylistDialog.Remove(
                 target = playlist,
                 onDismissRequest = ::dismissDialog,
                 onConfirmClick = {
