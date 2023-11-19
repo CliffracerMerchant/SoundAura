@@ -6,6 +6,7 @@ package com.cliffracertech.soundaura.model
 import android.content.Context
 import android.net.Uri
 import android.os.Build
+import com.cliffracertech.soundaura.logd
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.Collections.emptyList
 import javax.inject.Inject
@@ -69,6 +70,7 @@ class AndroidUriPermissionHandler @Inject constructor(
     ): List<Uri> {
         val remainingSpace = getRemainingAllowance()
         val hasEnoughSpace = remainingSpace >= uris.size
+        logd("remaining space = $remainingSpace")
         when {
             hasEnoughSpace -> uris
             allowPartial ->   uris.subList(0, remainingSpace)
@@ -83,7 +85,11 @@ class AndroidUriPermissionHandler @Inject constructor(
     }
 
     override fun releasePermissionsFor(uris: List<Uri>) {
-        for (uri in uris)
+        for (uri in uris) try {
             contentResolver.releasePersistableUriPermission(uri, 0)
+        } catch (e: SecurityException) {
+            logd("Attempted to release Uri permission for $uri" +
+                 "when no permission was previously granted")
+        }
     }
 }
