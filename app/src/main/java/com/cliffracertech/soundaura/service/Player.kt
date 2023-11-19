@@ -116,7 +116,7 @@ class Player(
     }
 
     private fun createPlayerForNextUri(): MediaPlayer? {
-        // The start index is recorded so that we know
+        // The start index is recorded so that we know when
         // we have done one full loop of the playlist
         val startIndex = nextIndex
         var player: MediaPlayer?
@@ -124,14 +124,13 @@ class Player(
 
         do {
             val uri = uris[nextIndex]
-            player = MediaPlayer.create(context, uri) ?: run {
+            player = MediaPlayer.create(context, uri)
+            if (player == null)
                 failedUris?.add(uri) ?: run {
                     failedUris = mutableListOf(uri)
                 }
-                nextIndex = if (nextIndex == uris.lastIndex) 0
-                            else nextIndex++
-                null
-            }
+            nextIndex = if (nextIndex == uris.lastIndex) 0
+                        else nextIndex + 1
         } while (player == null && nextIndex != startIndex)
 
         failedUris?.let(onPlaybackFailure)
