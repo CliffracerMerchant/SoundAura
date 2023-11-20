@@ -71,9 +71,9 @@ import javax.inject.Inject
     val onBackButtonClick get() = when {
         navigationState.willConsumeBackButtonClick ->
             navigationState::onBackButtonClick
-        searchQuery.value != null -> {{
-            searchQuery.set(null)
-        }} else -> null
+        searchQuery.isActive ->
+            searchQuery::toggleIsActive
+        else -> null
     }
 
     val title get() = StringResource(
@@ -84,13 +84,13 @@ import javax.inject.Inject
     val showIconButtons get() = !navigationState.showingAppSettings
 
     val searchQueryViewState = SearchQueryViewState(
+        getIsActive = searchQuery::isActive,
         getQuery = searchQuery::value,
         onQueryChange = searchQuery::set,
-        onButtonClick = {
-            searchQuery.set(if (searchQuery.value == null) "" else null)
-        }, getIcon = {
-            if (searchQuery.value == null) SearchQueryViewState.Icon.Search
-            else                           SearchQueryViewState.Icon.Close
+        onButtonClick = searchQuery::toggleIsActive,
+        getIcon = {
+            if (searchQuery.isActive) SearchQueryViewState.Icon.Close
+            else                      SearchQueryViewState.Icon.Search
         })
 
     private val playlistSortKey = intPreferencesKey(PrefKeys.playlistSort)
@@ -118,7 +118,8 @@ import javax.inject.Inject
         })
 
     fun onSettingsButtonClick() {
-        searchQuery.set(null)
+        if (searchQuery.isActive)
+            searchQuery.toggleIsActive()
         navigationState.showingPresetSelector = false
         navigationState.showingAppSettings = true
     }

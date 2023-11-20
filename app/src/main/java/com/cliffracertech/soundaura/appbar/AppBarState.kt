@@ -3,24 +3,26 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura.appbar
 
-
 import android.content.Context
+import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.cliffracertech.soundaura.appbar.SearchQueryViewState.Icon
 import kotlinx.collections.immutable.ImmutableList
 
 /**
  * A holder of state and callbacks related to a search query and a search button.
  *
  * Consumers of the SearchQueryViewState should show the search query when the
- * value of the property [query] is not null, and connect desired changes to
+ * value of the property [isActive] is true, and connect desired changes to
  * the search query (e.g. through [TextField.onValueChange]) to the property
  * [onQueryChange]. The displayed search button should show either a search
  * icon or a close icon according to the [Icon] value of the property [icon],
  * and the property [onButtonClick] should be used as its onClick action.
  *
+ * @param getIsActive A getter for whether or not the search query is active
  * @param getQuery A getter for the active search query.
  *     This should return null if there is no active search.
  * @param onQueryChange A setter for the active search query
@@ -30,12 +32,14 @@ import kotlinx.collections.immutable.ImmutableList
  *     [SearchQueryViewState.Icon] that the search button should display
  */
 class SearchQueryViewState(
-    private val getQuery: () -> String?,
+    private val getIsActive: () -> Boolean,
+    private val getQuery: () -> String,
     val onQueryChange: (String) -> Unit,
     val onButtonClick: () -> Unit,
     private val getIcon: () -> Icon,
 ) {
     enum class Icon { Search, Close }
+    val isActive get() = getIsActive()
     val query get() = getQuery()
     val icon get() = getIcon()
 }

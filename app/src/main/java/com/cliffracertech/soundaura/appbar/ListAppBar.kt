@@ -103,14 +103,13 @@ import kotlinx.collections.immutable.toImmutableList
 
     // Title / search query
     Crossfade(
-        targetState = searchQueryState.query != null,
+        targetState = searchQueryState.isActive,
         modifier = Modifier.weight(1f),
         animationSpec = tween(tweenDuration),
         label = "Action bar search query appearance/disappearance",
-    ) { queryIsNotNull ->
-        if (queryIsNotNull) {
-            SearchQueryView(searchQueryState.query ?: "",
-                            searchQueryState.onQueryChange)
+    ) { searchIsActive ->
+        if (searchIsActive) {
+            SearchQueryView(searchQueryState)
         } else Crossfade(
             targetState = title,
             animationSpec = tween(tweenDuration),
@@ -155,12 +154,13 @@ import kotlinx.collections.immutable.toImmutableList
 }
 
 @Preview @Composable fun PreviewListActionBar() = SoundAuraTheme {
-    var searchQuery by rememberMutableStateOf<String?>(null)
+    var searchIsActive by rememberMutableStateOf(false)
+    var searchQuery by rememberMutableStateOf("")
     var showingSettings by rememberMutableStateOf(false)
     ListAppBar(
         onBackButtonClick = when {
-            showingSettings ->     {{ showingSettings = false }}
-            searchQuery != null -> {{ searchQuery = null }}
+            showingSettings -> {{ showingSettings = false }}
+            searchIsActive ->  {{ searchIsActive = false }}
             else ->                null
         }, title = stringResource(
             if (!showingSettings) R.string.app_name
@@ -168,14 +168,16 @@ import kotlinx.collections.immutable.toImmutableList
         showIconButtons = !showingSettings,
         searchQueryState = remember {
             SearchQueryViewState(
+                getIsActive = { searchIsActive },
                 getQuery = { searchQuery },
                 onQueryChange = { searchQuery = it },
                 onButtonClick = {
-                    searchQuery = if (searchQuery == null) "" else null
+                    if (!searchIsActive)
+                        searchQuery = ""
+                    searchIsActive = !searchIsActive
                 }, getIcon = {
-                    if (searchQuery == null)
-                        SearchQueryViewState.Icon.Search
-                    else SearchQueryViewState.Icon.Close
+                    if (searchIsActive) SearchQueryViewState.Icon.Close
+                    else                SearchQueryViewState.Icon.Search
                 })
         }, sortMenuState = remember {
             SortMenuState(

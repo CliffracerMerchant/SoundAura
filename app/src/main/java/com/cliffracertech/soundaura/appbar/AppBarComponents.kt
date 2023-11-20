@@ -98,17 +98,15 @@ fun GradientToolBar(
 /**
  * A search query that displays an underline as a background.
  *
- * @param query The current value of the search query
- * @param onQueryChanged The callback to be invoked when user input changes the query
+ * @param state A [SearchQueryViewState] instance
  * @param modifier The [Modifier] used for the entire search query
  */
 @Composable fun SearchQueryView(
-    query: String,
-    onQueryChanged: (String) -> Unit,
+    state: SearchQueryViewState,
     modifier: Modifier = Modifier
 ) = BasicTextField(
-    value = query,
-    onValueChange = onQueryChanged,
+    value = state.query,
+    onValueChange = state.onQueryChange,
     textStyle = MaterialTheme.typography.h6,
     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
     modifier = modifier.minTouchTargetSize(),

@@ -53,7 +53,8 @@ class AppBarViewModelTests {
     @Test fun initial_state() {
         assertThat(instance.onBackButtonClick).isNull()
         assertThat(instance.title.stringResId).isEqualTo(R.string.app_name)
-        assertThat(instance.searchQueryViewState.query).isNull()
+        assertThat(instance.searchQueryViewState.isActive).isFalse()
+        assertThat(instance.searchQueryViewState.query).isEqualTo("")
         assertThat(instance.searchQueryViewState.icon)
             .isEqualTo(SearchQueryViewState.Icon.Search)
         assertThat(instance.sortMenuState.currentOptionIndex)
@@ -87,7 +88,7 @@ class AppBarViewModelTests {
         searchQueryState.set(testQuery)
         assertThat(instance.searchQueryViewState.query).isEqualTo(testQuery)
 
-        searchQueryState.set(null)
+        searchQueryState.toggleIsActive()
         assertThat(instance.searchQueryViewState.query).isNull()
     }
 

@@ -17,9 +17,9 @@ import com.cliffracertech.soundaura.preferenceFlow
 import com.cliffracertech.soundaura.settings.PrefKeys
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformLatest
 import javax.inject.Inject
@@ -52,7 +52,7 @@ class ReadLibraryUseCase @Inject constructor(
     val playlistsFlow = combine(
             playlistSort, showActivePlaylistsFirst, searchQuery.flow
         ) { sort, showActiveFirst, searchQuery ->
-            val filter = "%${searchQuery ?: ""}%"
+            val filter = "%$searchQuery%"
             if (showActiveFirst) when (sort) {
                 PlaylistSort.NameAsc ->    dao.getAllPlaylistsSortedByActiveThenNameAsc(filter)
                 PlaylistSort.NameDesc ->   dao.getAllPlaylistsSortedByActiveThenNameDesc(filter)

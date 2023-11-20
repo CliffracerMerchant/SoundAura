@@ -39,7 +39,20 @@ class NavigationState @Inject constructor() {
     }}
 }
 
-/** A state holder for a search query entry. */
+/**
+ * A state holder for a search query entry.
+ *
+ * The property [isActive] reflects whether or not the search query is active.
+ * The query can be accessed through the property [value] or as a [Flow]
+ * through the [flow] property. The current value can be accessed even if it
+ * is inactive in case, e.g., a UI component needs to crossfade the newly
+ * inactive search query to another piece of text.
+ *
+ * The method [toggleIsActive] toggles the search query's active state.
+ * The [value] will be reset to a blank string [toggleIsActive] causes the
+ * isActive state to become true. The method [set] can be used to update an
+ * active search query. Note that [set] will no-op is [isActive] is false.
+ */
 @ActivityRetainedScoped
 class SearchQueryState @Inject constructor() {
     // Originally the value was stored only in a MutableState, and entities that
@@ -47,11 +60,19 @@ class SearchQueryState @Inject constructor() {
     // to fail for some reason, so we just store the value in both a MutableState
     // and a MutableStateFlow for convenience.
 
-    var value by mutableStateOf<String?>(null)
+    var isActive by mutableStateOf(false)
         private set
-    val flow = MutableStateFlow<String?>(null)
+    var value by mutableStateOf("")
+        private set
+    val flow = MutableStateFlow("")
 
-    fun set(newQuery: String?) {
+    fun toggleIsActive() {
+        if (!isActive) set("")
+        isActive = !isActive
+    }
+
+    fun set(newQuery: String) {
+        if (!isActive) return
         value = newQuery
         flow.value = newQuery
     }
