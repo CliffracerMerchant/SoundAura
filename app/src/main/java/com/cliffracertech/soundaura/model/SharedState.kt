@@ -67,7 +67,10 @@ class SearchQueryState @Inject constructor() {
     val flow = MutableStateFlow("")
 
     fun toggleIsActive() {
-        if (!isActive) set("")
+        if (!isActive) {
+            value = ""
+            flow.value = ""
+        }
         isActive = !isActive
     }
 
