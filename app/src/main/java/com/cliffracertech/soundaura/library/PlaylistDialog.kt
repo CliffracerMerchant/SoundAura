@@ -83,16 +83,22 @@ sealed class PlaylistDialog(
                 // If no files were chosen at all, then the user
                 // must have backed out of the file chooser intentionally
             else {
-                val validatedFiles = chosenFiles - currentTracks.map { it.uri }.toSet()
-                if (validatedFiles.isEmpty()) {
+                val validFiles = if (currentTracks.size == 1) {
+                        chosenFiles - currentTracks.first().uri
+                    } else {
+                        val currentTrackSet = HashSet<Uri>(currentTracks.size)
+                        for (track in currentTracks)
+                            currentTrackSet.add(track.uri)
+                        chosenFiles - currentTrackSet
+                    }
+                if (validFiles.isEmpty()) {
                     onDismissRequest()
                     messageHandler.postMessage(R.string.file_chooser_no_valid_tracks_error_message)
                 } else {
-                    val rejectedCount = chosenFiles.size - validatedFiles.size
-                    if (rejectedCount > 0)
-                        messageHandler.postMessage(StringResource(
-                            R.string.file_chooser_invalid_tracks_warning_message, rejectedCount))
-                    onChosenFilesValidated(validatedFiles)
+                    val rejectedCount = chosenFiles.size - validFiles.size
+                    if (rejectedCount > 0) messageHandler.postMessage(StringResource(
+                        R.string.file_chooser_invalid_tracks_warning_message, rejectedCount))
+                    onChosenFilesValidated(validFiles)
                 }
             }
         }

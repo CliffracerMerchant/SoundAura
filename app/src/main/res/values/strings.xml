@@ -51,7 +51,7 @@
     <string name="file_chooser_no_valid_tracks_error_message">
         Choose at least one file that is not already in the playlist</string>
     <string name="file_chooser_invalid_tracks_warning_message">
-        $1%d of the files were already in the playlist</string>
+        %1$d of the files were already in the playlist</string>
 
     <string name="add_local_files_button_description">Add tracks or playlists from local files</string>
     <string name="add_local_files_as_playlist_or_tracks_title">Add local file(s)</string>
