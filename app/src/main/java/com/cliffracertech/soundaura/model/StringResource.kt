@@ -31,9 +31,9 @@ class StringResource(
         context == null -> ""
         args.isEmpty() -> context.getString(stringResId)
         else -> {
-            val resolvedArgs = Array<Any>(args.size) {
+            val resolvedArgs = Array(args.size) {
                 val arg = args[it]
-                if (arg !is Id) it
+                if (arg !is Id) arg
                 else context.getString(arg.id)
             }
             context.getString(stringResId, *resolvedArgs)
