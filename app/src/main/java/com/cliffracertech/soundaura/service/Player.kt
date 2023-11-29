@@ -85,7 +85,7 @@ class Player(
         val playing = currentPlayer?.isPlaying == true &&
                 (currentPlayer?.currentPosition ?: 0) > 0
         val playingUri = if (!playing) null
-        else uris[currentIndex]
+                         else uris[currentIndex]
 
         shuffle = newPlaylist.shuffle
         uris = newPlaylist.tracks.toMutableList().apply {
@@ -117,18 +117,19 @@ class Player(
 
     private fun createPlayerForNextUri(): MediaPlayer? {
         // The start index is recorded so that we know when
-        // we have done one full loop of the playlist
+        // we have done one full loop of the playlist's tracks
         val startIndex = nextIndex
         var player: MediaPlayer?
         var failedUris: MutableList<Uri>? = null
 
         do {
             val uri = uris[nextIndex]
-            player = MediaPlayer.create(context, uri)
-            if (player == null)
-                failedUris?.add(uri) ?: run {
+            player = MediaPlayer.create(context, uri).also {
+                if (it != null) return@also
+                if (failedUris == null)
                     failedUris = mutableListOf(uri)
-                }
+                else failedUris?.add(uri)
+            }
             nextIndex = if (nextIndex == uris.lastIndex) 0
                         else nextIndex + 1
         } while (player == null && nextIndex != startIndex)
