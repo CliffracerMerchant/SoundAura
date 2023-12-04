@@ -7,6 +7,7 @@ import android.net.Uri
 import androidx.room.*
 import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteQuery
+import com.cliffracertech.soundaura.service.ActivePlaylistSummary
 import kotlinx.coroutines.flow.Flow
 
 typealias LibraryPlaylist = com.cliffracertech.soundaura.library.Playlist
@@ -187,14 +188,15 @@ private const val librarySelect =
     @Query("SELECT EXISTS(SELECT 1 FROM playlist WHERE isActive)")
     abstract fun getAtLeastOnePlaylistIsActive(): Flow<Boolean>
 
-    /** Return a [Flow] that updates with a [Map] of each
-     * active [Playlist] mapped to its list of track [Uri]s. */
+    /** Return a [Flow] that updates with a [Map] of each active
+     * [Playlist] (represented as an [ActivePlaylistSummary]
+     * mapped to its tracks (represented as a [List] of [Uri]s). */
     @MapInfo(valueColumn = "trackUri")
-    @Query("SELECT name, shuffle, isActive, volume, hasError, trackUri " +
+    @Query("SELECT name, shuffle, volume, trackUri " +
            "FROM playlist " +
            "JOIN playlistTrack ON playlist.name = playlistTrack.playlistName " +
            "WHERE isActive ORDER by playlistOrder")
-    abstract fun getActivePlaylistsAndTracks(): Flow<Map<Playlist, List<Uri>>>
+    abstract fun getActivePlaylistsAndTracks(): Flow<Map<ActivePlaylistSummary, List<Uri>>>
 
     @Query("SELECT name FROM playlist")
     abstract fun getPlaylistNames(): Flow<List<String>>

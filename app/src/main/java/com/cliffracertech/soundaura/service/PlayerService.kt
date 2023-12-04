@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
 import android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+import android.net.Uri
 import android.support.v4.media.session.PlaybackStateCompat
 import android.support.v4.media.session.PlaybackStateCompat.STATE_PAUSED
 import android.support.v4.media.session.PlaybackStateCompat.STATE_PLAYING
@@ -26,6 +27,7 @@ import androidx.media.AudioFocusRequestCompat
 import androidx.media.AudioManagerCompat
 import androidx.media.AudioManagerCompat.AUDIOFOCUS_GAIN
 import com.cliffracertech.soundaura.R
+import com.cliffracertech.soundaura.model.database.Playlist
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.preferenceFlow
 import com.cliffracertech.soundaura.repeatWhenStarted
@@ -39,7 +41,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -173,7 +174,6 @@ class PlayerService: LifecycleService() {
                 .launchIn(this)
 
             playlistDao.getActivePlaylistsAndTracks()
-                .map{ it.map(::Playlist) }
                 .onEach(::updatePlayers)
                 .launchIn(this)
         }
@@ -287,25 +287,26 @@ class PlayerService: LifecycleService() {
         updateNotification()
     }
 
-    private fun updatePlayers(playlists: List<Playlist>) {
+    private fun updatePlayers(playlists: Map<ActivePlaylistSummary, List<Uri>>) {
         val firstUpdate = !playerMap.isInitialized
         playerMap.update(playlists, isPlaying)
 
         // If the new track list is empty when isPlaying is true, we want
-        // to pause playback because there are no tracks to play.
+        // to pause playback because there are no playlists to play.
         if (isPlaying && playlists.isEmpty()) {
             setPlaybackState(STATE_PAUSED)
-            // If this playback auto pause happened implicitly due to the user making
-            // the last active track inactive, no user feedback should be necessary.
-            // If this playback auto pause happened following an explicit attempt by
-            // the user to start playback when there were no active tracks, then we
-            // want to display a message to the user in this case explaining why the
-            // explicit attempt to start playback failed. Normally this case would be
-            // caught by playbackState's custom setter, but if the service is moved
-            // directly from a stopped to playing state, then the first value of
-            // trackDao's activeTracks won't have been collected yet, and playbackState's
-            // custom setter therefore won't know if it should prevent the change to
-            // STATE_PLAYING. This check will show the explanation in this edge case.
+            // If this playback auto pause occurred due to the user making the last
+            // active track inactive, then no user feedback should be necessary. If
+            // this playback auto pause was due to an explicit attempt by the user
+            // to start playback when there are no active tracks, then we want to
+            // display a message to the user in this case explaining why the attempt
+            // to start playback failed. Normally this case would be caught by
+            // playbackState's custom setter, but if the service is moved directly
+            // from a stopped to playing state, then the first value of playlistDao's
+            // getActivePlaylistsAndTracks won't have been collected yet, and
+            // playbackState's custom setter therefore won't know if it should
+            // prevent the change to STATE_PLAYING. This check will show the
+            // explanation in this edge case.
             if (firstUpdate) showAutoPausePlaybackExplanation()
         }
     }
