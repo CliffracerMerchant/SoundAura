@@ -56,9 +56,11 @@ class ReadLibraryUseCase @Inject constructor(
             if (showActiveFirst) when (sort) {
                 PlaylistSort.NameAsc ->    dao.getAllPlaylistsSortedByActiveThenNameAsc(filter)
                 PlaylistSort.NameDesc ->   dao.getAllPlaylistsSortedByActiveThenNameDesc(filter)
+                PlaylistSort.OrderAdded -> dao.getAllPlaylistsSortedByActiveThenOrderAdded(filter)
             } else when (sort) {
                 PlaylistSort.NameAsc ->    dao.getAllPlaylistsSortedByNameAsc(filter)
                 PlaylistSort.NameDesc ->   dao.getAllPlaylistsSortedByNameDesc(filter)
+                PlaylistSort.OrderAdded -> dao.getAllPlaylistsSortedByOrderAdded(filter)
             }
         }.transformLatest { emitAll(it) }
         .map(List<Playlist>::toImmutableList)
