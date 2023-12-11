@@ -34,7 +34,6 @@ import com.cliffracertech.soundaura.model.AddToLibraryUseCase
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.PresetDao
-import com.cliffracertech.soundaura.model.database.Track
 import com.cliffracertech.soundaura.model.database.newPresetNameValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -121,9 +120,7 @@ class AddPlaylistButtonViewModel(
                 onDialogDismissRequest()
                 scope.launch {
                     assert(trackUris.size == trackNames.size)
-                    val map = LinkedHashMap<Uri, String>()
-                    map.putAll(trackUris.zip(trackNames))
-                    addToLibrary.addSingleTrackPlaylists(map)
+                    addToLibrary.addSingleTrackPlaylists(trackNames, trackUris)
                 }
             })
     }
@@ -154,7 +151,7 @@ class AddPlaylistButtonViewModel(
                 showNamePlaylistStep(uris,
                     cameFromPlaylistOrTracksQuery = false,
                     playlistName = playlistName)
-            }, tracks = uris.map(::Track),
+            }, trackUris = uris,
             onFinish = { shuffle, newTracks ->
                 onDialogDismissRequest()
                 scope.launch {

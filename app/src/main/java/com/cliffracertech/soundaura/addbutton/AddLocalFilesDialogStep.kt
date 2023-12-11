@@ -183,14 +183,14 @@ sealed class AddLocalFilesDialogStep {
      * switch should be connected to [onShuffleSwitchClick]. The provided [mutablePlaylist]
      * can be used in a [com.cliffracertech.soundaura.library.PlaylistOptionsView].
      *
-     * @param tracks The [List] of [Uri]s that represent the new playlist's tracks
+     * @param trackUris The [List] of [Uri]s that represent the new playlist's tracks
      * @param onBackClick The callback that will be invoked when the dialog's back button is clicked
      * @param onFinish The callback that will be invoked when the dialog's
      *     finish button is clicked. The current shuffle and track ordering
      *     as passed as arguments.
      */
     class PlaylistOptions(
-        tracks: List<Track>,
+        trackUris: List<Uri>,
         override val onDismissRequest: () -> Unit,
         onBackClick: () -> Unit,
         private val onFinish: (shuffleEnabled: Boolean, newTrackList: List<Track>) -> Unit,
@@ -198,7 +198,7 @@ sealed class AddLocalFilesDialogStep {
         var shuffleEnabled by mutableStateOf(false)
             private set
         val onShuffleSwitchClick = { shuffleEnabled = !shuffleEnabled }
-        val mutablePlaylist = MutablePlaylist(tracks)
+        val mutablePlaylist = MutablePlaylist(trackUris.map(::Track))
 
         override val wasNavigatedForwardTo = true
         override val titleResId = R.string.configure_playlist_dialog_title
