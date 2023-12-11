@@ -3,7 +3,6 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura.library
 
-import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.AnimationConstants.DefaultDurationMillis
@@ -169,7 +168,7 @@ val RemovablePlaylistTrack.markedForRemoval get() = second
  * The current list of tracks can be accessed via [tracks]. The method
  * [moveTrack] can be used to to reorder tracks, while [toggleTrackRemoval]
  * can be used  or to toggle the 'to be removed' state for each track. The
- * method [applyChanges] will return a [List] of the [Uri]s in their new
+ * method [applyChanges] will return a [List] of the [Track]s in their new
  * order and without the tracks that were marked for removal.
  */
 class MutablePlaylist(tracks: List<Track>) {

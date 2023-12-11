@@ -50,6 +50,7 @@ import kotlin.math.roundToInt
 /**
  * A data class whose values describe the attributes of a playlist in a library of playlists.
  *
+ * @param id The [Long] value that uniquely identifies the playlist
  * @param name The name of the playlist
  * @param isActive Whether or not the playlist is currently playing
  * @param volume The volume of the playlist
@@ -61,6 +62,7 @@ import kotlin.math.roundToInt
  *     to them as 'tracks' instead of 'playlists').
  */
 data class Playlist(
+    val id: Long,
     val name: String,
     val isActive: Boolean,
     val volume: Float,
@@ -385,6 +387,7 @@ fun LightTrackViewPreview() = SoundAuraTheme(darkTheme = false) {
     PlaylistView(
         callback = rememberPlaylistViewCallback(),
         playlist = Playlist(
+            id = 0,
             name = "Playlist 1",
             isActive = false,
             volume = 0.5f,
@@ -397,6 +400,7 @@ fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme = true) {
     PlaylistView(
         callback = rememberPlaylistViewCallback(),
         playlist = Playlist(
+            id = 0,
             name = "Playlist 2",
             isActive = true,
             volume = 0.25f,
@@ -409,6 +413,7 @@ fun LightTrackErrorPreview() = SoundAuraTheme(darkTheme = false) {
     PlaylistView(
         callback = rememberPlaylistViewCallback(),
         playlist = Playlist(
+            id = 0,
             name = "Playlist 3",
             isActive = false,
             volume = 1.00f,
@@ -421,6 +426,7 @@ fun DarkTrackErrorPreview() = SoundAuraTheme(darkTheme = true) {
     PlaylistView(
         callback = rememberPlaylistViewCallback(),
         playlist = Playlist(
+            id = 0,
             name = "Playlist 4",
             isActive = false,
             volume = 1.00f,

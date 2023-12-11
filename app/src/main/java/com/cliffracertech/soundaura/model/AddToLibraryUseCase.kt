@@ -5,6 +5,7 @@ package com.cliffracertech.soundaura.model
 
 import android.net.Uri
 import com.cliffracertech.soundaura.R
+import com.cliffracertech.soundaura.model.database.Playlist
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.Track
 import com.cliffracertech.soundaura.model.database.TrackNamesValidator
@@ -31,25 +32,27 @@ class AddToLibraryUseCase(
     ) = TrackNamesValidator(dao, scope, initialTrackNames)
 
     /**
-     * Attempt to add multiple single-track playlists, with the name for
-     * each playlist mapped to the playlist's single track's [Uri] in
-     * [uriNameMap]. This operation can fail for all or some portion of
-     * the playlists if the attempt to acquire persisted permissions for
-     * one or more of the URIs fail.
+     * Attempt to add multiple single-track playlists. Each value in [names]
+     * will be used as a name for a new [Playlist], while the [Uri] with the
+     * same index in [uris] will be used as that [Playlist]'s single track.
+     * This operation can fail for all or some portion of the playlists if the
+     * attempt to acquire persisted permissions for one or more of the URIs fail.
      */
-    suspend fun addSingleTrackPlaylists(uriNameMap: LinkedHashMap<Uri, String>) {
-        val newTracks = dao.filterNewTracks(uriNameMap.keys.toList())
-        val rejectedTracks = permissionHandler
+    suspend fun addSingleTrackPlaylists(names: List<String>, uris: List<Uri>) {
+        assert(names.size == uris.size)
+        val newTracks = dao.filterNewTracks(uris)
+        val rejectedUris = permissionHandler
             .acquirePermissionsFor(newTracks, allowPartial = true)
 
-        if (rejectedTracks.size < uriNameMap.size) {
-            rejectedTracks.forEach(uriNameMap::remove)
-            dao.insertSingleTrackPlaylists(uriNameMap)
-        }
-        if (rejectedTracks.isNotEmpty())
+        if (rejectedUris.size < uris.size)
+            dao.insertSingleTrackPlaylists(
+                names = names.subList(0, uris.size - rejectedUris.size),
+                uris = uris.subList(0, uris.size - rejectedUris.size))
+
+        if (rejectedUris.isNotEmpty())
             messageHandler.postMessage(StringResource(
                 R.string.cant_add_all_tracks_warning,
-                rejectedTracks.size,
+                rejectedUris.size,
                 permissionHandler.totalAllowance))
     }
 

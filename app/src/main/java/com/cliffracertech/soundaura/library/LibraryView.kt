@@ -127,42 +127,40 @@ import javax.inject.Inject
 
     val itemCallback = object : PlaylistViewCallback {
         override fun onAddRemoveButtonClick(playlist: Playlist) {
-            scope.launch { modifyLibrary.togglePlaylistIsActive(playlist.name) }
+            scope.launch { modifyLibrary.togglePlaylistIsActive(playlist.id) }
         }
         override fun onVolumeChange(playlist: Playlist, volume: Float) {
             playbackState.setPlaylistVolume(playlist.name, volume)
         }
         override fun onVolumeChangeFinished(playlist: Playlist, volume: Float) {
-            scope.launch { modifyLibrary.setPlaylistVolume(playlist.name, volume) }
+            scope.launch { modifyLibrary.setPlaylistVolume(playlist.id, volume) }
         }
         override fun onRenameClick(playlist: Playlist) {
             shownDialog = PlaylistDialog.Rename(
                 target = playlist,
                 namingState = modifyLibrary.renameState(
-                    playlist.name, scope, ::dismissDialog),
+                    playlist.id, playlist.name, scope, ::dismissDialog),
                 onDismissRequest = ::dismissDialog)
         }
         override fun onExtraOptionsClick(playlist: Playlist) {
             scope.launch {
-                val existingTracks = readLibrary.getPlaylistTracks(playlist.name)
+                val existingTracks = readLibrary.getPlaylistTracks(playlist.id)
+                val shuffleEnabled = readLibrary.getPlaylistShuffle(playlist.id)
                 assert((existingTracks.size == 1) == playlist.isSingleTrack)
                 if (playlist.isSingleTrack)
                     showFileChooser(playlist, existingTracks)
-                else showPlaylistOptions(
-                    target = playlist,
-                    existingTracks = existingTracks,
-                    shuffleEnabled = readLibrary.getPlaylistShuffle(playlist.name))
+                else showPlaylistOptions(playlist, existingTracks, shuffleEnabled)
             }
         }
         override fun onRemoveClick(playlist: Playlist) {
             if (playlist.hasError)
-                scope.launch { modifyLibrary.removePlaylist(playlist.name) }
+                scope.launch { modifyLibrary.removePlaylist(playlist.id) }
             else shownDialog = PlaylistDialog.Remove(
                 target = playlist,
                 onDismissRequest = ::dismissDialog,
                 onConfirmClick = {
                     dismissDialog()
-                    scope.launch { modifyLibrary.removePlaylist(playlist.name) }
+                    scope.launch { modifyLibrary.removePlaylist(playlist.id) }
                 })
         }
     }
@@ -203,7 +201,7 @@ import javax.inject.Inject
                 dismissDialog()
                 scope.launch {
                     modifyLibrary.setPlaylistShuffleAndTracks(
-                        target.name, newShuffle, newTrackList)
+                        target.id, newShuffle, newTrackList)
                 }
             })
     }

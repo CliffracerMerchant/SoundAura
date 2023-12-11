@@ -13,22 +13,27 @@ import kotlinx.coroutines.flow.Flow
 typealias LibraryPlaylist = com.cliffracertech.soundaura.library.Playlist
 
 private const val librarySelect =
-    "SELECT name, isActive, volume, hasError, " +
-           "COUNT(playlistName) = 1 AS isSingleTrack " +
+    "SELECT id, name, isActive, volume, " +
+           "COUNT(NOT track.hasError) = 0 as hasError, " +
+           "COUNT(playlistId) = 1 AS isSingleTrack " +
     "FROM playlist " +
-    "JOIN playlistTrack ON playlist.name = playlistTrack.playlistName " +
+    "JOIN playlistTrack ON playlist.id = playlistTrack.playlistId " +
+    "JOIN track on playlistTrack.trackUri = track.uri " +
     "WHERE name LIKE :filter " +
-    "GROUP BY playlistTrack.playlistName"
+    "GROUP BY playlistTrack.playlistId"
 
 @Dao abstract class PlaylistDao {
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    protected abstract suspend fun insertPlaylistName(playlist: Playlist)
+    @Query("INSERT INTO track (uri) VALUES (:uri)")
+    protected abstract suspend fun insertTrack(uri: Uri)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    protected abstract suspend fun insertPlaylistNames(playlists: List<Playlist>)
+    protected abstract suspend fun insertTracks(tracks: List<Track>)
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    protected abstract suspend fun insertTracks(tracks: List<Track>): List<Long>
+    @Insert(onConflict = OnConflictStrategy.IGNORE, entity = Playlist::class)
+    protected abstract suspend fun insertPlaylist(playlist: Playlist): Long
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE, entity = Playlist::class)
+    protected abstract suspend fun insertPlaylists(names: List<Playlist>): List<Long>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     protected abstract suspend fun insertPlaylistTrack(playlistTrack: PlaylistTrack)
@@ -38,116 +43,121 @@ private const val librarySelect =
 
     /** Insert a single [Playlist] whose [Playlist.name] and [Playlist.shuffle]
      * vales will be equal to [playlistName] and [shuffle], respectively. The
-     * [Track]s in [tracks] will be added as the contents of the playlist. */
+     * [Uri]s in [tracks] will be added as the contents of the playlist. */
     @Transaction
     open suspend fun insertPlaylist(
         playlistName: String,
         shuffle: Boolean,
-        tracks: List<Track>
+        tracks: List<Track>,
+        newUris: List<Uri>? = null,
     ) {
-        insertPlaylistName(Playlist(playlistName, shuffle))
-        insertTracks(tracks)
+        insertTracks(newUris?.map(::Track) ?: tracks)
+        val playlist = Playlist(name = playlistName, shuffle = shuffle)
+        val id = insertPlaylist(playlist)
         insertPlaylistTracks(tracks.mapIndexed { index, track ->
-            PlaylistTrack(playlistName, track.uri, index)
+            PlaylistTrack(id, index, track.uri)
         })
     }
 
-    /** Insert a collection of new single-track [Playlist]s. The entries of
-     * [uriNameMap] will define the [Uri] of the single track and the name
-     * for each new playlist. The [Playlist.shuffle] value for the new
-     * playlists will be the default value (i.e. false) due to shuffle having
-     * no meaning for single-track playlists. If the order of tracks in the
-     * playlist must be preserved, a [Map] implementation that ensures a
-     * certain iteration order (e.g. [LinkedHashMap]) should be used. */
+    /** Attempt to add multiple single-track playlists. Each value in
+     * [names] will be used as a name for a new [Playlist], while the
+     * [Uri] with the same index in [uris] will be used as that [Playlist]'s
+     * single track. The [Playlist.shuffle] value for the new [Playlist]s
+     * will be the default value (i.e. false) due to shuffle having no
+     * meaning for single-track playlists. */
     @Transaction
-    open suspend fun insertSingleTrackPlaylists(uriNameMap: Map<Uri, String>) {
-        insertPlaylistNames(uriNameMap.values.map(::Playlist))
-        insertTracks(uriNameMap.keys.map(::Track))
-        insertPlaylistTracks(
-            uriNameMap.entries.mapIndexed { index, (uri, name) ->
-                PlaylistTrack(name, uri, index)
-            })
+    open suspend fun insertSingleTrackPlaylists(
+        names: List<String>,
+        uris: List<Uri>,
+        newUris: List<Uri>? = null,
+    ) {
+        assert(names.size == uris.size)
+        insertTracks((newUris ?: uris).map(::Track))
+        val playlists = names.map { Playlist(name = it) }
+        val ids = insertPlaylists(playlists)
+        assert(ids.size == names.size)
+        insertPlaylistTracks(ids.mapIndexed { index, id ->
+            PlaylistTrack(id, 0, uris[index])
+        })
     }
 
-    /** Delete the playlist whose name matches [name] from the database. */
-    @Query("DELETE FROM playlist WHERE name = :name")
-    protected abstract suspend fun deletePlaylistName(name: String)
+    /** Delete the playlist identified by [id] from the database. */
+    @Query("DELETE FROM playlist WHERE id = :id")
+    protected abstract suspend fun deletePlaylistName(id: Long)
 
-    @Query("DELETE FROM playlistTrack WHERE playlistName = :playlistName")
-    protected abstract suspend fun deletePlaylistTracks(playlistName: String)
+    @Query("DELETE FROM playlistTrack WHERE playlistId = :playlistId")
+    protected abstract suspend fun deletePlaylistTracks(playlistId: Long)
 
     @Query("DELETE FROM track WHERE uri IN (:uris)")
     protected abstract suspend fun deleteTracks(uris: List<Uri>)
 
-    /** Delete the [Playlist] whose name matches [name] along with its contents.
+    /** Delete the [Playlist] identified by [id] along with its contents.
      * @return the [List] of [Uri]s that are no longer a part of any playlist */
     @Transaction
-    open suspend fun deletePlaylist(name: String): List<Uri> {
-        val removableTracks = getUniqueUris(name)
-        deletePlaylistName(name)
+    open suspend fun deletePlaylist(id: Long): List<Uri> {
+        val removableTracks = getUniqueUris(id)
+        deletePlaylistName(id)
         // playlistTrack.playlistName has an 'on delete: cascade' policy,
         // so the playlistTrack rows don't need to be deleted manually
         deleteTracks(removableTracks)
         return removableTracks
     }
 
-    @Query("SELECT shuffle FROM playlist " +
-           "WHERE playlist.name = :playlistName")
-    abstract suspend fun getPlaylistShuffle(playlistName: String): Boolean
+    @Query("SELECT shuffle FROM playlist WHERE id = :id LIMIT 1")
+    abstract suspend fun getPlaylistShuffle(id: Long): Boolean
 
-    @Query("UPDATE playlist SET shuffle = :enabled WHERE name = :playlistName")
-    abstract suspend fun setPlaylistShuffle(playlistName: String, enabled: Boolean)
+    @Query("UPDATE playlist SET shuffle = :shuffle WHERE id = :id")
+    abstract suspend fun setPlaylistShuffle(id: Long, shuffle: Boolean)
 
     /**
-     * Set the playlist whose [Playlist.name] property matches [playlistName] to
-     * have a [Playlist.shuffle] value equal to [shuffleEnabled], and overwrite
-     * its tracks to be equal to [newTracks]. If the list of tracks that can be
-     * removed (i.e. that aren't in [newTracks] and are not a part of any other
-     * playlist) has already been obtained, it can be passed as [removableUris]
-     * to prevent the database from needing to recalculate this.
+     * Set the playlist identified by [playlistId] to have a [Playlist.shuffle]
+     * value equal to [shuffle], and overwrite its tracks to be equal to [contents].
+     *
+     * If the [Uri]s in [contents] that are not already in any other playlists
+     * has already been obtained, it can be passed as [newUris] to prevent the
+     * database from needing to insert already existing tracks. Likewise, if
+     * the [Uri]s that were previously a part of the playlist, but are not in
+     * the new [contents] and are not in any other playlist has already been
+     * obtained, it can be passed as [removableUris] to prevent the database
+     * from needing to recalculate the [Uri]s that are no longer needed.
      *
      * @return The [List] of [Uri]s that are no longer in any [Playlist] after the change.
      */
     @Transaction
     open suspend fun setPlaylistShuffleAndContents(
-        playlistName: String,
-        shuffleEnabled: Boolean,
-        newTracks: List<Track>,
+        playlistId: Long,
+        shuffle: Boolean,
+        contents: List<Track>,
+        newUris: List<Uri>? = null,
         removableUris: List<Uri>? = null,
     ): List<Uri> {
-        val removedUris = removableUris ?: run {
-            val newUris = newTracks.map(Track::uri)
-            getUniqueUrisNotIn(newUris, playlistName)
-        }
+        val removedUris = removableUris ?:
+            getUniqueUrisNotIn(contents.map(Track::uri), playlistId)
         deleteTracks(removedUris)
-        insertTracks(newTracks)
+        insertTracks(newUris?.map(::Track) ?: contents)
 
-        deletePlaylistTracks(playlistName)
-        insertPlaylistTracks(newTracks.mapIndexed { index, track ->
-            PlaylistTrack(playlistName, track.uri, index)
+        deletePlaylistTracks(playlistId)
+        insertPlaylistTracks(contents.mapIndexed { index, track ->
+            PlaylistTrack(playlistId, index, track.uri)
         })
-
-        setPlaylistShuffle(playlistName, shuffleEnabled)
+        setPlaylistShuffle(playlistId, shuffle)
         return removedUris
     }
 
     /** Return the track uris of the [Playlist] identified by
-     * [playlistName] that are not in any other [Playlist]s. */
+     * [playlistId] that are not in any other [Playlist]s. */
     @Query("SELECT trackUri FROM playlistTrack " +
-           "GROUP BY trackUri HAVING COUNT(playlistName) = 1 " +
-                             "AND playlistName = :playlistName")
-    protected abstract suspend fun getUniqueUris(playlistName: String): List<Uri>
+           "GROUP BY trackUri HAVING COUNT(playlistId) = 1 " +
+                             "AND playlistId = :playlistId")
+    protected abstract suspend fun getUniqueUris(playlistId: Long): List<Uri>
 
-    /** Return the track uris of the [Playlist] identified by [playlistName]
+    /** Return the track uris of the [Playlist] identified by [playlistId]
      * that are not in any other [Playlist]s and are not in [exceptions]. */
     @Query("SELECT trackUri FROM playlistTrack " +
            "WHERE trackUri NOT IN (:exceptions) " +
-           "GROUP BY trackUri HAVING COUNT(playlistName) = 1 " +
-                             "AND playlistName = :playlistName")
-    abstract suspend fun getUniqueUrisNotIn(
-        exceptions: List<Uri>,
-        playlistName: String
-    ): List<Uri>
+           "GROUP BY trackUri HAVING COUNT(playlistId) = 1 " +
+                             "AND playlistId = :playlistId")
+    abstract suspend fun getUniqueUrisNotIn(exceptions: List<Uri>, playlistId: Long): List<Uri>
 
     @RawQuery
     protected abstract suspend fun filterNewTracks(query: SupportSQLiteQuery): List<Uri>
@@ -194,7 +204,7 @@ private const val librarySelect =
     @MapInfo(valueColumn = "trackUri")
     @Query("SELECT name, shuffle, volume, trackUri " +
            "FROM playlist " +
-           "JOIN playlistTrack ON playlist.name = playlistTrack.playlistName " +
+           "JOIN playlistTrack ON playlist.id = playlistTrack.playlistId " +
            "WHERE isActive ORDER by playlistOrder")
     abstract fun getActivePlaylistsAndTracks(): Flow<Map<ActivePlaylistSummary, List<Uri>>>
 
@@ -203,36 +213,21 @@ private const val librarySelect =
 
     @Query("SELECT uri, hasError FROM playlistTrack " +
            "JOIN track on playlistTrack.trackUri = track.uri " +
-           "WHERE playlistName = :name ORDER by playlistOrder")
-    abstract suspend fun getPlaylistTracks(name: String): List<Track>
+           "WHERE playlistId = :id ORDER by playlistOrder")
+    abstract suspend fun getPlaylistTracks(id: Long): List<Track>
 
-    /** Rename the [Playlist] whose name matches [oldName] to [newName]. */
-    @Query("UPDATE playlist SET name = :newName WHERE name = :oldName")
-    abstract suspend fun rename(oldName: String, newName: String)
+    /** Rename the [Playlist] identified by [id] to [newName]. */
+    @Query("UPDATE playlist SET name = :newName WHERE id = :id")
+    abstract suspend fun rename(id: Long, newName: String)
 
-    /** Toggle the [Playlist.isActive] field of the [Playlist] identified by [name]. */
-    @Query("UPDATE playlist set isActive = 1 - isActive WHERE name = :name")
-    abstract suspend fun toggleIsActive(name: String)
+    /** Toggle the [Playlist.isActive] field of the [Playlist] identified by [id]. */
+    @Query("UPDATE playlist set isActive = 1 - isActive WHERE id = :id")
+    abstract suspend fun toggleIsActive(id: Long)
 
-    /** Set the [Playlist.volume] field of the [Playlist] identified by [name]. */
-    @Query("UPDATE playlist SET volume = :volume WHERE name = :name")
-    abstract suspend fun setVolume(name: String, volume: Float)
+    /** Set the [Playlist.volume] field of the [Playlist] identified by [id]. */
+    @Query("UPDATE playlist SET volume = :volume WHERE id = :id")
+    abstract suspend fun setVolume(id: Long, volume: Float)
 
     @Query("UPDATE track SET hasError = 1 WHERE uri in (:uris)")
-    protected abstract suspend fun setTracksHaveErrorPrivate(uris: List<Uri>)
-
-    @Query("SELECT playlistName FROM playlistTrack " +
-           "JOIN track ON playlistTrack.trackUri = track.uri " +
-           "GROUP BY playlistTrack.playlistName " +
-           "HAVING SUM(track.hasError) = COUNT(track.uri)")
-    protected abstract suspend fun getPlaylistsWithNoValidTracks(): List<String>
-
-    @Query("UPDATE playlist SET hasError = 1 WHERE name IN (:names)")
-    protected abstract suspend fun setPlaylistsHaveError(names: List<String>)
-
-    @Transaction
-    open suspend fun setTracksHaveError(trackUris: List<Uri>) {
-        setTracksHaveErrorPrivate(trackUris)
-        setPlaylistsHaveError(getPlaylistsWithNoValidTracks())
-    }
+    abstract suspend fun setTracksHaveError(uris: List<Uri>)
 }

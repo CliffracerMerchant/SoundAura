@@ -10,6 +10,7 @@ import androidx.core.net.toUri
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
 import com.cliffracertech.soundaura.R
@@ -34,51 +35,29 @@ data class Track(
     }
 }
 
-@Entity(tableName = "playlistTrack",
-        primaryKeys = ["playlistName", "trackUri"],
-        foreignKeys = [
-            ForeignKey(
-                entity = Playlist::class,
-                parentColumns=["name"],
-                childColumns=["playlistName"],
-                onUpdate=ForeignKey.CASCADE,
-                onDelete=ForeignKey.CASCADE),
-            ForeignKey(
-                entity = Track::class,
-                parentColumns=["uri"],
-                childColumns=["trackUri"],
-                onUpdate=ForeignKey.CASCADE,
-                onDelete=ForeignKey.CASCADE)])
-data class PlaylistTrack(
-    val playlistName: String,
-    val trackUri: Uri,
-    val playlistOrder: Int)
-
-@Entity(tableName = "playlist")
+@Entity(
+    tableName = "playlist",
+    indices = [Index(value = ["name"], unique = true)])
 data class Playlist(
-    /** The name of the [Playlist]. */
+    /** A [Long] value that uniquely identifies the [Playlist] */
     @PrimaryKey
+    val id: Long = 0L,
+
+    /** The name of the [Playlist] */
     val name: String,
 
-    /** Whether or not shuffle is enabled for the [Playlist]. */
+    /** Whether or not shuffle is enabled for the [Playlist] */
     @ColumnInfo(defaultValue = "0")
     val shuffle: Boolean = false,
 
-    /** Whether or not the [Playlist] is active (i.e. part of the current sound mix). */
+    /** Whether or not the [Playlist] is active (i.e. part of the current sound mix) */
     @ColumnInfo(defaultValue = "0")
     val isActive: Boolean = false,
 
-    /** The volume (in the range `[0f, 1f]`) of the [Playlist] during playback. */
+    /** The volume (in the range `[0f, 1f]`) of the [Playlist] during playback */
     @FloatRange(from = 0.0, to = 1.0)
     @ColumnInfo(defaultValue = "1.0")
     val volume: Float = 1f,
-
-    /** Whether or not the entire playlist has an error. This should be
-     * true if every track in the playlist has an error, but is stored
-     * as a separate column instead of being computed to prevent needing
-     * a subquery to determine its value. */
-    @ColumnInfo(defaultValue = "0")
-    val hasError: Boolean = false,
 ) {
     enum class Sort { NameAsc, NameDesc;
         fun name(context: Context) = when (this) {
@@ -87,6 +66,26 @@ data class Playlist(
         }
     }
 }
+
+@Entity(tableName = "playlistTrack",
+    primaryKeys = ["playlistId", "trackUri"],
+    foreignKeys = [
+        ForeignKey(
+            entity = Playlist::class,
+            parentColumns=["id"],
+            childColumns=["playlistId"],
+            onUpdate=ForeignKey.CASCADE,
+            onDelete=ForeignKey.CASCADE),
+        ForeignKey(
+            entity = Track::class,
+            parentColumns=["uri"],
+            childColumns=["trackUri"],
+            onUpdate=ForeignKey.CASCADE,
+            onDelete=ForeignKey.CASCADE)])
+data class PlaylistTrack(
+    val playlistId: Long,
+    val playlistOrder: Int,
+    val trackUri: Uri)
 
 /** A [ListValidator] that validates a list of new single-track [Playlist] names. */
 class TrackNamesValidator(

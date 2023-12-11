@@ -63,12 +63,12 @@ class ReadLibraryUseCase @Inject constructor(
         }.transformLatest { emitAll(it) }
         .map(List<Playlist>::toImmutableList)
 
-    /** Return a [List] of the [Track]s in the playlist whose name matches [playlistName]. */
-    suspend fun getPlaylistTracks(playlistName: String): List<Track> =
-        dao.getPlaylistTracks(playlistName)
+    /** Return a [List] of the [Track]s in the [Playlist] identified by [playlistId]. */
+    suspend fun getPlaylistTracks(playlistId: Long): List<Track> =
+        dao.getPlaylistTracks(playlistId)
 
-    /** Return whether or not the playlist whose name matches
-     * [playlistName] has shuffle playback enabled. */
-    suspend fun getPlaylistShuffle(playlistName: String): Boolean =
-        dao.getPlaylistShuffle(playlistName)
+    /** Return whether or not the [Playlist] identified
+     * by [playlistId] has shuffle playback enabled. */
+    suspend fun getPlaylistShuffle(playlistId: Long): Boolean =
+        dao.getPlaylistShuffle(playlistId)
 }
