@@ -39,8 +39,8 @@ interface PlaybackState {
     /** Clear any set stop timer. */
     fun clearTimer()
 
-    /** Set the playlist whose name matches [playlistName]'s volume to [volume]. */
-    fun setPlaylistVolume(playlistName: String, @FloatRange(0.0, 1.0) volume: Float)
+    /** Set the playlist identified by [playlistId]'s volume to [volume]. */
+    fun setPlaylistVolume(playlistId: Long, @FloatRange(0.0, 1.0) volume: Float)
 }
 
 /**
@@ -123,12 +123,12 @@ class PlayerServicePlaybackState @Inject constructor(): PlaybackState {
         }
     }
 
-    override fun setPlaylistVolume(playlistName: String, volume: Float) {
+    override fun setPlaylistVolume(playlistId: Long, volume: Float) {
         // If the service is not bound, we do nothing on the assumption that
         // the volume change will be written to the app's database and will
         // therefore be reflected next time the service is started and the
         // active tracks (and their volumes) are read from the database.
-        serviceBinder?.setPlaylistVolume(playlistName, volume)
+        serviceBinder?.setPlaylistVolume(playlistId, volume)
     }
 }
 
@@ -152,5 +152,5 @@ class TestPlaybackState: PlaybackState {
     override fun setTimer(duration: Duration) { stopTime = Instant.now() + duration }
     override fun clearTimer() { stopTime = null }
 
-    override fun setPlaylistVolume(playlistName: String, volume: Float) = Unit
+    override fun setPlaylistVolume(playlistId: Long, volume: Float) = Unit
 }

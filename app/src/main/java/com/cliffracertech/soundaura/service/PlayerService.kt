@@ -323,8 +323,8 @@ class PlayerService: LifecycleService() {
         } catch(e: RuntimeException) {}
     }
 
-    fun setPlaylistVolume(playlistName: String, volume: Float) =
-        playerMap.setPlayerVolume(playlistName, volume)
+    fun setPlaylistVolume(playlistId: Long, volume: Float) =
+        playerMap.setPlayerVolume(playlistId, volume)
 
     /**
      * Automatically pause playback if the parameter [condition] is true and
@@ -379,8 +379,8 @@ class PlayerService: LifecycleService() {
         }
         fun clearStopTimer() = setStopTime(null)
 
-        fun setPlaylistVolume(playlistName: String, volume: Float) =
-            this@PlayerService.setPlaylistVolume(playlistName, volume)
+        fun setPlaylistVolume(playlistId: Long, volume: Float) =
+            this@PlayerService.setPlaylistVolume(playlistId, volume)
     }
 
     override fun onBind(intent: Intent): Binder {

@@ -130,7 +130,7 @@ import javax.inject.Inject
             scope.launch { modifyLibrary.togglePlaylistIsActive(playlist.id) }
         }
         override fun onVolumeChange(playlist: Playlist, volume: Float) {
-            playbackState.setPlaylistVolume(playlist.name, volume)
+            playbackState.setPlaylistVolume(playlist.id, volume)
         }
         override fun onVolumeChangeFinished(playlist: Playlist, volume: Float) {
             scope.launch { modifyLibrary.setPlaylistVolume(playlist.id, volume) }
