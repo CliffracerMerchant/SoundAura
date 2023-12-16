@@ -8,12 +8,12 @@ import android.media.MediaPlayer
 import android.net.Uri
 
 data class ActivePlaylistSummary(
-    val name: String,
+    val id: Long,
     val shuffle: Boolean,
     val volume: Float)
 
 typealias ActivePlaylist = Map.Entry<ActivePlaylistSummary, List<Uri>>
-val ActivePlaylist.name get() = key.name
+val ActivePlaylist.id get() = key.id
 val ActivePlaylist.shuffle get() = key.shuffle
 val ActivePlaylist.volume get() = key.volume
 val ActivePlaylist.tracks get() = value
@@ -84,19 +84,19 @@ class Player(
     fun stop() { currentPlayer?.attempt { pause(); seekTo(0) }}
 
     fun update(newPlaylist: ActivePlaylist) {
-        volume = newPlaylist.volume
-        val playing = currentPlayer?.isPlaying == true &&
-                (currentPlayer?.currentPosition ?: 0) > 0
+        val playing = currentPlayer?.run {
+            isPlaying && currentPosition > 0
+        } ?: false
         val playingUri = if (!playing) null
                          else uris[currentIndex]
 
+        volume = newPlaylist.volume
         shuffle = newPlaylist.shuffle
         uris = newPlaylist.tracks.toMutableList().apply {
             if (newPlaylist.shuffle) shuffle()
         }
-        currentIndex = newPlaylist.tracks
-            .indexOf(playingUri)
-            .coerceIn(uris.indices)
+        currentIndex = uris.indexOf(playingUri)
+                           .coerceIn(uris.indices)
         prepareNextPlayer()
     }
 
@@ -185,7 +185,7 @@ class PlayerMap(
 ) {
     var isInitialized = false
         private set
-    private var playerMap: MutableMap<String, Player> = hashMapOf()
+    private var playerMap: MutableMap<Long, Player> = hashMapOf()
 
     val isEmpty get() = playerMap.isEmpty()
 
@@ -209,10 +209,10 @@ class PlayerMap(
 
         for (playlist in playlists) {
             val existingPlayer = oldMap
-                .remove(playlist.name)
+                .remove(playlist.id)
                 ?.apply { update(playlist) }
 
-            playerMap[playlist.name] = existingPlayer ?:
+            playerMap[playlist.id] = existingPlayer ?:
                 Player(context, playlist, startPlaying, onPlaybackFailure)
         }
         oldMap.values.forEach(Player::release)

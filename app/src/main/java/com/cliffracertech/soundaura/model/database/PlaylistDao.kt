@@ -4,7 +4,13 @@
 package com.cliffracertech.soundaura.model.database
 
 import android.net.Uri
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.MapInfo
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.RawQuery
+import androidx.room.Transaction
 import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteQuery
 import com.cliffracertech.soundaura.service.ActivePlaylistSummary
@@ -208,7 +214,7 @@ private const val librarySelect =
      * [Playlist] (represented as an [ActivePlaylistSummary]
      * mapped to its tracks (represented as a [List] of [Uri]s). */
     @MapInfo(valueColumn = "trackUri")
-    @Query("SELECT name, shuffle, volume, trackUri " +
+    @Query("SELECT id, shuffle, volume, trackUri " +
            "FROM playlist " +
            "JOIN playlistTrack ON playlist.id = playlistTrack.playlistId " +
            "WHERE isActive ORDER by playlistOrder")
