@@ -18,7 +18,6 @@ import com.cliffracertech.soundaura.model.ListValidator
 import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.Validator
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 @Entity(tableName = "track")
@@ -97,7 +96,7 @@ class TrackNamesValidator(
 
     private var existingNames: Set<String>? = null
     init { coroutineScope.launch {
-        existingNames = playlistDao.getPlaylistNames().first().toSet()
+        existingNames = playlistDao.getPlaylistNames().toSet()
     }}
 
     override fun isInvalid(value: String) =
@@ -107,7 +106,7 @@ class TrackNamesValidator(
         StringResource(R.string.add_multiple_tracks_name_error_message))
 
     override suspend fun validate(): List<String>? {
-        val existingNames = playlistDao.getPlaylistNames().first().toSet()
+        val existingNames = playlistDao.getPlaylistNames().toSet()
         return when {
             values.intersect(existingNames).isNotEmpty() -> null
             values.containsBlanks() -> null
