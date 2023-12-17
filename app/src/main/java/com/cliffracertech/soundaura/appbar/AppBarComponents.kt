@@ -29,12 +29,15 @@ import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.cliffracertech.soundaura.rememberMutableStateOf
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import kotlinx.collections.immutable.ImmutableList
 
@@ -104,16 +107,22 @@ fun GradientToolBar(
 @Composable fun SearchQueryView(
     state: SearchQueryViewState,
     modifier: Modifier = Modifier
-) = BasicTextField(
-    value = state.query,
-    onValueChange = state.onQueryChange,
-    textStyle = MaterialTheme.typography.h6,
-    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-    modifier = modifier.minTouchTargetSize(),
-    singleLine = true,
-) { innerTextField ->
-    Column(verticalArrangement = Arrangement.Center) {
-        innerTextField()
-        Divider(color = LocalContentColor.current, thickness = (1.5).dp)
+) {
+    // Remembering the last non-null query allows it to fade out when the query
+    // changes from a non-null value to null, instead of abruptly disappearing
+    var query by rememberMutableStateOf(state.query ?: "")
+    state.query?.let { query = it }
+    BasicTextField(
+        value = query,
+        onValueChange = state.onQueryChange,
+        textStyle = MaterialTheme.typography.h6,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        modifier = modifier.minTouchTargetSize(),
+        singleLine = true,
+    ) { innerTextField ->
+        Column(verticalArrangement = Arrangement.Center) {
+            innerTextField()
+            Divider(color = LocalContentColor.current, thickness = (1.5).dp)
+        }
     }
 }

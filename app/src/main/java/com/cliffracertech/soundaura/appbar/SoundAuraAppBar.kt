@@ -72,7 +72,7 @@ import javax.inject.Inject
         navigationState.willConsumeBackButtonClick ->
             navigationState::onBackButtonClick
         searchQuery.isActive ->
-            searchQuery::toggleIsActive
+            searchQuery::clear
         else -> null
     }
 
@@ -84,7 +84,6 @@ import javax.inject.Inject
     val showIconButtons get() = !navigationState.showingAppSettings
 
     val searchQueryViewState = SearchQueryViewState(
-        getIsActive = searchQuery::isActive,
         getQuery = searchQuery::value,
         onQueryChange = searchQuery::set,
         onButtonClick = searchQuery::toggleIsActive,
@@ -95,7 +94,7 @@ import javax.inject.Inject
 
     private val playlistSortKey = intPreferencesKey(PrefKeys.playlistSort)
     private val playlistSort by dataStore.enumPreferenceState<Playlist.Sort>(playlistSortKey, scope)
-    private val playlistSortOptions = Playlist.Sort.values()
+    private val playlistSortOptions = Playlist.Sort.entries
     val sortMenuState = SortMenuState(
         optionNames = @Composable { context ->
             // The locale is used as a key so that configuration changes won't
@@ -119,7 +118,7 @@ import javax.inject.Inject
 
     fun onSettingsButtonClick() {
         if (searchQuery.isActive)
-            searchQuery.toggleIsActive()
+            searchQuery.clear()
         navigationState.showingPresetSelector = false
         navigationState.showingAppSettings = true
     }

@@ -42,43 +42,31 @@ class NavigationState @Inject constructor() {
 /**
  * A state holder for a search query entry.
  *
- * The property [isActive] reflects whether or not the search query is active.
- * The query can be accessed through the property [value] or as a [Flow]
- * through the [flow] property. The current value can be accessed even if it
- * is inactive in case, e.g., a UI component needs to crossfade the newly
- * inactive search query to another piece of text.
- *
- * The method [toggleIsActive] toggles the search query's active state.
- * The [value] will be reset to a blank string [toggleIsActive] causes the
- * isActive state to become true. The method [set] can be used to update an
- * active search query. Note that [set] will no-op is [isActive] is false.
+ * The query itself can be accessed through the property [value] or as a
+ * [Flow] through the [flow] property. The method [set] can be used to
+ * update an active search query, or [clear] can be used to reset it to null.
+ * The convenience method [toggleIsActive] will set the query to null if it
+ * is not null, or to a blank string if it is null.
  */
 @ActivityRetainedScoped
 class SearchQueryState @Inject constructor() {
-    // Originally the value was stored only in a MutableState, and entities that
-    // required the value as a Flow could use a snapshotFlow. This caused tests
-    // to fail for some reason, so we just store the value in both a MutableState
-    // and a MutableStateFlow for convenience.
+    var value by mutableStateOf<String?>(null)
+        private set
+    val flow = MutableStateFlow<String?>(null)
 
-    var isActive by mutableStateOf(false)
-        private set
-    var value by mutableStateOf("")
-        private set
-    val flow = MutableStateFlow("")
+    val isActive get() = value != null
 
     fun toggleIsActive() {
-        if (!isActive) {
-            value = ""
-            flow.value = ""
-        }
-        isActive = !isActive
+        if (isActive) clear()
+        else          set("")
     }
 
-    fun set(newQuery: String) {
-        if (!isActive) return
+    fun set(newQuery: String?) {
         value = newQuery
         flow.value = newQuery
     }
+
+    fun clear() = set(null)
 }
 
 /**

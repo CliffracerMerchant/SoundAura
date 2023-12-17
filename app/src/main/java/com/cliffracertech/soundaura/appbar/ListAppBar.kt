@@ -103,7 +103,7 @@ import kotlinx.collections.immutable.toImmutableList
 
     // Title / search query
     Crossfade(
-        targetState = searchQueryState.isActive,
+        targetState = searchQueryState.query != null,
         modifier = Modifier.weight(1f),
         animationSpec = tween(tweenDuration),
         label = "Action bar search query appearance/disappearance",
@@ -118,7 +118,7 @@ import kotlinx.collections.immutable.toImmutableList
             Text(text = it,
                 modifier = Modifier.height(48.dp).wrapContentHeight(),
                 style = MaterialTheme.typography.h5, maxLines = 1)
-        } // This inner crossfade is for when the title changes.
+        }
     }
 
     // Right aligned content
@@ -168,7 +168,6 @@ import kotlinx.collections.immutable.toImmutableList
         showIconButtons = !showingSettings,
         searchQueryState = remember {
             SearchQueryViewState(
-                getIsActive = { searchIsActive },
                 getQuery = { searchQuery },
                 onQueryChange = { searchQuery = it },
                 onButtonClick = {
