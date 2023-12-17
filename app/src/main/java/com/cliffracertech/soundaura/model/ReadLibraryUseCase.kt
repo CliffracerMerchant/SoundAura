@@ -54,13 +54,13 @@ class ReadLibraryUseCase @Inject constructor(
         ) { sort, showActiveFirst, searchQuery ->
             val filter = "%$searchQuery%"
             if (showActiveFirst) when (sort) {
-                PlaylistSort.NameAsc ->    dao.getAllPlaylistsSortedByActiveThenNameAsc(filter)
-                PlaylistSort.NameDesc ->   dao.getAllPlaylistsSortedByActiveThenNameDesc(filter)
-                PlaylistSort.OrderAdded -> dao.getAllPlaylistsSortedByActiveThenOrderAdded(filter)
+                PlaylistSort.NameAsc ->    dao.getPlaylistsSortedByActiveThenNameAsc(filter)
+                PlaylistSort.NameDesc ->   dao.getPlaylistsSortedByActiveThenNameDesc(filter)
+                PlaylistSort.OrderAdded -> dao.getPlaylistsSortedByActiveThenOrderAdded(filter)
             } else when (sort) {
-                PlaylistSort.NameAsc ->    dao.getAllPlaylistsSortedByNameAsc(filter)
-                PlaylistSort.NameDesc ->   dao.getAllPlaylistsSortedByNameDesc(filter)
-                PlaylistSort.OrderAdded -> dao.getAllPlaylistsSortedByOrderAdded(filter)
+                PlaylistSort.NameAsc ->    dao.getPlaylistsSortedByNameAsc(filter)
+                PlaylistSort.NameDesc ->   dao.getPlaylistsSortedByNameDesc(filter)
+                PlaylistSort.OrderAdded -> dao.getPlaylistsSortedByOrderAdded(filter)
             }
         }.transformLatest { emitAll(it) }
         .map(List<Playlist>::toImmutableList)

@@ -190,22 +190,22 @@ private const val librarySelect =
     abstract suspend fun exists(name: String?): Boolean
 
     @Query("$librarySelect ORDER BY name COLLATE NOCASE ASC")
-    abstract fun getAllPlaylistsSortedByNameAsc(filter: String): Flow<List<LibraryPlaylist>>
+    abstract fun getPlaylistsSortedByNameAsc(filter: String): Flow<List<LibraryPlaylist>>
 
     @Query("$librarySelect ORDER BY name COLLATE NOCASE DESC")
-    abstract fun getAllPlaylistsSortedByNameDesc(filter: String): Flow<List<LibraryPlaylist>>
+    abstract fun getPlaylistsSortedByNameDesc(filter: String): Flow<List<LibraryPlaylist>>
 
     @Query("$librarySelect ORDER BY id ASC")
-    abstract fun getAllPlaylistsSortedByOrderAdded(filter: String): Flow<List<LibraryPlaylist>>
+    abstract fun getPlaylistsSortedByOrderAdded(filter: String): Flow<List<LibraryPlaylist>>
 
     @Query("$librarySelect ORDER BY isActive DESC, name COLLATE NOCASE ASC")
-    abstract fun getAllPlaylistsSortedByActiveThenNameAsc(filter: String): Flow<List<LibraryPlaylist>>
+    abstract fun getPlaylistsSortedByActiveThenNameAsc(filter: String): Flow<List<LibraryPlaylist>>
 
     @Query("$librarySelect ORDER BY isActive DESC, name COLLATE NOCASE DESC")
-    abstract fun getAllPlaylistsSortedByActiveThenNameDesc(filter: String): Flow<List<LibraryPlaylist>>
+    abstract fun getPlaylistsSortedByActiveThenNameDesc(filter: String): Flow<List<LibraryPlaylist>>
 
     @Query("$librarySelect ORDER BY isActive DESC, id ASC")
-    abstract fun getAllPlaylistsSortedByActiveThenOrderAdded(filter: String): Flow<List<LibraryPlaylist>>
+    abstract fun getPlaylistsSortedByActiveThenOrderAdded(filter: String): Flow<List<LibraryPlaylist>>
 
     @Query("SELECT EXISTS(SELECT 1 FROM playlist WHERE isActive)")
     abstract fun getAtLeastOnePlaylistIsActive(): Flow<Boolean>
