@@ -119,33 +119,33 @@ private const val librarySelect =
 
     /**
      * Set the playlist identified by [playlistId] to have a [Playlist.shuffle]
-     * value equal to [shuffle], and overwrite its tracks to be equal to [contents].
+     * value equal to [shuffle], and overwrite its tracks to be equal to [tracks].
      *
-     * If the [Uri]s in [contents] that are not already in any other playlists
+     * If the [Uri]s in [tracks] that are not already in any other playlists
      * has already been obtained, it can be passed as [newUris] to prevent the
      * database from needing to insert already existing tracks. Likewise, if
      * the [Uri]s that were previously a part of the playlist, but are not in
-     * the new [contents] and are not in any other playlist has already been
+     * the new [tracks] and are not in any other playlist has already been
      * obtained, it can be passed as [removableUris] to prevent the database
      * from needing to recalculate the [Uri]s that are no longer needed.
      *
      * @return The [List] of [Uri]s that are no longer in any [Playlist] after the change.
      */
     @Transaction
-    open suspend fun setPlaylistShuffleAndContents(
+    open suspend fun setPlaylistShuffleAndTracks(
         playlistId: Long,
         shuffle: Boolean,
-        contents: List<Track>,
+        tracks: List<Track>,
         newUris: List<Uri>? = null,
         removableUris: List<Uri>? = null,
     ): List<Uri> {
         val removedUris = removableUris ?:
-            getUniqueUrisNotIn(contents.map(Track::uri), playlistId)
+            getUniqueUrisNotIn(tracks.map(Track::uri), playlistId)
         deleteTracks(removedUris)
-        insertTracks(newUris?.map(::Track) ?: contents)
+        insertTracks(newUris?.map(::Track) ?: tracks)
 
         deletePlaylistTracks(playlistId)
-        insertPlaylistTracks(contents.mapIndexed { index, track ->
+        insertPlaylistTracks(tracks.mapIndexed { index, track ->
             PlaylistTrack(playlistId, index, track.uri)
         })
         setPlaylistShuffle(playlistId, shuffle)

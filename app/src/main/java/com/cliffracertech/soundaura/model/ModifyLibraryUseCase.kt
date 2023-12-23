@@ -78,10 +78,10 @@ class ModifyLibraryUseCase(
                 permissionHandler.totalAllowance))
             dao.setPlaylistShuffle(playlistId, shuffle)
         } else {
-            val removedUris = dao.setPlaylistShuffleAndContents(
+            val removedUris = dao.setPlaylistShuffleAndTracks(
                 playlistId = playlistId,
                 shuffle = shuffle,
-                contents = tracks,
+                tracks = tracks,
                 newUris = newUris,
                 removableUris = removableUris)
             permissionHandler.releasePermissionsFor(removedUris)
