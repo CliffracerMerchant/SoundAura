@@ -4,6 +4,7 @@
 package com.cliffracertech.soundaura.library
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,10 +22,11 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -37,59 +39,90 @@ import com.cliffracertech.soundaura.model.ModifyLibraryUseCase
 import com.cliffracertech.soundaura.model.PlaybackState
 import com.cliffracertech.soundaura.model.PlayerServicePlaybackState
 import com.cliffracertech.soundaura.model.ReadLibraryUseCase
+import com.cliffracertech.soundaura.model.SearchQueryState
+import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.database.Track
+import com.cliffracertech.soundaura.ui.tweenDuration
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/** A state holder whose subtypes, [Loading], [Empty], and [Content], represent
+ * the possible states for an asynchronously loaded list of [Playlist]s. */
+sealed class LibraryViewState {
+    /** The list of items is still being loaded */
+    data object Loading: LibraryViewState()
+
+    /** The list of items is empty. [message] can be resolved to
+     * obtain a [String] describing the empty content. This can be
+     * used to, e.g., explain why the list of items might be empty. */
+    class Empty(val message: StringResource): LibraryViewState()
+
+    /** The list of items has been loaded, and can be obtained through
+     * the property [items]. The value of the property [itemCallback]
+     * can be used as an item callback in, e.g., a [PlaylistView]. */
+    class Content(
+        private val getItems: () -> ImmutableList<Playlist>?,
+        val itemCallback: PlaylistViewCallback,
+    ): LibraryViewState() {
+        val items get() = getItems()
+    }
+}
+
 /**
  * A [LazyColumn] to display all of the provided [Playlist]s with instances of [PlaylistView].
  *
- * @param modifier The [Modifier] that will be used for the TrackList.
- * @param state The [LazyListState] used for the TrackList's scrolling state.
+ * @param modifier The [Modifier] that will be used for the TrackList
+ * @param lazyListState The [LazyListState] used for the library's scrolling state
  * @param contentPadding The [PaddingValues] instance that will be used as
- *     the content padding for the TrackList's items.
- * @param libraryContents The [ImmutableList] of [Playlist]s that will be
- *     displayed by the LibraryView. If the list is empty, an empty list
- *     message will be displayed instead. A null value is interpreted as
- *     a loading state.
- * @param playlistViewCallback The instance of [PlaylistViewCallback] that will
- *     be used for responses to individual TrackView interactions.
+ *     the content padding for the list of items
+ * @param shownDialog A [PlaylistDialog] instance that describes the [Playlist]
+ *     related dialog that should be shown, or null if no dialog needs to be shown
+ * @param libraryViewState A [LibraryViewState] instance that describes the UI
+ *     state of the LibraryView
  */
 @Composable fun LibraryView(
     modifier: Modifier = Modifier,
-    state: LazyListState = rememberLazyListState(),
+    lazyListState: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues,
-    libraryContents: ImmutableList<Playlist>?,
     shownDialog: PlaylistDialog?,
-    playlistViewCallback: PlaylistViewCallback
+    libraryViewState: LibraryViewState,
 ) {
+    PlaylistDialogShower(shownDialog)
+
     Crossfade(
-        targetState = libraryContents?.isEmpty(),
-        label = "LibraryView content/empty crossfade",
-    ) {
-        when(it) {
-            null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+        targetState = libraryViewState,
+        modifier = modifier,
+        animationSpec = tween(tweenDuration),
+        label = "LibraryView loading/empty/content crossfade",
+    ) { viewState -> when(viewState) {
+        is LibraryViewState.Loading ->
+            Box(Modifier.fillMaxSize(), Alignment.Center) {
                 CircularProgressIndicator(Modifier.size(50.dp))
-            } true -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                Text(stringResource(R.string.empty_library_message),
+            }
+        is LibraryViewState.Empty -> {
+            val context = LocalContext.current
+            val text = remember(viewState) { viewState.message.resolve(context) }
+            Box(Modifier.fillMaxSize(), Alignment.Center) {
+                Text(text = text,
                      modifier = Modifier.width(300.dp),
                      textAlign = TextAlign.Justify)
-            } else -> LazyColumn(
-                modifier, state, contentPadding,
+            }
+        } is LibraryViewState.Content -> {
+            val items = (viewState.items ?: emptyList()) as ImmutableList<Playlist>
+            LazyColumn(
+                Modifier, lazyListState, contentPadding,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val items = libraryContents ?: emptyList()
                 items(items, key = Playlist::name::get) { playlist ->
-                    PlaylistView(playlist, playlistViewCallback,
-                                 Modifier.animateItemPlacement())
+                    PlaylistView(playlist, viewState.itemCallback,
+                        Modifier.animateItemPlacement())
                 }
             }
         }
-    }
-    PlaylistDialogShower(shownDialog)
+    }}
 }
 
 /**
@@ -104,6 +137,7 @@ import javax.inject.Inject
 @HiltViewModel class LibraryViewModel(
     readLibrary: ReadLibraryUseCase,
     private val modifyLibrary: ModifyLibraryUseCase,
+    private val searchQueryState: SearchQueryState,
     private val messageHandler: MessageHandler,
     private val playbackState: PlaybackState,
     coroutineScope: CoroutineScope? = null
@@ -112,20 +146,18 @@ import javax.inject.Inject
     @Inject constructor(
         readLibraryUseCase: ReadLibraryUseCase,
         modifyLibraryUseCase: ModifyLibraryUseCase,
+        searchQueryState: SearchQueryState,
         messageHandler: MessageHandler,
         playbackState: PlayerServicePlaybackState,
     ) : this(readLibraryUseCase, modifyLibraryUseCase,
-             messageHandler, playbackState, null)
+             searchQueryState, messageHandler, playbackState, null)
 
     private val scope = coroutineScope ?: viewModelScope
 
-    val playlists by readLibrary.playlistsFlow.collectAsState(null, scope)
-
     var shownDialog by mutableStateOf<PlaylistDialog?>(null)
-
     private fun dismissDialog() { shownDialog = null }
 
-    val itemCallback = object : PlaylistViewCallback {
+    private val itemCallback = object : PlaylistViewCallback {
         override fun onAddRemoveButtonClick(playlist: Playlist) {
             scope.launch { modifyLibrary.togglePlaylistIsActive(playlist.id) }
         }
@@ -163,6 +195,21 @@ import javax.inject.Inject
                     scope.launch { modifyLibrary.removePlaylist(playlist.id) }
                 })
         }
+    }
+
+    private val playlists by readLibrary.playlistsFlow.collectAsState(null, scope)
+    private val noSearchResultsState = LibraryViewState.Empty(StringResource(R.string.no_search_results_message))
+    private val emptyLibraryState = LibraryViewState.Empty(StringResource(R.string.empty_library_message))
+    private val contentState = LibraryViewState.Content(::playlists, itemCallback)
+
+    val viewState get() = when {
+        playlists == null ->
+            LibraryViewState.Loading
+        playlists?.isEmpty() == true -> {
+            if (searchQueryState.isActive)
+                noSearchResultsState
+            else emptyLibraryState
+        } else -> contentState
     }
 
     private fun showFileChooser(
@@ -227,9 +274,8 @@ import javax.inject.Inject
     val viewModel: LibraryViewModel = viewModel()
     LibraryView(
         modifier = modifier,
-        state = state,
+        lazyListState = state,
         contentPadding = padding,
-        libraryContents = viewModel.playlists,
         shownDialog = viewModel.shownDialog,
-        playlistViewCallback = viewModel.itemCallback)
+        libraryViewState = viewModel.viewState)
 }

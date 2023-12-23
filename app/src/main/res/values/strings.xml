@@ -23,6 +23,7 @@
 
     <string name="empty_library_message">Your library is empty. Tap
         the add button below to add local files to your library.</string>
+    <string name="no_search_results_message">No tracks/playlists match the query.</string>
     <string name="set_playlist_active_description">Add %1$s to sound mix</string>
     <string name="set_playlist_inactive_description">Remove %1$s from sound mix</string>
     <string name="playlist_error_message">Files missing/corrupt</string>
