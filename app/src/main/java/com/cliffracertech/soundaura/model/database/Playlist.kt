@@ -97,6 +97,7 @@ class TrackNamesValidator(
     private var existingNames: Set<String>? = null
     init { coroutineScope.launch {
         existingNames = playlistDao.getPlaylistNames().toSet()
+        recheck()
     }}
 
     override fun isInvalid(value: String) =
