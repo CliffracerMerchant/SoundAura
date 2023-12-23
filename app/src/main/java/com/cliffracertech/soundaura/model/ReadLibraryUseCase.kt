@@ -52,16 +52,29 @@ class ReadLibraryUseCase @Inject constructor(
     val playlistsFlow = combine(
             playlistSort, showActivePlaylistsFirst, searchQuery.flow
         ) { sort, showActiveFirst, searchQuery ->
-            val filter = "%$searchQuery%"
-            if (showActiveFirst) when (sort) {
-                PlaylistSort.NameAsc ->    dao.getPlaylistsSortedByActiveThenNameAsc(filter)
-                PlaylistSort.NameDesc ->   dao.getPlaylistsSortedByActiveThenNameDesc(filter)
-                PlaylistSort.OrderAdded -> dao.getPlaylistsSortedByActiveThenOrderAdded(filter)
-            } else when (sort) {
-                PlaylistSort.NameAsc ->    dao.getPlaylistsSortedByNameAsc(filter)
-                PlaylistSort.NameDesc ->   dao.getPlaylistsSortedByNameDesc(filter)
-                PlaylistSort.OrderAdded -> dao.getPlaylistsSortedByOrderAdded(filter)
+            if (searchQuery == null) {
+                if (showActiveFirst) when (sort) {
+                    PlaylistSort.NameAsc ->    dao.getPlaylistsSortedByActiveThenNameAsc()
+                    PlaylistSort.NameDesc ->   dao.getPlaylistsSortedByActiveThenNameDesc()
+                    PlaylistSort.OrderAdded -> dao.getPlaylistsSortedByActiveThenOrderAdded()
+                } else when (sort) {
+                    PlaylistSort.NameAsc ->    dao.getPlaylistsSortedByNameAsc()
+                    PlaylistSort.NameDesc ->   dao.getPlaylistsSortedByNameDesc()
+                    PlaylistSort.OrderAdded -> dao.getPlaylistsSortedByOrderAdded()
+                }
+            } else {
+                val filter = "%$searchQuery%"
+                if (showActiveFirst) when (sort) {
+                    PlaylistSort.NameAsc ->    dao.getPlaylistsSortedByActiveThenNameAsc(filter)
+                    PlaylistSort.NameDesc ->   dao.getPlaylistsSortedByActiveThenNameDesc(filter)
+                    PlaylistSort.OrderAdded -> dao.getPlaylistsSortedByActiveThenOrderAdded(filter)
+                } else when (sort) {
+                    PlaylistSort.NameAsc ->    dao.getPlaylistsSortedByNameAsc(filter)
+                    PlaylistSort.NameDesc ->   dao.getPlaylistsSortedByNameDesc(filter)
+                    PlaylistSort.OrderAdded -> dao.getPlaylistsSortedByOrderAdded(filter)
+                }
             }
+
         }.transformLatest { emitAll(it) }
         .map(List<Playlist>::toImmutableList)
 

@@ -18,13 +18,19 @@ import kotlinx.coroutines.flow.Flow
 
 typealias LibraryPlaylist = com.cliffracertech.soundaura.library.Playlist
 
-private const val librarySelect =
+private const val librarySelectBase =
     "SELECT id, name, isActive, volume, " +
            "COUNT(NOT track.hasError) = 0 as hasError, " +
            "COUNT(playlistId) = 1 AS isSingleTrack " +
     "FROM playlist " +
     "JOIN playlistTrack ON playlist.id = playlistTrack.playlistId " +
-    "JOIN track on playlistTrack.trackUri = track.uri " +
+    "JOIN track on playlistTrack.trackUri = track.uri "
+
+private const val librarySelect =
+    librarySelectBase + "GROUP BY playlistTrack.playlistId"
+
+private const val librarySelectWithFilter =
+    librarySelectBase +
     "WHERE name LIKE :filter " +
     "GROUP BY playlistTrack.playlistId"
 
@@ -192,21 +198,39 @@ private const val librarySelect =
     abstract suspend fun exists(name: String?): Boolean
 
     @Query("$librarySelect ORDER BY name COLLATE NOCASE ASC")
-    abstract fun getPlaylistsSortedByNameAsc(filter: String): Flow<List<LibraryPlaylist>>
+    abstract fun getPlaylistsSortedByNameAsc(): Flow<List<LibraryPlaylist>>
 
     @Query("$librarySelect ORDER BY name COLLATE NOCASE DESC")
-    abstract fun getPlaylistsSortedByNameDesc(filter: String): Flow<List<LibraryPlaylist>>
+    abstract fun getPlaylistsSortedByNameDesc(): Flow<List<LibraryPlaylist>>
 
     @Query("$librarySelect ORDER BY id ASC")
-    abstract fun getPlaylistsSortedByOrderAdded(filter: String): Flow<List<LibraryPlaylist>>
+    abstract fun getPlaylistsSortedByOrderAdded(): Flow<List<LibraryPlaylist>>
 
     @Query("$librarySelect ORDER BY isActive DESC, name COLLATE NOCASE ASC")
-    abstract fun getPlaylistsSortedByActiveThenNameAsc(filter: String): Flow<List<LibraryPlaylist>>
+    abstract fun getPlaylistsSortedByActiveThenNameAsc(): Flow<List<LibraryPlaylist>>
 
     @Query("$librarySelect ORDER BY isActive DESC, name COLLATE NOCASE DESC")
-    abstract fun getPlaylistsSortedByActiveThenNameDesc(filter: String): Flow<List<LibraryPlaylist>>
+    abstract fun getPlaylistsSortedByActiveThenNameDesc(): Flow<List<LibraryPlaylist>>
 
     @Query("$librarySelect ORDER BY isActive DESC, id ASC")
+    abstract fun getPlaylistsSortedByActiveThenOrderAdded(): Flow<List<LibraryPlaylist>>
+
+    @Query("$librarySelectWithFilter ORDER BY name COLLATE NOCASE ASC")
+    abstract fun getPlaylistsSortedByNameAsc(filter: String): Flow<List<LibraryPlaylist>>
+
+    @Query("$librarySelectWithFilter ORDER BY name COLLATE NOCASE DESC")
+    abstract fun getPlaylistsSortedByNameDesc(filter: String): Flow<List<LibraryPlaylist>>
+
+    @Query("$librarySelectWithFilter ORDER BY id ASC")
+    abstract fun getPlaylistsSortedByOrderAdded(filter: String): Flow<List<LibraryPlaylist>>
+
+    @Query("$librarySelectWithFilter ORDER BY isActive DESC, name COLLATE NOCASE ASC")
+    abstract fun getPlaylistsSortedByActiveThenNameAsc(filter: String): Flow<List<LibraryPlaylist>>
+
+    @Query("$librarySelectWithFilter ORDER BY isActive DESC, name COLLATE NOCASE DESC")
+    abstract fun getPlaylistsSortedByActiveThenNameDesc(filter: String): Flow<List<LibraryPlaylist>>
+
+    @Query("$librarySelectWithFilter ORDER BY isActive DESC, id ASC")
     abstract fun getPlaylistsSortedByActiveThenOrderAdded(filter: String): Flow<List<LibraryPlaylist>>
 
     @Query("SELECT EXISTS(SELECT 1 FROM playlist WHERE isActive)")
