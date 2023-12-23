@@ -40,7 +40,7 @@ data class Track(
 data class Playlist(
     /** A [Long] value that uniquely identifies the [Playlist] */
     @PrimaryKey
-    val id: Long = 0L,
+    val id: Long,
 
     /** The name of the [Playlist] */
     val name: String,

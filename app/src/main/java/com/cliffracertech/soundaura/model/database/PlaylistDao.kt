@@ -223,7 +223,7 @@ private const val librarySelect =
     abstract fun getActivePlaylistsAndTracks(): Flow<Map<ActivePlaylistSummary, List<Uri>>>
 
     @Query("SELECT name FROM playlist")
-    abstract fun getPlaylistNames(): List<String>
+    abstract suspend fun getPlaylistNames(): List<String>
 
     @Query("SELECT uri, hasError FROM playlistTrack " +
            "JOIN track on playlistTrack.trackUri = track.uri " +
