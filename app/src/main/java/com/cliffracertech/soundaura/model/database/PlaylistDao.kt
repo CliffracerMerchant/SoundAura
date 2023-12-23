@@ -29,17 +29,17 @@ private const val librarySelect =
     "GROUP BY playlistTrack.playlistId"
 
 @Dao abstract class PlaylistDao {
+    @Query("SELECT last_insert_rowid()")
+    protected abstract suspend fun getLastInsertId(): Long
+
     @Query("INSERT INTO track (uri) VALUES (:uri)")
     protected abstract suspend fun insertTrack(uri: Uri)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     protected abstract suspend fun insertTracks(tracks: List<Track>)
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE, entity = Playlist::class)
-    protected abstract suspend fun insertPlaylist(playlist: Playlist): Long
-
-    @Insert(onConflict = OnConflictStrategy.IGNORE, entity = Playlist::class)
-    protected abstract suspend fun insertPlaylists(names: List<Playlist>): List<Long>
+    @Query("INSERT INTO playlist (name, shuffle) VALUES (:name, :shuffle)")
+    protected abstract suspend fun insertPlaylist(name: String, shuffle: Boolean = false)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     protected abstract suspend fun insertPlaylistTrack(playlistTrack: PlaylistTrack)
@@ -58,8 +58,8 @@ private const val librarySelect =
         newUris: List<Uri>? = null,
     ) {
         insertTracks(newUris?.map(::Track) ?: tracks)
-        val playlist = Playlist(name = playlistName, shuffle = shuffle)
-        val id = insertPlaylist(playlist)
+        insertPlaylist(playlistName, shuffle)
+        val id = getLastInsertId()
         insertPlaylistTracks(tracks.mapIndexed { index, track ->
             PlaylistTrack(id, index, track.uri)
         })
@@ -79,12 +79,14 @@ private const val librarySelect =
     ) {
         assert(names.size == uris.size)
         insertTracks((newUris ?: uris).map(::Track))
-        val playlists = names.map { Playlist(name = it) }
-        val ids = insertPlaylists(playlists)
-        assert(ids.size == names.size)
-        insertPlaylistTracks(ids.mapIndexed { index, id ->
-            PlaylistTrack(id, 0, uris[index])
-        })
+        val playlistTracks = List(names.size) {
+            insertPlaylist(names[it])
+            PlaylistTrack(
+                playlistId = getLastInsertId(),
+                playlistOrder = 0,
+                trackUri = uris[it])
+        }
+        insertPlaylistTracks(playlistTracks)
     }
 
     /** Delete the playlist identified by [id] from the database. */
