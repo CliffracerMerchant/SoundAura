@@ -53,12 +53,11 @@ class AppBarViewModelTests {
     @Test fun initial_state() {
         assertThat(instance.onBackButtonClick).isNull()
         assertThat(instance.title.stringResId).isEqualTo(R.string.app_name)
-        assertThat(instance.searchQueryViewState.isActive).isFalse()
-        assertThat(instance.searchQueryViewState.query).isEqualTo("")
+        assertThat(instance.searchQueryViewState.query).isNull()
         assertThat(instance.searchQueryViewState.icon)
             .isEqualTo(SearchQueryViewState.Icon.Search)
         assertThat(instance.sortMenuState.currentOptionIndex)
-            .isEqualTo(Playlist.Sort.values().first().ordinal)
+            .isEqualTo(Playlist.Sort.entries.first().ordinal)
         assertThat(instance.sortMenuState.showingPopup).isFalse()
         assertThat(instance.showActivePlaylistsFirstSwitchState.checked).isFalse()
     }
