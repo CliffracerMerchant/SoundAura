@@ -263,7 +263,7 @@ class AddPlaylistButtonViewModelTests {
     @Test fun validating_playlist_names() = runTest {
         val playlistName = testUris.first().getDisplayName(context) + " playlist"
         playlistDao.insertPlaylist(playlistName, false, testTracks)
-        waitUntil { playlistDao.getPlaylistNames().first().isNotEmpty() }
+        waitUntil { playlistDao.getPlaylistNames().isNotEmpty() }
 
         goto_name_playlist_step()
         waitUntil { namePlaylistStep.message != null }
