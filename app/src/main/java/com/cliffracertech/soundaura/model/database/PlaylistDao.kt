@@ -53,30 +53,41 @@ private const val librarySelectWithFilter =
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     protected abstract suspend fun insertPlaylistTracks(playlistTracks: List<PlaylistTrack>)
 
-    /** Insert a single [Playlist] whose [Playlist.name] and [Playlist.shuffle]
+    /**
+     * Insert a single [Playlist] whose [Playlist.name] and [Playlist.shuffle]
      * vales will be equal to [playlistName] and [shuffle], respectively. The
-     * [Uri]s in [tracks] will be added as the contents of the playlist. */
+     * [Uri]s in [tracks] will be added as the contents of the playlist.
+     *
+     * @return The [Long] id of the newly inserted [Playlist]
+     * */
     @Transaction
     open suspend fun insertPlaylist(
         playlistName: String,
         shuffle: Boolean,
         tracks: List<Track>,
         newUris: List<Uri>? = null,
-    ) {
+    ): Long {
         insertTracks(newUris?.map(::Track) ?: tracks)
         insertPlaylist(playlistName, shuffle)
         val id = getLastInsertId()
         insertPlaylistTracks(tracks.mapIndexed { index, track ->
             PlaylistTrack(id, index, track.uri)
         })
+        return id
     }
 
-    /** Attempt to add multiple single-track playlists. Each value in
+    /**
+     * Attempt to add multiple single-track playlists. Each value in
      * [names] will be used as a name for a new [Playlist], while the
      * [Uri] with the same index in [uris] will be used as that [Playlist]'s
      * single track. The [Playlist.shuffle] value for the new [Playlist]s
      * will be the default value (i.e. false) due to shuffle having no
-     * meaning for single-track playlists. */
+     * meaning for single-track playlists.
+     *
+     * If the [Uri]s in [uris] that are not already a part of any existing
+     * [Playlist]s is already known, it can be passed in to the parameter
+     * [newUris] to prevent the database inserting already existing tracks.
+     */
     @Transaction
     open suspend fun insertSingleTrackPlaylists(
         names: List<String>,
