@@ -76,7 +76,6 @@ sealed class AddLocalFilesDialogStep {
      * A question about whether to add multiple files as separate tracks
      * or as files within a single playlist is being presented.
      *
-     * @param onCancelClick The callback invoked when the dialog's cancel button is clicked
      * @param onAddIndividuallyClick The callback that is invoked when the
      *     dialog's option to add the files as individual tracks is chosen
      * @param onAddAsPlaylistClick The callback that is invoked when dialog's
@@ -84,14 +83,13 @@ sealed class AddLocalFilesDialogStep {
      */
     class AddIndividuallyOrAsPlaylistQuery(
         override val onDismissRequest: () -> Unit,
-        private val onCancelClick: () -> Unit,
         private val onAddIndividuallyClick: () -> Unit,
         private val onAddAsPlaylistClick: () -> Unit,
     ): AddLocalFilesDialogStep() {
         override val titleResId = R.string.add_local_files_as_playlist_or_tracks_title
         val textResId = R.string.add_local_files_as_playlist_or_tracks_question
         override val buttons = listOf(
-            ButtonInfo(R.string.cancel, onClick = onCancelClick),
+            ButtonInfo(R.string.cancel, onClick = onDismissRequest),
             ButtonInfo(R.string.add_local_files_individually_option, onClick = onAddIndividuallyClick),
             ButtonInfo(R.string.add_local_files_as_playlist_option, onClick = onAddAsPlaylistClick))
     }

@@ -11,6 +11,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.cliffracertech.soundaura.addbutton.AddLocalFilesDialogStep
 import com.cliffracertech.soundaura.addbutton.AddPlaylistButtonViewModel
 import com.cliffracertech.soundaura.addbutton.getDisplayName
+import com.cliffracertech.soundaura.library.Playlist
 import com.cliffracertech.soundaura.model.AddToLibraryUseCase
 import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.TestPermissionHandler
@@ -21,8 +22,6 @@ import com.cliffracertech.soundaura.model.database.Track
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Before
@@ -54,8 +53,7 @@ class AddPlaylistButtonViewModelTests {
     }
 
     private val testUris = List(3) { "uri $it".toUri() }
-    private suspend fun PlaylistDao.getPlaylistUris(name: String) =
-        getPlaylistTracks(name).map(Track::uri)
+    private suspend fun PlaylistDao.getPlaylistUris(id: Long) = getPlaylistTracks(id).map(Track::uri)
     private val testTracks = testUris.map(::Track)
 
     private val selectingFilesStep get() = instance.dialogStep as AddLocalFilesDialogStep.SelectingFiles
@@ -280,9 +278,9 @@ class AddPlaylistButtonViewModelTests {
         assertThat(namePlaylistStep.message).isInstanceOf(Validator.Message.Error::class)
     }
 
-    @Test fun name_tracks_step_finish_closes_dialog_and_adds_tracks() = runTest{
+    @Test fun name_tracks_step_finish_closes_dialog_and_adds_tracks() = runTest {
         goto_name_tracks_step_with_multiple_files()
-        assertThat(playlistDao.getPlaylistNames().first()).isEmpty()
+        assertThat(playlistDao.getPlaylistNames()).isEmpty()
         val newTrack2Name = "new name"
         nameTracksStep.onNameChange(1, newTrack2Name)
         nameTracksStep.finishButton.onClick()
@@ -290,36 +288,34 @@ class AddPlaylistButtonViewModelTests {
         assertThat(instance.dialogStep).isNull()
 
         advanceUntilIdle()
-        val names = playlistDao.getPlaylistNames().first()
+        val names = playlistDao.getPlaylistNames()
         val expectedNames = listOf(
             testUris[0].getDisplayName(context),
             newTrack2Name,
             testUris[2].getDisplayName(context))
         assertThat(names).containsExactlyElementsIn(expectedNames)
 
-        expectedNames.forEachIndexed { index, name ->
-            val uris = playlistDao.getPlaylistUris(name)
+        val playlists = playlistDao.getPlaylistsSortedByOrderAdded().first()
+        playlists.forEachIndexed { index, playlist ->
+            val uris = playlistDao.getPlaylistUris(playlist.id)
             assertThat(uris).containsExactly(testUris[index])
         }
     }
 
     @Test fun playlist_options_finish_closes_dialog_and_adds_playlist() = runTest {
-        var names: List<String> = emptyList()
-        playlistDao.getPlaylistNames()
-            .onEach { names = it }
-            .launchIn(coroutineScope)
-
         // default playlist name, shuffle, and track order
         goto_playlist_options_step()
         playlistOptionsStep.finishButton.onClick()
-        advanceUntilIdle()
+        waitUntil { playlistDao.getPlaylistsSortedByOrderAdded().first().isNotEmpty() }
         assertThat(instance.dialogStep).isNull()
 
         val name1 = testUris.first().getDisplayName(context) + " playlist"
-        waitUntil { names.isNotEmpty() } // advanceUntilIdle doesn't work here for some reason
-        assertThat(names).containsExactly(name1)
-        assertThat(playlistDao.getPlaylistShuffle(name1)).isFalse()
-        assertThat(playlistDao.getPlaylistUris(name1))
+        var playlists = playlistDao.getPlaylistsSortedByOrderAdded().first()
+        assertThat(playlists.size).isEqualTo(1)
+        val playlist = playlists.first()
+        assertThat(playlist.name).isEqualTo(name1)
+        assertThat(playlistDao.getPlaylistShuffle(playlist.id)).isFalse()
+        assertThat(playlistDao.getPlaylistUris(playlist.id))
             .containsExactlyElementsIn(testUris).inOrder()
 
         // non-default playlist name, shuffle, and track order
@@ -327,18 +323,18 @@ class AddPlaylistButtonViewModelTests {
         goto_name_playlist_step()
         namePlaylistStep.onNameChange(name2)
         namePlaylistStep.nextButton.onClick()
-        waitUntil { instance.dialogStep is AddLocalFilesDialogStep.PlaylistOptions } // advanceUntilIdle doesn't work here for some reason
+        waitUntil { instance.dialogStep is AddLocalFilesDialogStep.PlaylistOptions }
         playlistOptionsStep.onShuffleSwitchClick()
         playlistOptionsStep.mutablePlaylist.moveTrack(1, 2)
         playlistOptionsStep.mutablePlaylist.moveTrack(0, 1)
         playlistOptionsStep.finishButton.onClick()
         assertThat(instance.dialogStep).isNull()
 
-        waitUntil { playlistDao.getPlaylistNames().first().size == 2 } // advanceUntilIdle doesn't work here for some reason
-        names = playlistDao.getPlaylistNames().first()
-        assertThat(names).containsExactly(name1, name2)
-        assertThat(playlistDao.getPlaylistShuffle(name2)).isTrue()
-        assertThat(playlistDao.getPlaylistUris(name2))
+        waitUntil { playlistDao.getPlaylistNames().size == 2 }
+        playlists = playlistDao.getPlaylistsSortedByOrderAdded().first()
+        assertThat(playlists.map(Playlist::name)).containsExactly(name1, name2)
+        assertThat(playlistDao.getPlaylistShuffle(playlists[1].id)).isTrue()
+        assertThat(playlistDao.getPlaylistUris(playlists[1].id))
             .containsExactly(testUris[2], testUris[0], testUris[1]).inOrder()
     }
 }

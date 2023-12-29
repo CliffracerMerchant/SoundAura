@@ -96,7 +96,6 @@ class AddPlaylistButtonViewModel(
     private fun showAddIndividuallyOrAsPlaylistQueryStep(chosenUris: List<Uri>) {
         dialogStep = AddLocalFilesDialogStep.AddIndividuallyOrAsPlaylistQuery(
             onDismissRequest = ::onDialogDismissRequest,
-            onCancelClick = ::onDialogDismissRequest,
             onAddIndividuallyClick = { showNameTracksStep(chosenUris) },
             onAddAsPlaylistClick = {
                 showNamePlaylistStep(chosenUris, cameFromPlaylistOrTracksQuery = true)
