@@ -179,6 +179,7 @@ sealed class PlaylistDialog(
     is Remove -> ConfirmRemoveDialog(
         modifier = modifier,
         playlistName = dialogState.target.name,
+        isSingleTrack = dialogState.target.isSingleTrack,
         onDismissRequest = dialogState.onDismissRequest,
         onConfirmClick = dialogState.onConfirmClick)
 }
@@ -223,6 +224,7 @@ sealed class PlaylistDialog(
 /** Show a dialog to confirm the removal of the [Playlist] identified by [playlistName]. */
 @Composable fun ConfirmRemoveDialog(
     playlistName: String,
+    isSingleTrack: Boolean,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
     onConfirmClick: () -> Unit
@@ -230,7 +232,9 @@ sealed class PlaylistDialog(
     modifier = modifier,
     onDismissRequest = onDismissRequest,
     title = stringResource(R.string.confirm_remove_title, playlistName),
-    text = stringResource(R.string.confirm_remove_message),
+    text = stringResource(
+        if (isSingleTrack) R.string.confirm_remove_track_message
+        else               R.string.confirm_remove_playlist_message),
     confirmText = stringResource(R.string.remove),
     onConfirm = {
         onConfirmClick()

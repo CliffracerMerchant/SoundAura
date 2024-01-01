@@ -36,8 +36,11 @@
 
     <string name="remove">Remove</string>
     <string name="confirm_remove_title">Remove %1$s?</string>
-    <string name="confirm_remove_message">This will remove the track from your library
+    <string name="confirm_remove_track_message">This will remove the track from your library
         and any presets it is a part of, but will not delete the file from your device.</string>
+    <string name="confirm_remove_playlist_message">
+        This will remove the playlist from your library and any presets it is a
+        part of, but will not delete the files in the playlist from your device.</string>
 
     <string name="create_playlist_title">Create playlist</string>
     <string name="playlist_options_title">Playlist options</string>
