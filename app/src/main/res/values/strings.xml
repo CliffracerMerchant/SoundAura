@@ -32,7 +32,6 @@
 
     <string name="rename">Rename</string>
     <string name="default_rename_dialog_title">Enter new name</string>
-    <string name="track_name_cannot_be_blank_error_message">The track\'s name cannot be blank</string>
 
     <string name="remove">Remove</string>
     <string name="confirm_remove_title">Remove %1$s?</string>
@@ -67,10 +66,6 @@
     <string name="name_dialog_blank_name_error_message">The name can not be blank</string>
     <string name="name_dialog_duplicate_name_error_message">The name is already in use</string>
 
-    <string name="track_or_playlist_already_exists_error_message">
-        This track is already in the library.</string>
-    <string name="some_tracks_already_exist_error_message">
-        %1$d of the selected tracks were already in the library.</string>
     <string name="cant_add_all_tracks_warning">
         %1$d files could not be added because the app is at Android\'s
         file permission limit of %2$d. You must remove some tracks or
