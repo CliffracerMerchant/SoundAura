@@ -6,11 +6,10 @@ package com.cliffracertech.soundaura.library
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -24,10 +23,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -42,6 +40,7 @@ import com.cliffracertech.soundaura.model.ReadLibraryUseCase
 import com.cliffracertech.soundaura.model.SearchQueryState
 import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.database.Track
+import com.cliffracertech.soundaura.screenSizeBasedHorizontalPadding
 import com.cliffracertech.soundaura.ui.tweenDuration
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.ImmutableList
@@ -97,18 +96,21 @@ sealed class LibraryState {
         animationSpec = tween(tweenDuration),
         label = "LibraryView loading/empty/content crossfade",
     ) { viewState -> when(viewState) {
-        is LibraryState.Loading ->
-            Box(Modifier.fillMaxSize(), Alignment.Center) {
-                CircularProgressIndicator(Modifier.size(50.dp))
-            }
-        is LibraryState.Empty -> {
+        is LibraryState.Loading -> {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .padding(contentPadding)
+                    .wrapContentSize(),
+                strokeCap = StrokeCap.Round)
+        } is LibraryState.Empty -> {
             val context = LocalContext.current
             val text = remember(viewState) { viewState.message.resolve(context) }
-            Box(Modifier.fillMaxSize(), Alignment.Center) {
-                Text(text = text,
-                     modifier = Modifier.width(300.dp),
-                     textAlign = TextAlign.Justify)
-            }
+            Text(text = text,
+                 modifier = Modifier
+                     .fillMaxSize()
+                     .padding(contentPadding)
+                     .screenSizeBasedHorizontalPadding(48.dp)
+                     .wrapContentSize())
         } is LibraryState.Content -> {
             val items = (viewState.playlists ?: emptyList()) as ImmutableList<Playlist>
             LazyColumn(
