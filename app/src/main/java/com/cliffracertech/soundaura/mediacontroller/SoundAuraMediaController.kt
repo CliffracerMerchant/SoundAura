@@ -40,6 +40,7 @@ import com.cliffracertech.soundaura.model.PlaybackState
 import com.cliffracertech.soundaura.model.PlayerServicePlaybackState
 import com.cliffracertech.soundaura.model.StringResource
 import com.cliffracertech.soundaura.model.database.PlaylistDao
+import com.cliffracertech.soundaura.model.database.Preset
 import com.cliffracertech.soundaura.model.database.PresetDao
 import com.cliffracertech.soundaura.model.database.presetRenameValidator
 import com.cliffracertech.soundaura.preferenceState
@@ -102,8 +103,8 @@ import javax.inject.Inject
         booleanPreferencesKey(PrefKeys.playButtonLongClickHintShown)
     private val playButtonLongClickHintShown by
         dataStore.preferenceState(playButtonLongClickHintShownKey, false, scope)
-    private val activePlaylistsIsNotEmpty by playlistDao
-        .getAtLeastOnePlaylistIsActive()
+    private val noPlaylistsAreActive by playlistDao
+        .getNoPlaylistsAreActive()
         .collectAsState(true, scope)
     private val playButtonState = PlayButtonState(
         getIsPlaying = playbackState::isPlaying,
@@ -112,7 +113,7 @@ import javax.inject.Inject
             // We don't want to show the hint if there are no
             // active playlists because the PlayerService should
             // show a message about there being no active playlists
-            if (!playButtonLongClickHintShown && activePlaylistsIsNotEmpty) {
+            if (!playButtonLongClickHintShown && !noPlaylistsAreActive) {
                 val stringRes = StringResource(R.string.play_button_long_click_hint_text)
                 messageHandler.postMessage(stringRes, SnackbarDuration.Long)
                 dataStore.edit(playButtonLongClickHintShownKey, true, scope)
@@ -132,7 +133,7 @@ import javax.inject.Inject
 
     private val presetList by presetDao
         .getPresetList()
-        .map { it.toImmutableList() }
+        .map(List<Preset>::toImmutableList)
         .collectAsState(null, scope)
     private val presetListState = PresetListState(
         getList = ::presetList,
@@ -148,7 +149,6 @@ import javax.inject.Inject
                             activePresetState.setName(validatedName)
                         presetDao.renamePreset(presetName, validatedName)
                     }
-
                 })
         }, onOverwriteClick = { presetName: String ->
             shownDialog = DialogType.Confirmatory(
@@ -184,8 +184,8 @@ import javax.inject.Inject
                         dismissDialog()
                     })
             } presetName == activePresetName ->
-            // This skips a pointless loading of the unmodified active preset
-            closePresetSelector()
+                // This skips a pointless loading of the unmodified active preset
+                closePresetSelector()
             else -> loadPreset(presetName)
         }})
 
@@ -214,7 +214,7 @@ import javax.inject.Inject
     private fun dismissDialog() { shownDialog = null }
 
     private fun overwritePreset(presetName: String) { when {
-        !activePlaylistsIsNotEmpty ->
+        noPlaylistsAreActive ->
             messageHandler.postMessage(R.string.overwrite_no_active_tracks_error_message)
         presetName == activePresetName && !activePresetIsModified -> {
             // This prevents a pointless saving of the unmodified active preset

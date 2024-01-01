@@ -244,8 +244,8 @@ private const val librarySelectWithFilter =
     @Query("$librarySelectWithFilter ORDER BY isActive DESC, id ASC")
     abstract fun getPlaylistsSortedByActiveThenOrderAdded(filter: String): Flow<List<LibraryPlaylist>>
 
-    @Query("SELECT EXISTS(SELECT 1 FROM playlist WHERE isActive)")
-    abstract fun getAtLeastOnePlaylistIsActive(): Flow<Boolean>
+    @Query("SELECT NOT EXISTS(SELECT 1 FROM playlist WHERE isActive)")
+    abstract fun getNoPlaylistsAreActive(): Flow<Boolean>
 
     /** Return a [Flow] that updates with a [Map] of each active
      * [Playlist] (represented as an [ActivePlaylistSummary]

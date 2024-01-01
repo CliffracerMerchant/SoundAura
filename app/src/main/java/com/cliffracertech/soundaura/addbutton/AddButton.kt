@@ -38,7 +38,6 @@ import com.cliffracertech.soundaura.model.database.newPresetNameValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -198,13 +197,12 @@ class NewPresetDialogState(
     var newPresetDialogState by mutableStateOf<NewPresetDialogState?>(null)
         private set
 
-    private val activeTracksIsEmpty by playlistDao
-        .getAtLeastOnePlaylistIsActive()
-        .map(Boolean::not)
+    private val noPlaylistsAreActive by playlistDao
+        .getNoPlaylistsAreActive()
         .collectAsState(true, scope)
 
     fun onClick() { when {
-        activeTracksIsEmpty -> messageHandler.postMessage(
+        noPlaylistsAreActive -> messageHandler.postMessage(
             R.string.preset_cannot_be_empty_warning_message)
         else -> newPresetDialogState = NewPresetDialogState(
             namingState = ValidatedNamingState(
@@ -253,7 +251,6 @@ enum class AddButtonTarget { Playlist, Preset }
                     AddButtonTarget.Preset ->   R.string.add_preset_button_description
                 }),
              tint = MaterialTheme.colors.onPrimary)
-
     }
 
     addPlaylistViewModel.dialogStep?.let { AddLocalFilesDialog(it) }
