@@ -66,8 +66,8 @@ import com.cliffracertech.soundaura.rememberMutableIntStateOf
 import com.cliffracertech.soundaura.rememberMutableStateOf
 import kotlinx.coroutines.delay
 
-internal const val tweenDuration = 250
-internal const val springStiffness = 600f
+internal const val tweenDuration = 250// * 4
+internal const val springStiffness = 700f// / 30f
 
 fun <T> defaultSpring() = spring<T>(stiffness = springStiffness)
 

@@ -4,12 +4,10 @@
 package com.cliffracertech.soundaura.mediacontroller
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -55,8 +53,8 @@ import com.cliffracertech.soundaura.model.database.Preset
 import com.cliffracertech.soundaura.rememberDerivedStateOf
 import com.cliffracertech.soundaura.rememberMutableStateOf
 import com.cliffracertech.soundaura.ui.MarqueeText
+import com.cliffracertech.soundaura.ui.defaultSpring
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
-import com.cliffracertech.soundaura.ui.tweenDuration
 import kotlinx.collections.immutable.toImmutableList
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -138,7 +136,7 @@ class ActivePresetViewState(
 
     val appearanceProgress by animateFloatAsState(
         targetValue = if (stopTime != null) 1f else 0f,
-        animationSpec = tween(tweenDuration, 0, LinearOutSlowInEasing),
+        animationSpec = defaultSpring(),
         label = "Auto stop time appearance transition")
     if (appearanceProgress == 0f) return
 
@@ -337,7 +335,7 @@ class MediaControllerState(
     val expandTransition = updateTransition(
         isExpanded, "MediaController expand transition")
     val expandTransitionProgress by expandTransition.animateFloat(
-        transitionSpec = { tween(tweenDuration, 0, LinearOutSlowInEasing) },
+        transitionSpec = { defaultSpring() },
         label = "MediaController expand transition progress",
         targetValueByState = { if (it) 1f else 0f })
     val transitionProgressProvider = remember {{ expandTransitionProgress }}
@@ -353,7 +351,7 @@ class MediaControllerState(
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             val titleHeight by expandTransition.animateDp(
-                transitionSpec = { tween(tweenDuration, 0, LinearOutSlowInEasing) },
+                transitionSpec = { defaultSpring() },
                 label = "MediaController/preset selector title height transition",
             ) { expanded ->
                 if (!expanded && sizes.orientation.isVertical)

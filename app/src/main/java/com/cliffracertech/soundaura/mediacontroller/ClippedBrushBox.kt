@@ -3,9 +3,7 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura.mediacontroller
 
-import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -33,7 +31,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.LayoutDirection
-import com.cliffracertech.soundaura.ui.tweenDuration
+import com.cliffracertech.soundaura.ui.defaultSpring
 
 val LayoutDirection.isLtr get() = this == LayoutDirection.Ltr
 
@@ -65,11 +63,11 @@ val LayoutDirection.isLtr get() = this == LayoutDirection.Ltr
     val animatedWidth by animateDpAsState(
         targetValue = size.width,
         label = "ClippedBrushBox width animation",
-        animationSpec = tween(tweenDuration, 0, LinearOutSlowInEasing))
+        animationSpec = defaultSpring())
     val animatedHeight by animateDpAsState(
         targetValue = size.height,
         label = "ClippedBrushBox height animation",
-        animationSpec = tween(tweenDuration, 0, LinearOutSlowInEasing))
+        animationSpec = defaultSpring())
 
     BoxWithConstraints(Modifier
         .fillMaxSize()
