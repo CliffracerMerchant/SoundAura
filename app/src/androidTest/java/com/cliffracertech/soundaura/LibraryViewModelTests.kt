@@ -48,22 +48,9 @@ class LibraryViewModelTests {
     private val scope = TestCoroutineScope()
     private val playlistSortKey = intPreferencesKey(PrefKeys.playlistSort)
     private val showActivePlaylistsFirstKey = booleanPreferencesKey(PrefKeys.showActivePlaylistsFirst)
-
-    private val testUris = List(4) { "uri $it".toUri() }
-    private val testTracks = testUris.map(::Track)
-    private val testPlaylistNames = List(5) { "playlist $it" }
-    private val testPlaylists = List(5) {
-        Playlist(
-            id = it.toLong() + 1L,
-            name = testPlaylistNames[it],
-            isActive = false,
-            volume = 1.0f,
-            hasError = false,
-            isSingleTrack = it != 4)
-    }
-
     private val dataStore = PreferenceDataStoreFactory
         .create(scope = scope) { context.preferencesDataStoreFile("testDatastore") }
+
     private lateinit var db: SoundAuraDatabase
     private lateinit var dao: PlaylistDao
     private lateinit var permissionHandler: UriPermissionHandler
@@ -71,16 +58,6 @@ class LibraryViewModelTests {
     private lateinit var playbackState: PlaybackState
     private lateinit var searchQueryState: SearchQueryState
     private lateinit var instance: LibraryViewModel
-
-    private val renameDialog get() = instance.shownDialog as PlaylistDialog.Rename
-    private val fileChooser get() = instance.shownDialog as PlaylistDialog.FileChooser
-    private val playlistOptionsDialog get() = instance.shownDialog as PlaylistDialog.PlaylistOptions
-    private val removeDialog get() = instance.shownDialog as PlaylistDialog.Remove
-
-    private val emptyState get() = instance.viewState as LibraryState.Empty
-    private val contentState get() = instance.viewState as LibraryState.Content
-
-    private suspend fun PlaylistDao.getPlaylistUris(id: Long) = getPlaylistTracks(id).map(Track::uri)
 
     @Before fun init() {
         db = Room.inMemoryDatabaseBuilder(context, SoundAuraDatabase::class.java).build()
@@ -100,6 +77,29 @@ class LibraryViewModelTests {
         runBlocking { dataStore.edit { it.clear() } }
         scope.cancel()
     }
+
+    private val testUris = List(4) { "uri $it".toUri() }
+    private val testTracks = testUris.map(::Track)
+    private val testPlaylistNames = List(5) { "playlist $it" }
+    private val testPlaylists = List(5) {
+        Playlist(
+            id = it.toLong() + 1L,
+            name = testPlaylistNames[it],
+            isActive = false,
+            volume = 1.0f,
+            hasError = false,
+            isSingleTrack = it != 4)
+    }
+
+    private val renameDialog get() = instance.shownDialog as PlaylistDialog.Rename
+    private val fileChooser get() = instance.shownDialog as PlaylistDialog.FileChooser
+    private val playlistOptionsDialog get() = instance.shownDialog as PlaylistDialog.PlaylistOptions
+    private val removeDialog get() = instance.shownDialog as PlaylistDialog.Remove
+
+    private val emptyState get() = instance.viewState as LibraryState.Empty
+    private val contentState get() = instance.viewState as LibraryState.Content
+
+    private suspend fun PlaylistDao.getPlaylistUris(id: Long) = getPlaylistTracks(id).map(Track::uri)
 
     private fun runTestWithPlaylists(testBody: suspend () -> Unit) = runTest {
         // Of the five names in testPlaylistNames, the first four will
