@@ -50,7 +50,7 @@ interface NamingState {
     fun onNameChange(newName: String)
 
     /** The method that will be invoked when naming is finished. */
-    fun finalize()
+    fun finish()
 }
 
 /**
@@ -60,7 +60,7 @@ interface NamingState {
  * @param validator The [Validator] instance to use
  * @param coroutineScope A [coroutineScope] to run async methods on
  * @param onNameValidated The callback that will be invoked
- *     when the current value of [name] is valid and [finalize]
+ *     when the current value of [name] is valid and [finish]
  *     is called. The [String] parameter is the validated name.
  */
 class ValidatedNamingState(
@@ -78,7 +78,7 @@ class ValidatedNamingState(
     /** Validate the current value of [name]. If the value is valid,
      * the constructor parameter onNameValidated will be called with
      * the validated value. */
-    override fun finalize() {
+    override fun finish() {
         coroutineScope.launch {
             val result = validator.validate()
             if (result != null)
@@ -138,7 +138,7 @@ class ValidatedNamingState(
 
 /**
  * Show a dialog to name or rename an object. The 'Confirm' button will
- * call the [state]'s [NamingState.finalize] method, while the 'Cancel'
+ * call the [state]'s [NamingState.finish] method, while the 'Cancel'
  * button will invoke [onDismissRequest].
  *
  * @param onDismissRequest The callback that will be invoked
@@ -156,9 +156,9 @@ class ValidatedNamingState(
     modifier = modifier,
     width = DialogWidth.MatchToScreenSize(WindowInsets.ime),
     title = title,
-    onDismissRequest = onDismissRequest,//state::cancel,
+    onDismissRequest = onDismissRequest,
     confirmButtonEnabled = state.message !is Validator.Message.Error,
-    onConfirm = state::finalize,
+    onConfirm = state::finish,
 ) {
     TextField(
         onValueChange = state::onNameChange,

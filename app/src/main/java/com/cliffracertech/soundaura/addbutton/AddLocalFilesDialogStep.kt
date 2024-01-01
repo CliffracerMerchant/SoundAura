@@ -171,7 +171,7 @@ sealed class AddLocalFilesDialogStep {
            ButtonInfo(
                textResId = R.string.next,
                isEnabledProvider = { message?.isError != true },
-               onClick = ::finalize))
+               onClick = ::finish))
    }
 
     /**
