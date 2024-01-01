@@ -314,13 +314,12 @@ class PlayerService: LifecycleService() {
     /** Post a message explaining to the user that playback was
      * automatically paused due to there being no active tracks to play. */
     private fun showAutoPausePlaybackExplanation() {
-        val stringResId = R.string.player_no_tracks_warning_message
+        val stringResId = R.string.player_no_active_playlists_warning_message
         // A RuntimeException can be thrown here if the Toast is made outside
-        // of the UI thread. This can occur, e.g., during a test. Because the
-        // message is non-critical, we can ignore it in this case.
-        try {
-            Toast.makeText(this, stringResId, Toast.LENGTH_SHORT).show()
-        } catch(e: RuntimeException) {}
+        // of the UI thread. Because this should only occur during testing and
+        // the message is non-critical, we ignore it.
+        try { Toast.makeText(this, stringResId, Toast.LENGTH_LONG).show() }
+        catch(e: RuntimeException) {}
     }
 
     fun setPlaylistVolume(playlistId: Long, volume: Float) =

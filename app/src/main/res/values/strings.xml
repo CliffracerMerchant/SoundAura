@@ -7,12 +7,12 @@
     <string name="app_name" translatable="false">SoundAura</string>
     <string name="app_version">v1.4.1</string>
 
-    <string name="app_player_service_description">A service to play the user\'s sound mix.</string>
+    <string name="app_player_service_description">A service to play the user’s sound mix.</string>
     <string name="player_notification_channel_name">Player controls</string>
     <string name="player_notification_channel_description">
-        A notification with controls for SoundAura\'s background audio service.</string>
-    <string name="player_no_tracks_warning_message">
-        There are no active tracks to play. Tap a track\'s add button first.</string>
+        A notification with controls for SoundAura’s background audio service.</string>
+    <string name="player_no_active_playlists_warning_message">
+        There are no active tracks or playlists. Tap a track or playlist’s add button first.</string>
 
     <string name="tile_inactive_description">Play SoundAura audio</string>
     <string name="tile_active_description">Stop SoundAura audio</string>
@@ -21,8 +21,9 @@
     <string name="search">Search</string>
     <string name="sort_options_description">Open sorting options</string>
 
-    <string name="empty_library_message">Your library is empty. Tap
-        the add button below to add local files to your library.</string>
+    <string name="empty_library_message">Your library is empty\n\nTap the add button below to add
+        local files to your library\n\nTap the plus symbol next to an added track or playlist to
+        make it part of the sound mix when playback is started</string>
     <string name="no_search_results_message">No tracks/playlists match the query.</string>
     <string name="set_playlist_active_description">Add %1$s to sound mix</string>
     <string name="set_playlist_inactive_description">Remove %1$s from sound mix</string>
@@ -67,16 +68,16 @@
     <string name="name_dialog_duplicate_name_error_message">The name is already in use</string>
 
     <string name="cant_add_all_tracks_warning">
-        %1$d files could not be added because the app is at Android\'s
+        %1$d files could not be added because the app is at Android’s
         file permission limit of %2$d. You must remove some tracks or
         playlists in order to add any more.</string>
     <string name="cant_add_playlist_warning">
-        The playlist could not be added because the app is at Android\'s
+        The playlist could not be added because the app is at Android’s
         file permission limit of %2$d. You must remove some tracks or
         playlists in order to add any more.</string>
     <string name="cant_modify_playlist_tracks_warning">
-        The playlist\'s track list could not be modified because the app is
-        at Android\'s file permission limit of %2$d. You must remove some
+        The playlist’s track list could not be modified because the app is
+        at Android’s file permission limit of %2$d. You must remove some
         tracks or playlists in order to add any more.
     </string>
 
@@ -101,15 +102,14 @@
         Are you sure you would like to cancel the auto stop timer?</string>
 
     <string name="preset_selector_title">Select a preset</string>
-    <string name="empty_preset_list_message">You don\'t have any saved presets.
+    <string name="empty_preset_list_message">You don’t have any saved presets.
         Tap the add button below to save the current sound mix as a preset.</string>
     <string name="preset_click_label">Load preset %1$s</string>
     <string name="close_preset_selector_description">Close preset selector</string>
 
     <string name="overwrite">Overwrite</string>
-    <string name="overwrite_no_active_tracks_error_message">
-        Presets must have at least one active track or playlist.
-        Tap a track or playlist\'s add button first.</string>
+    <string name="overwrite_no_active_playlists_error_message">
+        Presets must have at least one active track or playlist</string>
     <string name="confirm_overwrite_preset_dialog_title">Confirm overwrite preset</string>
     <string name="confirm_overwrite_preset_dialog_message">
         This will overwrite the preset %1$s. Are you sure?</string>
@@ -117,10 +117,9 @@
     <string name="delete">Delete</string>
     <string name="confirm_delete_preset_title">Delete %1$s?</string>
     <string name="confirm_delete_preset_message">
-        This will not remove the tracks in the preset from your library.</string>
+        This will not remove the tracks or playlists in the preset from your library.</string>
     <string name="preset_cannot_be_empty_warning_message">
-        There are no active tracks to add to the preset.
-        Tap a track\'s add button first.</string>
+        There are no active tracks or playlists to add to the preset</string>
     <string name="add_preset_button_description">Create new preset</string>
     <string name="create_new_preset_dialog_title">Enter new preset name</string>
 
@@ -173,11 +172,11 @@
         Make playback controls appear in a regular notification instead
         of in the media controls section of the status bar</string>
     <string name="play_in_background_explanation_bullet_3">
-        Make playback ignore hardware media buttons (e.g. a headset\'s
+        Make playback ignore hardware media buttons (e.g. a headset’s
         play/pause button) unless the app is in the foreground</string>
     <string name="play_in_background_explanation_bullet_4">
-        Prevent playback from auto-pausing during calls, unless the \'Auto-pause during
-        calls\' setting is enabled and the read phone state permission is granted
+        Prevent playback from auto-pausing during calls, unless the ‘Auto-pause during
+        calls’ setting is enabled and the read phone state permission is granted
     </string>
 
     <string name="request_notification_permission_title">Notification permission required</string>
@@ -208,10 +207,10 @@
     <string name="on_zero_volume_behavior_setting_description">
         This setting will determine how playback will respond to an audio
         device change that results in a volume of zero (e.g. disconnecting
-        a headset while the phone\'s speakerphone volume is zero).</string>
+        a headset while the phone’s speakerphone volume is zero).</string>
     <string name="stop_playback_on_zero_volume_title">Stop playback</string>
     <string name="stop_playback_on_zero_volume_description">
-        Automatically stop the app\'s background service if the app is not in
+        Automatically stop the app’s background service if the app is not in
         the foreground (playback will only pause if the app is in the foreground).</string>
     <string name="pause_playback_on_zero_volume_title">Pause playback</string>
     <string name="pause_playback_on_zero_volume_description">
@@ -238,10 +237,10 @@
         through a quick settings tile.</string>
     <string name="tile_tutorial_add_tile_text">
         To add it to your active quick settings tiles, tap the fully
-        expanded status bar\'s edit button, and drag the SoundAura
+        expanded status bar’s edit button, and drag the SoundAura
         tile into your list of current tiles.</string>
     <string name="tile_tutorial_add_tile_help_button_text">
-        Help! I can\'t figure out how to add tiles.</string>
+        Help! I can’t figure out how to add tiles.</string>
     <string name="tile_tutorial_add_tile_help_button_show_description">
         show add tile help</string>
     <string name="tile_tutorial_add_tile_help_button_hide_description">
@@ -249,24 +248,24 @@
     <string name="tile_tutorial_add_tile_help_text">
         The button to edit your quick settings tiles might appear
         differently depending on your device manufacturer and
-        Android version. Try searching \'edit quick settings tiles\'
+        Android version. Try searching ‘edit quick settings tiles’
         along with your device manufacturer on an internet search
         engine.</string>
     <string name="tile_tutorial_add_tile_button_text">Add tile</string>
     <string name="tile_tutorial_tile_usage_text">
-        Tapping the tile will toggle SoundAura\'s background audio
+        Tapping the tile will toggle SoundAura’s background audio
         service between its playing and stopped states. Long tapping
         the tile will open SoundAura.</string>
     <string name="tile_tutorial_hide_notification_text">
-        If you would like to hide SoundAura\'s notification to save
-        space, you can hide it yourself in the %1$s. Tap \'Notifications\'
-        and disable the \'Player controls\' notification.</string>
+        If you would like to hide SoundAura’s notification to save
+        space, you can hide it yourself in the %1$s. Tap ‘Notifications’
+        and disable the ‘Player controls’ notification.</string>
     <string name="tile_tutorial_hide_notification_link_text">
         system settings page for SoundAura</string>
 
     <string name="stop_instead_of_pause_setting_title">Stop instead of pause</string>
     <string name="stop_instead_of_pause_setting_description">
-        Tracks will restart from the beginning instead of resuming</string>
+        Tracks/playlists will restart from the beginning instead of resuming</string>
 
     <string name="about">About</string>
     <string name="privacy_policy_setting_title">Privacy policy</string>
