@@ -6,8 +6,7 @@ package com.cliffracertech.soundaura.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.Icon
 import androidx.compose.material.LocalContentAlpha
@@ -52,12 +51,9 @@ import com.cliffracertech.soundaura.R
     items: List<String>,
     modifier: Modifier = Modifier,
 ) = Column(modifier, Arrangement.spacedBy(8.dp)) {
-    for (item in items) {
-        Row {
-            Text("\u2022")
-            Spacer(Modifier.width(12.dp))
-            Text(item)
-        }
+    for (item in items) Row {
+        Text("\u2022", Modifier.padding(end = 12.dp))
+        Text(item)
     }
 }
 
