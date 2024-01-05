@@ -257,7 +257,7 @@ class LibraryViewModelTests {
         waitUntil { instance.shownDialog != null }
         renameDialog.onNameChange("new name")
         waitUntil { renameDialog.name == "new name" }
-        renameDialog.finalize()
+        renameDialog.finish()
         waitUntil { dao.getPlaylistNames().contains("new name") }
 
         assertThat(instance.shownDialog).isNull()
