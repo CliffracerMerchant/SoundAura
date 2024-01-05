@@ -40,11 +40,9 @@ class PlaylistNameValidatorTests {
         db = Room.inMemoryDatabaseBuilder(context, SoundAuraDatabase::class.java).build()
         playlistDao = db.playlistDao()
         runBlocking {
-            val map = LinkedHashMap<Uri, String>()
-            val uris = listOf("test uri 1", "test uri 2").map(String::toUri)
             val names = listOf(existingName1, existingName2)
-            map.putAll(uris.zip(names))
-            playlistDao.insertSingleTrackPlaylists(map)
+            val uris = List(2) { "test uri $it".toUri() }
+            playlistDao.insertSingleTrackPlaylists(names, uris, uris)
         }
     }
 

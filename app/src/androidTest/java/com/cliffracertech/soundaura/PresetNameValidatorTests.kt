@@ -4,7 +4,6 @@
 package com.cliffracertech.soundaura
 
 import android.content.Context
-import android.net.Uri
 import androidx.core.net.toUri
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -16,6 +15,7 @@ import com.cliffracertech.soundaura.model.database.newPresetNameValidator
 import com.cliffracertech.soundaura.model.database.presetRenameValidator
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.*
 import org.junit.After
@@ -40,11 +40,11 @@ class PresetNameValidatorTests {
         db = Room.inMemoryDatabaseBuilder(context, SoundAuraDatabase::class.java).build()
         presetDao = db.presetDao()
         runBlocking {
-            val map = LinkedHashMap<Uri, String>()
             val names = listOf("track 1")
-            map["test rui".toUri()] = names.first()
-            db.playlistDao().insertSingleTrackPlaylists(map)
-            db.playlistDao().toggleIsActive(names.first())
+            val uris = listOf("test uri".toUri())
+            db.playlistDao().insertSingleTrackPlaylists(names, uris, uris)
+            val id = db.playlistDao().getPlaylistsSortedByNameAsc().first().first().id
+            db.playlistDao().toggleIsActive(id)
             presetDao.savePreset(existingName)
             presetDao.savePreset(existingName2)
         }
