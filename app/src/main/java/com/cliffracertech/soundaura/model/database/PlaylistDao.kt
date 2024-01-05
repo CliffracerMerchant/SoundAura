@@ -20,7 +20,7 @@ typealias LibraryPlaylist = com.cliffracertech.soundaura.library.Playlist
 
 private const val librarySelectBase =
     "SELECT id, name, isActive, volume, " +
-           "COUNT(NOT track.hasError) = 0 as hasError, " +
+           "SUM(track.hasError) = COUNT(track.hasError) as hasError, " +
            "COUNT(playlistId) = 1 AS isSingleTrack " +
     "FROM playlist " +
     "JOIN playlistTrack ON playlist.id = playlistTrack.playlistId " +
