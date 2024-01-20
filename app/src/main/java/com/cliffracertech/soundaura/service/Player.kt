@@ -55,10 +55,9 @@ class Player(
     startPlaying: Boolean = false,
     private val onPlaybackFailure: (List<Uri>) -> Unit,
 ) {
-    private var shuffle = playlist.shuffle
-    private var uris = playlist.tracks
-        .toMutableList()
-        .apply { if (playlist.shuffle) shuffle() }
+    private val trackCount = playlist.tracks.size
+    private var uriIterator = iteratorFor(playlist)
+
     var volume: Float = playlist.volume
         set(value) {
             field = value
@@ -66,10 +65,6 @@ class Player(
             nextPlayer?.setVolume(volume, volume)
         }
 
-    // The next index might not be currentIndex + 1 if MediaPlayer creation
-    // fails for uris[currentIndex + 1], so we track it separately
-    private var currentIndex = 0
-    private var nextIndex = 0
     private var currentPlayer: MediaPlayer? = createPlayerForNextUri()
     private var nextPlayer: MediaPlayer? = null
 
@@ -84,25 +79,35 @@ class Player(
     fun stop() { currentPlayer?.attempt { pause(); seekTo(0) }}
 
     fun update(newPlaylist: ActivePlaylist) {
-        val playing = currentPlayer?.run {
-            isPlaying && currentPosition > 0
-        } ?: false
-        val playingUri = if (!playing) null
-                         else uris[currentIndex]
-
         volume = newPlaylist.volume
-        shuffle = newPlaylist.shuffle
-        uris = newPlaylist.tracks.toMutableList().apply {
-            if (newPlaylist.shuffle) shuffle()
-        }
-        currentIndex = uris.indexOf(playingUri)
-                           .coerceIn(uris.indices)
+        uriIterator = iteratorFor(newPlaylist)
         prepareNextPlayer()
     }
 
     fun release() {
         currentPlayer?.release()
         nextPlayer?.release()
+    }
+
+    private fun createPlayerForNextUri(): MediaPlayer? {
+        // The number of player creation attempts is recorded and compared
+        // to the playlist's track count so that we know when we have done
+        // one full loop of the playlist's tracks
+        var attempts = 0
+        var player: MediaPlayer? = null
+        var failedUris: MutableList<Uri>? = null
+
+        while (player == null && ++attempts <= trackCount) {
+            val uri = uriIterator.next()
+            player = MediaPlayer.create(context, uri).also {
+                if (it != null) return@also
+                if (failedUris == null)
+                    failedUris = mutableListOf(uri)
+                else failedUris?.add(uri)
+            }
+        }
+        failedUris?.let(onPlaybackFailure)
+        return player
     }
 
     private fun prepareNextPlayer() {
@@ -113,32 +118,8 @@ class Player(
         currentPlayer.setOnCompletionListener {
             it.release()
             this.currentPlayer = nextPlayer
-            currentIndex = nextIndex
             prepareNextPlayer()
         }
-    }
-
-    private fun createPlayerForNextUri(): MediaPlayer? {
-        // The start index is recorded so that we know when
-        // we have done one full loop of the playlist's tracks
-        val startIndex = nextIndex
-        var player: MediaPlayer?
-        var failedUris: MutableList<Uri>? = null
-
-        do {
-            val uri = uris[nextIndex]
-            player = MediaPlayer.create(context, uri).also {
-                if (it != null) return@also
-                if (failedUris == null)
-                    failedUris = mutableListOf(uri)
-                else failedUris?.add(uri)
-            }
-            nextIndex = if (nextIndex == uris.lastIndex) 0
-                        else nextIndex + 1
-        } while (player == null && nextIndex != startIndex)
-
-        failedUris?.let(onPlaybackFailure)
-        return player
     }
 
     /** Attempt the [action] on the receiver [MediaPlayer]. In the case of a still-
@@ -152,6 +133,11 @@ class Player(
                 it.setOnPreparedListener(null)
             }
         }
+
+    private fun iteratorFor(playlist: ActivePlaylist): Iterator<Uri> = (
+            if (!playlist.shuffle) InfiniteSequence(playlist.tracks)
+            else ShuffledInfiniteSequence(playlist.tracks, memorySize = 3)
+        ).iterator()
 }
 
 /**
