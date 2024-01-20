@@ -115,6 +115,9 @@ dependencies {
     ksp("androidx.room:room-compiler:2.6.1")
     kapt("com.google.dagger:hilt-compiler:2.48")
 
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("androidx.test.ext:truth:1.5.0")
+
     debugImplementation("androidx.compose.ui:ui-tooling:1.5.4")
     androidTestImplementation("androidx.test.ext:truth:1.5.0")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
