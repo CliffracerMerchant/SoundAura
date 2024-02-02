@@ -78,10 +78,11 @@ class Player(
     fun pause() { currentPlayer?.attempt(MediaPlayer::pause) }
     fun stop() { currentPlayer?.attempt { pause(); seekTo(0) }}
 
-    fun update(newPlaylist: ActivePlaylist) {
+    fun update(newPlaylist: ActivePlaylist, startPlaying: Boolean) {
         volume = newPlaylist.volume
         uriIterator = iteratorFor(newPlaylist)
         prepareNextPlayer()
+        if (startPlaying) play()
     }
 
     fun release() {
@@ -145,20 +146,14 @@ class Player(
  *
  * [PlayerMap] manages a collection of [Player] instances for a collection
  * of [ActivePlaylist]s. The collection of [Player]s is updated via the
- * method [update].
+ * method [update]. Whether or not the collection of players is empty can
+ * be queried with the property [isEmpty].
  *
- * Whether or not the collection of players is empty can be queried with the
- * property [isEmpty]. The property [isInitialized], which will start as false
- * but will be set to true after the first [update] call, is also provided so
- * that [PlayerMap] being empty due to the provided [List]`<Playlist>` being
- * empty can be differentiated from [PlayerMap] being empty because update
- * hasn't been called yet.
- *
- * The playing/paused/stopped state can be set for all [Player]s at once with
- * the methods [play], [pause], and [stop]. The volume for individual playlists
- * can be set with the method [setPlayerVolume]. The method [releaseAll] should
- * be called before the PlayerMap is destroyed so that all [Player] instances
- * can be released first.
+ * The playing/paused/stopped state can be set for all [Player]s at once
+ * with the methods [play], [pause], and [stop]. The volume for individual
+ * playlists can be set with the method [setPlayerVolume]. The method
+ * [releaseAll] should be called before the PlayerMap is destroyed so that
+ * all [Player] instances can be released first.
  *
  * @param context A [Context] instance. Note that the context instance
  *     will be held onto for the lifetime of the [PlayerSet].
@@ -169,8 +164,6 @@ class PlayerMap(
     private val context: Context,
     private val onPlaybackFailure: (uris: List<Uri>) -> Unit,
 ) {
-    var isInitialized = false
-        private set
     private var playerMap: MutableMap<Long, Player> = hashMapOf()
 
     val isEmpty get() = playerMap.isEmpty()
@@ -189,14 +182,13 @@ class PlayerMap(
      * If [startPlaying] is true, playback will start immediately. Otherwise, the
      * [Player]s will begin paused. */
     fun update(playlists: Map<ActivePlaylistSummary, List<Uri>>, startPlaying: Boolean) {
-        isInitialized = true
         val oldMap = playerMap
-        playerMap = HashMap(playlists.size, 1f)
+        playerMap = HashMap(playlists.size)
 
         for (playlist in playlists) {
             val existingPlayer = oldMap
                 .remove(playlist.id)
-                ?.apply { update(playlist) }
+                ?.apply { update(playlist, startPlaying) }
 
             playerMap[playlist.id] = existingPlayer ?:
                 Player(context, playlist, startPlaying, onPlaybackFailure)

@@ -106,6 +106,7 @@ class PlayerService: LifecycleService() {
             playlistDao.setTracksHaveError(problemUris)
         }
     }
+    private var playerMapIsInitialized = false
 
     private fun updateNotification() = notificationManager.update(playbackState, stopTime)
 
@@ -225,7 +226,7 @@ class PlayerService: LifecycleService() {
             return
 
         val newState = when {
-            state == STATE_PLAYING && playerMap.isInitialized && playerMap.isEmpty -> {
+            state == STATE_PLAYING && playerMapIsInitialized && playerMap.isEmpty -> {
                 // If there are no active tracks, we want to prevent a change to
                 // STATE_PLAYING and show an explanation message so that the user
                 // understands why their, e.g., play button tap didn't do anything.
@@ -288,7 +289,6 @@ class PlayerService: LifecycleService() {
     }
 
     private fun updatePlayers(playlists: Map<ActivePlaylistSummary, List<Uri>>) {
-        val firstUpdate = !playerMap.isInitialized
         playerMap.update(playlists, isPlaying)
 
         // If the new track list is empty when isPlaying is true, we want
@@ -303,12 +303,14 @@ class PlayerService: LifecycleService() {
             // to start playback failed. Normally this case would be caught by
             // playbackState's custom setter, but if the service is moved directly
             // from a stopped to playing state, then the first value of playlistDao's
-            // getActivePlaylistsAndTracks won't have been collected yet, and
+            // getActivePlaylistsAndTracks might not have been collected yet, and
             // playbackState's custom setter therefore won't know if it should
             // prevent the change to STATE_PLAYING. This check will show the
             // explanation in this edge case.
-            if (firstUpdate) showAutoPausePlaybackExplanation()
+            if (!playerMapIsInitialized)
+                showAutoPausePlaybackExplanation()
         }
+        playerMapIsInitialized = true
     }
 
     /** Post a message explaining to the user that playback was
