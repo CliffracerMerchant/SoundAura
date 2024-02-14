@@ -16,7 +16,7 @@ class InfiniteSequence<T>(val values: List<T>): Sequence<T> {
         override fun next(): T {
             if (currentIndex == values.lastIndex)
                 currentIndex = 0
-            else currentIndex++
+            else ++currentIndex
 
             return values[currentIndex]
         }
@@ -61,7 +61,7 @@ class ShuffledInfiniteSequence<T>(
             if (currentIndex == values.lastIndex) {
                 currentIndex = 0
                 firstIteration = false
-            } else currentIndex++
+            } else ++currentIndex
 
             val until = if (firstIteration) values.size
                         else values.size - maxOf(memorySize - currentIndex, 0)

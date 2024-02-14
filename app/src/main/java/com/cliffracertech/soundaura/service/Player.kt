@@ -6,6 +6,7 @@ package com.cliffracertech.soundaura.service
 import android.content.Context
 import android.media.MediaPlayer
 import android.net.Uri
+import java.io.IOException
 
 data class ActivePlaylistSummary(
     val id: Long,
@@ -39,106 +40,130 @@ val ActivePlaylist.tracks get() = value
  *
  * @param context A [Context] instance. Note that the provided context instance
  *     is held onto for the lifetime of the Player instance, and so should not
- *     be a component that the Player might outlive.
+ *     be a [Context] that the Player might outlive.
  * @param playlist The [ActivePlaylist] whose contents will be played
- * @param startPlaying Whether or not the Player should call start upon
- *     successful MediaPlayer creation
+ * @param startImmediately Whether or not the Player should start playback
+ *     as soon as it is ready
  * @param onPlaybackFailure A callback that will be invoked if MediaPlayer
- *     creation fails for one or more [Uri]s. This callback is used instead
- *     of, e.g., a factory method that can return null if creation fails due
- *     to the fact that creation can fail at any point in the future when
- *     the player is looped.
+ *     creation fails for one or more [Uri]s in the playlist
  */
 class Player(
     private val context: Context,
     playlist: ActivePlaylist,
-    startPlaying: Boolean = false,
+    startImmediately: Boolean = false,
     private val onPlaybackFailure: (List<Uri>) -> Unit,
 ) {
-    private val trackCount = playlist.tracks.size
-    private var uriIterator = iteratorFor(playlist)
+    private var mediaPlayer: MediaPlayer? = null
 
+    private var uriIterator = playlist.iterator()
+    private var tracks = playlist.tracks
+    private var shuffle = playlist.shuffle
     var volume: Float = playlist.volume
         set(value) {
             field = value
-            currentPlayer?.setVolume(volume, volume)
-            nextPlayer?.setVolume(volume, volume)
+            mediaPlayer?.setVolume(volume, volume)
         }
 
-    private var currentPlayer: MediaPlayer? = createPlayerForNextUri()
-    private var nextPlayer: MediaPlayer? = null
-
-    init {
-        prepareNextPlayer()
-        volume = playlist.volume
-        if (startPlaying) play()
+    private val onCompletionListener = MediaPlayer.OnCompletionListener {
+        initPlayerForNextUri(startImmediately = true)
     }
 
-    fun play() { currentPlayer?.attempt(MediaPlayer::start) }
-    fun pause() { currentPlayer?.attempt(MediaPlayer::pause) }
-    fun stop() { currentPlayer?.attempt { pause(); seekTo(0) }}
+    init {
+        initPlayerForNextUri(startImmediately)
+        mediaPlayer?.initFor(playlist)
+    }
 
-    fun update(newPlaylist: ActivePlaylist, startPlaying: Boolean) {
+    fun play() { mediaPlayer?.start() }
+    fun pause() { mediaPlayer?.pause() }
+    fun stop() {
+        mediaPlayer?.pause()
+        mediaPlayer?.seekTo(0)
+    }
+
+    /** Reset the Player to play the [newPlaylist]*/
+    fun update(newPlaylist: ActivePlaylist, startImmediately: Boolean) {
         volume = newPlaylist.volume
-        uriIterator = iteratorFor(newPlaylist)
-        prepareNextPlayer()
-        if (startPlaying) play()
+        if (newPlaylist.shuffle != shuffle || newPlaylist.tracks != tracks) {
+            shuffle = newPlaylist.shuffle
+            tracks = newPlaylist.tracks
+            uriIterator = newPlaylist.iterator()
+            initPlayerForNextUri(startImmediately)
+            mediaPlayer?.initFor(newPlaylist)
+            // If the shuffle or track list have changed, then
+            // initPlayerForNextUri will set the player's onPreparedListener
+        } else mediaPlayer?.setOnPreparedListener(
+            if (!startImmediately) null
+            else MediaPlayer::start)
     }
 
     fun release() {
-        currentPlayer?.release()
-        nextPlayer?.release()
+        mediaPlayer?.reset()
+        mediaPlayer?.release()
     }
 
-    private fun createPlayerForNextUri(): MediaPlayer? {
-        // The number of player creation attempts is recorded and compared
-        // to the playlist's track count so that we know when we have done
-        // one full loop of the playlist's tracks
-        var attempts = 0
-        var player: MediaPlayer? = null
-        var failedUris: MutableList<Uri>? = null
+    private fun ActivePlaylist.iterator(): Iterator<Uri> = (
+            if (!shuffle) InfiniteSequence(tracks)
+            else ShuffledInfiniteSequence(
+                unshuffledValues = tracks,
+                memorySize = maxOf(1, tracks.size / 3))
+        ).iterator()
 
-        while (player == null && ++attempts <= trackCount) {
+    /**
+     * Determine the next target [Uri], and either create a new [MediaPlayer]
+     * instance if [mediaPlayer] is null, or attempt to reset the existing
+     * player to use the target [Uri] as a data source. When the new or
+     * existing player is prepared, playback will start immediately if
+     * [startImmediately] is true.
+     *
+     * getOrCreatePlayerForNextUri must be called once for each [Uri] that
+     * is to be played, such that a single track playlist only needs to
+     * call it once, but a multi-track playlist will need to have it
+     * called for each track.
+     */
+    private fun initPlayerForNextUri(startImmediately: Boolean) {
+        // The number of player creation/data source setting attempts is
+        // recorded and compared to the playlist's track count so that we
+        // know when we have done one full loop of the playlist's tracks
+        var attempts = 0
+        var failedUris: MutableList<Uri>? = null
+        var newPlayer: MediaPlayer? = null
+
+        while (newPlayer == null && ++attempts <= tracks.size) {
             val uri = uriIterator.next()
-            player = MediaPlayer.create(context, uri).also {
-                if (it != null) return@also
+            newPlayer = mediaPlayer.let {
+                if (it == null)
+                    MediaPlayer.create(context, uri)
+                else try {
+                    it.reset()
+                    it.setDataSource(context, uri)
+                    it.prepare(); it
+                } catch(e: IOException) { null }
+            }
+            if (newPlayer == null) {
                 if (failedUris == null)
                     failedUris = mutableListOf(uri)
-                else failedUris?.add(uri)
-            }
+                else failedUris.add(uri)
+            } else newPlayer.setOnPreparedListener(
+                if (!startImmediately) null
+                else MediaPlayer::start)
         }
         failedUris?.let(onPlaybackFailure)
-        return player
+        mediaPlayer = newPlayer
     }
 
-    private fun prepareNextPlayer() {
-        val currentPlayer = this.currentPlayer ?: return
-        nextPlayer = createPlayerForNextUri()
-        nextPlayer?.setVolume(volume, volume)
-        currentPlayer.setNextMediaPlayer(nextPlayer)
-        currentPlayer.setOnCompletionListener {
-            it.release()
-            this.currentPlayer = nextPlayer
-            prepareNextPlayer()
-        }
+    /**
+     * Set the receiver's volume, [MediaPlayer.isLooping] property, and
+     * [MediaPlayer.setOnCompletionListener] to their appropriate values
+     * to play the content of [playlist]. init must be called only once
+     * for each [ActivePlaylist].
+     */
+    private fun MediaPlayer.initFor(playlist: ActivePlaylist) {
+        setVolume(playlist.volume, playlist.volume)
+        isLooping = playlist.tracks.size < 2
+        setOnCompletionListener(
+            if (playlist.tracks.size < 2) null
+            else onCompletionListener)
     }
-
-    /** Attempt the [action] on the receiver [MediaPlayer]. In the case of a still-
-     * initializing [MediaPlayer] a [MediaPlayer.OnPreparedListener] will automatically
-     * be added to execute the [action] when the [MediaPlayer] is ready. */
-    private fun MediaPlayer.attempt(action: MediaPlayer.() -> Unit) =
-        try { action() }
-        catch(e: java.lang.IllegalStateException) {
-            setOnPreparedListener {
-                action()
-                it.setOnPreparedListener(null)
-            }
-        }
-
-    private fun iteratorFor(playlist: ActivePlaylist): Iterator<Uri> = (
-            if (!playlist.shuffle) InfiniteSequence(playlist.tracks)
-            else ShuffledInfiniteSequence(playlist.tracks, memorySize = 3)
-        ).iterator()
 }
 
 /**
