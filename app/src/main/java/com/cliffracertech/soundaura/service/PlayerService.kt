@@ -27,7 +27,6 @@ import androidx.media.AudioFocusRequestCompat
 import androidx.media.AudioManagerCompat
 import androidx.media.AudioManagerCompat.AUDIOFOCUS_GAIN
 import com.cliffracertech.soundaura.R
-import com.cliffracertech.soundaura.model.database.Playlist
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.preferenceFlow
 import com.cliffracertech.soundaura.repeatWhenStarted
@@ -52,35 +51,38 @@ import javax.inject.Inject
 /**
  * A service to play the set of playlists marked as active in the app's database.
  *
- * PlayerService can either be started independently of an activity with a
- * [startService] call, or can be started bound to an activity if the activity
- * calls [bindService]. In the latter case, PlayerService will call [startService]
- * on itself so that it outlives the binding activity. In either case,
- * PlayerService presents a foreground notification to the user that displays
- * its current play/pause state in string form, along with actions to toggle
- * the play/pause state and to close the service.
+ * PlayerService attempts to play the contents of all playlists that are marked
+ * as active in the app's database simultaneously. An optional auto-stop timer
+ * can also be set. PlayerService offers no way to change the contents of the
+ * active playlist set internally, but playback of the active playlist set or
+ * the auto-stop timer can be changed via PlayerService's foreground
+ * notification's actions, by sending intents, or through the methods provided
+ * by an instance of [PlayerService.Binder] after an activity has been bound.
+ *
+ * When it is created, PlayerService displays a foreground notification that
+ * shows the service's current play/pause state in string form, along with
+ * actions to toggle the play/pause state and to close the service. If an auto-
+ * stop timer is active, the remaining time will also be shown along with an
+ * additional action to cancel the auto-stop timer.
+ *
+ * Playback state can also be affected by calling [Context.startService] with
+ * one of the [Intent]s provided by the static methods [PlayerService.playIntent],
+ * [PlayerService.pauseIntent], or [PlayerService.stopIntent]. The auto-stop
+ * timer can be set with an [Intent] provided by [PlayerService.setTimerIntent].
+ *
+ * Finally, when an activity is bound to PlayerService via [Context.bindService],
+ * an instance of [PlayerService.Binder] will be provided that can be used to
+ * alter playback via its methods. Note that in order to achieve smooth volume
+ * changes to already active playlists, the binder's [Binder.setPlaylistVolume]
+ * method or PlayerService's method of the same name should be called. Volume
+ * changes that occur at the database level will work, but due to database I/O
+ * delays will not be responded to quickly enough to be perceived as lag free.
+ * If a bound activity presents the user with, e.g, a slider to change a
+ * playlist's volume, the slider's onSlide callback should call
+ * [Binder.setPlaylistVolume] or [setPlaylistVolume].
  *
  * Changes in the playback state can be listened to by calling the static
- * function [addPlaybackChangeListener] with a [PlaybackChangeListener].
- * Playback state can be affected by calling startService with an [Intent]
- * with an action value of [PlayerService.setPlaybackAction], an extra key the
- * same as the action, and an extra value of the desired [PlaybackStateCompat]
- * value. A stop timer can be set with an [Intent] with an action value of
- * [PlayerService.setTimerAction], an extra key the same as the action, and an
- * extra value that is the milliseconds since 1/01/1970 when playback should be
- * stopped. A null or zero value can also be passed in for the duration to
- * cancel a current stop timer. Both of the actions can be accomplished more
- * easily with the static methods [PlayerService.setPlaybackIntent] and
- * [PlayerService.setTimerIntent].
- *
- * To ensure that the volume for already playing playlists is changed without
- * perceptible lag, PlayerService will not respond to playlist volume changes
- * made at the database level for already playing playlists. Instead, the method
- * [Binder.setPlaylistVolume] must be called with the [Playlist.name] and its
- * new volume. If a bound activity presents the user with, e.g, a slider to
- * change a playlist's volume, the slider's onSlide callback should call
- * [Binder.setPlaylistVolume].
- *
+ * method [addPlaybackChangeListener] with a [PlaybackChangeListener].
  * PlayerService reads the values of and changes its behavior depending on the
  * app preferences pointed to by the keys [PrefKeys.playInBackground] and
  * [PrefKeys.stopInsteadOfPause]. Read the documentation for these preferences
@@ -96,7 +98,7 @@ class PlayerService: LifecycleService() {
         PhoneStateAwarePlaybackModule(::autoPauseIf))
     @Inject lateinit var playlistDao: PlaylistDao
     private lateinit var audioManager: AudioManager
-    private lateinit var notificationManager: PlayerNotification
+    private lateinit var notification: PlayerNotification
 
     private var autoStopJob: Job? = null
     private var stopTime by mutableStateOf<Instant?>(null)
@@ -108,12 +110,12 @@ class PlayerService: LifecycleService() {
     }
     private var playerMapIsInitialized = false
 
-    private fun updateNotification() = notificationManager.update(playbackState, stopTime)
+    private fun updateNotification() = notification.update(playbackState, stopTime)
 
     private var playInBackground = false
         set(value) {
             field = value
-            notificationManager.useMediaSession = !value
+            notification.useMediaSession = !value
             if (value) {
                 abandonAudioFocus()
                 unpauseLocks.remove(autoPauseAudioFocusLossKey)
@@ -153,7 +155,7 @@ class PlayerService: LifecycleService() {
         // PlayerService knows whether it needs to request audio focus or not.
         val playInBackgroundFirstValue = runBlocking { playInBackgroundFlow.first() }
 
-        notificationManager = PlayerNotification(
+        notification = PlayerNotification(
             service = this,
             playIntent = playIntent(this),
             pauseIntent = pauseIntent(this),
@@ -187,7 +189,7 @@ class PlayerService: LifecycleService() {
     override fun onDestroy() {
         playbackModules.forEach { it.onDestroy(this) }
         playbackState = STATE_STOPPED
-        notificationManager.remove()
+        notification.remove()
         playerMap.releaseAll()
         super.onDestroy()
     }
@@ -365,7 +367,16 @@ class PlayerService: LifecycleService() {
         AudioManagerCompat.abandonAudioFocusRequest(audioManager, audioFocusRequest)
     }
 
-
+    /**
+     * A [android.os.Binder] to allow bound activity's to interact with the service.
+     *
+     * The state of the playback can be read via the property [isPlaying], and
+     * toggled with the method [toggleIsPlaying]. The [Instant] at which
+     * playback will automatically be stopped, or null if there isn't an auto-
+     * stop time, can be read via the property [stopTime], and set using
+     * [clearStopTimer]. The method [setPlaylistVolume] should be called when
+     * the volume of an already active playlist changes.
+     */
     inner class Binder: android.os.Binder() {
         val isPlaying get() = this@PlayerService.isPlaying
         fun toggleIsPlaying() {
@@ -412,10 +423,13 @@ class PlayerService: LifecycleService() {
         fun pauseIntent(context: Context) = setPlaybackIntent(context, STATE_PAUSED)
         fun stopIntent(context: Context) = setPlaybackIntent(context, STATE_STOPPED)
 
-        fun setTimerIntent(context: Context, stopTimer: Duration?) =
+        /** Create an intent that will set the service's auto-stop timer such
+         * that playback will stop after [duration] elapses. A [duration] of
+         * zero will cancel any current stop timer without affecting playback. */
+        fun setTimerIntent(context: Context, duration: Duration?) =
             Intent(context, PlayerService::class.java)
                 .setAction(setTimerAction)
-                .putExtra(setTimerAction, stopTimer?.let {
+                .putExtra(setTimerAction, duration?.let {
                     Instant.now().plus(it).toEpochMilli()
                 })
 
