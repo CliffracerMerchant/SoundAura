@@ -69,6 +69,8 @@ sealed class PlaylistDialog(
      * @param currentTracks A [List] of the [Track]s that are already in the playlist
      * @param onDismissRequest The callback that should be invoked when
      *     a back button click or gesture is performed
+     * @param onChosenFilesValidated The callback that will be invoked
+     *     inside [onFilesChosen] if the files are validated
      */
     class FileChooser(
         target: Playlist,
@@ -78,11 +80,11 @@ sealed class PlaylistDialog(
         private val onChosenFilesValidated: (List<Uri>) -> Unit,
     ): PlaylistDialog(target, onDismissRequest) {
         val onFilesChosen: (List<Uri>) -> Unit = { chosenFiles ->
-            if (chosenFiles.isEmpty())
+            if (chosenFiles.isEmpty()) {
                 onDismissRequest()
                 // If no files were chosen at all, then the user
                 // must have backed out of the file chooser intentionally
-            else {
+            } else {
                 val validFiles = if (currentTracks.size == 1) {
                         chosenFiles - currentTracks.first().uri
                     } else {
@@ -112,8 +114,8 @@ sealed class PlaylistDialog(
      * [PlaylistOptionsView].
      *
      * @param target The [Playlist] that is the target of the dialog
-     * @param shuffleEnabled Whether shuffle is initially enabled for the [target]
      * @param playlistTracks The [List] of [Track]s in the target [Playlist]
+     * @param shuffleEnabled Whether shuffle is initially enabled for the [target]
      * @param onDismissRequest The callback that should be invoked when the dialog's
      *     cancel button is clicked or a back button click or gesture is performed
      * @param onAddFilesClick The callback that will be invoked when the dialog's
