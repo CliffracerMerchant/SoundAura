@@ -54,46 +54,56 @@ class Player(
     private val onPlaybackFailure: (List<Uri>) -> Unit,
 ) {
     private var mediaPlayer: MediaPlayer? = null
-
     private var uriIterator = playlist.iterator()
     private var tracks = playlist.tracks
     private var shuffle = playlist.shuffle
-    var volume: Float = playlist.volume
-        set(value) {
-            field = value
-            mediaPlayer?.setVolume(volume, volume)
-        }
+    // Without tracking the intended playing/paused state in this property,
+    // an issue can occur if an attempt to pause is made when the internal
+    // MediaPlayer is in the process of switching to the next track in a
+    // playlist that will cause the pause command to be ignored. This is
+    // resolved by using the value of isPlaying in the on completion listener.
+    private var isPlaying = startImmediately
 
     private val onCompletionListener = MediaPlayer.OnCompletionListener {
-        initPlayerForNextUri(startImmediately = true)
+        initializePlayerForNextUri(startImmediately = isPlaying)
     }
 
     init {
-        initPlayerForNextUri(startImmediately)
-        mediaPlayer?.initFor(playlist)
+        initializePlayerForNextUri(startImmediately)
+        mediaPlayer?.initializeFor(playlist)
     }
 
-    fun play() { mediaPlayer?.start() }
-    fun pause() { mediaPlayer?.pause() }
+    fun play() {
+        isPlaying = true
+        mediaPlayer?.start()
+    }
+    fun pause() {
+        isPlaying = false
+        mediaPlayer?.pause()
+    }
     fun stop() {
+        isPlaying = false
         mediaPlayer?.pause()
         mediaPlayer?.seekTo(0)
+    }
+    fun setVolume(volume: Float) {
+        mediaPlayer?.setVolume(volume, volume)
     }
 
     /** Reset the Player to play the [newPlaylist]*/
     fun update(newPlaylist: ActivePlaylist, startImmediately: Boolean) {
-        volume = newPlaylist.volume
+        isPlaying = startImmediately
+        setVolume(newPlaylist.volume)
         if (newPlaylist.shuffle != shuffle || newPlaylist.tracks != tracks) {
             shuffle = newPlaylist.shuffle
             tracks = newPlaylist.tracks
             uriIterator = newPlaylist.iterator()
-            initPlayerForNextUri(startImmediately)
-            mediaPlayer?.initFor(newPlaylist)
-            // If the shuffle or track list have changed, then
-            // initPlayerForNextUri will set the player's onPreparedListener
-        } else mediaPlayer?.setOnPreparedListener(
-            if (!startImmediately) null
-            else MediaPlayer::start)
+            initializePlayerForNextUri(startImmediately)
+            mediaPlayer?.initializeFor(newPlaylist)
+            // initializePlayerForNextUri will start the player if startImmediately
+            // is true, so we don't need to call start manually here
+        } else if (startImmediately)
+            mediaPlayer?.start()
     }
 
     fun release() {
@@ -115,12 +125,11 @@ class Player(
      * existing player is prepared, playback will start immediately if
      * [startImmediately] is true.
      *
-     * getOrCreatePlayerForNextUri must be called once for each [Uri] that
-     * is to be played, such that a single track playlist only needs to
-     * call it once, but a multi-track playlist will need to have it
-     * called for each track.
+     * initializePlayerForNextUri must be called once for each [Uri] that is
+     * to be played. A single track playlist only needs to call it once, but
+     * a multi-track playlist will need to have it called for each track.
      */
-    private fun initPlayerForNextUri(startImmediately: Boolean) {
+    private fun initializePlayerForNextUri(startImmediately: Boolean) {
         // The number of player creation/data source setting attempts is
         // recorded and compared to the playlist's track count so that we
         // know when we have done one full loop of the playlist's tracks
@@ -143,9 +152,8 @@ class Player(
                 if (failedUris == null)
                     failedUris = mutableListOf(uri)
                 else failedUris.add(uri)
-            } else newPlayer.setOnPreparedListener(
-                if (!startImmediately) null
-                else MediaPlayer::start)
+            } else if (startImmediately)
+                newPlayer.start()
         }
         failedUris?.let(onPlaybackFailure)
         mediaPlayer = newPlayer
@@ -157,7 +165,7 @@ class Player(
      * to play the content of [playlist]. init must be called only once
      * for each [ActivePlaylist].
      */
-    private fun MediaPlayer.initFor(playlist: ActivePlaylist) {
+    private fun MediaPlayer.initializeFor(playlist: ActivePlaylist) {
         setVolume(playlist.volume, playlist.volume)
         isLooping = playlist.tracks.size < 2
         setOnCompletionListener(
@@ -197,9 +205,8 @@ class PlayerMap(
     fun pause() = playerMap.values.forEach(Player::pause)
     fun stop() = playerMap.values.forEach(Player::stop)
 
-    fun setPlayerVolume(playlistId: Long, volume: Float) {
-        playerMap[playlistId]?.volume = volume
-    }
+    fun setPlayerVolume(playlistId: Long, volume: Float) =
+        playerMap[playlistId]?.setVolume(volume)
 
     fun releaseAll() = playerMap.values.forEach(Player::release)
 
