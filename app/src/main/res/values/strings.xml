@@ -213,8 +213,7 @@
         a headset while the phone’s speakerphone volume is zero).</string>
     <string name="stop_playback_on_zero_volume_title">Stop playback</string>
     <string name="stop_playback_on_zero_volume_description">
-        Automatically stop the app’s background service if the app is not in
-        the foreground (playback will only pause if the app is in the foreground).</string>
+        Automatically stop the app’s background service.</string>
     <string name="pause_playback_on_zero_volume_title">Pause playback</string>
     <string name="pause_playback_on_zero_volume_description">
         Playback will automatically resume if another audio device change results
