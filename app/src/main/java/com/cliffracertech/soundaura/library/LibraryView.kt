@@ -6,6 +6,7 @@ package com.cliffracertech.soundaura.library
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -23,9 +24,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -97,11 +100,11 @@ sealed class LibraryState {
         label = "LibraryView loading/empty/content crossfade",
     ) { viewState -> when(viewState) {
         is LibraryState.Loading -> {
-            CircularProgressIndicator(
-                modifier = Modifier
-                    .padding(contentPadding)
-                    .wrapContentSize(),
-                strokeCap = StrokeCap.Round)
+            // The CircularProgressIndicator is not center aligned properly when
+            // Modifier.wrapContentSize() is used, so a fillMaxSize box is used instead
+            Box(Modifier.fillMaxSize().padding(contentPadding), Alignment.Center) {
+                CircularProgressIndicator(strokeCap = StrokeCap.Round)
+            }
         } is LibraryState.Empty -> {
             val context = LocalContext.current
             val text = remember(viewState) { viewState.message.resolve(context) }
@@ -110,7 +113,8 @@ sealed class LibraryState {
                      .fillMaxSize()
                      .padding(contentPadding)
                      .screenSizeBasedHorizontalPadding(48.dp)
-                     .wrapContentSize())
+                     .wrapContentSize(),
+                 textAlign = TextAlign.Justify)
         } is LibraryState.Content -> {
             val items = (viewState.playlists ?: emptyList()) as ImmutableList<Playlist>
             LazyColumn(
