@@ -54,7 +54,7 @@ class Player(
     private val onPlaybackFailure: (List<Uri>) -> Unit,
 ) {
     private var mediaPlayer: MediaPlayer? = null
-    private var uriIterator = playlist.iterator()
+    private var uriIterator = uriIterator(playlist)
     private var tracks = playlist.tracks
     private var shuffle = playlist.shuffle
     // Without tracking the intended playing/paused state in this property,
@@ -83,8 +83,13 @@ class Player(
     }
     fun stop() {
         isPlaying = false
-        mediaPlayer?.pause()
-        mediaPlayer?.seekTo(0)
+        if (tracks.size < 2) {
+            mediaPlayer?.pause()
+            mediaPlayer?.seekTo(0)
+        } else {
+            uriIterator = uriIterator(tracks, shuffle)
+            initializePlayerForNextUri(startImmediately = false)
+        }
     }
     fun setVolume(volume: Float) {
         mediaPlayer?.setVolume(volume, volume)
@@ -97,7 +102,7 @@ class Player(
         if (newPlaylist.shuffle != shuffle || newPlaylist.tracks != tracks) {
             shuffle = newPlaylist.shuffle
             tracks = newPlaylist.tracks
-            uriIterator = newPlaylist.iterator()
+            uriIterator = uriIterator(newPlaylist)
             initializePlayerForNextUri(startImmediately)
             mediaPlayer?.initializeFor(newPlaylist)
             // initializePlayerForNextUri will start the player if startImmediately
@@ -111,12 +116,14 @@ class Player(
         mediaPlayer?.release()
     }
 
-    private fun ActivePlaylist.iterator(): Iterator<Uri> = (
-            if (!shuffle) InfiniteSequence(tracks)
+    private fun uriIterator(uris: List<Uri>, shuffle: Boolean) = (
+            if (!shuffle) InfiniteSequence(uris)
             else ShuffledInfiniteSequence(
-                unshuffledValues = tracks,
-                memorySize = maxOf(1, tracks.size / 3))
+                unshuffledValues = uris,
+                memorySize = maxOf(1, uris.size / 3))
         ).iterator()
+    private fun uriIterator(playlist: ActivePlaylist) =
+        uriIterator(playlist.tracks, playlist.shuffle)
 
     /**
      * Determine the next target [Uri], and either create a new [MediaPlayer]
