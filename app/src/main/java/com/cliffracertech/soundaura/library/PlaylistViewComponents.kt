@@ -220,8 +220,10 @@ class MutablePlaylist(tracks: List<Track>) {
     onAddButtonClick: (() -> Unit)? = null,
 ) {
     HorizontalDivider(Modifier.padding(horizontal = 8.dp))
-    Row(modifier = Modifier.fillMaxWidth().height(48.dp)) {
-        PlaylistOptionsTrackCount(mutablePlaylist.tracks.size, onAddButtonClick)
+    Row(modifier = Modifier.fillMaxWidth().height(56.dp)) {
+        PlaylistOptionsTrackCount(
+            trackCount = mutablePlaylist.tracks.size,
+            onClick = onAddButtonClick)
         VerticalDivider(Modifier.padding(vertical = 8.dp))
         PlaylistOptionsShuffleSwitch(shuffleEnabled, onShuffleClick)
     }
@@ -239,25 +241,28 @@ class MutablePlaylist(tracks: List<Track>) {
 }
 
 @Composable private fun RowScope.PlaylistOptionsTrackCount(
+    modifier: Modifier = Modifier,
     trackCount: Int,
-    onAddButtonClick: (() -> Unit)?
-) = Row(modifier = Modifier.weight(1f).height(48.dp),
+    onClick: (() -> Unit)?
+) = Row(
+    modifier = modifier
+        .weight(1f).height(56.dp)
+        .clickable(
+            enabled = onClick != null,
+            onClickLabel = stringResource(
+                R.string.playlist_add_tracks_button_description),
+            role = Role.Button,
+            onClick = onClick ?: {}),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.Center
 ) {
     Text(text = stringResource(R.string.playlist_track_count_description, trackCount),
-        modifier = Modifier.padding(end = 4.dp),
         style = MaterialTheme.typography.h6)
-    onAddButtonClick?.let { onClick ->
+    if (onClick != null) {
         Box(modifier = Modifier
-            .size(48.dp)
+            .padding(start = 8.dp)
+            .size(32.dp)
             .clip(MaterialTheme.shapes.small)
-            .clickable(
-                onClickLabel = stringResource(
-                    R.string.playlist_add_tracks_button_description),
-                role = Role.Button,
-                onClick = onClick)
-            .padding(8.dp)
             .background(MaterialTheme.colors.primaryVariant,
                         MaterialTheme.shapes.small),
             contentAlignment = Alignment.Center
