@@ -64,6 +64,10 @@ object PrefKeys {
      * enum value to use as the application's light/dark theme. */
     const val appLightDarkMode = "app_theme"
 
+    /** An int value that represents the ordinal of the desired [AppColorTheme]
+     * enum value to use as the application's color theme. */
+    const val appColorTheme = "app_color_theme"
+
     /**
      * A boolean value that indicates whether playback should occur in the
      * background. Expected behavior when playInBackground == false is:
@@ -119,6 +123,18 @@ enum class AppLightDarkMode { UseSystem, Light, Dark;
                 getString(R.string.match_system_theme),
                 getString(R.string.light_theme),
                 getString(R.string.dark_theme)
+            )}
+        }
+    }
+}
+
+enum class AppColorTheme { UseSystem, Default, Custom;
+    companion object {
+        @Composable fun valueNames() = with(LocalContext.current) {
+            remember { arrayOf(
+                getString(R.string.match_system_theme),
+                getString(R.string.default_color_theme),
+                getString(R.string.custom_color_theme),
             )}
         }
     }

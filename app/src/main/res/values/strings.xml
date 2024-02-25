@@ -163,9 +163,11 @@
     <string name="match_system_theme">Match system</string>
     <string name="light_theme">Light</string>
     <string name="dark_theme">Dark</string>
+    <string name="app_color_theme">Color Theme</string>
+    <string name="default_color_theme">Default Theme"</string>
+    <string name="custom_color_theme">Custom Theme"</string>
 
     <string name="playback">Playback</string>
-
     <string name="play_in_background_setting_title">Play in background</string>
     <string name="play_in_background_setting_description">Tap for additional explanation</string>
     <string name="play_in_background_explanation">Enabling play in background will:</string>
