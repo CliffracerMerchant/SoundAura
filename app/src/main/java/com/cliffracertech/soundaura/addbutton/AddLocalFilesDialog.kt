@@ -39,9 +39,9 @@ import com.cliffracertech.soundaura.ui.HorizontalDivider
 import com.cliffracertech.soundaura.ui.SlideAnimatedContent
 import com.cliffracertech.soundaura.ui.TextButton
 import com.cliffracertech.soundaura.ui.VerticalDivider
-import com.cliffracertech.soundaura.ui.bottomEndShape
-import com.cliffracertech.soundaura.ui.bottomShape
-import com.cliffracertech.soundaura.ui.bottomStartShape
+import com.cliffracertech.soundaura.ui.theme.bottomEndShape
+import com.cliffracertech.soundaura.ui.theme.bottomShape
+import com.cliffracertech.soundaura.ui.theme.bottomStartShape
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 
 @Composable private fun ColumnScope.AddLocalFilesDialogButtons(

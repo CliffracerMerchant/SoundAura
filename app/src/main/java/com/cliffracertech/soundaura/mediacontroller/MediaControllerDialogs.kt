@@ -21,7 +21,7 @@ import com.cliffracertech.soundaura.model.Validator
 import com.cliffracertech.soundaura.model.database.Preset
 import com.cliffracertech.soundaura.ui.HorizontalDivider
 import com.cliffracertech.soundaura.ui.TextButton
-import com.cliffracertech.soundaura.ui.bottomShape
+import com.cliffracertech.soundaura.ui.theme.bottomShape
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import kotlinx.coroutines.CoroutineScope
 import java.time.Duration

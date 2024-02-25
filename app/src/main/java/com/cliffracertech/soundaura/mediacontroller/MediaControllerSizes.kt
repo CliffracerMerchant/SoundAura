@@ -13,10 +13,10 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import com.cliffracertech.soundaura.ui.bottomShape
-import com.cliffracertech.soundaura.ui.endShape
-import com.cliffracertech.soundaura.ui.startShape
-import com.cliffracertech.soundaura.ui.topShape
+import com.cliffracertech.soundaura.ui.theme.bottomShape
+import com.cliffracertech.soundaura.ui.theme.endShape
+import com.cliffracertech.soundaura.ui.theme.startShape
+import com.cliffracertech.soundaura.ui.theme.topShape
 
 /**
  * A collection of sizes that a [MediaController] uses to determine its

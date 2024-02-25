@@ -67,8 +67,8 @@ import com.cliffracertech.soundaura.dialog.MultiStepDialog
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
 import com.cliffracertech.soundaura.service.TogglePlaybackTileService
 import com.cliffracertech.soundaura.ui.VerticalDivider
-import com.cliffracertech.soundaura.ui.bottomEndShape
-import com.cliffracertech.soundaura.ui.bottomStartShape
+import com.cliffracertech.soundaura.ui.theme.bottomEndShape
+import com.cliffracertech.soundaura.ui.theme.bottomStartShape
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
