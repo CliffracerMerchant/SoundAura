@@ -45,21 +45,20 @@ import com.cliffracertech.soundaura.ui.HorizontalDivider
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) = Surface(modifier, color = MaterialTheme.colors.background) {
+    val viewModel = viewModel<SettingsViewModel>()
     LazyColumn(
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        item { DisplaySettingsCategory() }
-        item { PlaybackSettingsCategory() }
+        item { DisplaySettingsCategory(viewModel) }
+        item { PlaybackSettingsCategory(viewModel) }
         item { AboutSettingsCategory() }
     }
 }
 
-@Composable private fun DisplaySettingsCategory() =
+@Composable private fun DisplaySettingsCategory(viewModel: SettingsViewModel) =
     SettingCategory(stringResource(R.string.display)) { paddingModifier ->
-        val viewModel: SettingsViewModel = viewModel()
-
         EnumDialogSetting(
             title = stringResource(R.string.app_light_dark_mode),
             modifier = paddingModifier,
@@ -146,9 +145,8 @@ import com.cliffracertech.soundaura.ui.HorizontalDivider
     }
 }
 
-@Composable private fun PlaybackSettingsCategory() =
+@Composable private fun PlaybackSettingsCategory(viewModel: SettingsViewModel) =
     SettingCategory(stringResource(R.string.playback)) { paddingModifier ->
-        val viewModel: SettingsViewModel = viewModel()
         var showingTileTutorialDialog by rememberSaveable { mutableStateOf(false) }
 
         PlayInBackgroundSetting(
