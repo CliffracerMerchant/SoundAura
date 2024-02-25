@@ -63,7 +63,7 @@ import javax.inject.Inject
 
 @HiltViewModel class MainActivityViewModel(
     messageHandler: MessageHandler,
-    private val dataStore: DataStore<Preferences>,
+    dataStore: DataStore<Preferences>,
     private val navigationState: NavigationState,
     private val playbackState: PlayerServicePlaybackState,
     coroutineScope: CoroutineScope?

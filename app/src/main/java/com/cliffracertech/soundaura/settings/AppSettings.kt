@@ -153,7 +153,6 @@ import com.cliffracertech.soundaura.ui.HorizontalDivider
             viewModel = viewModel,
             modifier = paddingModifier,
             onTileTutorialShowRequest = { showingTileTutorialDialog = true })
-
         AutoPauseDuringCallSetting(viewModel, paddingModifier)
 
         HorizontalDivider(paddingModifier)
