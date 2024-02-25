@@ -61,12 +61,12 @@ import com.cliffracertech.soundaura.ui.HorizontalDivider
         val viewModel: SettingsViewModel = viewModel()
 
         EnumDialogSetting(
-            title = stringResource(R.string.app_theme),
+            title = stringResource(R.string.app_light_dark_mode),
             modifier = paddingModifier,
-            values = AppTheme.values(),
-            valueNames = AppTheme.valueStrings(),
-            currentValue = viewModel.appTheme,
-            onValueClick = viewModel::onAppThemeClick)
+            values = AppLightDarkMode.entries,
+            valueNames = AppLightDarkMode.valueNames(),
+            currentValue = viewModel.appLightDarkMode,
+            onValueClick = viewModel::onLightDarkModeClick)
     }
 
 @Composable private fun PlayInBackgroundSetting(
@@ -156,8 +156,8 @@ import com.cliffracertech.soundaura.ui.HorizontalDivider
             modifier = paddingModifier,
             dialogWidth = DialogWidth.MatchToScreenSize(),
             description = stringResource(R.string.on_zero_volume_behavior_setting_description),
-            values = enumValues(),
-            valueNames = OnZeroVolumeAudioDeviceBehavior.valueStrings(),
+            values = OnZeroVolumeAudioDeviceBehavior.entries,
+            valueNames = OnZeroVolumeAudioDeviceBehavior.valueNames(),
             valueDescriptions = OnZeroVolumeAudioDeviceBehavior.valueDescriptions(),
             currentValue = viewModel.onZeroVolumeAudioDeviceBehavior,
             onValueClick = viewModel::onOnZeroVolumeAudioDeviceBehaviorClick)

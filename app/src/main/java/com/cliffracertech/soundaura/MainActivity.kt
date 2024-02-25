@@ -44,7 +44,7 @@ import com.cliffracertech.soundaura.model.MessageHandler
 import com.cliffracertech.soundaura.model.NavigationState
 import com.cliffracertech.soundaura.model.PlayerServicePlaybackState
 import com.cliffracertech.soundaura.settings.AppSettings
-import com.cliffracertech.soundaura.settings.AppTheme
+import com.cliffracertech.soundaura.settings.AppLightDarkMode
 import com.cliffracertech.soundaura.settings.PrefKeys
 import com.cliffracertech.soundaura.ui.SlideAnimatedContent
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
@@ -75,7 +75,7 @@ import javax.inject.Inject
         playbackState: PlayerServicePlaybackState
     ) : this(messageHandler, dataStore, navigationState, playbackState, null)
 
-    private val appThemeKey = intPreferencesKey(PrefKeys.appTheme)
+    private val lightDarkModeKey = intPreferencesKey(PrefKeys.appLightDarkMode)
     private val scope = coroutineScope ?: viewModelScope
 
     val messages = messageHandler.messages
@@ -85,8 +85,8 @@ import javax.inject.Inject
     // The thread must be blocked when reading the first value
     // of the app theme from the DataStore or else the screen
     // can flicker between light and dark themes on startup.
-    val appTheme by runBlocking {
-        dataStore.awaitEnumPreferenceState<AppTheme>(appThemeKey, scope)
+    val appLightDarkMode by runBlocking {
+        dataStore.awaitEnumPreferenceState<AppLightDarkMode>(lightDarkModeKey, scope)
     }
 
     fun onBackButtonClick() = with(navigationState) {
@@ -198,24 +198,24 @@ class MainActivity : ComponentActivity() {
         parent: CompositionContext? = null,
         content: @Composable () -> Unit
     ) = setContent(parent) {
-        val themePreference = viewModel.appTheme
-        val systemInDarkTheme = isSystemInDarkTheme()
-        val useDarkTheme by remember(themePreference, systemInDarkTheme) {
+        val lightDarkModePref = viewModel.appLightDarkMode
+        val systemInDarkMode = isSystemInDarkTheme()
+        val useDarkMode by remember(lightDarkModePref, systemInDarkMode) {
             derivedStateOf {
-                themePreference == AppTheme.Dark ||
-                (themePreference == AppTheme.UseSystem && systemInDarkTheme)
+                lightDarkModePref == AppLightDarkMode.Dark ||
+                (lightDarkModePref == AppLightDarkMode.UseSystem && systemInDarkMode)
             }
         }
 
         val uiController = rememberSystemUiController()
-        LaunchedEffect(useDarkTheme) {
+        LaunchedEffect(useDarkMode) {
             // For some reason the status bar icons get reset
             // to a light color when the theme is changed, so
             // this effect needs to run after every theme change.
             uiController.setStatusBarColor(Color.Transparent, true)
-            uiController.setNavigationBarColor(Color.Transparent, !useDarkTheme)
+            uiController.setNavigationBarColor(Color.Transparent, !useDarkMode)
         }
-        SoundAuraTheme(useDarkTheme) {
+        SoundAuraTheme(useDarkMode) {
             val windowSizeClass = calculateWindowSizeClass(this)
             CompositionLocalProvider(LocalWindowSizeClass provides windowSizeClass) {
                 ProvideWindowInsets { content() }

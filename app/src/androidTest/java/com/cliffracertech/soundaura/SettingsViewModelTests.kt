@@ -13,7 +13,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.cliffracertech.soundaura.settings.AppTheme
+import com.cliffracertech.soundaura.settings.AppLightDarkMode
 import com.cliffracertech.soundaura.settings.OnZeroVolumeAudioDeviceBehavior
 import com.cliffracertech.soundaura.settings.PrefKeys
 import com.cliffracertech.soundaura.settings.SettingsViewModel
@@ -42,7 +42,7 @@ class SettingsViewModelTests {
     private val scope = TestCoroutineScope()
     private val dataStore = PreferenceDataStoreFactory
         .create(scope = scope) { context.preferencesDataStoreFile("testDatastore") }
-    private val appThemeKey = intPreferencesKey(PrefKeys.appTheme)
+    private val appLightDarkModeKey = intPreferencesKey(PrefKeys.appLightDarkMode)
     private val playInBackgroundKey = booleanPreferencesKey(PrefKeys.playInBackground)
     private val autoPauseDuringCallKey = booleanPreferencesKey(PrefKeys.autoPauseDuringCalls)
     private val onZeroVolumeAudioDeviceBehaviorKey = intPreferencesKey(PrefKeys.onZeroVolumeAudioDeviceBehavior)
@@ -63,7 +63,7 @@ class SettingsViewModelTests {
     }
 
     @Test fun default_values() {
-        assertThat(instance.appTheme).isEqualTo(AppTheme.UseSystem)
+        assertThat(instance.appLightDarkMode).isEqualTo(AppLightDarkMode.UseSystem)
         assertThat(instance.playInBackground).isFalse()
         assertThat(instance.showingPlayInBackgroundExplanation).isFalse()
         assertThat(instance.autoPauseDuringCallSettingVisible).isFalse()
@@ -75,12 +75,14 @@ class SettingsViewModelTests {
 
     @Test fun on_app_theme_click() = runTest {
         default_values()
-        instance.onAppThemeClick(AppTheme.Dark)
-        assertThat(updatedPreferences()[appThemeKey]).isEqualTo(AppTheme.Dark.ordinal)
-        assertThat(instance.appTheme).isEqualTo(AppTheme.Dark)
-        instance.onAppThemeClick(AppTheme.Light)
-        assertThat(updatedPreferences()[appThemeKey]).isEqualTo(AppTheme.Light.ordinal)
-        assertThat(instance.appTheme).isEqualTo(AppTheme.Light)
+        instance.onLightDarkModeClick(AppLightDarkMode.Dark)
+        assertThat(updatedPreferences()[appLightDarkModeKey])
+            .isEqualTo(AppLightDarkMode.Dark.ordinal)
+        assertThat(instance.appLightDarkMode).isEqualTo(AppLightDarkMode.Dark)
+        instance.onLightDarkModeClick(AppLightDarkMode.Light)
+        assertThat(updatedPreferences()[appLightDarkModeKey])
+            .isEqualTo(AppLightDarkMode.Light.ordinal)
+        assertThat(instance.appLightDarkMode).isEqualTo(AppLightDarkMode.Light)
     }
 
     @Test fun on_play_in_background_title_click() {

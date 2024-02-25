@@ -60,9 +60,9 @@ object PrefKeys {
     /** A [String] value that represents the name of the currently active preset. */
     const val activePresetName = "active_preset_name"
 
-    /** An int value that represents the ordinal of the desired [AppTheme]
+    /** An int value that represents the ordinal of the desired [AppLightDarkMode]
      * enum value to use as the application's light/dark theme. */
-    const val appTheme = "app_theme"
+    const val appLightDarkMode = "app_theme"
 
     /**
      * A boolean value that indicates whether playback should occur in the
@@ -111,17 +111,16 @@ object PrefKeys {
     const val playButtonLongClickHintShown = "play_button_long_click_hint_shown"
 }
 
-enum class AppTheme { UseSystem, Light, Dark;
+enum class AppLightDarkMode { UseSystem, Light, Dark;
     companion object {
-        /** Return an Array<String> containing strings that describe the enum values. */
-        @Composable fun valueStrings() =
-            with(LocalContext.current) {
-                remember { arrayOf(
-                    getString(R.string.match_system_theme),
-                    getString(R.string.light_theme),
-                    getString(R.string.dark_theme)
-                )}
-            }
+        /** Return an Array<String> whose strings describe the enum values. */
+        @Composable fun valueNames() = with(LocalContext.current) {
+            remember { arrayOf(
+                getString(R.string.match_system_theme),
+                getString(R.string.light_theme),
+                getString(R.string.dark_theme)
+            )}
+        }
     }
 }
 
@@ -142,24 +141,22 @@ enum class OnZeroVolumeAudioDeviceBehavior {
 
     companion object {
         /** Return an [Array] containing [String]s that describe the enum values. */
-        @Composable fun valueStrings() =
-            with(LocalContext.current) {
-                remember { arrayOf(
-                    getString(R.string.stop_playback_on_zero_volume_title),
-                    getString(R.string.pause_playback_on_zero_volume_title),
-                    getString(R.string.do_nothing_on_zero_volume_title)
-                )}
-            }
+        @Composable fun valueNames() = with(LocalContext.current) {
+            remember { arrayOf(
+                getString(R.string.stop_playback_on_zero_volume_title),
+                getString(R.string.pause_playback_on_zero_volume_title),
+                getString(R.string.do_nothing_on_zero_volume_title)
+            )}
+        }
 
         /** Return an [Array] containing nullable strings that further describe the enum values if necessary. */
-        @Composable fun valueDescriptions() =
-            with(LocalContext.current) {
-                remember { arrayOf(
-                    getString(R.string.stop_playback_on_zero_volume_description),
-                    getString(R.string.pause_playback_on_zero_volume_description),
-                    getString(R.string.do_nothing_on_zero_volume_description)
-                )}
-            }
+        @Composable fun valueDescriptions() = with(LocalContext.current) {
+            remember { arrayOf(
+                getString(R.string.stop_playback_on_zero_volume_description),
+                getString(R.string.pause_playback_on_zero_volume_description),
+                getString(R.string.do_nothing_on_zero_volume_description)
+            )}
+        }
     }
 }
 
@@ -176,7 +173,7 @@ class SettingsViewModel(
     ) : this(context, dataStore, null)
 
     private val scope = coroutineScope ?: viewModelScope
-    private val appThemeKey = intPreferencesKey(PrefKeys.appTheme)
+    private val appLightDarkModeKey = intPreferencesKey(PrefKeys.appLightDarkMode)
     private val playInBackgroundKey = booleanPreferencesKey(PrefKeys.playInBackground)
     private val notificationPermissionRequestedKey =
         booleanPreferencesKey(PrefKeys.notificationPermissionRequested)
@@ -185,10 +182,10 @@ class SettingsViewModel(
         intPreferencesKey(PrefKeys.onZeroVolumeAudioDeviceBehavior)
     private val stopInsteadOfPauseKey = booleanPreferencesKey(PrefKeys.stopInsteadOfPause)
 
-    val appTheme by dataStore.enumPreferenceState<AppTheme>(appThemeKey, scope)
+    val appLightDarkMode by dataStore.enumPreferenceState<AppLightDarkMode>(appLightDarkModeKey, scope)
 
-    fun onAppThemeClick(theme: AppTheme) =
-        dataStore.edit(appThemeKey, theme.ordinal, scope)
+    fun onLightDarkModeClick(mode: AppLightDarkMode) =
+        dataStore.edit(appLightDarkModeKey, mode.ordinal, scope)
 
     val playInBackground by dataStore
         .preferenceFlow(playInBackgroundKey, false)

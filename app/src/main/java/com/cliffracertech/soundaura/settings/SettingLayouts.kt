@@ -41,6 +41,7 @@ import com.cliffracertech.soundaura.screenSizeBasedHorizontalPadding
 import com.cliffracertech.soundaura.ui.HorizontalDivider
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
+import kotlin.enums.EnumEntries
 
 /**
  * A settings category displayed on a large surface background.
@@ -96,7 +97,7 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
  * A radio button group to select a particular value of an enum.
  *
  * @param modifier The [Modifier] to apply to the entire radio button group
- * @param values An [Array] of all possible enum values
+ * @param values The enum's [EnumEntries]
  * @param valueNames An [Array] containing names for each of the enum values
  * @param valueDescriptions An optional array of [String]s, the individual
  *     values of which will be displayed beneath each enum value to
@@ -106,9 +107,9 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
  * @param onValueClick The callback that will be invoked when an enum
  *                     value is clicked
  */
-@Composable fun <T> EnumRadioButtonGroup(
+@Composable fun <T: Enum<T>> EnumRadioButtonGroup(
     modifier: Modifier = Modifier,
-    values: Array<T>,
+    values: EnumEntries<T>,
     valueNames: Array<String>,
     valueDescriptions: Array<String>? = null,
     currentValue: T,
@@ -285,7 +286,7 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
     modifier: Modifier = Modifier,
     dialogWidth: DialogWidth = DialogWidth.PlatformDefault,
     description: String? = null,
-    values: Array<T>,
+    values: EnumEntries<T>,
     valueNames: Array<String>,
     valueDescriptions: Array<String>? = null,
     currentValue: T,
