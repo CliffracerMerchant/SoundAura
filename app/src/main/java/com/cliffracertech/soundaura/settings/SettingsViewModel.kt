@@ -190,6 +190,7 @@ class SettingsViewModel(
 
     private val scope = coroutineScope ?: viewModelScope
     private val appLightDarkModeKey = intPreferencesKey(PrefKeys.appLightDarkMode)
+    private val appColorThemeKey = intPreferencesKey(PrefKeys.appColorTheme)
     private val playInBackgroundKey = booleanPreferencesKey(PrefKeys.playInBackground)
     private val notificationPermissionRequestedKey =
         booleanPreferencesKey(PrefKeys.notificationPermissionRequested)
@@ -199,9 +200,13 @@ class SettingsViewModel(
     private val stopInsteadOfPauseKey = booleanPreferencesKey(PrefKeys.stopInsteadOfPause)
 
     val appLightDarkMode by dataStore.enumPreferenceState<AppLightDarkMode>(appLightDarkModeKey, scope)
+    val appColorTheme by dataStore.enumPreferenceState<AppColorTheme>(appColorThemeKey, scope)
 
     fun onLightDarkModeClick(mode: AppLightDarkMode) =
         dataStore.edit(appLightDarkModeKey, mode.ordinal, scope)
+
+    fun onColorThemeClick(theme: AppColorTheme) =
+        dataStore.edit(appColorThemeKey, theme.ordinal, scope)
 
     val playInBackground by dataStore
         .preferenceFlow(playInBackgroundKey, false)

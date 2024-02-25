@@ -67,6 +67,14 @@ import com.cliffracertech.soundaura.ui.HorizontalDivider
             valueNames = AppLightDarkMode.valueNames(),
             currentValue = viewModel.appLightDarkMode,
             onValueClick = viewModel::onLightDarkModeClick)
+        HorizontalDivider()
+        EnumDialogSetting(
+            title = stringResource(R.string.app_color_theme),
+            modifier = paddingModifier,
+            values = AppColorTheme.entries,
+            valueNames = AppColorTheme.valueNames(),
+            currentValue = viewModel.appColorTheme,
+            onValueClick = viewModel::onColorThemeClick)
     }
 
 @Composable private fun PlayInBackgroundSetting(
@@ -115,11 +123,10 @@ import com.cliffracertech.soundaura.ui.HorizontalDivider
     enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
     exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top)
 ) {
-    Column {
-        HorizontalDivider(modifier)
+    Column(modifier) {
+        HorizontalDivider()
         Setting(
             title = stringResource(R.string.auto_pause_during_calls_setting_title),
-            modifier = modifier,
             subtitle = stringResource(R.string.auto_pause_during_calls_setting_subtitle),
             onClick = viewModel::onAutoPauseDuringCallClick
         ) {
@@ -148,6 +155,7 @@ import com.cliffracertech.soundaura.ui.HorizontalDivider
             viewModel = viewModel,
             modifier = paddingModifier,
             onTileTutorialShowRequest = { showingTileTutorialDialog = true })
+
         AutoPauseDuringCallSetting(viewModel, paddingModifier)
 
         HorizontalDivider(paddingModifier)
@@ -161,6 +169,7 @@ import com.cliffracertech.soundaura.ui.HorizontalDivider
             valueDescriptions = OnZeroVolumeAudioDeviceBehavior.valueDescriptions(),
             currentValue = viewModel.onZeroVolumeAudioDeviceBehavior,
             onValueClick = viewModel::onOnZeroVolumeAudioDeviceBehaviorClick)
+
         HorizontalDivider(paddingModifier)
         DialogSetting(
             title = stringResource(R.string.control_playback_using_tile_setting_title),
@@ -169,6 +178,7 @@ import com.cliffracertech.soundaura.ui.HorizontalDivider
             onShowRequest = { showingTileTutorialDialog = true },
             onDismissRequest = { showingTileTutorialDialog = false },
             content = { TileTutorialDialog(onDismissRequest = it) })
+
         HorizontalDivider(paddingModifier)
         Setting(
             title = stringResource(R.string.stop_instead_of_pause_setting_title),
