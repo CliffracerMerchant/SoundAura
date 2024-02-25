@@ -3,12 +3,8 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
-import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
 import android.os.Bundle
-import android.os.IBinder
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -38,7 +34,21 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cliffracertech.soundaura.addbutton.AddButton
+import com.cliffracertech.soundaura.addbutton.AddButtonTarget
+import com.cliffracertech.soundaura.appbar.SoundAuraAppBar
+import com.cliffracertech.soundaura.library.SoundAuraLibraryView
+import com.cliffracertech.soundaura.mediacontroller.MediaControllerSizes
+import com.cliffracertech.soundaura.mediacontroller.SoundAuraMediaController
+import com.cliffracertech.soundaura.model.MessageHandler
+import com.cliffracertech.soundaura.model.NavigationState
+import com.cliffracertech.soundaura.model.PlayerServicePlaybackState
+import com.cliffracertech.soundaura.settings.AppSettings
+import com.cliffracertech.soundaura.settings.AppTheme
+import com.cliffracertech.soundaura.settings.PrefKeys
+import com.cliffracertech.soundaura.ui.SlideAnimatedContent
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
+import com.cliffracertech.soundaura.ui.tweenDuration
 import com.google.accompanist.insets.LocalWindowInsets
 import com.google.accompanist.insets.ProvideWindowInsets
 import com.google.accompanist.insets.navigationBarsHeight
@@ -46,41 +56,24 @@ import com.google.accompanist.insets.rememberInsetsPaddingValues
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.scopes.ActivityRetainedScoped
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.runBlocking
-import java.time.Duration
-import java.time.Instant
 import javax.inject.Inject
-
-@ActivityRetainedScoped
-class MainActivityNavigationState @Inject constructor() {
-    var showingAppSettings by mutableStateOf(false)
-    var showingPresetSelector by mutableStateOf(false)
-
-    fun onBackButtonClick() = when {
-        showingAppSettings -> {
-            showingAppSettings = false
-            true
-        } showingPresetSelector -> {
-            showingPresetSelector = false
-            true
-        } else -> false
-    }
-}
 
 @HiltViewModel class MainActivityViewModel(
     messageHandler: MessageHandler,
     dataStore: DataStore<Preferences>,
-    private val navigationState: MainActivityNavigationState,
+    private val navigationState: NavigationState,
+    private val playbackState: PlayerServicePlaybackState,
     coroutineScope: CoroutineScope?
 ) : ViewModel() {
 
     @Inject constructor(
         messageHandler: MessageHandler,
         dataStore: DataStore<Preferences>,
-        navigationState: MainActivityNavigationState,
-    ) : this(messageHandler, dataStore, navigationState, null)
+        navigationState: NavigationState,
+        playbackState: PlayerServicePlaybackState
+    ) : this(messageHandler, dataStore, navigationState, playbackState, null)
 
     private val appThemeKey = intPreferencesKey(PrefKeys.appTheme)
     private val scope = coroutineScope ?: viewModelScope
@@ -96,7 +89,37 @@ class MainActivityNavigationState @Inject constructor() {
         dataStore.awaitEnumPreferenceState<AppTheme>(appThemeKey, scope)
     }
 
-    fun onBackButtonClick() = navigationState.onBackButtonClick()
+    fun onBackButtonClick() = with(navigationState) {
+        if (willConsumeBackButtonClick) {
+            onBackButtonClick(); true
+        } else false
+    }
+
+    fun onActivityStart(context: Context) = playbackState.onActivityStart(context)
+
+    fun onActivityStop() = playbackState.onActivityStop()
+
+    fun onKeyDown(keyCode: Int) = when (keyCode) {
+        KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+            playbackState.toggleIsPlaying()
+            true
+        } KeyEvent.KEYCODE_MEDIA_PLAY -> {
+            if (playbackState.isPlaying) {
+                playbackState.toggleIsPlaying()
+                true
+            } else false
+        } KeyEvent.KEYCODE_MEDIA_PAUSE -> {
+            if (playbackState.isPlaying) {
+                playbackState.toggleIsPlaying()
+                true
+            } else false
+        } KeyEvent.KEYCODE_MEDIA_STOP -> {
+            if (playbackState.isPlaying) {
+                playbackState.toggleIsPlaying()
+                true
+            } else false
+        } else -> false
+    }
 }
 
 val LocalWindowSizeClass = compositionLocalOf {
@@ -105,26 +128,16 @@ val LocalWindowSizeClass = compositionLocalOf {
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    private var boundPlayerService by mutableStateOf<PlayerService.Binder?>(null)
     private val viewModel: MainActivityViewModel by viewModels()
 
-    private val serviceConnection = object: ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            boundPlayerService = service as? PlayerService.Binder
-        }
-        override fun onServiceDisconnected(name: ComponentName?) {}
+    override fun onStart() {
+        super.onStart()
+        viewModel.onActivityStart(this)
     }
 
-    override fun onResume() {
-        super.onResume()
-        val intent = Intent(this, PlayerService::class.java)
-        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-    }
-
-    override fun onPause() {
-        super.onPause()
-        unbindService(serviceConnection)
-        boundPlayerService = null
+    override fun onStop() {
+        super.onStop()
+        viewModel.onActivityStop()
     }
 
     @Suppress("OVERRIDE_DEPRECATION")
@@ -154,10 +167,7 @@ class MainActivity : ComponentActivity() {
                         // statusBarsPadding, so we have to use applyTop = false
                         // here to prevent the top padding from being doubled.
                         insets = insets.systemBars, applyTop = false, applyBottom = false)
-                    @Suppress("DEPRECATION")
-                    SoundAuraActionBar(
-                        onUnhandledBackButtonClick = ::onBackPressed,
-                        modifier = Modifier.padding(padding))
+                    SoundAuraAppBar(modifier = Modifier.padding(padding))
                 }, bottomBar = {
                     Spacer(Modifier.navigationBarsHeight().fillMaxWidth())
                 }, floatingActionButton = {
@@ -245,17 +255,14 @@ class MainActivity : ComponentActivity() {
         ) { showingAppSettingsScreen ->
             if (showingAppSettingsScreen)
                 AppSettings(padding)
-            else SoundAuraTrackList(
+            else SoundAuraLibraryView(
                 // The track list's padding must be adjusted
                 // depending on the placement of the FABs.
                 padding = remember(padding, widthIsConstrained) {
                     PaddingValues(padding, ld,
                         additionalEnd = mainContentAdditionalEndMargin(widthIsConstrained),
                         additionalBottom = if (widthIsConstrained) 64.dp else 0.dp)
-                }, state = trackListState,
-                onVolumeChange = { uri, volume ->
-                    boundPlayerService?.setTrackVolume(uri, volume)
-                })
+                }, state = trackListState)
         }
 
         MediaController(padding, alignToEnd = !widthIsConstrained)
@@ -314,16 +321,10 @@ class MainActivity : ComponentActivity() {
                              else contentAreaSize.height))
         }
 
+        val alignment = if (alignToEnd) Alignment.TopEnd as BiasAlignment
+                        else            Alignment.BottomStart as BiasAlignment
         SoundAuraMediaController(
-            sizes = mediaControllerSizes,
-            alignment = if (alignToEnd) Alignment.TopEnd as BiasAlignment
-                        else            Alignment.BottomStart as BiasAlignment,
-            padding = padding,
-            isPlayingProvider = { boundPlayerService?.isPlaying ?: false },
-            onPlayButtonClick = ::onPlayButtonClick,
-            stopTimeProvider = { boundPlayerService?.stopTime },
-            onNewStopTimerRequest = ::onSetTimer,
-            onCancelStopTimerRequest = ::onClearTimer)
+            Modifier, mediaControllerSizes, alignment, padding)
     }
 
     /** Compose an add button at the bottom end edge of the screen that is
@@ -378,46 +379,12 @@ class MainActivity : ComponentActivity() {
             AddButton(
                 target = if (showingPresetSelector)
                              AddButtonTarget.Preset
-                         else AddButtonTarget.Track,
+                         else AddButtonTarget.Playlist,
                 backgroundColor = MaterialTheme.colors.secondaryVariant)
         }
     }
 
-    private fun onPlayButtonClick() {
-        boundPlayerService?.toggleIsPlaying()
-    }
-
-    private fun onSetTimer(duration: Duration) {
-        val stopTimeInstant = Instant.now().plus(duration)
-        val intent = PlayerService.setTimerIntent(this, stopTimeInstant)
-        startService(intent)
-    }
-
-    private fun onClearTimer() {
-        startService(PlayerService.setTimerIntent(this, null))
-    }
-
     override fun onKeyDown(keyCode: Int, event: KeyEvent?) =
-        when (keyCode) {
-            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
-                boundPlayerService?.toggleIsPlaying()
-                true
-            } KeyEvent.KEYCODE_MEDIA_PLAY -> {
-                if (boundPlayerService?.isPlaying == false) {
-                    boundPlayerService?.toggleIsPlaying()
-                    true
-                } else false
-            } KeyEvent.KEYCODE_MEDIA_PAUSE -> {
-                if (boundPlayerService?.isPlaying == true) {
-                    boundPlayerService?.toggleIsPlaying()
-                    true
-                } else false
-            } KeyEvent.KEYCODE_MEDIA_STOP -> {
-                if (boundPlayerService?.isPlaying == true) {
-                    boundPlayerService?.toggleIsPlaying()
-                    true
-                } else false
-            }
-            else -> super.onKeyDown(keyCode, event)
-        }
+        if (viewModel.onKeyDown(keyCode)) true
+        else super.onKeyDown(keyCode, event)
 }

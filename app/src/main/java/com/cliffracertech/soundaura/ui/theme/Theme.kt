@@ -11,18 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
-private val DarkColorPalette = darkColors(
-    primary = DarkThemePrimary,
-    primaryVariant = DarkThemePrimaryVariant,
-    secondary = DarkThemeSecondary,
-    secondaryVariant = DarkThemeSecondaryVariant,
-    background = DarkBackground,
-    surface = DarkSurface,
-    onBackground = DarkOnSurface,
-    onSurface = DarkOnSurface,
-    onPrimary = DarkOnPrimary)
-
-private val LightColorPalette = lightColors(
+private val lightColorPalette = lightColors(
     primary = LightThemePrimary,
     primaryVariant = LightThemePrimaryVariant,
     secondary = LightThemeSecondary,
@@ -34,6 +23,18 @@ private val LightColorPalette = lightColors(
     onSurface = LightOnSurface,
     onPrimary = LightOnPrimary)
 
+private val darkColorPalette = darkColors(
+    primary = DarkThemePrimary,
+    primaryVariant = DarkThemePrimaryVariant,
+    secondary = DarkThemeSecondary,
+    secondaryVariant = DarkThemeSecondaryVariant,
+    background = DarkBackground,
+    surface = DarkSurface,
+    error = DarkError,
+    onBackground = DarkOnSurface,
+    onSurface = DarkOnSurface,
+    onPrimary = DarkOnPrimary)
+
 @Composable fun SoundAuraTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
@@ -41,10 +42,9 @@ private val LightColorPalette = lightColors(
     val systemUiController = rememberSystemUiController()
     systemUiController.setSystemBarsColor(Color.Transparent)
 
-    val colors = if (darkTheme) DarkColorPalette
-                 else           LightColorPalette
     MaterialTheme(
-        colors = colors,
+        colors = if (darkTheme) darkColorPalette
+                 else           lightColorPalette,
         typography = Typography,
         shapes = Shapes,
         content = content)
