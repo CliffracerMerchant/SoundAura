@@ -3,19 +3,21 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura.appbar
 
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material.DropdownMenuItem
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Switch
-import androidx.compose.material.TabRowDefaults.Divider
-import androidx.compose.material.Text
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -141,18 +143,22 @@ import javax.inject.Inject
         searchQueryState = viewModel.searchQueryViewState,
         sortMenuState = viewModel.sortMenuState,
         otherSortMenuContent = {
-            DropdownMenuItem(onClick = viewModel.showActivePlaylistsFirstSwitchState.onClick) {
-                Text(stringResource(R.string.show_active_playlists_first),
-                     style = MaterialTheme.typography.button)
-                Spacer(Modifier.weight(1f).widthIn(12.dp))
-                Switch(viewModel.showActivePlaylistsFirstSwitchState.checked,
-                       onCheckedChange = null)
-            }
-            Divider()
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.show_active_playlists_first)) },
+                onClick = viewModel.showActivePlaylistsFirstSwitchState.onClick,
+                trailingIcon = {
+                    CompositionLocalProvider(LocalMinimumInteractiveComponentEnforcement provides false) {
+                        Switch(checked = viewModel.showActivePlaylistsFirstSwitchState.checked,
+                               onCheckedChange = null,
+                               modifier = Modifier.scale(0.8f).padding(start = 8.dp))
+                    }
+                })
+            HorizontalDivider()
         }, otherIconButtons = {
             SimpleIconButton(
                 icon = Icons.Default.Settings,
                 contentDescription = stringResource(R.string.app_settings_description),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 onClick = viewModel::onSettingsButtonClick)
         })
 }

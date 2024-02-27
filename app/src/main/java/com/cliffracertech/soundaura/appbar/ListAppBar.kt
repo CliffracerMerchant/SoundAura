@@ -20,14 +20,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Sort
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -96,8 +96,9 @@ import kotlinx.collections.immutable.toImmutableList
         if (!backButtonVisible)
             Spacer(Modifier.width(24.dp))
         else SimpleIconButton(
-            icon = Icons.Default.ArrowBack,
+            icon = Icons.AutoMirrored.Filled.ArrowBack,
             contentDescription = stringResource(R.string.back),
+            tint = MaterialTheme.colorScheme.onPrimaryContainer,
             onClick = onBackButtonClick ?: {})
     }
 
@@ -117,7 +118,8 @@ import kotlinx.collections.immutable.toImmutableList
         ) {
             Text(text = it,
                 modifier = Modifier.height(48.dp).wrapContentHeight(),
-                style = MaterialTheme.typography.h5, maxLines = 1)
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                style = MaterialTheme.typography.headlineSmall, maxLines = 1)
         }
     }
 
@@ -133,12 +135,14 @@ import kotlinx.collections.immutable.toImmutableList
             val painter = rememberAnimatedVectorPainter(vector,
                 searchQueryState.icon == SearchQueryViewState.Icon.Close)
             IconButton(onClick = searchQueryState.onButtonClick) {
-                Icon(painter, stringResource(R.string.search))
+                Icon(painter, stringResource(R.string.search),
+                     tint = MaterialTheme.colorScheme.onPrimaryContainer)
             }
             // Sort button
             IconButton(onClick = sortMenuState.onButtonClick) {
-                Icon(imageVector = Icons.Default.Sort,
-                    stringResource(R.string.sort_options_description))
+                Icon(imageVector = Icons.AutoMirrored.Filled.Sort,
+                    contentDescription = stringResource(R.string.sort_options_description),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer)
                 RadioDropdownMenu(
                     expanded = sortMenuState.showingPopup,
                     options = sortMenuState.optionNames(LocalContext.current),
@@ -155,7 +159,7 @@ import kotlinx.collections.immutable.toImmutableList
 
 @Preview @Composable fun PreviewListActionBar() = SoundAuraTheme {
     var searchIsActive by rememberMutableStateOf(false)
-    var searchQuery by rememberMutableStateOf("")
+    var searchQuery by rememberMutableStateOf<String?>(null)
     var showingSettings by rememberMutableStateOf(false)
     ListAppBar(
         onBackButtonClick = when {

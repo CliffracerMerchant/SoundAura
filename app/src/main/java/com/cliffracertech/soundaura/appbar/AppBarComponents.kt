@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -17,16 +16,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.Divider
-import androidx.compose.material.DropdownMenu
-import androidx.compose.material.DropdownMenuItem
-import androidx.compose.material.Icon
-import androidx.compose.material.LocalContentColor
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -49,16 +48,16 @@ fun GradientToolBar(
     modifier: Modifier = Modifier,
     content: @Composable RowScope.() -> Unit
 ) {
-    val gradStart = MaterialTheme.colors.primaryVariant
-    val gradEnd = MaterialTheme.colors.secondaryVariant
+    val gradStart = MaterialTheme.colorScheme.secondaryContainer
+    val gradEnd = MaterialTheme.colorScheme.tertiaryContainer
     val gradient = remember(gradStart, gradEnd) {
         Brush.horizontalGradient(listOf(gradStart, gradEnd))
     }
     Row(modifier.fillMaxWidth().background(gradient)
-        .statusBarsPadding().height(56.dp),
+                .statusBarsPadding().height(56.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val color = MaterialTheme.colors.onPrimary
+        val color = MaterialTheme.colorScheme.onSecondaryContainer
         CompositionLocalProvider(LocalContentColor provides color) { content() }
     }
 }
@@ -86,13 +85,15 @@ fun GradientToolBar(
     if (showOtherContentFirst)
         otherContent()
     options.forEachIndexed { index, name ->
-        DropdownMenuItem({ onOptionClick(index); onDismissRequest() }) {
-            Text(text = name, style = MaterialTheme.typography.button)
-            Spacer(Modifier.weight(1f))
-            val vector = if (index == currentIndex) Icons.Default.RadioButtonChecked
-                         else                       Icons.Default.RadioButtonUnchecked
-            Icon(vector, name,Modifier.size(36.dp).padding(8.dp))
-        }
+        DropdownMenuItem(
+            text = { Text(name) },
+            onClick = { onOptionClick(index) },
+            trailingIcon = {
+                val vector = if (index == currentIndex)
+                                 Icons.Default.RadioButtonChecked
+                             else Icons.Default.RadioButtonUnchecked
+                Icon(vector, name, Modifier.size(36.dp).padding(8.dp))
+            })
     }
     if (!showOtherContentFirst)
         otherContent()
@@ -115,14 +116,16 @@ fun GradientToolBar(
     BasicTextField(
         value = query,
         onValueChange = state.onQueryChange,
-        textStyle = MaterialTheme.typography.h6,
+        textStyle = MaterialTheme.typography.titleMedium,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         modifier = modifier.minTouchTargetSize(),
         singleLine = true,
     ) { innerTextField ->
         Column(verticalArrangement = Arrangement.Center) {
             innerTextField()
-            Divider(color = LocalContentColor.current, thickness = (1.5).dp)
+            HorizontalDivider(
+                thickness = 1.5.dp,
+                color = MaterialTheme.colorScheme.onPrimaryContainer)
         }
     }
 }
