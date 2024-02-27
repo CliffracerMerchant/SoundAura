@@ -18,9 +18,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -165,7 +165,7 @@ sealed class DialogWidth {
             ) {
                 Text(text = title, maxLines = 1,
                      overflow = TextOverflow.Ellipsis,
-                     style = MaterialTheme.typography.h6)
+                     style = MaterialTheme.typography.titleMedium)
             }
     }, text: String? = null,
     onDismissRequest: () -> Unit,
@@ -186,7 +186,7 @@ sealed class DialogWidth {
         Text(text = text ?: "",
             modifier = Modifier.padding(
                 start = 16.dp, end = 16.dp, bottom = 12.dp),
-            style = MaterialTheme.typography.body1)
+            style = MaterialTheme.typography.bodyLarge)
     }
 ) = Dialog(
     onDismissRequest = onDismissRequest,

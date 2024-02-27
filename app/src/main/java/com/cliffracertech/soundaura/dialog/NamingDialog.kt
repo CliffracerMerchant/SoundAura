@@ -14,10 +14,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
-import androidx.compose.material.TextField
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Info
@@ -104,7 +104,7 @@ class ValidatedNamingState(
     val tint = when {
         message.isInformational -> Color.Blue
         message.isWarning ->       Color.Yellow
-        else ->/*message.isError*/ MaterialTheme.colors.error
+        else ->/*message.isError*/ MaterialTheme.colorScheme.error
     }
     Icon(vector, null, tint = tint)
     Spacer(Modifier.width(4.dp))
@@ -168,7 +168,7 @@ class ValidatedNamingState(
             .padding(horizontal = 16.dp),
         isError = state.message is Validator.Message.Error,
         singleLine = true,
-        textStyle = MaterialTheme.typography.body1)
+        textStyle = MaterialTheme.typography.bodyLarge)
     AnimatedValidatorMessage(
         message = state.message,
         modifier = Modifier.padding(horizontal = 16.dp))

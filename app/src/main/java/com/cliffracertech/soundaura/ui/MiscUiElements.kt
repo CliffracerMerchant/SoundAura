@@ -30,15 +30,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.ButtonColors
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.ButtonElevation
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.LocalContentColor
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonElevation
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonColors
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -180,17 +182,17 @@ fun Modifier.minTouchTargetSize() =
 @Composable fun TextButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    shape: Shape = MaterialTheme.shapes.small,
+    colors: ButtonColors = ButtonDefaults.textButtonColors(),
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     elevation: ButtonElevation? = null,
-    shape: Shape = MaterialTheme.shapes.small,
     border: BorderStroke? = null,
-    colors: ButtonColors = ButtonDefaults.textButtonColors(),
     contentPadding: PaddingValues = ButtonDefaults.TextButtonContentPadding,
     text: String,
     onClick: () -> Unit,
-) = androidx.compose.material.TextButton(
-    onClick, modifier, enabled, interactionSource,
-    elevation, shape, border, colors, contentPadding
+) = androidx.compose.material3.TextButton(
+    onClick, modifier, enabled, shape, colors, elevation,
+    border, contentPadding, interactionSource
 ) { Text(text) }
 
 /** The same as an [androidx.compose.material.TextButton], except that
@@ -199,17 +201,17 @@ fun Modifier.minTouchTargetSize() =
 @Composable fun TextButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    shape: Shape = MaterialTheme.shapes.small,
+    colors: ButtonColors = ButtonDefaults.textButtonColors(),
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     elevation: ButtonElevation? = null,
-    shape: Shape = MaterialTheme.shapes.small,
     border: BorderStroke? = null,
-    colors: ButtonColors = ButtonDefaults.textButtonColors(),
     contentPadding: PaddingValues = ButtonDefaults.TextButtonContentPadding,
     @StringRes textResId: Int,
     onClick: () -> Unit,
 ) = TextButton(
-    modifier, enabled, interactionSource, elevation,
-    shape, border, colors, contentPadding,
+    modifier, enabled, shape, colors, interactionSource,
+    elevation, border, contentPadding,
     stringResource(textResId), onClick)
 
 /** The same as an [androidx.compose.material.IconButton], except
@@ -220,13 +222,12 @@ fun Modifier.minTouchTargetSize() =
     contentDescription: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    colors: IconButtonColors = IconButtonDefaults.iconButtonColors(),
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     tint: Color = LocalContentColor.current,
     iconPadding: Dp = 10.dp,
     onClick: () -> Unit,
-) = IconButton(
-    onClick, modifier, enabled, interactionSource,
-) {
+) = IconButton(onClick, modifier, enabled, colors, interactionSource) {
     Icon(icon, contentDescription,
          Modifier.padding(iconPadding), tint)
 }

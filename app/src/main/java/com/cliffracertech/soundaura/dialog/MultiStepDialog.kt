@@ -13,10 +13,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.Divider
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.ProvideTextStyle
-import androidx.compose.material.Text
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -83,15 +83,15 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
         titleLayout = {
             Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp)) {
                 Spacer(Modifier.weight(1f))
-                Text(title, style = MaterialTheme.typography.h6)
+                Text(title, style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.weight(1f))
                 Text(stringResource(R.string.multi_step_dialog_indicator,
                                     currentPageIndex + 1, numPages),
-                     style = MaterialTheme.typography.subtitle1)
+                     style = MaterialTheme.typography.bodyLarge)
             }
         }, onDismissRequest = onDismissRequest,
         buttons = {
-            Divider(Modifier.padding(top = 12.dp))
+            HorizontalDivider(Modifier.padding(top = 12.dp))
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
                 TextButton(
                     modifier = Modifier.minTouchTargetSize().weight(1f),
@@ -128,10 +128,10 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
         // before the padding is applied. This improves the look of the page
         // slide animations.
         val pageModifier = Modifier
-            .background(MaterialTheme.colors.surface)
+            .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 16.dp)
 
-        ProvideTextStyle(MaterialTheme.typography.subtitle1) {
+        ProvideTextStyle(MaterialTheme.typography.bodyLarge) {
             SlideAnimatedContent(
                 targetState = currentPageIndex,
                 leftToRight = currentPageIndex >= previousPageIndex,
