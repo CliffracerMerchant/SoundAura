@@ -23,10 +23,10 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -263,7 +263,7 @@ interface PlaylistViewCallback {
             // there were no error message.
             modifier = Modifier.padding(start = 1.dp))
         else {
-            Icon(imageVector = Icons.Default.VolumeUp,
+            Icon(imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                  contentDescription = null,
                  modifier = Modifier.size(20.dp),
                  tint = MaterialTheme.colors.primaryVariant)
@@ -383,7 +383,7 @@ private enum class PlaylistViewEndContentType {
 }}
 
 @Preview @Composable
-fun LightTrackViewPreview() = SoundAuraTheme(darkTheme = false) {
+fun LightTrackViewPreview() = SoundAuraTheme(useDarkMode = false) {
     PlaylistView(
         callback = rememberPlaylistViewCallback(),
         playlist = Playlist(
@@ -396,7 +396,7 @@ fun LightTrackViewPreview() = SoundAuraTheme(darkTheme = false) {
 }
 
 @Preview(showBackground = true) @Composable
-fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme = true) {
+fun DarkTrackViewPreview() = SoundAuraTheme(useDarkMode = true) {
     PlaylistView(
         callback = rememberPlaylistViewCallback(),
         playlist = Playlist(
@@ -409,7 +409,7 @@ fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme = true) {
 }
 
 @Preview @Composable
-fun LightTrackErrorPreview() = SoundAuraTheme(darkTheme = false) {
+fun LightTrackErrorPreview() = SoundAuraTheme(useDarkMode = false) {
     PlaylistView(
         callback = rememberPlaylistViewCallback(),
         playlist = Playlist(
@@ -422,7 +422,7 @@ fun LightTrackErrorPreview() = SoundAuraTheme(darkTheme = false) {
 }
 
 @Preview(showBackground = true) @Composable
-fun DarkTrackErrorPreview() = SoundAuraTheme(darkTheme = true) {
+fun DarkTrackErrorPreview() = SoundAuraTheme(useDarkMode = true) {
     PlaylistView(
         callback = rememberPlaylistViewCallback(),
         playlist = Playlist(

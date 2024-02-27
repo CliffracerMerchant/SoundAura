@@ -4,47 +4,45 @@
 package com.cliffracertech.soundaura.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.darkColors
-import androidx.compose.material.lightColors
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
-private val lightColorPalette = lightColors(
-    primary = LightThemePrimary,
-    primaryVariant = LightThemePrimaryVariant,
-    secondary = LightThemeSecondary,
-    secondaryVariant = LightThemeSecondaryVariant,
+private val lightColorPalette = lightColorScheme(
+    primary = LightPrimary,
+    secondary = LightSecondary,
+    tertiary = LightTertiary,
     background = LightBackground,
-    surface = LightSurface,
     error = LightError,
-    onBackground = LightOnSurface,
-    onSurface = LightOnSurface,
+    primaryContainer = LightPrimaryContainer,
+    secondaryContainer = LightSecondaryContainer,
+    tertiaryContainer = LightTertiaryContainer,
     onPrimary = LightOnPrimary)
 
-private val darkColorPalette = darkColors(
-    primary = DarkThemePrimary,
-    primaryVariant = DarkThemePrimaryVariant,
-    secondary = DarkThemeSecondary,
-    secondaryVariant = DarkThemeSecondaryVariant,
+private val darkColorPalette = darkColorScheme(
+    primary = DarkPrimary,
+    secondary = DarkSecondary,
+    tertiary = DarkTertiary,
     background = DarkBackground,
-    surface = DarkSurface,
     error = DarkError,
-    onBackground = DarkOnSurface,
-    onSurface = DarkOnSurface,
+    primaryContainer = DarkPrimaryContainer,
+    secondaryContainer = DarkSecondaryContainer,
+    tertiaryContainer = DarkTertiaryContainer,
     onPrimary = DarkOnPrimary)
 
 @Composable fun SoundAuraTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    useDarkMode: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
     val systemUiController = rememberSystemUiController()
     systemUiController.setSystemBarsColor(Color.Transparent)
 
     MaterialTheme(
-        colors = if (darkTheme) darkColorPalette
-                 else           lightColorPalette,
+        colorScheme = if (useDarkMode) darkColorPalette
+                      else             lightColorPalette,
         typography = Typography,
         shapes = Shapes,
         content = content)
