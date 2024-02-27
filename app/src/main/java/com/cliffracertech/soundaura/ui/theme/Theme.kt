@@ -20,7 +20,9 @@ private val lightColorPalette = lightColorScheme(
     primaryContainer = LightPrimaryContainer,
     secondaryContainer = LightSecondaryContainer,
     tertiaryContainer = LightTertiaryContainer,
-    onPrimary = LightOnPrimary)
+    onPrimaryContainer = LightOnPrimaryContainer,
+    onSecondaryContainer = LightOnSecondaryContainer,
+    onTertiaryContainer = LightOnTertiaryContainer)
 
 private val darkColorPalette = darkColorScheme(
     primary = DarkPrimary,
@@ -31,7 +33,9 @@ private val darkColorPalette = darkColorScheme(
     primaryContainer = DarkPrimaryContainer,
     secondaryContainer = DarkSecondaryContainer,
     tertiaryContainer = DarkTertiaryContainer,
-    onPrimary = DarkOnPrimary)
+    onPrimaryContainer = DarkOnPrimaryContainer,
+    onSecondaryContainer = DarkOnSecondaryContainer,
+    onTertiaryContainer = DarkOnTertiaryContainer)
 
 @Composable fun SoundAuraTheme(
     useDarkMode: Boolean = isSystemInDarkTheme(),

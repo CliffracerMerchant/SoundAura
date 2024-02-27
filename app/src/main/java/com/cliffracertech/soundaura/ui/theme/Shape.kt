@@ -29,6 +29,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 val Shapes = Shapes(
+    // The material3 drop down menu shape uses extraSmall as its default
+    // shape, and this is not changeable. Since it is not used anywhere
+    // else, extraSmall is changed here to be the same as medium so that
+    // the drop down menu will match the medium shape instead of extraSmall.
+    extraSmall = RoundedCornerShape(16.dp),
     small = RoundedCornerShape(10.dp),
     medium = RoundedCornerShape(16.dp),
     large = RoundedCornerShape(24.dp))
