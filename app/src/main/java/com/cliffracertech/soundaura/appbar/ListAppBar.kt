@@ -68,10 +68,7 @@ import kotlinx.collections.immutable.toImmutableList
  * @param sortMenuState A [SortMenuState]`<T>` that contains state and
  *     callbacks related to the sort button and its popup menu.
  * @param otherSortMenuContent A composable lambda that contains other
- *     content that should be displayed in the popup sort menu. The
- *     onDismissRequest lambda for the popup sort menu is passed as a
- *     parameter so that additional sort menu contents can close the
- *     menu in their onClick actions.
+ *     content that should be displayed in the popup sort menu
  * @param otherIconButtons A composable containing other icon buttons
  *     that should be placed at the end of the action bar
  */

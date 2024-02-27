@@ -107,14 +107,19 @@ import javax.inject.Inject
                 }.toImmutableList()
             }
         }, getCurrentOptionIndex = { playlistSort.ordinal },
-        onOptionClick = { dataStore.edit(playlistSortKey, it, scope) })
+        onOptionClick = {
+            dismissSortMenuPopup()
+            dataStore.edit(playlistSortKey, it, scope)
+        })
+
+    private fun dismissSortMenuPopup() { sortMenuState.onPopupDismissRequest() }
 
     private val showActivePlaylistsFirstKey = booleanPreferencesKey(PrefKeys.showActivePlaylistsFirst)
     private val showActivePlaylistsFirst by dataStore.preferenceState(showActivePlaylistsFirstKey, false, scope)
     val showActivePlaylistsFirstSwitchState = SwitchState(
         getChecked = ::showActivePlaylistsFirst,
         onClick = {
-            sortMenuState.onPopupDismissRequest()
+            dismissSortMenuPopup()
             dataStore.edit(showActivePlaylistsFirstKey, !showActivePlaylistsFirst, scope)
         })
 
