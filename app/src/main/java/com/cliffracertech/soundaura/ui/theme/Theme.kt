@@ -14,28 +14,26 @@ import com.google.accompanist.systemuicontroller.rememberSystemUiController
 private val lightColorPalette = lightColorScheme(
     primary = LightPrimary,
     secondary = LightSecondary,
-    tertiary = LightTertiary,
     background = LightBackground,
+    surface = LightSurface,
     error = LightError,
     primaryContainer = LightPrimaryContainer,
     secondaryContainer = LightSecondaryContainer,
-    tertiaryContainer = LightTertiaryContainer,
     onPrimaryContainer = LightOnPrimaryContainer,
     onSecondaryContainer = LightOnSecondaryContainer,
-    onTertiaryContainer = LightOnTertiaryContainer)
+    onSurface = LightOnSurface)
 
 private val darkColorPalette = darkColorScheme(
     primary = DarkPrimary,
     secondary = DarkSecondary,
-    tertiary = DarkTertiary,
     background = DarkBackground,
+    surface = DarkSurface,
     error = DarkError,
     primaryContainer = DarkPrimaryContainer,
     secondaryContainer = DarkSecondaryContainer,
-    tertiaryContainer = DarkTertiaryContainer,
     onPrimaryContainer = DarkOnPrimaryContainer,
     onSecondaryContainer = DarkOnSecondaryContainer,
-    onTertiaryContainer = DarkOnTertiaryContainer)
+    onSurface = DarkOnSurface)
 
 @Composable fun SoundAuraTheme(
     useDarkMode: Boolean = isSystemInDarkTheme(),
