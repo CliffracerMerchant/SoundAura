@@ -29,18 +29,19 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Divider
-import androidx.compose.material.Icon
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.ProvideTextStyle
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -66,11 +67,10 @@ import com.cliffracertech.soundaura.dialog.DialogWidth
 import com.cliffracertech.soundaura.dialog.MultiStepDialog
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
 import com.cliffracertech.soundaura.service.TogglePlaybackTileService
-import com.cliffracertech.soundaura.ui.VerticalDivider
-import com.cliffracertech.soundaura.ui.theme.bottomEndShape
-import com.cliffracertech.soundaura.ui.theme.bottomStartShape
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
+import com.cliffracertech.soundaura.ui.theme.bottomEndShape
+import com.cliffracertech.soundaura.ui.theme.bottomStartShape
 import com.mikepenz.aboutlibraries.ui.compose.LibrariesContainer
 import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
 
@@ -95,7 +95,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
             start = 16.dp, end = 16.dp, bottom = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        ProvideTextStyle(MaterialTheme.typography.subtitle1) {
+        ProvideTextStyle(MaterialTheme.typography.bodyLarge) {
             Text(stringResource(R.string.play_in_background_explanation))
             BulletedList(listOf(
                 stringResource(R.string.play_in_background_explanation_bullet_1),
@@ -149,7 +149,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(stringResource(R.string.request_notification_permission_explanation_p1),
-                     style = MaterialTheme.typography.body1)
+                     style = MaterialTheme.typography.bodyLarge)
 
                 val linkText = stringResource(R.string.tile_tutorial_link_text)
                 TextWithClickableLink(
@@ -231,11 +231,10 @@ import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
     Button(
         onClick = onAddTileButtonClick,
         modifier = modifier,
-        elevation = ButtonDefaults.elevation(
+        elevation = ButtonDefaults.buttonElevation(
             defaultElevation = 8.dp,
             pressedElevation = 4.dp),
         shape = MaterialTheme.shapes.medium,
-        colors = ButtonDefaults.buttonColors(MaterialTheme.colors.primaryVariant),
         contentPadding = PaddingValues(vertical = 16.dp, horizontal = 24.dp),
     ) {
         Text(stringResource(R.string.tile_tutorial_add_tile_button_text))
@@ -299,7 +298,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
         currentPageIndex = currentPageIndex,
         onCurrentPageIndexChange = { currentPageIndex = it },
     ) { pageModifier, currentIndex ->
-        if (currentIndex == 0)
+        if (currentIndex == 0) {
             Column(pageModifier) {
                 Text(stringResource(R.string.tile_tutorial_intro_text))
                 if (Build.VERSION.SDK_INT >= 33)
@@ -310,7 +309,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
                         onSuccess = { currentPageIndex++ })
                 else PreApi33TileTutorial()
             }
-        else Column(pageModifier, Arrangement.spacedBy(16.dp)) {
+        } else Column(pageModifier, Arrangement.spacedBy(16.dp)) {
             Text(stringResource(R.string.tile_tutorial_tile_usage_text))
             val context = LocalContext.current
 
@@ -361,10 +360,10 @@ import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
             .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
             .heightIn(max = config.screenHeightDp.dp),
         colors = LibraryDefaults.libraryColors(
-            backgroundColor = MaterialTheme.colors.surface,
-            contentColor = MaterialTheme.colors.onSurface,
-            badgeBackgroundColor = MaterialTheme.colors.secondary,
-            badgeContentColor = MaterialTheme.colors.onSecondary
+            backgroundColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            badgeBackgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+            badgeContentColor = MaterialTheme.colorScheme.onPrimaryContainer
         ))
 }
 
@@ -382,20 +381,20 @@ import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
             Icon(painter = painterResource(R.drawable.tile_and_notification_icon),
                 contentDescription = null,
                 modifier = Modifier.size(22.dp),
-                tint = MaterialTheme.colors.primary)
+                tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.width(8.dp))
             Text(text = stringResource(R.string.app_name),
                 modifier = Modifier.alignByBaseline(),
-                style = MaterialTheme.typography.h6)
+                style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.width(6.dp))
             Text(text = stringResource(R.string.app_version),
                 modifier = Modifier.alignByBaseline(),
-                style = MaterialTheme.typography.subtitle1)
+                style = MaterialTheme.typography.bodyLarge)
         }
     }, text = stringResource(R.string.about_app_setting_body),
     onDismissRequest = onDismissRequest,
     buttons = {
-        Divider()
+        HorizontalDivider()
         Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
             val uriHandler = LocalUriHandler.current
             val gitHubLink = stringResource(R.string.github_link)
@@ -404,12 +403,12 @@ import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
                 modifier = Modifier.weight(1f).fillMaxSize(),
                 shape = MaterialTheme.shapes.medium.bottomStartShape()
             ) {
-                Icon(painterResource(R.drawable.github_logo), null,
-                    Modifier.size(20.dp))
+                Icon(painterResource(R.drawable.github_logo),
+                     null, Modifier.size(20.dp))
                 Spacer(Modifier.width(10.dp))
                 Text(text = stringResource(R.string.view_source_code),
                     textDecoration = TextDecoration.Underline,
-                    color = MaterialTheme.colors.primary)
+                    color = MaterialTheme.colorScheme.primary)
             }
             VerticalDivider()
             TextButton(
@@ -418,7 +417,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
                 shape = MaterialTheme.shapes.medium.bottomEndShape(),
             ) {
                 Text(text = stringResource(R.string.ok),
-                    color = MaterialTheme.colors.primary)
+                    color = MaterialTheme.colorScheme.primary)
             }
         }
     })

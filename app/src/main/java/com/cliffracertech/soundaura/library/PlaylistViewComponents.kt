@@ -16,7 +16,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -30,20 +29,22 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.LocalContentColor
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Switch
-import androidx.compose.material.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -55,7 +56,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -68,10 +68,8 @@ import androidx.documentfile.provider.DocumentFile
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.model.database.Track
 import com.cliffracertech.soundaura.rememberMutableStateOf
-import com.cliffracertech.soundaura.ui.HorizontalDivider
 import com.cliffracertech.soundaura.ui.MarqueeText
 import com.cliffracertech.soundaura.ui.SimpleIconButton
-import com.cliffracertech.soundaura.ui.VerticalDivider
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import org.burnoutcrew.reorderable.ReorderableItem
@@ -112,7 +110,7 @@ import java.io.File
 @Composable fun AddRemoveButton(
     added: Boolean,
     contentDescription: String? = null,
-    backgroundColor: Color = MaterialTheme.colors.background,
+    backgroundColor: Color = MaterialTheme.colorScheme.background,
     tint: Color = LocalContentColor.current,
     onClick: () -> Unit
 ) = IconButton(onClick) {
@@ -213,7 +211,7 @@ class MutablePlaylist(tracks: List<Track>) {
  *     tracks from the playlist will be disabled.
  *
  */
-@Composable fun ColumnScope.PlaylistOptionsView(
+@Composable fun PlaylistOptionsView(
     shuffleEnabled: Boolean,
     onShuffleClick: () -> Unit,
     mutablePlaylist: MutablePlaylist,
@@ -257,20 +255,19 @@ class MutablePlaylist(tracks: List<Track>) {
     horizontalArrangement = Arrangement.Center
 ) {
     Text(text = stringResource(R.string.playlist_track_count_description, trackCount),
-        style = MaterialTheme.typography.h6)
+        style = MaterialTheme.typography.titleMedium)
     if (onClick != null) {
         Box(modifier = Modifier
             .padding(start = 8.dp)
             .size(32.dp)
             .clip(MaterialTheme.shapes.small)
-            .background(MaterialTheme.colors.primaryVariant,
+            .background(MaterialTheme.colorScheme.primary,
                         MaterialTheme.shapes.small),
             contentAlignment = Alignment.Center
         ) {
             Icon(imageVector = Icons.Default.Add,
                 contentDescription = null,
-                modifier = Modifier.padding(6.dp),
-                tint = MaterialTheme.colors.onPrimary)
+                tint = MaterialTheme.colorScheme.onSecondaryContainer)
         }
     }
 }
@@ -318,9 +315,9 @@ class MutablePlaylist(tracks: List<Track>) {
                     targetValue = if (isDragging) 8.dp else 0.dp,
                     label = "playlist track elevation")
                 val color by animateColorAsState(
-                    targetValue = MaterialTheme.colors.error
-                        .copy(alpha = if (markedForRemoval) 0.8f else 0f)
-                        .compositeOver(MaterialTheme.colors.surface),
+                    targetValue = if (markedForRemoval)
+                                      MaterialTheme.colorScheme.error
+                                  else MaterialTheme.colorScheme.surface,
                     label = "playlist track background color")
                 val shape = MaterialTheme.shapes.small
 
@@ -343,7 +340,7 @@ class MutablePlaylist(tracks: List<Track>) {
                             .minTouchTargetSize()
                             .detectReorder(reorderableState)
                             .padding(10.dp),
-                        tint = if (track.hasError) MaterialTheme.colors.error
+                        tint = if (track.hasError) MaterialTheme.colorScheme.error
                                else                LocalContentColor.current)
 
                     val errorMessage = if (!track.hasError) "" else
@@ -354,8 +351,9 @@ class MutablePlaylist(tracks: List<Track>) {
                     if (!allowDeletion)
                         Spacer(Modifier.width(16.dp))
                     else SimpleIconButton(
-                        icon = if (markedForRemoval) Icons.Default.Undo
-                               else                  Icons.Default.Delete,
+                        icon = if (markedForRemoval)
+                                   Icons.AutoMirrored.Filled.Undo
+                               else Icons.Default.Delete,
                         contentDescription = stringResource(
                             R.string.playlist_track_delete_description, name),
                         iconPadding = if (markedForRemoval) 11.dp

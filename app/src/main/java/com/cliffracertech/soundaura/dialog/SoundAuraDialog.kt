@@ -18,9 +18,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -37,9 +39,7 @@ import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.dialog.DialogWidth.MatchToScreenSize
 import com.cliffracertech.soundaura.dialog.DialogWidth.PlatformDefault
 import com.cliffracertech.soundaura.screenSizeBasedHorizontalPadding
-import com.cliffracertech.soundaura.ui.HorizontalDivider
 import com.cliffracertech.soundaura.ui.TextButton
-import com.cliffracertech.soundaura.ui.VerticalDivider
 import com.cliffracertech.soundaura.ui.theme.bottomEndShape
 import com.cliffracertech.soundaura.ui.theme.bottomShape
 import com.cliffracertech.soundaura.ui.theme.bottomStartShape
@@ -117,11 +117,8 @@ sealed class DialogWidth {
     ) : DialogWidth()
 }
 
-// SoundAuraDialog was created to have more control over the layout of the dialog
-// than the stock Compose AlertDialog allows, and due to the fact that the standard
-// AlertDialog was not adding space in between the title and the content TextField
-// of the rename dialog, despite trying to add spacers and/or padding to both the
-// title and the TextField.
+// SoundAuraDialog was created to have more control over the layout
+// of the dialog than the stock Compose AlertDialog allows.
 /**
  * Show an alert dialog.
  *

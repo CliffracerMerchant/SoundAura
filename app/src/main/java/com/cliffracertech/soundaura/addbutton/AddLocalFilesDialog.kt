@@ -10,7 +10,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -20,9 +19,11 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
-import androidx.compose.material.TextField
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -35,16 +36,14 @@ import com.cliffracertech.soundaura.dialog.AnimatedValidatorMessage
 import com.cliffracertech.soundaura.dialog.DialogWidth
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
 import com.cliffracertech.soundaura.library.PlaylistOptionsView
-import com.cliffracertech.soundaura.ui.HorizontalDivider
 import com.cliffracertech.soundaura.ui.SlideAnimatedContent
 import com.cliffracertech.soundaura.ui.TextButton
-import com.cliffracertech.soundaura.ui.VerticalDivider
 import com.cliffracertech.soundaura.ui.theme.bottomEndShape
 import com.cliffracertech.soundaura.ui.theme.bottomShape
 import com.cliffracertech.soundaura.ui.theme.bottomStartShape
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 
-@Composable private fun ColumnScope.AddLocalFilesDialogButtons(
+@Composable private fun AddLocalFilesDialogButtons(
     step: AddLocalFilesDialogStep
 ) {
     HorizontalDivider()
@@ -110,7 +109,7 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
             // This background modifiers gives a border to the content to
             // improve the appearance of the SlideAnimatedContent animations
             val backgroundModifier = Modifier
-                .background(MaterialTheme.colors.surface)
+                .background(MaterialTheme.colorScheme.surface)
                 .padding(horizontal = 16.dp)
             when (step) {
                 is AddLocalFilesDialogStep.SelectingFiles -> {}
@@ -133,7 +132,7 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
                                 TextField(
                                     value = step.names[index],
                                     onValueChange = { step.onNameChange(index, it) },
-                                    textStyle = MaterialTheme.typography.body1,
+                                    textStyle = MaterialTheme.typography.bodyLarge,
                                     singleLine = true,
                                     isError = step.errors[index],
                                     modifier = Modifier.fillMaxWidth())
@@ -146,7 +145,7 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
                         TextField(
                             value = step.name,
                             onValueChange = step::onNameChange,
-                            textStyle = MaterialTheme.typography.body1,
+                            textStyle = MaterialTheme.typography.bodyLarge,
                             singleLine = true,
                             isError = step.message?.isError == true,
                             modifier = Modifier.fillMaxWidth())
@@ -155,7 +154,7 @@ import com.cliffracertech.soundaura.ui.minTouchTargetSize
                 } is AddLocalFilesDialogStep.PlaylistOptions-> {
                     // PlaylistOptions already has its own horizontal padding, so we avoid
                     // using backgroundModifier here to prevent doubling up on the padding
-                    Column(Modifier.background(MaterialTheme.colors.surface)) {
+                    Column(Modifier.background(MaterialTheme.colorScheme.surface)) {
                         PlaylistOptionsView(
                             shuffleEnabled = step.shuffleEnabled,
                             onShuffleClick = step.onShuffleSwitchClick,

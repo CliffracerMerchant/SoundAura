@@ -107,19 +107,14 @@ import javax.inject.Inject
                 }.toImmutableList()
             }
         }, getCurrentOptionIndex = { playlistSort.ordinal },
-        onOptionClick = {
-            dismissSortMenuPopup()
-            dataStore.edit(playlistSortKey, it, scope)
-        })
-
-    private fun dismissSortMenuPopup() { sortMenuState.onPopupDismissRequest() }
+        onOptionClick = { dataStore.edit(playlistSortKey, it, scope) })
 
     private val showActivePlaylistsFirstKey = booleanPreferencesKey(PrefKeys.showActivePlaylistsFirst)
     private val showActivePlaylistsFirst by dataStore.preferenceState(showActivePlaylistsFirstKey, false, scope)
     val showActivePlaylistsFirstSwitchState = SwitchState(
         getChecked = ::showActivePlaylistsFirst,
         onClick = {
-            dismissSortMenuPopup()
+            sortMenuState.onPopupDismissRequest()
             dataStore.edit(showActivePlaylistsFirstKey, !showActivePlaylistsFirst, scope)
         })
 
@@ -163,7 +158,7 @@ import javax.inject.Inject
             SimpleIconButton(
                 icon = Icons.Default.Settings,
                 contentDescription = stringResource(R.string.app_settings_description),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                tint = MaterialTheme.colorScheme.onPrimary,
                 onClick = viewModel::onSettingsButtonClick)
         })
 }

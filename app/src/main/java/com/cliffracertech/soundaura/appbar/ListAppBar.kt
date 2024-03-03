@@ -95,7 +95,7 @@ import kotlinx.collections.immutable.toImmutableList
         else SimpleIconButton(
             icon = Icons.AutoMirrored.Filled.ArrowBack,
             contentDescription = stringResource(R.string.back),
-            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+            tint = MaterialTheme.colorScheme.onPrimary,
             onClick = onBackButtonClick ?: {})
     }
 
@@ -115,7 +115,7 @@ import kotlinx.collections.immutable.toImmutableList
         ) {
             Text(text = it,
                 modifier = Modifier.height(48.dp).wrapContentHeight(),
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                color = MaterialTheme.colorScheme.onPrimary,
                 style = MaterialTheme.typography.headlineSmall, maxLines = 1)
         }
     }
@@ -133,13 +133,13 @@ import kotlinx.collections.immutable.toImmutableList
                 searchQueryState.icon == SearchQueryViewState.Icon.Close)
             IconButton(onClick = searchQueryState.onButtonClick) {
                 Icon(painter, stringResource(R.string.search),
-                     tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                     tint = MaterialTheme.colorScheme.onPrimary)
             }
             // Sort button
             IconButton(onClick = sortMenuState.onButtonClick) {
                 Icon(imageVector = Icons.AutoMirrored.Filled.Sort,
                     contentDescription = stringResource(R.string.sort_options_description),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    tint = MaterialTheme.colorScheme.onPrimary)
                 RadioDropdownMenu(
                     expanded = sortMenuState.showingPopup,
                     options = sortMenuState.optionNames(LocalContext.current),

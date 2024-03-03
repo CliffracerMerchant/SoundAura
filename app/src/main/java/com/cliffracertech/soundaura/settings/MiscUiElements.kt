@@ -8,18 +8,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material.Icon
-import androidx.compose.material.LocalContentAlpha
-import androidx.compose.material.LocalContentColor
-import androidx.compose.material.LocalTextStyle
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -32,7 +30,7 @@ import com.cliffracertech.soundaura.R
 @Composable fun RadioButton(
     checked: Boolean,
     modifier: Modifier = Modifier,
-    tint: Color = MaterialTheme.colors.primary
+    tint: Color = MaterialTheme.colorScheme.primary
 ) {
     val vector = if (checked) Icons.Default.RadioButtonChecked
                  else         Icons.Default.RadioButtonUnchecked
@@ -76,19 +74,17 @@ import com.cliffracertech.soundaura.R
     val linkTextLastIndex = linkTextStartIndex + linkText.length
     val linkifiedText = buildAnnotatedString {
         // ClickableText seems to not follow the local text style by default
-        pushStyle(
-            SpanStyle(color = LocalContentColor.current,
-            fontSize = LocalTextStyle.current.fontSize)
-        )
+        pushStyle(SpanStyle(color = LocalContentColor.current,
+                            fontSize = LocalTextStyle.current.fontSize))
         append(completeText)
-        val urlStyle = SpanStyle(color = MaterialTheme.colors.primary,
-            textDecoration = TextDecoration.Underline)
+        val urlStyle = SpanStyle(color = MaterialTheme.colorScheme.primary,
+                                 textDecoration = TextDecoration.Underline)
         addStyle(urlStyle, linkTextStartIndex, linkTextLastIndex)
     }
     ClickableText(
         text = linkifiedText,
-        modifier = modifier.alpha(LocalContentAlpha.current),
-        style = MaterialTheme.typography.body1
+        modifier = modifier,
+        style = MaterialTheme.typography.bodyLarge
     ) {
         if (it in linkTextStartIndex..linkTextLastIndex)
             onLinkClick()

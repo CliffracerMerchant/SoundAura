@@ -14,23 +14,22 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.paddingFromBaseline
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.DropdownMenu
-import androidx.compose.material.DropdownMenuItem
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.LocalContentColor
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -42,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
+import com.cliffracertech.soundaura.rememberMutableStateOf
 import com.cliffracertech.soundaura.ui.MarqueeText
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
@@ -147,7 +147,8 @@ interface PlaylistViewCallback {
         Box(Modifier.weight(1f)) {
             // 1dp start padding is required to make the text align with the volume icon
             MarqueeText(text = playlist.name,
-                        style = MaterialTheme.typography.h5,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier
                             .padding(start = 1.dp, top = 10.dp)
                             .paddingFromBaseline(bottom = 48.dp))
@@ -176,7 +177,7 @@ interface PlaylistViewCallback {
             onRenameClick = { callback.onRenameClick(playlist) },
             onPlaylistOptionsClick = { callback.onExtraOptionsClick(playlist) },
             onRemoveClick = { callback.onRemoveClick(playlist) },
-            tint = MaterialTheme.colors.secondaryVariant)
+            tint = MaterialTheme.colorScheme.secondary)
     }
 }
 
@@ -200,7 +201,7 @@ interface PlaylistViewCallback {
     showError: Boolean,
     isAdded: Boolean,
     contentDescription: String? = null,
-    backgroundColor: Color = MaterialTheme.colors.surface,
+    backgroundColor: Color = MaterialTheme.colorScheme.secondaryContainer,
     onAddRemoveClick: () -> Unit
 ) = AnimatedContent(
     targetState = showError,
@@ -210,12 +211,12 @@ interface PlaylistViewCallback {
         imageVector = Icons.Default.Error,
         contentDescription = contentDescription,
         modifier = Modifier.size(48.dp).padding(10.dp),
-        tint = MaterialTheme.colors.error)
+        tint = MaterialTheme.colorScheme.error)
     else AddRemoveButton(
         added = isAdded,
         contentDescription = contentDescription,
         backgroundColor = backgroundColor,
-        tint = MaterialTheme.colors.primaryVariant,
+        tint = MaterialTheme.colorScheme.primary,
         onClick = onAddRemoveClick)
 }
 
@@ -255,8 +256,8 @@ interface PlaylistViewCallback {
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (hasError) Text(
             text = errorMessage ?: "",
-            color = MaterialTheme.colors.error,
-            style = MaterialTheme.typography.body1,
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodyLarge,
             maxLines = 1, overflow = TextOverflow.Ellipsis,
             // 1dp start padding is required to make the text
             // align with where the volume icon would appear if
@@ -266,18 +267,18 @@ interface PlaylistViewCallback {
             Icon(imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                  contentDescription = null,
                  modifier = Modifier.size(20.dp),
-                 tint = MaterialTheme.colors.primaryVariant)
+                 tint = MaterialTheme.colorScheme.primary)
             GradientSlider(
                 value = volume,
                 onValueChange = onVolumeChange,
                 onValueChangeFinished = { onVolumeChangeFinished?.invoke() },
                 interactionSource = sliderInteractionSource,
                 colors = GradientSliderDefaults.colors(
-                    thumbColor = MaterialTheme.colors.primaryVariant,
-                    thumbColorEnd = MaterialTheme.colors.secondaryVariant,
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    thumbColorEnd = MaterialTheme.colorScheme.secondary,
                     activeTrackBrush = Brush.horizontalGradient(
-                        listOf(MaterialTheme.colors.primaryVariant,
-                               MaterialTheme.colors.secondaryVariant))))
+                        listOf(MaterialTheme.colorScheme.primary,
+                               MaterialTheme.colorScheme.secondary))))
         }
     }
 }
@@ -332,9 +333,8 @@ private enum class PlaylistViewEndContentType {
     label = "PlaylistView end content crossfade"
 ) { when(it) {
     PlaylistViewEndContentType.MoreOptionsButton -> {
-        var showingOptionsMenu by remember {
-            mutableStateOf(false)
-        }
+        var showingOptionsMenu by rememberMutableStateOf(false)
+
         IconButton({ showingOptionsMenu = true }) {
             Icon(imageVector = Icons.Default.MoreVert,
                 contentDescription = stringResource(
@@ -346,30 +346,34 @@ private enum class PlaylistViewEndContentType {
             expanded = showingOptionsMenu,
             onDismissRequest = { showingOptionsMenu = false }
         ) {
-            DropdownMenuItem(onClick = {
-                showingOptionsMenu = false
-                onRenameClick()
-            }) { Text(stringResource(R.string.rename)) }
-
-            DropdownMenuItem(onClick = {
-                showingOptionsMenu = false
-                onPlaylistOptionsClick()
-            }) {
-                Text(stringResource(
-                    if (playlist.isSingleTrack) R.string.create_playlist_title
-                    else                        R.string.playlist_options_title))
-            }
-            DropdownMenuItem(onClick = {
-                showingOptionsMenu = false
-                onRemoveClick()
-            }) { Text(stringResource(R.string.remove)) }
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.rename)) },
+                onClick = {
+                    showingOptionsMenu = false
+                    onRenameClick()})
+            DropdownMenuItem(
+                text = {
+                    Text(stringResource(
+                        if (playlist.isSingleTrack)
+                            R.string.create_playlist_title
+                        else R.string.playlist_options_title))
+                }, onClick = {
+                    showingOptionsMenu = false
+                    onPlaylistOptionsClick()
+                })
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.remove)) },
+                onClick = {
+                    showingOptionsMenu = false
+                    onRemoveClick()
+                })
         }
     }
     PlaylistViewEndContentType.VolumeDisplay -> {
         Box(Modifier.minTouchTargetSize(), Alignment.Center) {
             Text(text = (volume * 100).roundToInt().toString(),
                 color = tint,
-                style = MaterialTheme.typography.subtitle2)
+                style = MaterialTheme.typography.titleSmall)
         }
     }
     PlaylistViewEndContentType.DeleteButton -> {
@@ -377,7 +381,7 @@ private enum class PlaylistViewEndContentType {
             Icon(imageVector = Icons.Default.Delete,
                 contentDescription = stringResource(
                     R.string.remove_item_description, playlist.name),
-                tint = MaterialTheme.colors.error)
+                tint = MaterialTheme.colorScheme.error)
         }
     }
 }}

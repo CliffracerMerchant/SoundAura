@@ -48,8 +48,8 @@ fun GradientToolBar(
     modifier: Modifier = Modifier,
     content: @Composable RowScope.() -> Unit
 ) {
-    val gradStart = MaterialTheme.colorScheme.secondaryContainer
-    val gradEnd = MaterialTheme.colorScheme.tertiaryContainer
+    val gradStart = MaterialTheme.colorScheme.primaryContainer
+    val gradEnd = MaterialTheme.colorScheme.secondaryContainer
     val gradient = remember(gradStart, gradEnd) {
         Brush.horizontalGradient(listOf(gradStart, gradEnd))
     }
@@ -125,7 +125,7 @@ fun GradientToolBar(
             innerTextField()
             HorizontalDivider(
                 thickness = 1.5.dp,
-                color = MaterialTheme.colorScheme.onPrimaryContainer)
+                color = MaterialTheme.colorScheme.onPrimary)
         }
     }
 }
