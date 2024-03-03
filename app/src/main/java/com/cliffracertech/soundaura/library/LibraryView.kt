@@ -189,6 +189,9 @@ sealed class LibraryState {
                 else showPlaylistOptions(playlist, existingTracks, shuffleEnabled)
             }
         }
+        override fun onVolumeBoostClick(playlist: Playlist) {
+            TODO("Not yet implemented")
+        }
         override fun onRemoveClick(playlist: Playlist) {
             if (playlist.hasError)
                 scope.launch { modifyLibrary.removePlaylist(playlist.id) }

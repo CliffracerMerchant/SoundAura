@@ -30,7 +30,6 @@ import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -42,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
+import com.cliffracertech.soundaura.rememberMutableStateOf
 import com.cliffracertech.soundaura.ui.MarqueeText
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
@@ -87,6 +87,9 @@ interface PlaylistViewCallback {
     /** The callback that will be invoked when the 'playlist options' or
      * 'create playlist' option of the playlist's options menu is clicked */
     fun onExtraOptionsClick(playlist: Playlist)
+    /** The callback that will be invoked when the 'volume boost'
+     * option in the playlist's options menu is clicked */
+    fun onVolumeBoostClick(playlist: Playlist)
     /** The callback that will be invoked when the 'remove'
      * option of the playlist's options menu is clicked */
     fun onRemoveClick(playlist: Playlist)
@@ -99,6 +102,7 @@ interface PlaylistViewCallback {
     onVolumeChangeFinished: (Playlist, Float) -> Unit = { _, _ -> },
     onRenameClick: (Playlist) -> Unit = {},
     onExtraOptionsClick: (Playlist) -> Unit = {},
+    onVolumeBoostClick: (Playlist) -> Unit = {},
     onRemoveClick: (Playlist) -> Unit = {}
 ) = remember { object: PlaylistViewCallback {
     override fun onAddRemoveButtonClick(playlist: Playlist) = onAddRemoveButtonClick(playlist)
@@ -106,6 +110,7 @@ interface PlaylistViewCallback {
     override fun onVolumeChangeFinished(playlist: Playlist, volume: Float) = onVolumeChangeFinished(playlist, volume)
     override fun onRenameClick(playlist: Playlist) = onRenameClick(playlist)
     override fun onExtraOptionsClick(playlist: Playlist) = onExtraOptionsClick(playlist)
+    override fun onVolumeBoostClick(playlist: Playlist) = onVolumeBoostClick(playlist)
     override fun onRemoveClick(playlist: Playlist) = onRemoveClick(playlist)
 }}
 
@@ -178,6 +183,7 @@ interface PlaylistViewCallback {
             volume = volumeSliderValue,
             onRenameClick = { callback.onRenameClick(playlist) },
             onPlaylistOptionsClick = { callback.onExtraOptionsClick(playlist) },
+            onVolumeBoostClick = { callback.onVolumeBoostClick(playlist) },
             onRemoveClick = { callback.onRemoveClick(playlist) },
             tint = MaterialTheme.colors.secondaryVariant)
     }
@@ -328,6 +334,7 @@ private enum class PlaylistViewEndContentType {
     volume: Float,
     onRenameClick: () -> Unit,
     onPlaylistOptionsClick: () -> Unit,
+    onVolumeBoostClick: () -> Unit,
     onRemoveClick: () -> Unit,
     tint: Color = LocalContentColor.current,
 ) = Crossfade(
@@ -335,9 +342,8 @@ private enum class PlaylistViewEndContentType {
     label = "PlaylistView end content crossfade"
 ) { when(it) {
     PlaylistViewEndContentType.MoreOptionsButton -> {
-        var showingOptionsMenu by remember {
-            mutableStateOf(false)
-        }
+        var showingOptionsMenu by rememberMutableStateOf(false)
+
         IconButton({ showingOptionsMenu = true }) {
             Icon(imageVector = Icons.Default.MoreVert,
                 contentDescription = stringResource(
@@ -362,6 +368,11 @@ private enum class PlaylistViewEndContentType {
                     if (playlist.isSingleTrack) R.string.create_playlist_title
                     else                        R.string.playlist_options_title))
             }
+            DropdownMenuItem(onClick = {
+                showingOptionsMenu = false
+                onVolumeBoostClick()
+            }) { Text(stringResource(R.string.volume_boost_description)) }
+
             DropdownMenuItem(onClick = {
                 showingOptionsMenu = false
                 onRemoveClick()

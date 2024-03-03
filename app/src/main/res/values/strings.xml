@@ -34,6 +34,8 @@
     <string name="rename">Rename</string>
     <string name="default_rename_dialog_title">Enter new name</string>
 
+    <string name="volume_boost_description">Boost volume</string>
+
     <string name="remove">Remove</string>
     <string name="confirm_remove_title">Remove %1$s?</string>
     <string name="confirm_remove_track_message">This will remove the track from your library
