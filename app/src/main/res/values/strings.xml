@@ -35,6 +35,14 @@
     <string name="default_rename_dialog_title">Enter new name</string>
 
     <string name="volume_boost_description">Boost volume</string>
+    <string name="volume_boost_explanation_part_1">This will boost the volume of the
+        playlist/track before the regular volume is applied. Each 10\u2009dB increase
+        results in a perceived doubling of volume. For example:</string>
+    <!-- u2009 is half-space, u00D7 is multiplication sign -->
+    <string name="volume_boost_explanation_part_2">
+        +\u200910\u2009dB = 2\u00D7 volume
+        \n+\u200920\u2009dB = 4\u00D7 volume
+        \n+\u200930\u2009dB = 8\u00D7 volume</string>
 
     <string name="remove">Remove</string>
     <string name="confirm_remove_title">Remove %1$s?</string>

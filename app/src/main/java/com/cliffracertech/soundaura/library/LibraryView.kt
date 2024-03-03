@@ -190,7 +190,13 @@ sealed class LibraryState {
             }
         }
         override fun onVolumeBoostClick(playlist: Playlist) {
-            TODO("Not yet implemented")
+            shownDialog = PlaylistDialog.BoostVolume(
+                target = playlist,
+                onDismissRequest = ::dismissDialog,
+                onConfirm = {
+                    dismissDialog()
+//                    scope.launch { }
+                })
         }
         override fun onRemoveClick(playlist: Playlist) {
             if (playlist.hasError)
