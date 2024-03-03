@@ -53,21 +53,24 @@ import kotlin.math.roundToInt
  * @param id The [Long] value that uniquely identifies the playlist
  * @param name The name of the playlist
  * @param isActive Whether or not the playlist is currently playing
- * @param volume The volume of the playlist
- * @param hasError Whether or not there is an error (e.g. a playback
- *     problem) with the playlist
  * @param isSingleTrack Whether or not the playlist has only one track.
  *     This value can be used in case single-track playlists need to
  *     appear differently from multi-track playlists (e.g. by referring
  *     to them as 'tracks' instead of 'playlists').
+ * @param volume The volume of the playlist
+ * @param volumeBoostDb The additional volume boost that will be applied
+ *     to the playlist before the volume is applied
+ * @param hasError Whether or not there is an error (e.g. a playback
+ *     problem) with the playlist
  */
 data class Playlist(
     val id: Long,
     val name: String,
     val isActive: Boolean,
-    val volume: Float,
-    val hasError: Boolean,
-    val isSingleTrack: Boolean)
+    val isSingleTrack: Boolean,
+    val volume: Float = 1.0f,
+    val volumeBoostDb: Int = 0,
+    val hasError: Boolean = false)
 
 /** A collection of callbacks for [PlaylistView] interactions. The first parameter
  * for each of the callbacks is the [Playlist.name] for the [Playlist]. */
@@ -390,9 +393,8 @@ fun LightTrackViewPreview() = SoundAuraTheme(darkTheme = false) {
             id = 0,
             name = "Playlist 1",
             isActive = false,
-            volume = 0.5f,
-            hasError = false,
-            isSingleTrack = true))
+            isSingleTrack = true,
+            volume = 0.5f))
 }
 
 @Preview(showBackground = true) @Composable
@@ -403,9 +405,8 @@ fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme = true) {
             id = 0,
             name = "Playlist 2",
             isActive = true,
-            volume = 0.25f,
-            hasError = false,
-            isSingleTrack = false))
+            isSingleTrack = false,
+            volume = 0.25f))
 }
 
 @Preview @Composable
@@ -416,9 +417,8 @@ fun LightTrackErrorPreview() = SoundAuraTheme(darkTheme = false) {
             id = 0,
             name = "Playlist 3",
             isActive = false,
-            volume = 1.00f,
-            hasError = true,
-            isSingleTrack = true))
+            isSingleTrack = true,
+            hasError = true))
 }
 
 @Preview(showBackground = true) @Composable
@@ -429,7 +429,6 @@ fun DarkTrackErrorPreview() = SoundAuraTheme(darkTheme = true) {
             id = 0,
             name = "Playlist 4",
             isActive = false,
-            volume = 1.00f,
-            hasError = true,
-            isSingleTrack = true))
+            isSingleTrack = true,
+            hasError = true))
 }

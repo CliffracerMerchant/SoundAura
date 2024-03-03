@@ -19,9 +19,10 @@ import kotlinx.coroutines.flow.Flow
 typealias LibraryPlaylist = com.cliffracertech.soundaura.library.Playlist
 
 private const val librarySelectBase =
-    "SELECT id, name, isActive, volume, " +
-           "SUM(track.hasError) = COUNT(track.hasError) as hasError, " +
-           "COUNT(playlistId) = 1 AS isSingleTrack " +
+    "SELECT id, name, isActive, " +
+           "COUNT(playlistId) = 1 AS isSingleTrack, " +
+           "volume, volumeBoostDb, " +
+           "SUM(track.hasError) = COUNT(track.hasError) as hasError " +
     "FROM playlist " +
     "JOIN playlistTrack ON playlist.id = playlistTrack.playlistId " +
     "JOIN track on playlistTrack.trackUri = track.uri "
