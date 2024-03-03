@@ -14,14 +14,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.paddingFromBaseline
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.DropdownMenu
-import androidx.compose.material.DropdownMenuItem
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.LocalContentColor
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Delete
@@ -42,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
+import com.cliffracertech.soundaura.rememberMutableStateOf
 import com.cliffracertech.soundaura.ui.MarqueeText
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
@@ -379,6 +379,33 @@ private enum class PlaylistViewEndContentType {
                 showingOptionsMenu = false
                 onRemoveClick()
             }) { Text(stringResource(R.string.remove)) }
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.rename)) },
+                onClick = {
+                    showingOptionsMenu = false
+                    onRenameClick()})
+            DropdownMenuItem(
+                text = {
+                    Text(stringResource(
+                        if (playlist.isSingleTrack)
+                            R.string.create_playlist_title
+                        else R.string.playlist_options_title))
+                }, onClick = {
+                    showingOptionsMenu = false
+                    onPlaylistOptionsClick()
+                })
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.volume_boost_description)) },
+                onClick = {
+                    showingOptionsMenu = false
+                    onVolumeBoostClick()
+                })
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.remove)) },
+                onClick = {
+                    showingOptionsMenu = false
+                    onRemoveClick()
+                })
         }
     }
     PlaylistViewEndContentType.VolumeDisplay -> {
