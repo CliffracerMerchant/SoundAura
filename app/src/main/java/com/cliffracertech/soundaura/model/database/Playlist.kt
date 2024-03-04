@@ -57,6 +57,11 @@ data class Playlist(
     @FloatRange(from = 0.0, to = 1.0)
     @ColumnInfo(defaultValue = "1.0")
     val volume: Float = 1f,
+
+    /** An additional volume boost in dB that will be applied to the track
+     * before the volume adjustment. The supported range of values is 0-30db. */
+    @ColumnInfo(defaultValue = "0")
+    val volumeBoostDb: Int = 0
 ) {
     enum class Sort { NameAsc, NameDesc, OrderAdded;
         fun name(context: Context) = when (this) {

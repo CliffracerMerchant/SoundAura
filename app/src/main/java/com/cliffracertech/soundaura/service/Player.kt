@@ -5,18 +5,21 @@ package com.cliffracertech.soundaura.service
 
 import android.content.Context
 import android.media.MediaPlayer
+import android.media.audiofx.LoudnessEnhancer
 import android.net.Uri
 import java.io.IOException
 
 data class ActivePlaylistSummary(
     val id: Long,
     val shuffle: Boolean,
-    val volume: Float)
+    val volume: Float,
+    val volumeBoostDb: Int)
 
 typealias ActivePlaylist = Map.Entry<ActivePlaylistSummary, List<Uri>>
 val ActivePlaylist.id get() = key.id
 val ActivePlaylist.shuffle get() = key.shuffle
 val ActivePlaylist.volume get() = key.volume
+val ActivePlaylist.volumeBoostDb get() = key.volumeBoostDb
 val ActivePlaylist.tracks get() = value
 
 /**
@@ -49,14 +52,13 @@ val ActivePlaylist.tracks get() = value
  */
 class Player(
     private val context: Context,
-    playlist: ActivePlaylist,
+    private var playlist: ActivePlaylist,
     startImmediately: Boolean = false,
     private val onPlaybackFailure: (List<Uri>) -> Unit,
 ) {
-    private var mediaPlayer: MediaPlayer? = null
     private var uriIterator = uriIterator(playlist)
-    private var tracks = playlist.tracks
-    private var shuffle = playlist.shuffle
+    private var mediaPlayer: MediaPlayer? = null
+    private var volumeBooster: LoudnessEnhancer? = null
     // Without tracking the intended playing/paused state in this property,
     // an issue can occur if an attempt to pause is made when the internal
     // MediaPlayer is in the process of switching to the next track in a
@@ -77,20 +79,23 @@ class Player(
         isPlaying = true
         mediaPlayer?.start()
     }
+
     fun pause() {
         isPlaying = false
         mediaPlayer?.pause()
     }
+
     fun stop() {
         isPlaying = false
-        if (tracks.size < 2) {
+        if (playlist.tracks.size < 2) {
             mediaPlayer?.pause()
             mediaPlayer?.seekTo(0)
         } else {
-            uriIterator = uriIterator(tracks, shuffle)
+            uriIterator = uriIterator(playlist)
             initializePlayerForNextUri(startImmediately = false)
         }
     }
+
     fun setVolume(volume: Float) {
         mediaPlayer?.setVolume(volume, volume)
     }
@@ -98,17 +103,24 @@ class Player(
     /** Reset the Player to play the [newPlaylist]*/
     fun update(newPlaylist: ActivePlaylist, startImmediately: Boolean) {
         isPlaying = startImmediately
-        setVolume(newPlaylist.volume)
-        if (newPlaylist.shuffle != shuffle || newPlaylist.tracks != tracks) {
-            shuffle = newPlaylist.shuffle
-            tracks = newPlaylist.tracks
+
+        if (newPlaylist.shuffle != playlist.shuffle ||
+            newPlaylist.tracks != playlist.tracks
+        ) {
             uriIterator = uriIterator(newPlaylist)
             initializePlayerForNextUri(startImmediately)
             mediaPlayer?.initializeFor(newPlaylist)
-            // initializePlayerForNextUri will start the player if startImmediately
-            // is true, so we don't need to call start manually here
-        } else if (startImmediately)
-            mediaPlayer?.start()
+            // initializePlayerForNextUri and MediaPlayer.initializeFor will
+            // start the player and apply the volume and volumeBoost if necessary,
+            // so this does not need to be done manually in this case.
+        } else {
+            setVolume(newPlaylist.volume)
+            if (newPlaylist.volumeBoostDb != playlist.volumeBoostDb)
+                mediaPlayer?.boostVolume(newPlaylist.volumeBoostDb)
+            if (startImmediately)
+                mediaPlayer?.start()
+        }
+        playlist = newPlaylist
     }
 
     fun release() {
@@ -116,14 +128,13 @@ class Player(
         mediaPlayer?.release()
     }
 
-    private fun uriIterator(uris: List<Uri>, shuffle: Boolean) = (
-            if (!shuffle) InfiniteSequence(uris)
+    private fun uriIterator(playlist: ActivePlaylist) = (
+            if (!playlist.shuffle)
+                InfiniteSequence(playlist.tracks)
             else ShuffledInfiniteSequence(
-                unshuffledValues = uris,
-                memorySize = maxOf(1, uris.size / 3))
+                unshuffledValues = playlist.tracks,
+                memorySize = maxOf(1, playlist.tracks.size / 3))
         ).iterator()
-    private fun uriIterator(playlist: ActivePlaylist) =
-        uriIterator(playlist.tracks, playlist.shuffle)
 
     /**
      * Determine the next target [Uri], and either create a new [MediaPlayer]
@@ -144,7 +155,7 @@ class Player(
         var failedUris: MutableList<Uri>? = null
         var newPlayer: MediaPlayer? = null
 
-        while (newPlayer == null && ++attempts <= tracks.size) {
+        while (newPlayer == null && ++attempts <= playlist.tracks.size) {
             val uri = uriIterator.next()
             newPlayer = mediaPlayer.let {
                 if (it == null)
@@ -175,9 +186,19 @@ class Player(
     private fun MediaPlayer.initializeFor(playlist: ActivePlaylist) {
         setVolume(playlist.volume, playlist.volume)
         isLooping = playlist.tracks.size < 2
+        boostVolume(playlist.volumeBoostDb)
         setOnCompletionListener(
             if (playlist.tracks.size < 2) null
             else onCompletionListener)
+    }
+
+    private fun MediaPlayer.boostVolume(dbBoost: Int) {
+        volumeBooster?.enabled = false
+        volumeBooster = if (dbBoost == 0) null else
+            LoudnessEnhancer(audioSessionId).apply {
+                setTargetGain(dbBoost * 100)
+                enabled = true
+            }
     }
 }
 

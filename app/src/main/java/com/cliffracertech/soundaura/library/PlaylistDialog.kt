@@ -5,16 +5,21 @@ package com.cliffracertech.soundaura.library
 
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Slider
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.addbutton.SystemFileChooser
@@ -148,6 +153,34 @@ sealed class PlaylistDialog(
     }
 
     /**
+     * The 'boost volume' dialog for a playlist. The property [volumeBoost]
+     * should be used as the current value for a slider with a range of 0 to
+     * 30dB (i.e. the supported range for the volume boost feature). Changes
+     * in the slider's value should be connected to the [onSliderDrag]
+     * property. Clicks on the dialog's confirmatory button should be
+     * connected to the [onConfirmClick] property.
+     *
+     * @param target The [Playlist] that is the target of the dialog
+     * @param onDismissRequest The callback that should be invoked when the dialog's
+     *     cancel button is clicked or a back button click or gesture is performed
+     * @param onConfirm The callback that should be invoked when the dialog's
+     *     confirmatory button is clicked. The Int parameter will be the current
+     *     value of the volume boost slider in the range of [0, 30].
+     */
+    class BoostVolume(
+        target: Playlist,
+        onDismissRequest: () -> Unit,
+        private val onConfirm: (Int) -> Unit,
+    ): PlaylistDialog(target, onDismissRequest) {
+        var volumeBoost by mutableStateOf(target.volumeBoostDb.toFloat())
+            private set
+
+        val onSliderDrag = { newBoost: Float -> volumeBoost = newBoost }
+
+        val onConfirmClick = { onConfirm(volumeBoost.toInt().coerceIn(0, 30)) }
+    }
+
+    /**
      * The remove dialog for a playlist
      *
      * @param target The [Playlist] that is the target of the dialog
@@ -176,6 +209,9 @@ sealed class PlaylistDialog(
         state = dialogState)
     is FileChooser -> SystemFileChooser(onFilesSelected = dialogState.onFilesChosen)
     is PlaylistOptions -> PlaylistOptionsDialog(
+        modifier = modifier,
+        state = dialogState)
+    is PlaylistDialog.BoostVolume -> BoostVolumeDialog(
         modifier = modifier,
         state = dialogState)
     is Remove -> ConfirmRemoveDialog(
@@ -222,6 +258,39 @@ sealed class PlaylistDialog(
         mutablePlaylist = state.mutablePlaylist,
         onAddButtonClick = state.onAddFilesClick)
 }
+
+/** Show a dialog to change a playlist's volume boost. */
+@Composable fun BoostVolumeDialog(
+    state: PlaylistDialog.BoostVolume,
+    modifier: Modifier = Modifier,
+) = SoundAuraDialog(
+    modifier = modifier,
+    width = DialogWidth.MatchToScreenSize(),
+    title = stringResource(R.string.volume_boost_description),
+    onDismissRequest = state.onDismissRequest,
+    onConfirm = state.onConfirmClick,
+) {
+    Column(Modifier.padding(horizontal = 16.dp)) {
+        Text(stringResource(R.string.volume_boost_explanation_part_1),
+             style = MaterialTheme.typography.body1,
+             textAlign = TextAlign.Justify)
+        Text(stringResource(R.string.volume_boost_explanation_part_2),
+             modifier = Modifier.padding(top = 6.dp, bottom = 24.dp)
+                                .align(Alignment.CenterHorizontally),
+             style = MaterialTheme.typography.body1,)
+        Slider(
+            value = state.volumeBoost,
+            onValueChange = state.onSliderDrag,
+            modifier = Modifier.weight(1f),
+            valueRange = 0f..30f,
+            steps = 30)
+        Text("+\u2009${state.volumeBoost.toInt().coerceIn(0, 30)}\u2009dB",
+             modifier = Modifier.padding(top = 20.dp, bottom = 12.dp)
+                                .align(Alignment.CenterHorizontally),
+             style = MaterialTheme.typography.h6)
+    }
+}
+
 
 /** Show a dialog to confirm the removal of the [Playlist] identified by [playlistName]. */
 @Composable fun ConfirmRemoveDialog(
