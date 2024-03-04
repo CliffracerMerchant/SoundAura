@@ -252,7 +252,7 @@ private const val librarySelectWithFilter =
      * [Playlist] (represented as an [ActivePlaylistSummary]
      * mapped to its tracks (represented as a [List] of [Uri]s). */
     @MapInfo(valueColumn = "trackUri")
-    @Query("SELECT id, shuffle, volume, trackUri " +
+    @Query("SELECT id, shuffle, volume, volumeBoostDb, trackUri " +
            "FROM playlist " +
            "JOIN playlistTrack ON playlist.id = playlistTrack.playlistId " +
            "WHERE isActive ORDER by playlistOrder")

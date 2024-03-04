@@ -11,12 +11,14 @@ import java.io.IOException
 data class ActivePlaylistSummary(
     val id: Long,
     val shuffle: Boolean,
-    val volume: Float)
+    val volume: Float,
+    val volumeBoostDb: Int)
 
 typealias ActivePlaylist = Map.Entry<ActivePlaylistSummary, List<Uri>>
 val ActivePlaylist.id get() = key.id
 val ActivePlaylist.shuffle get() = key.shuffle
 val ActivePlaylist.volume get() = key.volume
+val ActivePlaylist.volumeBoostDb get() = key.volumeBoostDb
 val ActivePlaylist.tracks get() = value
 
 /**
