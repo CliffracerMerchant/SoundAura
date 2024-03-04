@@ -189,6 +189,17 @@ sealed class LibraryState {
                 else showPlaylistOptions(playlist, existingTracks, shuffleEnabled)
             }
         }
+        override fun onVolumeBoostClick(playlist: Playlist) {
+            shownDialog = PlaylistDialog.BoostVolume(
+                target = playlist,
+                onDismissRequest = ::dismissDialog,
+                onConfirm = { volumeBoostDb ->
+                    dismissDialog()
+                    scope.launch {
+                        modifyLibrary.setPlaylistVolumeBoostDb(playlist.id, volumeBoostDb)
+                    }
+                })
+        }
         override fun onRemoveClick(playlist: Playlist) {
             if (playlist.hasError)
                 scope.launch { modifyLibrary.removePlaylist(playlist.id) }

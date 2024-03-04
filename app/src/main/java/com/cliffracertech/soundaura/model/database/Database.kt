@@ -15,7 +15,7 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
-@Database(version = 6, exportSchema = true,
+@Database(version = 7, exportSchema = true,
           entities = [Playlist::class, PlaylistTrack::class, Track::class,
                       Preset::class, PresetPlaylist::class])
 @TypeConverters(Track.UriStringConverter::class)
@@ -26,7 +26,7 @@ abstract class SoundAuraDatabase : RoomDatabase() {
     companion object {
         fun addAllMigrations(builder: Builder<SoundAuraDatabase>) =
             builder.addMigrations(migration1to2, migration2to3, migration3to4,
-                                  migration4to5, migration5to6)
+                                  migration4to5, migration5to6, migration6to7)
 
         private val migration1to2 = Migration(1,2) { db ->
             db.execSQL("PRAGMA foreign_keys=off")
@@ -176,6 +176,10 @@ abstract class SoundAuraDatabase : RoomDatabase() {
             db.execSQL("CREATE UNIQUE INDEX index_playlist_name ON playlist (`name`)")
             db.execSQL("COMMIT;")
             db.execSQL("PRAGMA foreign_keys=on;")
+        }
+
+        private val migration6to7 = Migration(6, 7) { db ->
+            db.execSQL("ALTER TABLE playlist ADD COLUMN `volumeBoostDb` INTEGER NOT NULL DEFAULT 0")
         }
     }
 }

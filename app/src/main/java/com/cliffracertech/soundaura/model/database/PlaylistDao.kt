@@ -19,9 +19,10 @@ import kotlinx.coroutines.flow.Flow
 typealias LibraryPlaylist = com.cliffracertech.soundaura.library.Playlist
 
 private const val librarySelectBase =
-    "SELECT id, name, isActive, volume, " +
-           "SUM(track.hasError) = COUNT(track.hasError) as hasError, " +
-           "COUNT(playlistId) = 1 AS isSingleTrack " +
+    "SELECT id, name, isActive, " +
+           "COUNT(playlistId) = 1 AS isSingleTrack, " +
+           "volume, volumeBoostDb, " +
+           "SUM(track.hasError) = COUNT(track.hasError) as hasError " +
     "FROM playlist " +
     "JOIN playlistTrack ON playlist.id = playlistTrack.playlistId " +
     "JOIN track on playlistTrack.trackUri = track.uri "
@@ -251,7 +252,7 @@ private const val librarySelectWithFilter =
      * [Playlist] (represented as an [ActivePlaylistSummary]
      * mapped to its tracks (represented as a [List] of [Uri]s). */
     @MapInfo(valueColumn = "trackUri")
-    @Query("SELECT id, shuffle, volume, trackUri " +
+    @Query("SELECT id, shuffle, volume, volumeBoostDb, trackUri " +
            "FROM playlist " +
            "JOIN playlistTrack ON playlist.id = playlistTrack.playlistId " +
            "WHERE isActive ORDER by playlistOrder")
@@ -276,6 +277,10 @@ private const val librarySelectWithFilter =
     /** Set the [Playlist.volume] field of the [Playlist] identified by [id]. */
     @Query("UPDATE playlist SET volume = :volume WHERE id = :id")
     abstract suspend fun setVolume(id: Long, volume: Float)
+
+    /** Set the [Playlist.volumeBoostDb] field of the [Playlist identified by [id]. */
+    @Query("UPDATE playlist SET volumeBoostDb = :dbBoost WHERE id = :id")
+    abstract suspend fun setVolumeBoostDb(id: Long, dbBoost: Int)
 
     @Query("UPDATE track SET hasError = 1 WHERE uri in (:uris)")
     abstract suspend fun setTracksHaveError(uris: List<Uri>)

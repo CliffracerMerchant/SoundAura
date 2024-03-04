@@ -30,7 +30,6 @@ import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -42,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
+import com.cliffracertech.soundaura.rememberMutableStateOf
 import com.cliffracertech.soundaura.ui.MarqueeText
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
@@ -53,21 +53,24 @@ import kotlin.math.roundToInt
  * @param id The [Long] value that uniquely identifies the playlist
  * @param name The name of the playlist
  * @param isActive Whether or not the playlist is currently playing
- * @param volume The volume of the playlist
- * @param hasError Whether or not there is an error (e.g. a playback
- *     problem) with the playlist
  * @param isSingleTrack Whether or not the playlist has only one track.
  *     This value can be used in case single-track playlists need to
  *     appear differently from multi-track playlists (e.g. by referring
  *     to them as 'tracks' instead of 'playlists').
+ * @param volume The volume of the playlist
+ * @param volumeBoostDb The additional volume boost that will be applied
+ *     to the playlist before the volume is applied
+ * @param hasError Whether or not there is an error (e.g. a playback
+ *     problem) with the playlist
  */
 data class Playlist(
     val id: Long,
     val name: String,
     val isActive: Boolean,
-    val volume: Float,
-    val hasError: Boolean,
-    val isSingleTrack: Boolean)
+    val isSingleTrack: Boolean,
+    val volume: Float = 1.0f,
+    val volumeBoostDb: Int = 0,
+    val hasError: Boolean = false)
 
 /** A collection of callbacks for [PlaylistView] interactions. The first parameter
  * for each of the callbacks is the [Playlist.name] for the [Playlist]. */
@@ -84,6 +87,9 @@ interface PlaylistViewCallback {
     /** The callback that will be invoked when the 'playlist options' or
      * 'create playlist' option of the playlist's options menu is clicked */
     fun onExtraOptionsClick(playlist: Playlist)
+    /** The callback that will be invoked when the 'volume boost'
+     * option in the playlist's options menu is clicked */
+    fun onVolumeBoostClick(playlist: Playlist)
     /** The callback that will be invoked when the 'remove'
      * option of the playlist's options menu is clicked */
     fun onRemoveClick(playlist: Playlist)
@@ -96,6 +102,7 @@ interface PlaylistViewCallback {
     onVolumeChangeFinished: (Playlist, Float) -> Unit = { _, _ -> },
     onRenameClick: (Playlist) -> Unit = {},
     onExtraOptionsClick: (Playlist) -> Unit = {},
+    onVolumeBoostClick: (Playlist) -> Unit = {},
     onRemoveClick: (Playlist) -> Unit = {}
 ) = remember { object: PlaylistViewCallback {
     override fun onAddRemoveButtonClick(playlist: Playlist) = onAddRemoveButtonClick(playlist)
@@ -103,6 +110,7 @@ interface PlaylistViewCallback {
     override fun onVolumeChangeFinished(playlist: Playlist, volume: Float) = onVolumeChangeFinished(playlist, volume)
     override fun onRenameClick(playlist: Playlist) = onRenameClick(playlist)
     override fun onExtraOptionsClick(playlist: Playlist) = onExtraOptionsClick(playlist)
+    override fun onVolumeBoostClick(playlist: Playlist) = onVolumeBoostClick(playlist)
     override fun onRemoveClick(playlist: Playlist) = onRemoveClick(playlist)
 }}
 
@@ -175,6 +183,7 @@ interface PlaylistViewCallback {
             volume = volumeSliderValue,
             onRenameClick = { callback.onRenameClick(playlist) },
             onPlaylistOptionsClick = { callback.onExtraOptionsClick(playlist) },
+            onVolumeBoostClick = { callback.onVolumeBoostClick(playlist) },
             onRemoveClick = { callback.onRemoveClick(playlist) },
             tint = MaterialTheme.colors.secondaryVariant)
     }
@@ -325,6 +334,7 @@ private enum class PlaylistViewEndContentType {
     volume: Float,
     onRenameClick: () -> Unit,
     onPlaylistOptionsClick: () -> Unit,
+    onVolumeBoostClick: () -> Unit,
     onRemoveClick: () -> Unit,
     tint: Color = LocalContentColor.current,
 ) = Crossfade(
@@ -332,9 +342,8 @@ private enum class PlaylistViewEndContentType {
     label = "PlaylistView end content crossfade"
 ) { when(it) {
     PlaylistViewEndContentType.MoreOptionsButton -> {
-        var showingOptionsMenu by remember {
-            mutableStateOf(false)
-        }
+        var showingOptionsMenu by rememberMutableStateOf(false)
+
         IconButton({ showingOptionsMenu = true }) {
             Icon(imageVector = Icons.Default.MoreVert,
                 contentDescription = stringResource(
@@ -359,6 +368,11 @@ private enum class PlaylistViewEndContentType {
                     if (playlist.isSingleTrack) R.string.create_playlist_title
                     else                        R.string.playlist_options_title))
             }
+            DropdownMenuItem(onClick = {
+                showingOptionsMenu = false
+                onVolumeBoostClick()
+            }) { Text(stringResource(R.string.volume_boost_description)) }
+
             DropdownMenuItem(onClick = {
                 showingOptionsMenu = false
                 onRemoveClick()
@@ -390,9 +404,8 @@ fun LightTrackViewPreview() = SoundAuraTheme(darkTheme = false) {
             id = 0,
             name = "Playlist 1",
             isActive = false,
-            volume = 0.5f,
-            hasError = false,
-            isSingleTrack = true))
+            isSingleTrack = true,
+            volume = 0.5f))
 }
 
 @Preview(showBackground = true) @Composable
@@ -403,9 +416,8 @@ fun DarkTrackViewPreview() = SoundAuraTheme(darkTheme = true) {
             id = 0,
             name = "Playlist 2",
             isActive = true,
-            volume = 0.25f,
-            hasError = false,
-            isSingleTrack = false))
+            isSingleTrack = false,
+            volume = 0.25f))
 }
 
 @Preview @Composable
@@ -416,9 +428,8 @@ fun LightTrackErrorPreview() = SoundAuraTheme(darkTheme = false) {
             id = 0,
             name = "Playlist 3",
             isActive = false,
-            volume = 1.00f,
-            hasError = true,
-            isSingleTrack = true))
+            isSingleTrack = true,
+            hasError = true))
 }
 
 @Preview(showBackground = true) @Composable
@@ -429,7 +440,6 @@ fun DarkTrackErrorPreview() = SoundAuraTheme(darkTheme = true) {
             id = 0,
             name = "Playlist 4",
             isActive = false,
-            volume = 1.00f,
-            hasError = true,
-            isSingleTrack = true))
+            isSingleTrack = true,
+            hasError = true))
 }
