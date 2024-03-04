@@ -275,7 +275,7 @@ sealed class PlaylistDialog(
              style = MaterialTheme.typography.body1,
              textAlign = TextAlign.Justify)
         Text(stringResource(R.string.volume_boost_explanation_part_2),
-             modifier = Modifier.padding(top = 6.dp, bottom = 16.dp)
+             modifier = Modifier.padding(top = 6.dp, bottom = 24.dp)
                                 .align(Alignment.CenterHorizontally),
              style = MaterialTheme.typography.body1,)
         Slider(
@@ -285,7 +285,7 @@ sealed class PlaylistDialog(
             valueRange = 0f..30f,
             steps = 30)
         Text("+\u2009${state.volumeBoost.toInt().coerceIn(0, 30)}\u2009dB",
-             modifier = Modifier.padding(top = 12.dp, bottom = 8.dp)
+             modifier = Modifier.padding(top = 20.dp, bottom = 12.dp)
                                 .align(Alignment.CenterHorizontally),
              style = MaterialTheme.typography.h6)
     }
