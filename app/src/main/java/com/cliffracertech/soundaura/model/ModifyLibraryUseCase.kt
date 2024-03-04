@@ -89,6 +89,16 @@ class ModifyLibraryUseCase(
         }
     }
 
+    /** Set the [Playlist] identified by [playlistId]'s volume boost property
+     * to [volumeBoostDb]. Values of [volumeBoostDb] will be coerced into the
+     * supported range of [0, 30]. */
+    suspend fun setPlaylistVolumeBoostDb(
+        playlistId: Long,
+        volumeBoostDb: Int
+    ) {
+        dao.setVolumeBoostDb(playlistId, volumeBoostDb.coerceIn(0, 30))
+    }
+
     /** Remove the [Playlist] identified by [id]. */
     suspend fun removePlaylist(id: Long) {
         val unusedTracks = dao.deletePlaylist(id)

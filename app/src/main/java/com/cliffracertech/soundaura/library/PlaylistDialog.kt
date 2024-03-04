@@ -268,6 +268,7 @@ sealed class PlaylistDialog(
     width = DialogWidth.MatchToScreenSize(),
     title = stringResource(R.string.volume_boost_description),
     onDismissRequest = state.onDismissRequest,
+    onConfirm = state.onConfirmClick,
 ) {
     Column(Modifier.padding(horizontal = 16.dp)) {
         Text(stringResource(R.string.volume_boost_explanation_part_1),

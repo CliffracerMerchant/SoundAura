@@ -278,6 +278,10 @@ private const val librarySelectWithFilter =
     @Query("UPDATE playlist SET volume = :volume WHERE id = :id")
     abstract suspend fun setVolume(id: Long, volume: Float)
 
+    /** Set the [Playlist.volumeBoostDb] field of the [Playlist identified by [id]. */
+    @Query("UPDATE playlist SET volumeBoostDb = :dbBoost WHERE id = :id")
+    abstract suspend fun setVolumeBoostDb(id: Long, dbBoost: Int)
+
     @Query("UPDATE track SET hasError = 1 WHERE uri in (:uris)")
     abstract suspend fun setTracksHaveError(uris: List<Uri>)
 }

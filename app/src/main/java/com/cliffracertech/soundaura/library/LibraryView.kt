@@ -193,9 +193,11 @@ sealed class LibraryState {
             shownDialog = PlaylistDialog.BoostVolume(
                 target = playlist,
                 onDismissRequest = ::dismissDialog,
-                onConfirm = {
+                onConfirm = { volumeBoostDb ->
                     dismissDialog()
-//                    scope.launch { }
+                    scope.launch {
+                        modifyLibrary.setPlaylistVolumeBoostDb(playlist.id, volumeBoostDb)
+                    }
                 })
         }
         override fun onRemoveClick(playlist: Playlist) {
