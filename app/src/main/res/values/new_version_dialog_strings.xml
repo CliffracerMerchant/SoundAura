@@ -4,17 +4,16 @@
    ~ the project's root directory to see the full license. -->
 
 <resources>
-    <string name="new_version_dialog_title">Version $1%s</string>
+    <string name="new_version_dialog_title">Version %1$s</string>
 
-    <string name="version_code_10_new_item_1">
-        Added support for playlists.\n
-        Select multiple files at once when adding new tracks, or select the $1%s option
-        from a track\'s options menu and select at least one additional track to create
-        a playlist.
-    </string>
-    <string name="version_code_10_new_item_2">
-        Added volume boost.\n
-        Select the $1%s option from a track or playlist\'s options menu to boost the
-        volume by up to 30dB without modifying the source file.
-    </string>
+    <string name="feature_playlists_title">Added playlist support</string>
+    <string name="feature_playlists_description">
+        Select multiple files at once when adding new tracks, or select the
+        ‘%1$s’ option from a track’s options menu and select at least one
+        additional track to create a playlist.</string>
+
+    <string name="feature_volume_boost_title">Added volume boost</string>
+    <string name="feature_volume_boost_description">
+        Select the ‘%1$s’ option from a track or playlist’s options menu to
+        boost the volume by up to 30dB without modifying the source file.</string>
 </resources>
