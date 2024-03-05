@@ -3,6 +3,7 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
 import android.view.KeyEvent
@@ -62,7 +63,7 @@ import javax.inject.Inject
 
 @HiltViewModel class MainActivityViewModel(
     messageHandler: MessageHandler,
-    dataStore: DataStore<Preferences>,
+    private val dataStore: DataStore<Preferences>,
     private val navigationState: NavigationState,
     private val playbackState: PlayerServicePlaybackState,
     coroutineScope: CoroutineScope?
@@ -87,6 +88,16 @@ import javax.inject.Inject
     // can flicker between light and dark themes on startup.
     val appLightDarkMode by runBlocking {
         dataStore.awaitEnumPreferenceState<AppLightDarkMode>(lightDarkModeKey, scope)
+    }
+
+    private val lastLaunchedVersionCodeKey = intPreferencesKey(PrefKeys.lastLaunchedVersionCode)
+    val lastLaunchedVersionCode by dataStore.preferenceState(
+        key = lastLaunchedVersionCodeKey,
+        initialValue = 0,
+        defaultValue = 9, // version code 9 was the last version code before
+        scope = scope)    // the lastLaunchedVersionCode was introduced
+    fun onNewVersionDialogShown() {
+        dataStore.edit(lastLaunchedVersionCodeKey, BuildConfig.VERSION_CODE, scope)
     }
 
     fun onBackButtonClick() = with(navigationState) {
@@ -155,6 +166,10 @@ class MainActivity : ComponentActivity() {
             val windowWidthSizeClass = LocalWindowSizeClass.current.widthSizeClass
             val widthIsConstrained = windowWidthSizeClass == WindowWidthSizeClass.Compact
             val insets = LocalWindowInsets.current
+
+            NewVersionDialogShower(
+                lastLaunchedVersionCode = viewModel.lastLaunchedVersionCode,
+                onDialogDismissed = viewModel::onNewVersionDialogShown)
 
             val scaffoldState = rememberScaffoldState()
             MessageDisplayer(scaffoldState.snackbarHostState)
@@ -237,6 +252,7 @@ class MainActivity : ComponentActivity() {
         if (widthIsConstrained) 0.dp
         else MediaControllerSizes.defaultStopTimerWidthDp.dp + 8.dp
 
+    @SuppressLint("UnusedBoxWithConstraintsScope") // the scope is used in MediaController
     @Composable private fun MainContent(
         widthIsConstrained: Boolean,
         padding: PaddingValues,

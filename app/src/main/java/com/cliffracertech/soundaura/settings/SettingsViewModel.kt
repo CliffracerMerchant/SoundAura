@@ -47,6 +47,10 @@ class PreferencesModule {
 }
 
 object PrefKeys {
+    /** An int value that indicates the version code of the app the last
+     * time it was launched. */
+    const val lastLaunchedVersionCode = "last_launched_version_code"
+
     /** A boolean value that indicates whether the list of tracks/playlists
      * should be sorted by their active states (with active tracks/playlists
      * appearing before inactive ones) before being sorted by another
