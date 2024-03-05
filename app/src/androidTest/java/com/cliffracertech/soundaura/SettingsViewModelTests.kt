@@ -70,7 +70,7 @@ class SettingsViewModelTests {
         assertThat(instance.autoPauseDuringCall).isFalse()
         assertThat(instance.showingPhoneStatePermissionDialog).isFalse()
         assertThat(instance.onZeroVolumeAudioDeviceBehavior).isEqualTo(
-            OnZeroVolumeAudioDeviceBehavior.values()[0])
+            OnZeroVolumeAudioDeviceBehavior.entries[0])
     }
 
     @Test fun on_app_theme_click() = runTest {
@@ -100,6 +100,7 @@ class SettingsViewModelTests {
     @Test fun on_play_in_background_switch_click() = runTest {
         default_values()
         instance.onPlayInBackgroundSwitchClick()
+        waitUntil { updatedPreferences()[playInBackgroundKey] == true }
         assertThat(updatedPreferences()[playInBackgroundKey]).isTrue()
         assertThat(instance.playInBackground).isTrue()
         assertThat(instance.autoPauseDuringCallSettingVisible).isTrue()
@@ -120,6 +121,7 @@ class SettingsViewModelTests {
 
         instance.onPlayInBackgroundSwitchClick()
         instance.onAutoPauseDuringCallClick()
+        waitUntil { updatedPreferences()[autoPauseDuringCallKey] == true }
         assertThat(instance.showingPhoneStatePermissionDialog).isFalse()
         assertThat(updatedPreferences()[autoPauseDuringCallKey]).isTrue()
         assertThat(instance.autoPauseDuringCall).isTrue()
@@ -156,6 +158,7 @@ class SettingsViewModelTests {
         assertThat(instance.showingPhoneStatePermissionDialog).isFalse()
 
         instance.onAutoPauseDuringCallClick()
+        waitUntil { instance.showingPhoneStatePermissionDialog }
         assertThat(instance.showingPhoneStatePermissionDialog).isTrue()
         assertThat(updatedPreferences()[autoPauseDuringCallKey]).isNotEqualTo(true)
         assertThat(instance.autoPauseDuringCall).isFalse()

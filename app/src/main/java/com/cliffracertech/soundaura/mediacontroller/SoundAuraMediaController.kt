@@ -145,9 +145,9 @@ import javax.inject.Inject
                 onNameValidated = { validatedName ->
                     dismissDialog()
                     if (validatedName != presetName) {
+                        presetDao.renamePreset(presetName, validatedName)
                         if (activePresetName == presetName)
                             activePresetState.setName(validatedName)
-                        presetDao.renamePreset(presetName, validatedName)
                     }
                 })
         }, onOverwriteClick = { presetName: String ->

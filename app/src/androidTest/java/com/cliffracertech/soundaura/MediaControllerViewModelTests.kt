@@ -5,7 +5,9 @@ package com.cliffracertech.soundaura
 
 import android.content.Context
 import androidx.core.net.toUri
+import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -32,7 +34,6 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestCoroutineScope
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -44,13 +45,10 @@ import java.time.Instant
 
 @RunWith(AndroidJUnit4::class)
 class MediaControllerViewModelTests {
-    private val context = ApplicationProvider.getApplicationContext<Context>()
-    private val scope = TestCoroutineScope()
-    private val dataStore = PreferenceDataStoreFactory.create(scope = scope) {
-        context.preferencesDataStoreFile("testDatastore")
-    }
     private val activePresetNameKey = stringPreferencesKey(PrefKeys.activePresetName)
 
+    private lateinit var scope: TestCoroutineScope
+    private lateinit var dataStore: DataStore<Preferences>
     private lateinit var db: SoundAuraDatabase
     private lateinit var presetDao: PresetDao
     private lateinit var playlistDao: PlaylistDao
@@ -61,6 +59,11 @@ class MediaControllerViewModelTests {
     private lateinit var instance: MediaControllerViewModel
 
     @Before fun init() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        scope = TestCoroutineScope()
+        dataStore = PreferenceDataStoreFactory.create(scope = scope) {
+            context.preferencesDataStoreFile("testDatastore")
+        }
         db = Room.inMemoryDatabaseBuilder(context, SoundAuraDatabase::class.java).build()
         presetDao = db.presetDao()
         playlistDao = db.playlistDao()
@@ -76,7 +79,6 @@ class MediaControllerViewModelTests {
 
     @After fun clean_up() {
         db.close()
-        runBlocking { dataStore.edit { it.clear() } }
         scope.cancel()
     }
 
@@ -99,7 +101,7 @@ class MediaControllerViewModelTests {
     private val unsavedChangesWarningDialog get() = instance.shownDialog as DialogType.PresetUnsavedChangesWarning
     private val setStopTimeDialog get() = instance.shownDialog as DialogType.SetAutoStopTimer
 
-    private fun runTestWithTestPresets(testBody: suspend () -> Unit) = runTest {
+    private suspend fun insertTestPresets() {
         playlistDao.insertSingleTrackPlaylists(testPlaylistNames, testUris)
         testPlaylistIds = playlistDao.getPlaylistsSortedByNameAsc().first().map(LibraryPlaylist::id)
         playlistDao.toggleIsActive(testPlaylistIds[0])
@@ -116,14 +118,14 @@ class MediaControllerViewModelTests {
         playlistDao.toggleIsActive(testPlaylistIds[4])
         presetDao.savePreset(testPresetNames[2])
         waitUntil { currentPresets?.isNotEmpty() == true }
-        testBody()
     }
 
     @Test fun no_dialog_is_initially_shown() {
         assertThat(instance.shownDialog).isNull()
     }
 
-    @Test fun active_preset_name_matches_underlying_state() = runTestWithTestPresets {
+    @Test fun active_preset_name_matches_underlying_state() = runTest {
+        insertTestPresets()
         assertThat(activePreset.name).isNull()
 
         activePresetState.setName(testPresetNames[1])
@@ -135,7 +137,8 @@ class MediaControllerViewModelTests {
         assertThat(activePreset.name).isNull()
     }
 
-    @Test fun active_preset_is_modified_matches_underlying_state() = runTestWithTestPresets {
+    @Test fun active_preset_is_modified_matches_underlying_state() = runTest {
+        insertTestPresets()
         assertThat(activePreset.isModified).isFalse()
 
         dataStore.edit(activePresetNameKey, testPresetNames[2])
@@ -166,7 +169,8 @@ class MediaControllerViewModelTests {
         assertThat(instance.state.showingPresetSelector).isTrue()
     }
 
-    @Test fun play_button_isPlaying_matches_underlying_state() = runTestWithTestPresets {
+    @Test fun play_button_isPlaying_matches_underlying_state() = runTest {
+        insertTestPresets()
         assertThat(playButton.isPlaying).isFalse()
 
         playbackState.toggleIsPlaying()
@@ -187,6 +191,7 @@ class MediaControllerViewModelTests {
     }
 
     @Test fun play_button_long_click_hint_not_shown_with_no_active_tracks() = runTest {
+        insertTestPresets()
         val prefKey = booleanPreferencesKey(PrefKeys.playButtonLongClickHintShown)
         dataStore.edit { it.remove(prefKey) }
 
@@ -201,7 +206,8 @@ class MediaControllerViewModelTests {
         job.cancel()
     }
 
-    @Test fun play_button_long_click_hint_shows_once() = runTestWithTestPresets {
+    @Test fun play_button_long_click_hint_shows_once() = runTest {
+        insertTestPresets()
         val prefKey = booleanPreferencesKey(PrefKeys.playButtonLongClickHintShown)
         dataStore.edit { it.remove(prefKey) }
 
@@ -225,6 +231,7 @@ class MediaControllerViewModelTests {
     }
 
     @Test fun stop_time_matches_underlying_state() = runTest {
+        insertTestPresets()
         val startTime = Instant.now()
         val duration = Duration.ofMinutes(1)
         assertThat(stopTime).isNull()
@@ -240,12 +247,14 @@ class MediaControllerViewModelTests {
     }
 
     @Test fun play_button_long_click_opens_set_stop_timer_dialog() = runTest {
+        insertTestPresets()
         playButton.onLongClick()
         waitUntil { instance.shownDialog != null }
         assertThat(instance.shownDialog).isInstanceOf(DialogType.SetAutoStopTimer::class)
     }
 
     @Test fun set_stop_timer_dialog_no_ops_for_zero_duration() = runTest {
+        insertTestPresets()
         playButton.onLongClick()
         waitUntil { instance.shownDialog != null }
         setStopTimeDialog.onConfirmClick(Duration.ZERO)
@@ -255,6 +264,7 @@ class MediaControllerViewModelTests {
     }
 
     @Test fun set_stop_timer_dialog_dismissal() = runTest {
+        insertTestPresets()
         playButton.onLongClick()
         waitUntil { instance.shownDialog != null }
         setStopTimeDialog.onDismissRequest()
@@ -264,6 +274,7 @@ class MediaControllerViewModelTests {
     }
 
     @Test fun set_stop_timer_dialog_confirm() = runTest {
+        insertTestPresets()
         val startTime = Instant.now()
         val duration = Duration.ofMinutes(1)
         val acceptableRange = Range.closed(
@@ -279,6 +290,7 @@ class MediaControllerViewModelTests {
     }
 
     @Test fun cancel_stop_timer_dialog_appearance() = runTest {
+        insertTestPresets()
         playButton.onLongClick()
         waitUntil { instance.shownDialog != null }
         setStopTimeDialog.onConfirmClick(Duration.ofMinutes(1))
@@ -292,6 +304,7 @@ class MediaControllerViewModelTests {
     }
 
     @Test fun cancel_stop_timer_dialog_dismissal() = runTest {
+        insertTestPresets()
         val startTime = Instant.now()
         val duration = Duration.ofMinutes(1)
         val acceptableRange = Range.closed(
@@ -311,6 +324,7 @@ class MediaControllerViewModelTests {
     }
 
     @Test fun cancel_stop_timer_dialog_confirm() = runTest {
+        insertTestPresets()
         playButton.onLongClick()
         waitUntil { instance.shownDialog != null }
         setStopTimeDialog.onConfirmClick(Duration.ofMinutes(1))
@@ -335,6 +349,7 @@ class MediaControllerViewModelTests {
     }
 
     @Test fun preset_list_matches_underlying_state() = runTest {
+        insertTestPresets()
         waitUntil { !currentPresets.isNullOrEmpty() } // should time out
         assertThat(currentPresets.isNullOrEmpty()).isTrue()
 
@@ -351,14 +366,16 @@ class MediaControllerViewModelTests {
         assertThat(currentPresetNames).containsExactly(testPresetNames[0], testPresetNames[2])
     }
 
-    @Test fun rename_dialog_appearance() = runTestWithTestPresets {
+    @Test fun rename_dialog_appearance() = runTest {
+        insertTestPresets()
         presetList.onRenameClick(testPresetNames[1])
         assertThat(instance.shownDialog).isInstanceOf(DialogType.RenamePreset::class)
         assertThat(renameDialog.name).isEqualTo(testPresetNames[1])
         assertThat(renameDialog.message).isNull()
     }
 
-    @Test fun rename_dialog_dismissal() = runTestWithTestPresets {
+    @Test fun rename_dialog_dismissal() = runTest {
+        insertTestPresets()
         presetList.onRenameClick(testPresetNames[1])
         val newName = "new name"
         renameDialog.onNameChange(newName)
@@ -369,7 +386,8 @@ class MediaControllerViewModelTests {
         assertThat(currentPresetNames?.get(1)).isEqualTo(testPresetNames[1])
     }
 
-    @Test fun rename_dialog_confirm() = runTestWithTestPresets {
+    @Test fun rename_dialog_confirm() = runTest {
+        insertTestPresets()
         presetList.onRenameClick(testPresetNames[1])
         waitUntil { instance.shownDialog is DialogType.RenamePreset }
         renameDialog.finish()
@@ -389,7 +407,8 @@ class MediaControllerViewModelTests {
         assertThat(currentPresetNames?.get(1)).isEqualTo(newName)
     }
 
-    @Test fun renaming_active_preset_updates_active_preset_name() = runTestWithTestPresets {
+    @Test fun renaming_active_preset_updates_active_preset_name() = runTest {
+        insertTestPresets()
         activePresetState.setName(testPresetNames[1])
         waitUntil { activePreset.name != null }
 
@@ -401,7 +420,8 @@ class MediaControllerViewModelTests {
         assertThat(activePresetState.name.first()).isEqualTo("new name")
     }
 
-    @Test fun overwrite_dialog_appearance() = runTestWithTestPresets {
+    @Test fun overwrite_dialog_appearance() = runTest {
+        insertTestPresets()
         presetList.onOverwriteClick(testPresetNames[0])
         waitUntil { instance.shownDialog != null }
         assertThat(instance.shownDialog).isInstanceOf(DialogType.Confirmatory::class)
@@ -409,7 +429,8 @@ class MediaControllerViewModelTests {
         assertThat(confirmatoryDialog.text.stringResId).isEqualTo(R.string.confirm_overwrite_preset_dialog_message)
     }
 
-    @Test fun overwrite_dialog_dismissal() = runTestWithTestPresets {
+    @Test fun overwrite_dialog_dismissal() = runTest {
+        insertTestPresets()
         presetList.onOverwriteClick(testPresetNames[0])
         waitUntil { instance.shownDialog != null }
         confirmatoryDialog.onDismissRequest()
@@ -419,7 +440,8 @@ class MediaControllerViewModelTests {
             .containsExactly(testPlaylistNames[0])
     }
 
-    @Test fun overwriting_not_allowed_with_no_active_tracks() = runTestWithTestPresets {
+    @Test fun overwriting_not_allowed_with_no_active_tracks() = runTest {
+        insertTestPresets()
         activePresetState.setName(testPresetNames[2])
         waitUntil { activePreset.name != null }
         playlistDao.toggleIsActive(testPlaylistIds[3])
@@ -435,7 +457,8 @@ class MediaControllerViewModelTests {
         assertThat(activePreset.isModified).isTrue()
     }
 
-    @Test fun overwrite_dialog_confirm() = runTestWithTestPresets {
+    @Test fun overwrite_dialog_confirm() = runTest {
+        insertTestPresets()
         presetList.onOverwriteClick(testPresetNames[1])
         waitUntil { instance.shownDialog != null }
         confirmatoryDialog.onConfirmClick()
@@ -447,7 +470,8 @@ class MediaControllerViewModelTests {
         assertThat(activePreset.isModified).isFalse()
     }
 
-    @Test fun overwriting_preset_makes_it_active() = runTestWithTestPresets {
+    @Test fun overwriting_preset_makes_it_active() = runTest {
+        insertTestPresets()
         activePresetState.setName(testPresetNames[2])
         waitUntil { activePreset.name != null }
 
@@ -460,7 +484,8 @@ class MediaControllerViewModelTests {
         assertThat(name).isEqualTo(testPresetNames[2])
     }
 
-    @Test fun delete_dialog_appearance() = runTestWithTestPresets {
+    @Test fun delete_dialog_appearance() = runTest {
+        insertTestPresets()
         presetList.onDeleteClick(testPresetNames[1])
         waitUntil { instance.shownDialog != null }
         assertThat(instance.shownDialog).isInstanceOf(DialogType.Confirmatory::class)
@@ -468,7 +493,8 @@ class MediaControllerViewModelTests {
         assertThat(confirmatoryDialog.text.stringResId).isEqualTo(R.string.confirm_delete_preset_message)
     }
 
-    @Test fun delete_dialog_dismissal() = runTestWithTestPresets {
+    @Test fun delete_dialog_dismissal() = runTest {
+        insertTestPresets()
         presetList.onDeleteClick(testPresetNames[1])
         waitUntil { instance.shownDialog != null }
         instance.shownDialog?.onDismissRequest?.invoke()
@@ -477,7 +503,8 @@ class MediaControllerViewModelTests {
         assertThat(currentPresetNames).containsExactlyElementsIn(testPresetNames)
     }
 
-    @Test fun delete_dialog_confirm() = runTestWithTestPresets {
+    @Test fun delete_dialog_confirm() = runTest {
+        insertTestPresets()
         presetList.onDeleteClick(testPresetNames[1])
         waitUntil { instance.shownDialog != null }
         confirmatoryDialog.onConfirmClick()
@@ -486,7 +513,8 @@ class MediaControllerViewModelTests {
             testPresetNames - testPresetNames[1]).inOrder()
     }
 
-    @Test fun deleting_active_preset_makes_active_preset_null() = runTestWithTestPresets {
+    @Test fun deleting_active_preset_makes_active_preset_null() = runTest {
+        insertTestPresets()
         activePresetState.setName(testPresetNames[0])
         waitUntil { activePreset.name == testPresetNames[0] }
         presetList.onDeleteClick(testPresetNames[0])
@@ -496,7 +524,8 @@ class MediaControllerViewModelTests {
         assertThat(activePreset.name).isNull()
     }
 
-    @Test fun clicking_presets_without_unsaved_changes_skips_dialog() = runTestWithTestPresets {
+    @Test fun clicking_presets_without_unsaved_changes_skips_dialog() = runTest {
+        insertTestPresets()
         activePreset.onClick()
         presetList.onClick(testPresetNames[1])
         waitUntil { activePreset.name != null }
@@ -513,7 +542,8 @@ class MediaControllerViewModelTests {
         assertThat(instance.state.showingPresetSelector).isFalse()
     }
 
-    @Test fun unsaved_changes_dialog_appearance() = runTestWithTestPresets {
+    @Test fun unsaved_changes_dialog_appearance() = runTest {
+        insertTestPresets()
         presetList.onClick(testPresetNames[1])
         waitUntil { activePreset.name != null }
         playlistDao.toggleIsActive(testPlaylistIds[3])
@@ -530,7 +560,8 @@ class MediaControllerViewModelTests {
         assertThat(getActivePlaylistIds()).containsExactlyElementsIn(testPlaylistIds.subList(1, 4))
     }
 
-    @Test fun unsaved_changes_dialog_dismissal() = runTestWithTestPresets {
+    @Test fun unsaved_changes_dialog_dismissal() = runTest {
+        insertTestPresets()
         presetList.onClick(testPresetNames[1])
         waitUntil { activePreset.name != null }
         playlistDao.toggleIsActive(testPlaylistIds[3])
@@ -546,7 +577,8 @@ class MediaControllerViewModelTests {
         assertThat(getActivePlaylistIds()).containsExactlyElementsIn(testPlaylistIds.subList(1, 4))
     }
 
-    @Test fun unsaved_changes_dialog_drop_changes() = runTestWithTestPresets {
+    @Test fun unsaved_changes_dialog_drop_changes() = runTest {
+        insertTestPresets()
         presetList.onClick(testPresetNames[1])
         waitUntil { activePreset.name != null }
         playlistDao.toggleIsActive(testPlaylistIds[3])
@@ -569,7 +601,8 @@ class MediaControllerViewModelTests {
             .containsExactly(testPlaylistNames[1], testPlaylistNames[2])
     }
 
-    @Test fun unsaved_changes_dialog_save_first() = runTestWithTestPresets {
+    @Test fun unsaved_changes_dialog_save_first() = runTest {
+        insertTestPresets()
         activePreset.onClick()
         presetList.onClick(testPresetNames[1])
         waitUntil { activePreset.name != null }

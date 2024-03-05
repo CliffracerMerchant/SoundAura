@@ -62,6 +62,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.cliffracertech.soundaura.BuildConfig
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.dialog.DialogWidth
 import com.cliffracertech.soundaura.dialog.MultiStepDialog
@@ -387,7 +388,7 @@ import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
                 modifier = Modifier.alignByBaseline(),
                 style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.width(6.dp))
-            Text(text = stringResource(R.string.app_version),
+            Text(text = "v${BuildConfig.VERSION_NAME}",
                 modifier = Modifier.alignByBaseline(),
                 style = MaterialTheme.typography.bodyLarge)
         }
