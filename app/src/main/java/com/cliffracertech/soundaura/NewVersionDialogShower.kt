@@ -7,6 +7,7 @@ package com.cliffracertech.soundaura
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Text
@@ -20,6 +21,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
 
+/**
+ * Show a dialog to explain new features.
+ *
+ * If the value of [lastLaunchedVersionCode] is less than the current version
+ * of the app (as determined by the value of [BuildConfig.VERSION_CODE]), then
+ * a dialog will be shown to explain new features. [onDialogDismissed] will be
+ * called when the new version dialog is dismissed, and should usually be used
+ * to update the stored [lastLaunchedVersionCode] value to the new version code.
+ */
 @Composable fun NewVersionDialogShower(
     lastLaunchedVersionCode: Int,
     onDialogDismissed: () -> Unit
@@ -45,7 +55,7 @@ import com.cliffracertech.soundaura.dialog.SoundAuraDialog
     onDismissRequest = onDismissRequest,
     showCancelButton = false,
 ) {
-    Column(Modifier.padding(horizontal = 16.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         val features: List<Pair<String, String>> = when (BuildConfig.VERSION_CODE) {
             10 -> listOf(
                 stringResource(R.string.feature_playlists_title) to
