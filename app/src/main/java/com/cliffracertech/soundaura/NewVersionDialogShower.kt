@@ -5,12 +5,20 @@
 
 package com.cliffracertech.soundaura
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
-import com.cliffracertech.soundaura.settings.BulletedList
 
 @Composable fun NewVersionDialogShower(
     lastLaunchedVersionCode: Int,
@@ -36,13 +44,23 @@ import com.cliffracertech.soundaura.settings.BulletedList
     title = stringResource(R.string.new_version_dialog_title, BuildConfig.VERSION_NAME),
     onDismissRequest = onDismissRequest,
     showCancelButton = false,
-) { when (BuildConfig.VERSION_CODE) {
-    10 -> {
-        BulletedList(listOf(
-            stringResource(R.string.version_code_10_new_item_1,
-                stringResource(R.string.create_playlist_title)),
-            stringResource(R.string.version_code_10_new_item_2,
-                stringResource(R.string.volume_boost_description))
-        ))
-    } else -> {}
-}}
+) {
+    Column(Modifier.padding(horizontal = 16.dp)) {
+        val features: List<Pair<String, String>> = when (BuildConfig.VERSION_CODE) {
+            10 -> listOf(
+                stringResource(R.string.feature_playlists_title) to
+                    stringResource(R.string.feature_playlists_description,
+                        stringResource(R.string.create_playlist_title)),
+                stringResource(R.string.feature_volume_boost_title) to
+                    stringResource(R.string.feature_volume_boost_description,
+                        stringResource(R.string.volume_boost_description)))
+            else -> emptyList()
+        }
+        features.forEach { (title, description) ->
+            Text(title, Modifier.align(Alignment.CenterHorizontally))
+            Spacer(Modifier.height(4.dp))
+            Text(description, textAlign = TextAlign.Justify)
+            Spacer(Modifier.height(12.dp))
+        }
+    }
+}
