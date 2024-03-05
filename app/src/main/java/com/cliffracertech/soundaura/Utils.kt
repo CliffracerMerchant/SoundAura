@@ -1,5 +1,6 @@
-/* This file is part of SoundAura, which is released under the terms of the Apache
- * License 2.0. See license.md in the project's root directory to see the full license. */
+/* This file is part of SoundAura, which is released under
+ * the terms of the Apache License 2.0. See license.md in
+ * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
 import androidx.compose.foundation.layout.PaddingValues
@@ -59,7 +60,9 @@ fun <T> Flow<T>.collectAsState(initialValue: T, scope: CoroutineScope): State<T>
 }
 
 /** Return a [State]`<T>` that contains the most recent value for the [DataStore]
- * preference pointed to by [key], with an initial value of [initialValue]. */
+ * preference pointed to by [key], with an initial value of [initialValue] (which
+ * will also be used as the default value). If the default value must be different
+ * from the initial value, see the overload with a separate defaultValue parameter. */
 fun <T> DataStore<Preferences>.preferenceState(
     key: Preferences.Key<T>,
     initialValue: T,
@@ -67,6 +70,22 @@ fun <T> DataStore<Preferences>.preferenceState(
 ) : State<T> {
     val state = mutableStateOf(initialValue)
     data.map { it[key] ?: initialValue }
+        .onEach { state.value = it }
+        .launchIn(scope)
+    return state
+}
+
+/** Return a [State]`<T>` that contains the most recent value for the [DataStore]
+ * preference pointed to by [key], with an initial value of [initialValue], and
+ * a default value of [defaultValue]. */
+fun <T> DataStore<Preferences>.preferenceState(
+    key: Preferences.Key<T>,
+    initialValue: T,
+    defaultValue: T,
+    scope: CoroutineScope,
+) : State<T> {
+    val state = mutableStateOf(initialValue)
+    data.map { it[key] ?: defaultValue }
         .onEach { state.value = it }
         .launchIn(scope)
     return state
@@ -169,7 +188,7 @@ inline fun <reified T: Enum<T>> DataStore<Preferences>.enumPreferenceFlow(
  * the screen width according to the [LocalWindowSizeClass] value. This can be
  * used for top level UI elements that don't need to be very wide from becoming
  * too stretched out in configurations with a large [WindowWidthSizeClass]. When
- * the [WindowWidthSizeClass] is equal to :
+ * the [WindowWidthSizeClass] is equal to:
  * - [WindowWidthSizeClass.Compact] the start and end padding will be set to [compactPadding]
  * - [WindowWidthSizeClass.Medium] the start and end padding will be set to 10% of the screen width
  * - [WindowWidthSizeClass.Expanded] the start and end padding will be set to 20% of the screen width
@@ -177,9 +196,8 @@ inline fun <reified T: Enum<T>> DataStore<Preferences>.enumPreferenceFlow(
 fun Modifier.screenSizeBasedHorizontalPadding(
     compactPadding: Dp = 16.dp
 ) = composed {
-    val config = LocalConfiguration.current
     val widthSizeClass = LocalWindowSizeClass.current.widthSizeClass
-    val screenWidthDp = config.screenWidthDp.dp
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp
     this.padding(horizontal = when (widthSizeClass) {
         WindowWidthSizeClass.Medium ->   screenWidthDp * 0.1f
         WindowWidthSizeClass.Expanded -> screenWidthDp * 0.2f
