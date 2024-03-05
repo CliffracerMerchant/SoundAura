@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import com.cliffracertech.soundaura.dialog.SoundAuraDialog
+import com.cliffracertech.soundaura.settings.BulletedList
 
 @Composable fun NewVersionDialogShower(
     lastLaunchedVersionCode: Int,
@@ -35,8 +36,13 @@ import com.cliffracertech.soundaura.dialog.SoundAuraDialog
     title = stringResource(R.string.new_version_dialog_title, BuildConfig.VERSION_NAME),
     onDismissRequest = onDismissRequest,
     showCancelButton = false,
-) {
-    when (BuildConfig.VERSION_CODE) {
-        else -> {}
-    }
-}
+) { when (BuildConfig.VERSION_CODE) {
+    10 -> {
+        BulletedList(listOf(
+            stringResource(R.string.version_code_10_new_item_1,
+                stringResource(R.string.create_playlist_title)),
+            stringResource(R.string.version_code_10_new_item_2,
+                stringResource(R.string.volume_boost_description))
+        ))
+    } else -> {}
+}}
