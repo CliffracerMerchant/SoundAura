@@ -54,11 +54,13 @@ class SearchQueryViewState(
  * that should be shown as the current one (e.g. with a filled radio button)
  * is obtained through the property [currentOptionIndex]. The popup menu's
  * onDismissRequest should be set to the provided [onPopupDismissRequest].
+ * Clicks on sorting options within the popup menu should be connected to the
+ * [onOptionClick] callback.
  */
 class SortMenuState(
     val optionNames: @Composable (Context) -> ImmutableList<String>,
     private val getCurrentOptionIndex: () -> Int,
-    val onOptionClick: (Int) -> Unit,
+    onOptionClick: (Int) -> Unit,
 ) {
     val currentOptionIndex get() = getCurrentOptionIndex()
 
@@ -66,6 +68,10 @@ class SortMenuState(
         private set
     val onPopupDismissRequest = { showingPopup = false }
     val onButtonClick = { showingPopup = !showingPopup }
+    val onOptionClick = { index: Int ->
+        onPopupDismissRequest()
+        onOptionClick(index)
+    }
 }
 
 /** A state holder for a switch UI component. The switch's current checked
