@@ -85,7 +85,6 @@ import kotlinx.collections.immutable.toImmutableList
         ).padding(vertical = 2.dp),
     verticalAlignment = Alignment.CenterVertically
 ) {
-
     Row(Modifier.weight(1f).padding(start = 18.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
