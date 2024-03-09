@@ -17,6 +17,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -63,7 +64,7 @@ import javax.inject.Inject
 
 @HiltViewModel class MainActivityViewModel(
     messageHandler: MessageHandler,
-    dataStore: DataStore<Preferences>,
+    private val dataStore: DataStore<Preferences>,
     private val navigationState: NavigationState,
     private val playbackState: PlayerServicePlaybackState,
     coroutineScope: CoroutineScope?
@@ -396,7 +397,7 @@ class MainActivity : ComponentActivity() {
                 target = if (showingPresetSelector)
                              AddButtonTarget.Preset
                          else AddButtonTarget.Playlist,
-                backgroundColor = MaterialTheme.colors.secondaryVariant)
+                backgroundColor = MaterialTheme.colorScheme.secondary)
         }
     }
 
