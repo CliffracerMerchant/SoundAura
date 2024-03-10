@@ -102,8 +102,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
     implementation("androidx.documentfile:documentfile:1.0.1")
     implementation("com.google.accompanist:accompanist-systemuicontroller:0.28.0")
-    implementation("com.google.accompanist:accompanist-insets:0.28.0")
-    implementation("com.google.accompanist:accompanist-insets-ui:0.28.0")
     implementation("androidx.media:media:1.7.0")
     implementation("androidx.datastore:datastore-preferences:1.0.0")
     implementation("com.google.dagger:hilt-android:2.46.1")

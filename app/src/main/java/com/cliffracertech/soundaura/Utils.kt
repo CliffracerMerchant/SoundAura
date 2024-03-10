@@ -4,6 +4,7 @@
 package com.cliffracertech.soundaura
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.padding
@@ -18,6 +19,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -226,3 +230,17 @@ fun PaddingValues(
         end = original.calculateEndPadding(layoutDirection) + additionalEnd,
         bottom = original.calculateBottomPadding() + additionalBottom)
 }
+
+@Composable fun WindowInsets.getStart(
+    density: Density = LocalDensity.current,
+    layoutDirection: LayoutDirection = LocalLayoutDirection.current,
+) = if (layoutDirection == LayoutDirection.Ltr)
+        getLeft(density, layoutDirection)
+    else getRight(density, layoutDirection)
+
+@Composable fun WindowInsets.getEnd(
+    density: Density = LocalDensity.current,
+    layoutDirection: LayoutDirection = LocalLayoutDirection.current,
+) = if (layoutDirection == LayoutDirection.Ltr)
+    getRight(density, layoutDirection)
+else getLeft(density, layoutDirection)

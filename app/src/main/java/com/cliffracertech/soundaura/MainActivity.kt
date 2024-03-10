@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
@@ -51,10 +52,6 @@ import com.cliffracertech.soundaura.settings.PrefKeys
 import com.cliffracertech.soundaura.ui.SlideAnimatedContent
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import com.cliffracertech.soundaura.ui.tweenDuration
-import com.google.accompanist.insets.LocalWindowInsets
-import com.google.accompanist.insets.ProvideWindowInsets
-import com.google.accompanist.insets.navigationBarsHeight
-import com.google.accompanist.insets.rememberInsetsPaddingValues
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -166,7 +163,6 @@ class MainActivity : ComponentActivity() {
         setContentWithTheme {
             val windowWidthSizeClass = LocalWindowSizeClass.current.widthSizeClass
             val widthIsConstrained = windowWidthSizeClass == WindowWidthSizeClass.Compact
-            val insets = LocalWindowInsets.current
 
             NewVersionDialogShower(
                 lastLaunchedVersionCode = viewModel.lastLaunchedVersionCode,
@@ -175,11 +171,13 @@ class MainActivity : ComponentActivity() {
             val scaffoldState = rememberScaffoldState()
             MessageDisplayer(scaffoldState.snackbarHostState)
 
-            com.google.accompanist.insets.ui.Scaffold(
+            Scaffold(
                 scaffoldState = scaffoldState,
                 topBar = { SoundAuraAppBar() },
                 bottomBar = {
-                    Spacer(Modifier.navigationBarsHeight().fillMaxWidth())
+                    Spacer(modifier = Modifier
+                        .windowInsetsBottomHeight(WindowInsets.navigationBars)
+                        .fillMaxWidth())
                 }, floatingActionButton = {
                     // The floating action buttons are added in the content
                     // section instead to have more control over their placement.
@@ -190,13 +188,15 @@ class MainActivity : ComponentActivity() {
                     if (widthIsConstrained)
                         Spacer(Modifier.height(48.dp).fillMaxWidth())
                 }, content = {
-                    val padding = rememberInsetsPaddingValues(
-                        insets = insets.systemBars,
-                        additionalStart = 8.dp,
-                        // The 56dp is added here for the action bar's height.
-                        additionalTop = 8.dp + 56.dp,
-                        additionalEnd = 8.dp,
-                        additionalBottom = 8.dp)
+                    val padding = PaddingValues(
+                        original = it,
+                        layoutDirection = LocalLayoutDirection.current,
+                        additionalStart = 8.dp + with(LocalDensity.current) {
+                            WindowInsets.navigationBars.getStart(this).toDp()
+                        }, additionalTop = 8.dp,
+                        additionalEnd = 8.dp + with(LocalDensity.current) {
+                            WindowInsets.navigationBars.getEnd(this).toDp()
+                        }, additionalBottom = 8.dp)
                     MainContent(widthIsConstrained, padding)
                 })
         }
@@ -228,7 +228,7 @@ class MainActivity : ComponentActivity() {
         SoundAuraTheme(useDarkMode) {
             val windowSizeClass = calculateWindowSizeClass(this)
             CompositionLocalProvider(LocalWindowSizeClass provides windowSizeClass) {
-                ProvideWindowInsets { content() }
+                content()
             }
         }
     }
