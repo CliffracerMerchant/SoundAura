@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -56,8 +58,16 @@ import kotlinx.collections.immutable.ImmutableList
     val gradient = remember(gradStart, gradEnd) {
         Brush.horizontalGradient(listOf(gradStart, gradEnd))
     }
-    Row(modifier.fillMaxWidth().background(gradient)
-                .windowInsetsPadding(insets).height(56.dp),
+    // This particular size and background modifier order is chosen so that the
+    // gradient background will draw under horizontal system bars at the top and
+    // bottom of the screen, but not under vertical system bars at the sides of
+    // the screen (e.g. the 3-button nav bar in landscape orientation)
+    Row(modifier = modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(insets.only(WindowInsetsSides.Horizontal))
+            .background(gradient)
+            .windowInsetsPadding(insets.only(WindowInsetsSides.Vertical))
+            .height(56.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         val color = MaterialTheme.colorScheme.onPrimary
