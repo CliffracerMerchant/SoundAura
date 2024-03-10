@@ -356,34 +356,12 @@ private enum class PlaylistViewEndContentType {
             expanded = showingOptionsMenu,
             onDismissRequest = { showingOptionsMenu = false }
         ) {
-            DropdownMenuItem(onClick = {
-                showingOptionsMenu = false
-                onRenameClick()
-            }) { Text(stringResource(R.string.rename)) }
-
-            DropdownMenuItem(onClick = {
-                showingOptionsMenu = false
-                onPlaylistOptionsClick()
-            }) {
-                Text(stringResource(
-                    if (playlist.isSingleTrack)
-                        R.string.create_playlist_title
-                    else R.string.playlist_options_title))
-            }
-            DropdownMenuItem(onClick = {
-                showingOptionsMenu = false
-                onVolumeBoostClick()
-            }) { Text(stringResource(R.string.volume_boost_description)) }
-
-            DropdownMenuItem(onClick = {
-                showingOptionsMenu = false
-                onRemoveClick()
-            }) { Text(stringResource(R.string.remove)) }
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.rename)) },
                 onClick = {
                     showingOptionsMenu = false
-                    onRenameClick()})
+                    onRenameClick()
+                })
             DropdownMenuItem(
                 text = {
                     Text(stringResource(
