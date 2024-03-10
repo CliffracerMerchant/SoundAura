@@ -9,11 +9,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.DropdownMenu
@@ -42,10 +44,11 @@ import kotlinx.collections.immutable.ImmutableList
 
 /** Compose a [Row] with a gradient background and vertically centered
  * content, while providing the current theme's onPrimary color as the
- * [LocalContentColor]. */
-@Composable
-fun GradientToolBar(
+ * [LocalContentColor]. The bar will have padding added to account for
+ * system bars according to the provided [insets]. */
+@Composable fun GradientToolBar(
     modifier: Modifier = Modifier,
+    insets: WindowInsets = WindowInsets.statusBars,
     content: @Composable RowScope.() -> Unit
 ) {
     val gradStart = MaterialTheme.colorScheme.primaryContainer
@@ -54,10 +57,10 @@ fun GradientToolBar(
         Brush.horizontalGradient(listOf(gradStart, gradEnd))
     }
     Row(modifier.fillMaxWidth().background(gradient)
-                .statusBarsPadding().height(56.dp),
+                .windowInsetsPadding(insets).height(56.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val color = MaterialTheme.colorScheme.onSecondaryContainer
+        val color = MaterialTheme.colorScheme.onPrimary
         CompositionLocalProvider(LocalContentColor provides color) { content() }
     }
 }

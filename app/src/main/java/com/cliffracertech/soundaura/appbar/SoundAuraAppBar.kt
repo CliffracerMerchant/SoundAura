@@ -3,7 +3,11 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura.appbar
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenuItem
@@ -51,9 +55,9 @@ import javax.inject.Inject
  * parameters in a [ListAppBar]. In addition to these properties, the property
  * [showActivePlaylistsFirstSwitchState] should be used as the state for a
  * 'Show active playlists first' switch within the [ListAppBar]'s sort popup
- * menu (i.e. through its [ListAppBar.otherSortMenuContent] parameter). The
- * [ListAppBar.otherIconButtons] parameter should contain a settings icon
- * button that uses the property [onSettingsButtonClick] as its onClick action.
+ * menu (i.e. through its otherSortMenuContent parameter). The otherIconButtons
+ * parameter should contain a settings icon button that uses the property
+ * [onSettingsButtonClick] as its onClick action.
  */
 @HiltViewModel class AppBarViewModel(
     private val dataStore: DataStore<Preferences>,
@@ -137,6 +141,12 @@ import javax.inject.Inject
     }
     ListAppBar(
         modifier = modifier,
+        // horizontal window insets must be taken into account even though the bar
+        // is intended to be at the top of the screen because the navigation bar
+        // will appear at the end of the screen when 3-button navigation is in use
+        // for a landscape orientation
+        insets = WindowInsets.systemBars.only(
+            WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
         onBackButtonClick = viewModel.onBackButtonClick,
         title = title,
         showIconButtons = viewModel.showIconButtons,

@@ -177,14 +177,8 @@ class MainActivity : ComponentActivity() {
 
             com.google.accompanist.insets.ui.Scaffold(
                 scaffoldState = scaffoldState,
-                topBar = {
-                    val padding = rememberInsetsPaddingValues(
-                        // The top bar's top padding is set internally using
-                        // statusBarsPadding, so we have to use applyTop = false
-                        // here to prevent the top padding from being doubled.
-                        insets = insets.systemBars, applyTop = false, applyBottom = false)
-                    SoundAuraAppBar(modifier = Modifier.padding(padding))
-                }, bottomBar = {
+                topBar = { SoundAuraAppBar() },
+                bottomBar = {
                     Spacer(Modifier.navigationBarsHeight().fillMaxWidth())
                 }, floatingActionButton = {
                     // The floating action buttons are added in the content

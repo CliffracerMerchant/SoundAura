@@ -17,7 +17,9 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.Icon
@@ -56,6 +58,7 @@ import kotlinx.collections.immutable.toImmutableList
  * and any other content passed in through the [otherIconButtons] parameter.
  *
  * @param modifier The [Modifier] to use for the bar
+ * @param insets The [WindowInsets] for which padding should be applied
  * @param onBackButtonClick The callback to use for the back button.
  *    If null, the back button will not be shown.
  * @param title The title that will be displayed when there is no search query
@@ -64,9 +67,9 @@ import kotlinx.collections.immutable.toImmutableList
  *     search button, the change sort button, and any other icon buttons added
  *     in [otherContent].
  * @param searchQueryState A [SearchQueryViewState] that contains state and
- *     callbacks related to the active search query and the search button.
+ *     callbacks related to the active search query and the search button
  * @param sortMenuState A [SortMenuState]`<T>` that contains state and
- *     callbacks related to the sort button and its popup menu.
+ *     callbacks related to the sort button and its popup menu
  * @param otherSortMenuContent A composable lambda that contains other
  *     content that should be displayed in the popup sort menu
  * @param otherIconButtons A composable containing other icon buttons
@@ -74,6 +77,7 @@ import kotlinx.collections.immutable.toImmutableList
  */
 @Composable fun ListAppBar(
     modifier: Modifier = Modifier,
+    insets: WindowInsets = WindowInsets.statusBars,
     onBackButtonClick: (() -> Unit)?,
     title: String,
     showIconButtons: Boolean,
@@ -81,7 +85,7 @@ import kotlinx.collections.immutable.toImmutableList
     sortMenuState: SortMenuState,
     otherSortMenuContent: @Composable ColumnScope.() -> Unit,
     otherIconButtons: @Composable RowScope.() -> Unit,
-) = GradientToolBar(modifier) {
+) = GradientToolBar(modifier, insets) {
     // Back button
     AnimatedContent(
         targetState = onBackButtonClick != null,
