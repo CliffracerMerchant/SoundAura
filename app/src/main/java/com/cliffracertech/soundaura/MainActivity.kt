@@ -16,8 +16,10 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.*
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -168,16 +170,17 @@ class MainActivity : ComponentActivity() {
                 lastLaunchedVersionCode = viewModel.lastLaunchedVersionCode,
                 onDialogDismissed = viewModel::onNewVersionDialogShown)
 
-            val scaffoldState = rememberScaffoldState()
-            MessageDisplayer(scaffoldState.snackbarHostState)
+            val snackbarHostState = remember { SnackbarHostState() }
+            MessageDisplayer(snackbarHostState)
 
             Scaffold(
-                scaffoldState = scaffoldState,
                 topBar = { SoundAuraAppBar() },
                 bottomBar = {
                     Spacer(modifier = Modifier
                         .windowInsetsBottomHeight(WindowInsets.navigationBars)
                         .fillMaxWidth())
+                }, snackbarHost = {
+                    SnackbarHost(snackbarHostState)
                 }, floatingActionButton = {
                     // The floating action buttons are added in the content
                     // section instead to have more control over their placement.
