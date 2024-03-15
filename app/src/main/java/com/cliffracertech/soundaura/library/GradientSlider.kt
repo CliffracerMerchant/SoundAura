@@ -6,6 +6,7 @@
  * following ways to make the GradientSlider class:
  * - The SliderRange class has been removed
  * - The steps/ticks functionality has been removed
+ * - Disableability has been removed
  * - The SliderColors class has been changed to GradientSliderColors
  *   to support gradients for the slider track and thumb, and the tick
  *   colors have been removed
@@ -54,11 +55,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.progressSemantics
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.ContentAlpha
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.SliderColors
-import androidx.compose.material.SliderDefaults
 import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SliderColors
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -80,7 +80,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -92,6 +91,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.ColorUtils
+import com.cliffracertech.soundaura.rememberMutableStateOf
 import com.google.android.material.math.MathUtils.lerp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
@@ -182,55 +182,30 @@ object GradientSliderDefaults {
      * right in RTL) 30% of the track will be active, the rest is not active.
      *
      * @param thumbColor thumb color when enabled
-     * @param disabledThumbColor thumb colors when disabled
      * @param activeTrackColor color of the track in the part that is "active", meaning that the
      * thumb is ahead of it
      * @param inactiveTrackColor color of the track in the part that is "inactive", meaning that the
      * thumb is before it
-     * @param disabledActiveTrackColor color of the track in the "active" part when the Slider is
-     * disabled
-     * @param disabledInactiveTrackColor color of the track in the "inactive" part when the
-     * Slider is disabled
      */
     @Composable fun colors(
-        thumbColor: Color = MaterialTheme.colors.primary,
-        thumbColorEnd: Color = MaterialTheme.colors.secondary,
-        disabledThumbColor: Color = MaterialTheme.colors.onSurface
-            .copy(alpha = ContentAlpha.disabled)
-            .compositeOver(MaterialTheme.colors.surface),
-        activeTrackColor: Color = MaterialTheme.colors.primary,
+        thumbColor: Color = MaterialTheme.colorScheme.primary,
+        thumbColorEnd: Color = MaterialTheme.colorScheme.secondary,
+        activeTrackColor: Color = MaterialTheme.colorScheme.primary,
         inactiveTrackColor: Color = activeTrackColor.copy(alpha = InactiveTrackAlpha),
         activeTrackBrush: Brush? = Brush.horizontalGradient(listOf(
-            MaterialTheme.colors.primary, MaterialTheme.colors.secondary)),
-        disabledActiveTrackColor: Color =
-            MaterialTheme.colors.onSurface.copy(alpha = DisabledActiveTrackAlpha),
-        disabledInactiveTrackColor: Color =
-            disabledActiveTrackColor.copy(alpha = DisabledInactiveTrackAlpha)
+            MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)),
     ): GradientSliderColors = DefaultGradientSliderColors(
         thumbColor = thumbColor,
         thumbColorEnd = thumbColorEnd,
-        disabledThumbColor = disabledThumbColor,
         activeTrackColor = activeTrackColor,
         inactiveTrackColor = inactiveTrackColor,
         activeTrackBrush = activeTrackBrush,
-        disabledActiveTrackColor = disabledActiveTrackColor,
-        disabledInactiveTrackColor = disabledInactiveTrackColor,
     )
 
     /**
      * Default alpha of the inactive part of the track
      */
     const val InactiveTrackAlpha = 0.24f
-
-    /**
-     * Default alpha for the track when it is disabled but active
-     */
-    const val DisabledInactiveTrackAlpha = 0.12f
-
-    /**
-     * Default alpha for the track when it is disabled and inactive
-     */
-    const val DisabledActiveTrackAlpha = 0.32f
 }
 
 /**
@@ -491,17 +466,14 @@ private fun Modifier.sliderPressModifier(
 private class DefaultGradientSliderColors(
     private val thumbColor: Color,
     private val thumbColorEnd: Color?,
-    private val disabledThumbColor: Color,
     private val activeTrackColor: Color,
     private val inactiveTrackColor: Color,
     private val activeTrackBrush: Brush?,
-    private val disabledActiveTrackColor: Color,
-    private val disabledInactiveTrackColor: Color,
 ) : GradientSliderColors {
 
     @Composable
     override fun thumbColor(enabled: Boolean): State<Color> {
-        return rememberUpdatedState(if (enabled) thumbColor else disabledThumbColor)
+        return rememberMutableStateOf(thumbColor)
     }
 
     @Composable override fun thumbColorEnd() = rememberUpdatedState(thumbColorEnd)
@@ -509,12 +481,8 @@ private class DefaultGradientSliderColors(
     @Composable
     override fun trackColor(enabled: Boolean, active: Boolean): State<Color> {
         return rememberUpdatedState(
-            if (enabled) {
-                if (active) activeTrackColor else inactiveTrackColor
-            } else {
-                if (active) disabledActiveTrackColor else disabledInactiveTrackColor
-            }
-        )
+            if (active) activeTrackColor
+            else        inactiveTrackColor)
     }
 
     @Composable override fun activeTrackBrush() = rememberUpdatedState(activeTrackBrush)
@@ -526,22 +494,16 @@ private class DefaultGradientSliderColors(
         other as DefaultGradientSliderColors
 
         if (thumbColor != other.thumbColor) return false
-        if (disabledThumbColor != other.disabledThumbColor) return false
         if (activeTrackColor != other.activeTrackColor) return false
         if (inactiveTrackColor != other.inactiveTrackColor) return false
-        if (disabledActiveTrackColor != other.disabledActiveTrackColor) return false
-        if (disabledInactiveTrackColor != other.disabledInactiveTrackColor) return false
 
         return true
     }
 
     override fun hashCode(): Int {
         var result = thumbColor.hashCode()
-        result = 31 * result + disabledThumbColor.hashCode()
         result = 31 * result + activeTrackColor.hashCode()
         result = 31 * result + inactiveTrackColor.hashCode()
-        result = 31 * result + disabledActiveTrackColor.hashCode()
-        result = 31 * result + disabledInactiveTrackColor.hashCode()
         return result
     }
 }
