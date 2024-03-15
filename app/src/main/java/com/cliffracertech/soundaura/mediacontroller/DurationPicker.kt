@@ -18,11 +18,11 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.LocalContentColor
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
@@ -64,7 +64,7 @@ import java.time.Duration
     val density = LocalDensity.current
     var dragPx by rememberMutableFloatStateOf(0f)
     var lastRequestedValue by rememberMutableIntStateOf(currentValue)
-    val pxThreshold = remember { with (density) { 20.dp.roundToPx() }}
+    val pxThreshold = remember(density) { with (density) { 20.dp.roundToPx() }}
 
     Box(modifier
         .widthIn(min = 48.dp)
@@ -110,6 +110,19 @@ import java.time.Duration
     }
 }
 
+private fun Duration.setHours(hours: Int, bounds: Range<Duration>): Duration {
+    val result = plusHours(hours.toLong() - toHours().toInt())
+    return if (result in bounds) result else this
+}
+private fun Duration.setMinutes(minutes: Int, bounds: Range<Duration>): Duration {
+    val result = plusMinutes(minutes.toLong() - toMinutesPart())
+    return if (result in bounds) result else this
+}
+private fun Duration.setSeconds(seconds: Int, bounds: Range<Duration>): Duration {
+    val result = plusSeconds(seconds.toLong() - toSecondsPart())
+    return if (result in bounds) result else this
+}
+
 /**
  * A row of three two digit [NumberDial]s that collectively allow a duration
  * to be picked by the user.
@@ -123,35 +136,20 @@ import java.time.Duration
 @Composable fun DurationPicker(
     modifier: Modifier = Modifier,
     currentDuration: Duration,
-    bounds: Range<Duration>? = null,
+    bounds: Range<Duration>,
     onDurationChange: (Duration) -> Unit,
 ) = Row(
     modifier = modifier
         .border(width = 1.5.dp,
-                color = LocalContentColor.current.copy(alpha = 0.2f),
-                shape = MaterialTheme.shapes.medium)
+            color = LocalContentColor.current.copy(alpha = 0.2f),
+            shape = MaterialTheme.shapes.medium)
         .padding(horizontal = 6.dp),
     horizontalArrangement = Arrangement.spacedBy(6.dp),
     verticalAlignment = Alignment.CenterVertically
 ) {
-    fun Duration.setHours(hours: Int, bounds: Range<Duration>? = null): Duration {
-        val result = plusHours(hours.toLong() - toHours().toInt())
-        return if (bounds?.contains(result) != false)
-            result else this
-    }
-    fun Duration.setMinutes(minutes: Int, bounds: Range<Duration>? = null): Duration {
-        val result = plusMinutes(minutes.toLong() - toMinutesPart())
-        return if (bounds?.contains(result) != false)
-            result else this
-    }
-    fun Duration.setSeconds(seconds: Int, bounds: Range<Duration>? = null): Duration {
-        val result = plusSeconds(seconds.toLong() - toSecondsPart())
-        return if (bounds?.contains(result) != false)
-            result else this
-    }
     val dividerColor = LocalContentColor.current.copy(alpha = 0.2f)
 
-    NumberDial( currentDuration.toHours().toInt(), formatString = "%02d h") {
+    NumberDial(currentDuration.toHours().toInt(), formatString = "%02d h") {
         onDurationChange(currentDuration.setHours(it, bounds))
     }
 
@@ -187,7 +185,7 @@ fun DurationPickerPreview() = SoundAuraTheme {
  * @param description An optional [String] that will be displayed before
  *     the [DurationPicker] if not null
  * @param bounds A [Range]`<Duration>` that describes the acceptable range
- *     for the [Duration]. Both the upper and lower bounds are exclusive.
+ *     for the [Duration]. Both the upper and lower bounds are inclusive.
  * @param onDismissRequest The callback that will be invoked when the user
  *     attempts to dismiss or cancel the dialog
  * @param onConfirm The callback that will be invoked when the user taps the ok
@@ -197,20 +195,19 @@ fun DurationPickerPreview() = SoundAuraTheme {
     modifier: Modifier = Modifier,
     title: String,
     description: String? = null,
-    bounds: Range<Duration>? = null,
+    bounds: Range<Duration> = Range(Duration.ZERO, Duration.ofHours(100L).minusSeconds(1)),
     onDismissRequest: () -> Unit,
     onConfirm: (Duration) -> Unit,
 ) {
-    var currentDuration by rememberMutableStateOf(Duration.ZERO)
+    var currentDuration by rememberMutableStateOf(Duration.ofSeconds(1L))
 
     SoundAuraDialog(
         modifier = modifier,
         title = title,
         onDismissRequest = onDismissRequest,
-        confirmButtonEnabled = currentDuration > bounds?.lower &&
-                               currentDuration < bounds?.upper,
+        confirmButtonEnabled = currentDuration in bounds,
         onConfirm = {
-            if (bounds?.contains(currentDuration) != false)
+            if (currentDuration in bounds)
                 onConfirm(currentDuration)
         }
     ) {
