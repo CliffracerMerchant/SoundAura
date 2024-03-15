@@ -15,17 +15,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.Divider
-import androidx.compose.material.DropdownMenu
-import androidx.compose.material.DropdownMenuItem
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.LocalContentColor
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -102,20 +102,24 @@ import kotlinx.collections.immutable.toImmutableList
             expanded = showingOptionsMenu,
             onDismissRequest = { showingOptionsMenu = false }
         ) {
-            DropdownMenuItem(onClick = {
-                onRenameClick(presetName)
-                showingOptionsMenu = false
-            }) { Text(stringResource(R.string.rename)) }
-
-            DropdownMenuItem(onClick = {
-                onOverwriteClick(presetName)
-                showingOptionsMenu = false
-            }) { Text(stringResource(R.string.overwrite)) }
-
-            DropdownMenuItem(onClick = {
-                onDeleteClick(presetName)
-                showingOptionsMenu = false
-            }) { Text(stringResource(R.string.delete)) }
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.rename)) },
+                onClick = {
+                    onRenameClick(presetName)
+                    showingOptionsMenu = false
+                })
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.overwrite)) },
+                onClick = {
+                    onOverwriteClick(presetName)
+                    showingOptionsMenu = false
+                 })
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.delete)) },
+                onClick = {
+                    onDeleteClick(presetName)
+                    showingOptionsMenu = false
+                })
         }
     }
 }
@@ -157,7 +161,7 @@ class PresetListState(
     activePresetState: ActivePresetViewState,
     selectionBrush: Brush,
     state: PresetListState,
-) = CompositionLocalProvider(LocalContentColor provides MaterialTheme.colors.onSurface) {
+) = CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
     Crossfade(
         targetState = state.list?.isEmpty(),
         modifier = modifier,
@@ -184,7 +188,7 @@ class PresetListState(
                     onOverwriteClick = state.onOverwriteClick,
                     onDeleteClick = state.onDeleteClick,
                     onClick = state.onClick)
-                Divider()
+                HorizontalDivider()
             }
         }
     }}
@@ -203,8 +207,8 @@ fun PresetListPreview() = SoundAuraTheme {
             getIsModified = { true },
             onClick = {}),
         selectionBrush = Brush.horizontalGradient(
-            listOf(MaterialTheme.colors.primaryVariant,
-                   MaterialTheme.colors.secondaryVariant)),
+            listOf(MaterialTheme.colorScheme.primary,
+                   MaterialTheme.colorScheme.secondary)),
         state = remember {
             PresetListState(
                 getList = { list },
