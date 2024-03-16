@@ -6,10 +6,11 @@ package com.cliffracertech.soundaura.addbutton
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
-import androidx.compose.material.FloatingActionButton
-import androidx.compose.material.FloatingActionButtonDefaults
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.Composable
@@ -242,7 +243,8 @@ enum class AddButtonTarget { Playlist, Preset }
             AddButtonTarget.Preset ->   addPresetViewModel.onClick()
         }},
         modifier = modifier,
-        backgroundColor = backgroundColor,
+        shape = CircleShape,
+        containerColor = backgroundColor,
         elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
     ) {
         Icon(imageVector = Icons.Default.Add,
@@ -250,7 +252,7 @@ enum class AddButtonTarget { Playlist, Preset }
                     AddButtonTarget.Playlist -> R.string.add_local_files_button_description
                     AddButtonTarget.Preset ->   R.string.add_preset_button_description
                 }),
-             tint = MaterialTheme.colors.onPrimary)
+             tint = MaterialTheme.colorScheme.onSecondary)
     }
 
     addPlaylistViewModel.dialogStep?.let { AddLocalFilesDialog(it) }
