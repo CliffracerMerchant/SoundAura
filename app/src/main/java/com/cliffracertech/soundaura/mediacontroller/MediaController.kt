@@ -24,10 +24,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
@@ -104,7 +104,7 @@ class ActivePresetViewState(
                                    .rotateClockwise())
     }
     Column(columnModifier, Arrangement.Center, Alignment.CenterHorizontally) {
-        val style = MaterialTheme.typography.caption
+        val style = MaterialTheme.typography.bodySmall
         Text(text = stringResource(R.string.playing),
              maxLines = 1, style = style, softWrap = false)
         Row {
@@ -234,7 +234,7 @@ class ActivePresetViewState(
         modifier = Modifier.align(Alignment.Center)
             .requiredWidth(sizes.presetSelectorSize.width),
         textAlign = TextAlign.Center,
-        style = MaterialTheme.typography.h6)
+        style = MaterialTheme.typography.titleMedium)
     IconButton(onCloseButtonClick, Modifier.align(Alignment.CenterEnd)) {
         Icon(Icons.Default.Close,
             stringResource(R.string.close_preset_selector_description))
@@ -271,7 +271,7 @@ class ActivePresetViewState(
                     alpha = transitionProgressProvider()
                     scaleY = transitionProgressProvider()
                     scaleX = minScaleX + (1f - minScaleX) * transitionProgressProvider()
-                }.background(MaterialTheme.colors.surface,
+                }.background(MaterialTheme.colorScheme.surface,
                              MaterialTheme.shapes.large),
             contentPadding = PaddingValues(bottom = 64.dp),
             activePresetState = activePresetState,
@@ -398,8 +398,8 @@ fun MediaControllerPreview() = SoundAuraTheme {
             orientation = Orientation.Horizontal,
             presetSelectorSize = DpSize(0.dp, 0.dp)),
         backgroundBrush = Brush.horizontalGradient(
-            listOf(MaterialTheme.colors.primaryVariant,
-                   MaterialTheme.colors.secondaryVariant)),
+            listOf(MaterialTheme.colorScheme.primary,
+                   MaterialTheme.colorScheme.secondary)),
         alignment = Alignment.BottomStart as BiasAlignment,
         padding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 8.dp),
         state = remember { MediaControllerState(

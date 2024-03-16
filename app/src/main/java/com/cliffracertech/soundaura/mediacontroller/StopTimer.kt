@@ -8,9 +8,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.runtime.Composable
@@ -69,7 +69,7 @@ fun Duration.toHMMSSstring(): String {
             }
         }
     }
-    val style = MaterialTheme.typography.caption
+    val style = MaterialTheme.typography.bodySmall
     // The -2.dp x offset prevents the first line of text from
     // appearing off-center (probably due to the icon's padding?).
     Row(modifier = Modifier.offset(x = (-2).dp),
