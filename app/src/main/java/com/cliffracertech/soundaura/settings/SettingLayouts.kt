@@ -14,16 +14,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Checkbox
-import androidx.compose.material.ContentAlpha
-import androidx.compose.material.Icon
-import androidx.compose.material.LocalContentColor
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Switch
-import androidx.compose.material.Text
-import androidx.compose.material.TextButton
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.runtime.Composable
@@ -64,7 +62,7 @@ import kotlin.enums.EnumEntries
     Column(Modifier.padding(top = 10.dp, bottom = 6.dp)) {
         Text(text = title,
             modifier = Modifier.align(Alignment.CenterHorizontally),
-            style = MaterialTheme.typography.h5)
+            style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(8.dp))
         HorizontalDivider(horizontalPaddingModifier)
         content(horizontalPaddingModifier)
@@ -119,7 +117,7 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
         TextButton(
             onClick = { onValueClick(value) },
             colors = ButtonDefaults.textButtonColors(
-                contentColor = MaterialTheme.colors.onSurface)
+                contentColor = MaterialTheme.colorScheme.onSurface)
         ) {
             Row(modifier = Modifier.fillMaxWidth().padding(end = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -132,12 +130,12 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
                     Modifier.size(36.dp).padding(top = 7.dp, bottom = 5.dp))
                 Column {
                     val name = valueNames.getOrNull(index) ?: "Error"
-                    Text(name, style = MaterialTheme.typography.body1)
+                    Text(name, style = MaterialTheme.typography.bodyLarge)
 
                     val description = valueDescriptions?.getOrNull(index)
                     if (!description.isNullOrEmpty()) {
                         Spacer(Modifier.height(2.dp))
-                        Text(description, style = MaterialTheme.typography.body2)
+                        Text(description, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
@@ -180,10 +178,10 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
         modifier = Modifier.weight(1f).padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        Text(title, style = MaterialTheme.typography.h6)
+        Text(title, style = MaterialTheme.typography.titleMedium)
 
         if (subtitle != null)
-            Text(subtitle, style = MaterialTheme.typography.body2)
+            Text(subtitle, style = MaterialTheme.typography.bodyMedium)
     }
     content()
 }
@@ -219,8 +217,7 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
         onClick = onShowRequest,
     ) {
         Icon(imageVector = Icons.Default.ChevronRight,
-            contentDescription = null,
-            tint = LocalContentColor.current.copy(ContentAlpha.medium))
+             contentDescription = null)
     }
     if (dialogVisible)
         content(onDismissRequest)
@@ -305,7 +302,7 @@ fun DarkSettingCategoryPreview() = SoundAuraTheme(true) {
         buttons = {}
     ) {
         if (description != null) {
-            Text(text = description, style = MaterialTheme.typography.body1,
+            Text(text = description, style = MaterialTheme.typography.bodyLarge,
                  modifier = Modifier.padding(horizontal = 16.dp))
             Spacer(Modifier.height(6.dp))
         }
