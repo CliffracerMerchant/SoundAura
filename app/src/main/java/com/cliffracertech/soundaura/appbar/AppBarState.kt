@@ -4,7 +4,7 @@
 package com.cliffracertech.soundaura.appbar
 
 import android.content.Context
-import androidx.compose.material.TextField
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -17,7 +17,7 @@ import kotlinx.collections.immutable.ImmutableList
  *
  * Consumers of the SearchQueryViewState should show the search query when the
  * value of the property [query] is not null, and connect desired changes to
- * the search query (e.g. through [TextField.onValueChange]) to the property
+ * the search query (e.g. through [TextField]'s onValueChange) to the property
  * [onQueryChange]. The displayed search button should show either a search
  * icon or a close icon according to the [Icon] value of the property [icon],
  * and the property [onButtonClick] should be used as its onClick action.
