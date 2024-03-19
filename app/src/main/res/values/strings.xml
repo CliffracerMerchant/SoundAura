@@ -85,11 +85,11 @@
         playlists in order to add any more.</string>
     <string name="cant_add_playlist_warning">
         The playlist could not be added because the app is at Android’s
-        file permission limit of %2$d. You must remove some tracks or
+        file permission limit of %1$d. You must remove some tracks or
         playlists in order to add any more.</string>
     <string name="cant_modify_playlist_tracks_warning">
         The playlist’s track list could not be modified because the app is
-        at Android’s file permission limit of %2$d. You must remove some
+        at Android’s file permission limit of %1$d. You must remove some
         tracks or playlists in order to add any more.
     </string>
 
