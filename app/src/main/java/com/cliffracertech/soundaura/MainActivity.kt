@@ -36,7 +36,6 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cliffracertech.soundaura.addbutton.AddButton
-import com.cliffracertech.soundaura.addbutton.AddButtonTarget
 import com.cliffracertech.soundaura.appbar.SoundAuraAppBar
 import com.cliffracertech.soundaura.library.SoundAuraLibraryView
 import com.cliffracertech.soundaura.mediacontroller.MediaControllerSizes
@@ -392,11 +391,7 @@ class MainActivity : ComponentActivity() {
             enter = fadeIn(enterSpec) + scaleIn(enterSpec, initialScale = 0.8f),
             exit = fadeOut(exitSpec) + scaleOut(exitSpec, targetScale = 0.8f),
         ) {
-            AddButton(
-                target = if (showingPresetSelector)
-                             AddButtonTarget.Preset
-                         else AddButtonTarget.Playlist,
-                backgroundColor = MaterialTheme.colors.secondaryVariant)
+            AddButton(MaterialTheme.colors.secondaryVariant)
         }
     }
 

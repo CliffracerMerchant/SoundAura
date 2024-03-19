@@ -25,16 +25,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cliffracertech.soundaura.R
-import com.cliffracertech.soundaura.collectAsState
-import com.cliffracertech.soundaura.dialog.NamingDialog
-import com.cliffracertech.soundaura.dialog.NamingState
 import com.cliffracertech.soundaura.dialog.ValidatedNamingState
-import com.cliffracertech.soundaura.model.ActivePresetState
 import com.cliffracertech.soundaura.model.AddToLibraryUseCase
-import com.cliffracertech.soundaura.model.MessageHandler
-import com.cliffracertech.soundaura.model.database.PlaylistDao
-import com.cliffracertech.soundaura.model.database.PresetDao
-import com.cliffracertech.soundaura.model.database.newPresetNameValidator
+import com.cliffracertech.soundaura.model.NavigationState
+import com.cliffracertech.soundaura.model.ReadModifyPresetsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -49,52 +43,74 @@ fun Uri.getDisplayName(context: Context) =
         ?: pathSegments.last().substringBeforeLast('.').replace('_', ' ')
 
 /**
- * A [ViewModel] that contains state and callbacks for a button to add playlists.
+ * A [ViewModel] that contains state and callbacks for a button to add playlists
+ * or presets.
  *
- * The add playlist button's onClick should be set to the view model's
- * provided [onClick] method. The property [dialogStep] can then be observed
- * to access the current [AddLocalFilesDialogStep] that should be shown to the
- * user. State and callbacks for each dialog step are contained inside the
- * current [AddLocalFilesDialogStep] value of the [dialogStep] property.
- *
- * Note that the [Context] argument passed in the constructor will be saved
- * for the lifetime of the view model, and therefore should not be a [Context]
- * whose owner should not outlive the view model (e.g. an activity context).
+ * The add button's onClick should be set to the view model's provided [onClick]
+ * method. The property [dialogState] can then be observed to access the current
+ * [AddButtonDialogState] that should be shown to the user. State and callbacks
+ * for each dialog step are contained inside the current [AddButtonDialogState]
+ * value of the [dialogState] property.
  */
-@HiltViewModel @SuppressLint("StaticFieldLeak")
-class AddPlaylistButtonViewModel(
+@HiltViewModel @SuppressLint("StaticFieldLeak") // The application context is used
+class AddButtonViewModel(
     private val context: Context,
+    coroutineScope: CoroutineScope?,
+    private val navigationState: NavigationState,
+    private val readModifyPresetsUseCase: ReadModifyPresetsUseCase,
     private val addToLibrary: AddToLibraryUseCase,
-    coroutineScope: CoroutineScope? = null
-) : ViewModel() {
-
+): ViewModel() {
     @Inject constructor(
         @ApplicationContext context: Context,
-        addToLibrary: AddToLibraryUseCase,
-    ) : this(context, addToLibrary, null)
+        navigationState: NavigationState,
+        readModifyPresets: ReadModifyPresetsUseCase,
+        addToLibrary: AddToLibraryUseCase
+    ): this(context, null, navigationState,
+            readModifyPresets, addToLibrary)
 
     private val scope = coroutineScope ?: viewModelScope
 
-    var dialogStep by mutableStateOf<AddLocalFilesDialogStep?>(null)
+    var dialogState by mutableStateOf<AddButtonDialogState?>(null)
         private set
 
-    private fun onDialogDismissRequest() { dialogStep = null }
+    private fun hideDialog() { dialogState = null }
 
-    fun onClick() {
-        dialogStep = AddLocalFilesDialogStep.SelectingFiles(
-            onDismissRequest = ::onDialogDismissRequest,
-            onFilesSelected = { chosenUris ->
-                // If uris.size == 1, we can skip straight to the name
-                // track dialog step to skip the user needing to choose
-                if (chosenUris.size > 1)
-                    showAddIndividuallyOrAsPlaylistQueryStep(chosenUris)
-                else showNameTracksStep(chosenUris)
-            })
+    val onClickContentDescriptionResId get() = when {
+        navigationState.showingAppSettings -> null
+        navigationState.showingPresetSelector ->
+            R.string.add_preset_button_description
+        else -> R.string.add_local_files_button_description
     }
 
+
+    fun onClick() { when {
+        navigationState.showingAppSettings -> {}
+        navigationState.showingPresetSelector -> {
+            scope.launch {
+                val namingState = readModifyPresetsUseCase.beginAddNewPreset(
+                    scope = scope,
+                    onAddPreset = ::hideDialog)
+                if (namingState != null)
+                    dialogState = AddButtonDialogState.NamePreset(
+                        onDismissRequest = ::hideDialog,
+                        namingState = namingState)
+            }
+        } else -> {
+            dialogState = AddButtonDialogState.SelectingFiles(
+                onDismissRequest = ::hideDialog,
+                onFilesSelected = { chosenUris ->
+                    // If uris.size == 1, we can skip straight to the name
+                    // track dialog step to skip the user needing to choose
+                    if (chosenUris.size > 1)
+                        showAddIndividuallyOrAsPlaylistQueryStep(chosenUris)
+                    else showNameTracksStep(chosenUris)
+                })
+        }
+    }}
+
     private fun showAddIndividuallyOrAsPlaylistQueryStep(chosenUris: List<Uri>) {
-        dialogStep = AddLocalFilesDialogStep.AddIndividuallyOrAsPlaylistQuery(
-            onDismissRequest = ::onDialogDismissRequest,
+        dialogState = AddButtonDialogState.AddIndividuallyOrAsPlaylistQuery(
+            onDismissRequest = ::hideDialog,
             onAddIndividuallyClick = { showNameTracksStep(chosenUris) },
             onAddAsPlaylistClick = {
                 showNamePlaylistStep(chosenUris, cameFromPlaylistOrTracksQuery = true)
@@ -102,20 +118,20 @@ class AddPlaylistButtonViewModel(
     }
 
     private fun showNameTracksStep(trackUris: List<Uri>) {
-        dialogStep = AddLocalFilesDialogStep.NameTracks(
-            onDismissRequest = ::onDialogDismissRequest,
+        dialogState = AddButtonDialogState.NameTracks(
+            onDismissRequest = ::hideDialog,
             onBackClick = {
                 // if uris.size == 1, then the question of whether to add as
                 // a track or as a playlist should have been skipped. In this
                 // case, the dialog will be dismissed instead of going back.
                 if (trackUris.size > 1)
                     showAddIndividuallyOrAsPlaylistQueryStep(trackUris)
-                else onDialogDismissRequest()
+                else hideDialog()
             }, validator = addToLibrary.trackNamesValidator(
                 scope, trackUris.map { it.getDisplayName(context) }),
             coroutineScope = scope,
             onFinish = { trackNames ->
-                onDialogDismissRequest()
+                hideDialog()
                 scope.launch {
                     assert(trackUris.size == trackNames.size)
                     addToLibrary.addSingleTrackPlaylists(trackNames, trackUris)
@@ -128,137 +144,63 @@ class AddPlaylistButtonViewModel(
         cameFromPlaylistOrTracksQuery: Boolean,
         playlistName: String = "${uris.first().getDisplayName(context)} playlist"
     ) {
-        dialogStep = AddLocalFilesDialogStep.NamePlaylist(
+        dialogState = AddButtonDialogState.NamePlaylist(
             wasNavigatedForwardTo = cameFromPlaylistOrTracksQuery,
-            onDismissRequest = ::onDialogDismissRequest,
-            onBackClick = { showAddIndividuallyOrAsPlaylistQueryStep(uris) },
-            validator = addToLibrary.newPlaylistNameValidator(scope, playlistName),
-            coroutineScope = scope,
-            onNameValidated = { validatedPlaylistName ->
-                showPlaylistOptionsStep(validatedPlaylistName, uris)
-            })
+            namingState = ValidatedNamingState(
+                validator = addToLibrary.newPlaylistNameValidator(scope, playlistName),
+                coroutineScope = scope,
+                onNameValidated = { validatedName ->
+                    showPlaylistOptionsStep(validatedName, uris)
+                }),
+            onDismissRequest = ::hideDialog,
+            onBackClick = { showAddIndividuallyOrAsPlaylistQueryStep(uris) })
     }
 
     private fun showPlaylistOptionsStep(
         playlistName: String,
         uris: List<Uri>
     ) {
-        dialogStep = AddLocalFilesDialogStep.PlaylistOptions(
-            onDismissRequest = ::onDialogDismissRequest,
+        dialogState = AddButtonDialogState.PlaylistOptions(
+            onDismissRequest = ::hideDialog,
             onBackClick = {
                 showNamePlaylistStep(uris,
                     cameFromPlaylistOrTracksQuery = false,
                     playlistName = playlistName)
             }, trackUris = uris,
             onFinish = { shuffle, newTracks ->
-                onDialogDismissRequest()
+                hideDialog()
                 scope.launch {
                     addToLibrary.addPlaylist(playlistName, shuffle, newTracks)
                 }
             })
     }
+
 }
 
-/** A state holder for a 'new preset dialog'. [NewPresetDialogState]
- * implements [NamingState], and can therefore be used as the state
- * parameter for a [NamingDialog]. The property [onDismissRequest]
- * should be used for the same named [NamingDialog] parameter.*/
-class NewPresetDialogState(
-    namingState: ValidatedNamingState,
-    val onDismissRequest: () -> Unit
-): NamingState by namingState
-
 /**
- * A [ViewModel] that contains state and callbacks for a button to add presets.
+ * A button to add local files or presets, with state provided by
+ * an instance of [AddButtonViewModel].
  *
- * The method [onClick] should be used as the onClick callback for the
- * button being used to add presets. If the property [newPresetDialogState]
- * is not null, then its [NewPresetDialogState]'s onDismissRequest and
- * namingState properties should be used as the onDismissRequest and state
- * parameters, respectively, for a shown [NamingDialog].
- */
-@HiltViewModel class AddPresetButtonViewModel(
-    private val presetDao: PresetDao,
-    private val messageHandler: MessageHandler,
-    private val activePresetState: ActivePresetState,
-    playlistDao: PlaylistDao,
-    coroutineScope: CoroutineScope?,
-) : ViewModel() {
-
-    @Inject constructor(
-        presetDao: PresetDao,
-        messageHandler: MessageHandler,
-        activePresetState: ActivePresetState,
-        playlistDao: PlaylistDao,
-    ) : this(presetDao, messageHandler, activePresetState, playlistDao, null)
-
-    private val scope = coroutineScope ?: viewModelScope
-
-    var newPresetDialogState by mutableStateOf<NewPresetDialogState?>(null)
-        private set
-
-    private val noPlaylistsAreActive by playlistDao
-        .getNoPlaylistsAreActive()
-        .collectAsState(true, scope)
-
-    fun onClick() { when {
-        noPlaylistsAreActive -> messageHandler.postMessage(
-            R.string.preset_cannot_be_empty_warning_message)
-        else -> newPresetDialogState = NewPresetDialogState(
-            namingState = ValidatedNamingState(
-                validator = newPresetNameValidator(presetDao, scope),
-                coroutineScope = scope,
-                onNameValidated = { validatedName ->
-                    newPresetDialogState = null
-                    presetDao.savePreset(validatedName)
-                    activePresetState.setName(validatedName)
-                }),
-            onDismissRequest = { newPresetDialogState = null })
-    }}
-}
-
-/** An enum whose values describe the entities that can be added by the [AddButton]. */
-enum class AddButtonTarget { Playlist, Preset }
-
-/**
- * A button to add local files or presets, with state provided by instances
- * of [AddPlaylistButtonViewModel] and [AddPresetButtonViewModel].
- *
- * @param target The [AddButtonTarget] that should be added when the button is clicked
  * @param backgroundColor The color to use for the button's background
  * @param modifier The [Modifier] to use for the button
  */
 @Composable fun AddButton(
-    target: AddButtonTarget,
     backgroundColor: Color,
     modifier: Modifier = Modifier,
 ) {
-    val addPlaylistViewModel: AddPlaylistButtonViewModel = viewModel()
-    val addPresetViewModel: AddPresetButtonViewModel = viewModel()
+    val viewModel: AddButtonViewModel = viewModel()
 
     FloatingActionButton(
-        onClick = { when(target) {
-            AddButtonTarget.Playlist -> addPlaylistViewModel.onClick()
-            AddButtonTarget.Preset ->   addPresetViewModel.onClick()
-        }},
+        onClick = viewModel::onClick,
         modifier = modifier,
         backgroundColor = backgroundColor,
         elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
     ) {
         Icon(imageVector = Icons.Default.Add,
-             contentDescription = stringResource(when(target) {
-                    AddButtonTarget.Playlist -> R.string.add_local_files_button_description
-                    AddButtonTarget.Preset ->   R.string.add_preset_button_description
-                }),
-             tint = MaterialTheme.colors.onPrimary)
+             contentDescription = viewModel.onClickContentDescriptionResId?.let {
+                 stringResource(it)
+             }, tint = MaterialTheme.colors.onPrimary)
     }
 
-    addPlaylistViewModel.dialogStep?.let { AddLocalFilesDialog(it) }
-
-    addPresetViewModel.newPresetDialogState?.let {
-        NamingDialog(
-            onDismissRequest = it.onDismissRequest,
-            state = it,
-            title = stringResource(R.string.create_new_preset_dialog_title))
-    }
+    viewModel.dialogState?.let { AddButtonDialogShower(it) }
 }
