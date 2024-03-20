@@ -5,21 +5,28 @@ package com.cliffracertech.soundaura
 
 import android.content.Context
 import androidx.core.net.toUri
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.cliffracertech.soundaura.addbutton.AddLocalFilesDialogStep
-import com.cliffracertech.soundaura.addbutton.AddPlaylistButtonViewModel
+import com.cliffracertech.soundaura.addbutton.AddButtonDialogState
+import com.cliffracertech.soundaura.addbutton.AddButtonViewModel
 import com.cliffracertech.soundaura.addbutton.getDisplayName
 import com.cliffracertech.soundaura.library.Playlist
+import com.cliffracertech.soundaura.model.ActivePresetState
 import com.cliffracertech.soundaura.model.AddToLibraryUseCase
 import com.cliffracertech.soundaura.model.MessageHandler
+import com.cliffracertech.soundaura.model.NavigationState
+import com.cliffracertech.soundaura.model.ReadModifyPresetsUseCase
 import com.cliffracertech.soundaura.model.TestPermissionHandler
+import com.cliffracertech.soundaura.model.UriPermissionHandler
 import com.cliffracertech.soundaura.model.Validator
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.model.database.SoundAuraDatabase
 import com.cliffracertech.soundaura.model.database.Track
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.*
@@ -29,22 +36,37 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class AddPlaylistButtonViewModelTests {
-    private val context = ApplicationProvider.getApplicationContext<Context>()
-    private val permissionHandler = TestPermissionHandler()
-    private val coroutineScope = TestCoroutineScope()
-    private val messageHandler = MessageHandler()
-
-    private lateinit var instance: AddPlaylistButtonViewModel
+class AddButtonViewModelTests {
+    private lateinit var context: Context
+    private lateinit var permissionHandler: UriPermissionHandler
+    private lateinit var coroutineScope: CoroutineScope
+    private lateinit var navigationState: NavigationState
     private lateinit var db: SoundAuraDatabase
     private lateinit var playlistDao: PlaylistDao
+    private lateinit var instance: AddButtonViewModel
 
     @Before fun init() {
+        context = ApplicationProvider.getApplicationContext()
+        permissionHandler = TestPermissionHandler()
+        coroutineScope = TestCoroutineScope()
+        navigationState = NavigationState()
         db = Room.inMemoryDatabaseBuilder(context, SoundAuraDatabase::class.java).build()
         playlistDao = db.playlistDao()
-        val useCase = AddToLibraryUseCase(permissionHandler, messageHandler, playlistDao)
-        instance = AddPlaylistButtonViewModel(
-            context, useCase, coroutineScope)
+
+        val dataStore = PreferenceDataStoreFactory.create(scope = coroutineScope) {
+            context.preferencesDataStoreFile("testDatastore")
+        }
+        val messageHandler = MessageHandler()
+        val addToLibraryUseCase = AddToLibraryUseCase(
+            permissionHandler, messageHandler, playlistDao)
+        
+        val activePresetState = ActivePresetState(dataStore, db.presetDao())
+        val readModifyPresetsUseCase = ReadModifyPresetsUseCase(
+            messageHandler, activePresetState, db.presetDao(), playlistDao)
+        
+        instance = AddButtonViewModel(
+            context, coroutineScope, navigationState,
+            readModifyPresetsUseCase, addToLibraryUseCase)
     }
 
     @After fun clean_up() {
@@ -56,26 +78,26 @@ class AddPlaylistButtonViewModelTests {
     private suspend fun PlaylistDao.getPlaylistUris(id: Long) = getPlaylistTracks(id).map(Track::uri)
     private val testTracks = testUris.map(::Track)
 
-    private val selectingFilesStep get() = instance.dialogStep as AddLocalFilesDialogStep.SelectingFiles
+    private val selectingFilesStep get() = instance.dialogState as AddButtonDialogState.SelectingFiles
     private val addIndividuallyOrAsPlaylistStep get() =
-        instance.dialogStep as AddLocalFilesDialogStep.AddIndividuallyOrAsPlaylistQuery
-    private val nameTracksStep get() = instance.dialogStep as AddLocalFilesDialogStep.NameTracks
-    private val namePlaylistStep get() = instance.dialogStep as AddLocalFilesDialogStep.NamePlaylist
-    private val playlistOptionsStep get() = instance.dialogStep as AddLocalFilesDialogStep.PlaylistOptions
+        instance.dialogState as AddButtonDialogState.AddIndividuallyOrAsPlaylistQuery
+    private val nameTracksStep get() = instance.dialogState as AddButtonDialogState.NameTracks
+    private val namePlaylistStep get() = instance.dialogState as AddButtonDialogState.NamePlaylist
+    private val playlistOptionsStep get() = instance.dialogState as AddButtonDialogState.PlaylistOptions
 
-    private val AddLocalFilesDialogStep.buttonTexts get() =
-        buttons.map(AddLocalFilesDialogStep.ButtonInfo::textResId)
-    private val AddLocalFilesDialogStep.cancelButton get() =
+    private val AddButtonDialogState.buttonTexts get() =
+        buttons.map(AddButtonDialogState.ButtonInfo::textResId)
+    private val AddButtonDialogState.cancelButton get() =
         buttons.find { it.textResId == R.string.cancel }!!
-    private val AddLocalFilesDialogStep.backButton get() =
+    private val AddButtonDialogState.backButton get() =
         buttons.find { it.textResId == R.string.back }!!
-    private val AddLocalFilesDialogStep.nextButton get() =
+    private val AddButtonDialogState.nextButton get() =
         buttons.find { it.textResId == R.string.next }!!
-    private val AddLocalFilesDialogStep.finishButton get() =
+    private val AddButtonDialogState.finishButton get() =
         buttons.find { it.textResId == R.string.finish }!!
-    private val AddLocalFilesDialogStep.AddIndividuallyOrAsPlaylistQuery.addIndividuallyButton get() =
+    private val AddButtonDialogState.AddIndividuallyOrAsPlaylistQuery.addIndividuallyButton get() =
         buttons.find { it.textResId == R.string.add_local_files_individually_option }!!
-    private val AddLocalFilesDialogStep.AddIndividuallyOrAsPlaylistQuery.addAsPlaylistButton get() =
+    private val AddButtonDialogState.AddIndividuallyOrAsPlaylistQuery.addAsPlaylistButton get() =
         buttons.find { it.textResId == R.string.add_local_files_as_playlist_option }!!
 
     private fun goto_add_individually_or_as_playlist_step() {
@@ -97,26 +119,26 @@ class AddPlaylistButtonViewModelTests {
     private suspend fun goto_playlist_options_step() {
         goto_name_playlist_step()
         namePlaylistStep.nextButton.onClick()
-        waitUntil { instance.dialogStep is AddLocalFilesDialogStep.PlaylistOptions }
+        waitUntil { instance.dialogState is AddButtonDialogState.PlaylistOptions }
     }
 
     @Test fun onClick_opens_file_selector() {
-        assertThat(instance.dialogStep).isNull()
+        assertThat(instance.dialogState).isNull()
         instance.onClick()
-        assertThat(instance.dialogStep).isInstanceOf(AddLocalFilesDialogStep.SelectingFiles::class)
+        assertThat(instance.dialogState).isInstanceOf(AddButtonDialogState.SelectingFiles::class)
         assertThat(selectingFilesStep.buttonTexts).isEmpty()
     }
 
     @Test fun file_selector_back_navigation() {
         instance.onClick()
         selectingFilesStep.onDismissRequest()
-        assertThat(instance.dialogStep).isNull()
+        assertThat(instance.dialogState).isNull()
     }
 
     @Test fun selecting_single_file_skips_query() {
         goto_name_tracks_step_with_one_file()
-        assertThat(instance.dialogStep).isInstanceOf(AddLocalFilesDialogStep.NameTracks::class)
-        assertThat(instance.dialogStep!!.wasNavigatedForwardTo).isTrue()
+        assertThat(instance.dialogState).isInstanceOf(AddButtonDialogState.NameTracks::class)
+        assertThat(instance.dialogState!!.wasNavigatedForwardTo).isTrue()
         assertThat(nameTracksStep.buttonTexts)
             .containsExactly(R.string.cancel, R.string.finish).inOrder()
     }
@@ -124,18 +146,18 @@ class AddPlaylistButtonViewModelTests {
     @Test fun naming_single_track_back_navigation() {
         goto_name_tracks_step_with_one_file()
         nameTracksStep.cancelButton.onClick()
-        assertThat(instance.dialogStep).isNull()
+        assertThat(instance.dialogState).isNull()
 
         goto_name_tracks_step_with_one_file()
         nameTracksStep.onDismissRequest()
-        assertThat(instance.dialogStep).isNull()
+        assertThat(instance.dialogState).isNull()
     }
 
     @Test fun selecting_multiple_files_goes_to_query() {
         goto_add_individually_or_as_playlist_step()
-        assertThat(instance.dialogStep).isInstanceOf(
-            AddLocalFilesDialogStep.AddIndividuallyOrAsPlaylistQuery::class)
-        assertThat(instance.dialogStep!!.wasNavigatedForwardTo).isFalse()
+        assertThat(instance.dialogState).isInstanceOf(
+            AddButtonDialogState.AddIndividuallyOrAsPlaylistQuery::class)
+        assertThat(instance.dialogState!!.wasNavigatedForwardTo).isFalse()
         assertThat(addIndividuallyOrAsPlaylistStep.buttonTexts)
             .containsExactly(
                 R.string.cancel,
@@ -147,17 +169,17 @@ class AddPlaylistButtonViewModelTests {
     @Test fun query_back_navigation() {
         goto_add_individually_or_as_playlist_step()
         addIndividuallyOrAsPlaylistStep.onDismissRequest()
-        assertThat(instance.dialogStep).isNull()
+        assertThat(instance.dialogState).isNull()
 
         goto_add_individually_or_as_playlist_step()
         addIndividuallyOrAsPlaylistStep.cancelButton.onClick()
-        assertThat(instance.dialogStep).isNull()
+        assertThat(instance.dialogState).isNull()
     }
 
     @Test fun clicking_add_individually_goes_to_name_tracks_step() {
         goto_name_tracks_step_with_multiple_files()
-        assertThat(instance.dialogStep).isInstanceOf(AddLocalFilesDialogStep.NameTracks::class)
-        assertThat(instance.dialogStep!!.wasNavigatedForwardTo).isTrue()
+        assertThat(instance.dialogState).isInstanceOf(AddButtonDialogState.NameTracks::class)
+        assertThat(instance.dialogState!!.wasNavigatedForwardTo).isTrue()
         assertThat(nameTracksStep.buttonTexts)
             .containsExactly(R.string.back, R.string.finish).inOrder()
     }
@@ -165,19 +187,19 @@ class AddPlaylistButtonViewModelTests {
     @Test fun name_tracks_back_navigation() {
         goto_name_tracks_step_with_multiple_files()
         nameTracksStep.onDismissRequest()
-        assertThat(instance.dialogStep).isNull()
+        assertThat(instance.dialogState).isNull()
 
         goto_name_tracks_step_with_multiple_files()
         nameTracksStep.backButton.onClick()
-        assertThat(instance.dialogStep).isInstanceOf(
-            AddLocalFilesDialogStep.AddIndividuallyOrAsPlaylistQuery::class)
-        assertThat(instance.dialogStep!!.wasNavigatedForwardTo).isFalse()
+        assertThat(instance.dialogState).isInstanceOf(
+            AddButtonDialogState.AddIndividuallyOrAsPlaylistQuery::class)
+        assertThat(instance.dialogState!!.wasNavigatedForwardTo).isFalse()
     }
 
     @Test fun clicking_add_as_playlist_goes_to_name_playlist_step() {
         goto_name_playlist_step()
-        assertThat(instance.dialogStep).isInstanceOf(AddLocalFilesDialogStep.NamePlaylist::class)
-        assertThat(instance.dialogStep!!.wasNavigatedForwardTo).isTrue()
+        assertThat(instance.dialogState).isInstanceOf(AddButtonDialogState.NamePlaylist::class)
+        assertThat(instance.dialogState!!.wasNavigatedForwardTo).isTrue()
         assertThat(namePlaylistStep.buttonTexts)
             .containsExactly(R.string.back, R.string.next).inOrder()
     }
@@ -185,19 +207,19 @@ class AddPlaylistButtonViewModelTests {
     @Test fun name_playlist_back_navigation() {
         goto_name_playlist_step()
         namePlaylistStep.onDismissRequest()
-        assertThat(instance.dialogStep).isNull()
+        assertThat(instance.dialogState).isNull()
 
         goto_name_playlist_step()
         namePlaylistStep.backButton.onClick()
-        assertThat(instance.dialogStep).isInstanceOf(
-            AddLocalFilesDialogStep.AddIndividuallyOrAsPlaylistQuery::class)
-        assertThat(instance.dialogStep!!.wasNavigatedForwardTo).isFalse()
+        assertThat(instance.dialogState).isInstanceOf(
+            AddButtonDialogState.AddIndividuallyOrAsPlaylistQuery::class)
+        assertThat(instance.dialogState!!.wasNavigatedForwardTo).isFalse()
     }
 
     @Test fun confirming_playlist_name_goes_to_playlist_options_step() = runTest {
         goto_playlist_options_step()
-        assertThat(instance.dialogStep).isInstanceOf(AddLocalFilesDialogStep.PlaylistOptions::class)
-        assertThat(instance.dialogStep!!.wasNavigatedForwardTo).isTrue()
+        assertThat(instance.dialogState).isInstanceOf(AddButtonDialogState.PlaylistOptions::class)
+        assertThat(instance.dialogState!!.wasNavigatedForwardTo).isTrue()
         assertThat(playlistOptionsStep.buttonTexts)
             .containsExactly(R.string.back, R.string.finish).inOrder()
     }
@@ -205,13 +227,13 @@ class AddPlaylistButtonViewModelTests {
     @Test fun playlist_options_back_navigation() = runTest {
         goto_playlist_options_step()
         playlistOptionsStep.onDismissRequest()
-        assertThat(instance.dialogStep).isNull()
+        assertThat(instance.dialogState).isNull()
 
         goto_playlist_options_step()
         playlistOptionsStep.backButton.onClick()
-        assertThat(instance.dialogStep).isInstanceOf(
-            AddLocalFilesDialogStep.NamePlaylist::class)
-        assertThat(instance.dialogStep!!.wasNavigatedForwardTo).isFalse()
+        assertThat(instance.dialogState).isInstanceOf(
+            AddButtonDialogState.NamePlaylist::class)
+        assertThat(instance.dialogState!!.wasNavigatedForwardTo).isFalse()
     }
 
     @Test fun validating_track_names() = runTest {
@@ -284,8 +306,8 @@ class AddPlaylistButtonViewModelTests {
         val newTrack2Name = "new name"
         nameTracksStep.onNameChange(1, newTrack2Name)
         nameTracksStep.finishButton.onClick()
-        waitUntil { instance.dialogStep == null } // advanceUntilIdle doesn't work here for some reason
-        assertThat(instance.dialogStep).isNull()
+        waitUntil { instance.dialogState == null } // advanceUntilIdle doesn't work here for some reason
+        assertThat(instance.dialogState).isNull()
 
         advanceUntilIdle()
         val names = playlistDao.getPlaylistNames()
@@ -307,7 +329,7 @@ class AddPlaylistButtonViewModelTests {
         goto_playlist_options_step()
         playlistOptionsStep.finishButton.onClick()
         waitUntil { playlistDao.getPlaylistsSortedByOrderAdded().first().isNotEmpty() }
-        assertThat(instance.dialogStep).isNull()
+        assertThat(instance.dialogState).isNull()
 
         val name1 = testUris.first().getDisplayName(context) + " playlist"
         var playlists = playlistDao.getPlaylistsSortedByOrderAdded().first()
@@ -323,12 +345,12 @@ class AddPlaylistButtonViewModelTests {
         goto_name_playlist_step()
         namePlaylistStep.onNameChange(name2)
         namePlaylistStep.nextButton.onClick()
-        waitUntil { instance.dialogStep is AddLocalFilesDialogStep.PlaylistOptions }
+        waitUntil { instance.dialogState is AddButtonDialogState.PlaylistOptions }
         playlistOptionsStep.onShuffleSwitchClick()
         playlistOptionsStep.mutablePlaylist.moveTrack(1, 2)
         playlistOptionsStep.mutablePlaylist.moveTrack(0, 1)
         playlistOptionsStep.finishButton.onClick()
-        assertThat(instance.dialogStep).isNull()
+        assertThat(instance.dialogState).isNull()
 
         waitUntil { playlistDao.getPlaylistNames().size == 2 }
         playlists = playlistDao.getPlaylistsSortedByOrderAdded().first()
@@ -336,5 +358,17 @@ class AddPlaylistButtonViewModelTests {
         assertThat(playlistDao.getPlaylistShuffle(playlists[1].id)).isTrue()
         assertThat(playlistDao.getPlaylistUris(playlists[1].id))
             .containsExactly(testUris[2], testUris[0], testUris[1]).inOrder()
+    }
+
+    @Test fun onClick_does_not_open_add_preset_with_preset_selector_hidden() {
+        assertThat(instance.dialogState).isNull()
+        instance.onClick()
+        assertThat(instance.dialogState).isInstanceOf(AddButtonDialogState.SelectingFiles::class)
+    }
+
+    @Test fun onClick_does_not_open_dialog_with_no_active_playlists() {
+        navigationState.showingPresetSelector = true
+        instance.onClick()
+        assertThat(instance.dialogState).isNull()
     }
 }
