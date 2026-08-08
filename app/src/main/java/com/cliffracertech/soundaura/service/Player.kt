@@ -96,9 +96,7 @@ class Player(
         update(playlist, startImmediately)
     }
 
-    fun play() {
-        _player.play()
-    }
+    fun play() { _player.play() }
 
     fun pause() { _player.pause() }
 
