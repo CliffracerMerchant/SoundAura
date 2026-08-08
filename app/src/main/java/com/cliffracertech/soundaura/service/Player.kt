@@ -9,7 +9,9 @@ import android.net.Uri
 import android.util.Log
 import androidx.compose.ui.text.input.KeyboardType.Companion.Uri
 import androidx.media3.common.C.WAKE_MODE_LOCAL
+import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player.COMMAND_PREPARE
 import androidx.media3.common.Player.COMMAND_SET_REPEAT_MODE
 import androidx.media3.common.Player.COMMAND_SET_SHUFFLE_MODE
 import androidx.media3.common.Player.COMMAND_SET_VOLUME
@@ -82,6 +84,9 @@ class Player(
             .setAudioOffloadPreferences(audioOffloadPreferences)
             .build()
         _player.addListener(object: androidx.media3.common.Player.Listener {
+            override fun onPlaybackStateChanged(state: Int) {
+                logd("Player state: $state")
+            }
             override fun onPlayerError(error: PlaybackException) {
                 Log.e("", error.message ?: "")
                 val uri = _player.currentMediaItem?.localConfiguration?.uri
@@ -91,7 +96,9 @@ class Player(
         update(playlist, startImmediately)
     }
 
-    fun play() { _player.play() }
+    fun play() {
+        _player.play()
+    }
 
     fun pause() { _player.pause() }
 
@@ -108,7 +115,7 @@ class Player(
      */
     fun update(playlist: ActivePlaylist, startImmediately: Boolean = false) {
         val availableCommands = _player.availableCommands
-        if (availableCommands.contains(COMMAND_SET_VOLUME)) {
+        if (COMMAND_SET_VOLUME in availableCommands) {
             _player.volume = playlist.volume
             val booster = volumeBooster
             if (playlist.volumeBoostDb == 0)
@@ -121,14 +128,21 @@ class Player(
             }
         } else logd("ExoPlayer instance could not set volume")
 
-        if (availableCommands.contains(COMMAND_SET_REPEAT_MODE))
+        if (COMMAND_SET_REPEAT_MODE in availableCommands)
             _player.repeatMode = if (playlist.tracks.size < 2) REPEAT_MODE_ONE
                                  else                          REPEAT_MODE_ALL
         else logd("ExoPlayer instance could not set repeat mode")
 
-        if (availableCommands.contains(COMMAND_SET_SHUFFLE_MODE))
+        if (COMMAND_SET_SHUFFLE_MODE in availableCommands)
             _player.shuffleModeEnabled = playlist.shuffle
         else logd("ExoPlayer instance could not set shuffle mode")
+
+        _player.clearMediaItems()
+        _player.addMediaItems(playlist.tracks.map(MediaItem::fromUri))
+
+        if(COMMAND_PREPARE in availableCommands)
+            _player.prepare()
+        else logd("ExoPlayer instance could not prepare for playback")
 
         if (startImmediately)
             _player.play()
