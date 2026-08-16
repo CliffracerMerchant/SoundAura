@@ -84,9 +84,6 @@ class Player(
             .setAudioOffloadPreferences(audioOffloadPreferences)
             .build()
         _player.addListener(object: androidx.media3.common.Player.Listener {
-            override fun onPlaybackStateChanged(state: Int) {
-                logd("Player state: $state")
-            }
             override fun onPlayerError(error: PlaybackException) {
                 Log.e("", error.message ?: "")
                 val uri = _player.currentMediaItem?.localConfiguration?.uri

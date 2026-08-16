@@ -30,8 +30,6 @@ import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.preferenceFlow
 import com.cliffracertech.soundaura.repeatWhenStarted
-import com.cliffracertech.soundaura.service.PlayerService.Binder
-import com.cliffracertech.soundaura.service.PlayerService.Companion.PlaybackChangeListener
 import com.cliffracertech.soundaura.service.PlayerService.Companion.addPlaybackChangeListener
 import com.cliffracertech.soundaura.settings.PrefKeys
 import com.cliffracertech.soundaura.settings.dataStore
@@ -256,14 +254,14 @@ class PlayerService: LifecycleService() {
             unpauseLocks.clear()
         playbackState = newState
         updateNotification()
-        if (newState != STATE_STOPPED) when {
-            isPlaying ->          playerMap.play()
-            stopInsteadOfPause -> playerMap.stop()
-            else ->               playerMap.pause()
-        } else {
+        if (newState == STATE_STOPPED) {
             if (!playInBackground && hasAudioFocus)
                 abandonAudioFocus()
             stopSelf()
+        } else when {
+            isPlaying ->          playerMap.play()
+            stopInsteadOfPause -> playerMap.stop()
+            else ->               playerMap.pause()
         }
     }
 
@@ -371,8 +369,8 @@ class PlayerService: LifecycleService() {
      * toggled with the method [toggleIsPlaying]. The [Instant] at which
      * playback will automatically be stopped, or null if there isn't an auto-
      * stop time, can be read via the property [stopTime], and set using
-     * [clearStopTimer]. The method [setPlaylistVolume] should be called when
-     * the volume of an already active playlist changes.
+     * [setStopTimer] or [clearStopTimer]. The method [setPlaylistVolume]
+     * should be called when the volume of an already active playlist changes.
      */
     inner class Binder {
         val isPlaying get() = this@PlayerService.isPlaying
