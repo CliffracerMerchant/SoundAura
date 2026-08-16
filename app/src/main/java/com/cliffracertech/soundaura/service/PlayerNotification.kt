@@ -9,6 +9,7 @@ import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.app.Service.STOP_FOREGROUND_REMOVE
 import android.content.Context.NOTIFICATION_SERVICE
 import android.content.Intent
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
 import android.os.Build
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.MediaMetadataCompat.*
@@ -208,7 +209,10 @@ class PlayerNotification(
                 })
             }
         notificationBuilder.setStyle(notificationStyle)
-        service.startForeground(notificationId, updatedNotification())
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+            service.startForeground(notificationId, updatedNotification(),
+                FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+        else service.startForeground(notificationId, updatedNotification())
     }
 
     fun remove() {
