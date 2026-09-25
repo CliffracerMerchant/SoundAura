@@ -3,6 +3,7 @@
  * the project's root directory to see the full license. */
 package com.cliffracertech.soundaura
 
+import android.app.Application
 import android.content.Context
 import android.util.Log
 import androidx.datastore.core.DataStore
@@ -11,8 +12,10 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.test.runner.AndroidJUnitRunner
 import com.cliffracertech.soundaura.model.database.SoundAuraDatabase
 import com.google.common.truth.Subject
+import dagger.hilt.android.testing.HiltTestApplication
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.TestScope
@@ -39,6 +42,12 @@ suspend fun waitUntil(
     }
 }
 
+class TestRunner : AndroidJUnitRunner() {
+    override fun newApplication(cl: ClassLoader?, name: String?, context: Context?): Application {
+        return super.newApplication(cl, HiltTestApplication::class.java.name, context)
+    }
+}
+
 fun <T: Any> Subject.isInstanceOf(clazz: KClass<T>) = isInstanceOf(clazz.java)
 
 /** Create a [TestScope] instance, accessible via the property [scope], for
@@ -46,7 +55,7 @@ fun <T: Any> Subject.isInstanceOf(clazz: KClass<T>) = isInstanceOf(clazz.java)
  * [CoroutineDispatcher] to override the [Dispatcher] object defaults. As long
  * as the code under test specifies all dispatchers by referencing the
  * [Dispatcher] properties (e.g. [Dispatcher.Main], all code under test will be
- * ran using the provided [dispatcher]. */
+ * run using the provided [dispatcher]. */
 class TestScopeRule(
     val dispatcher: CoroutineDispatcher = UnconfinedTestDispatcher()
 ): TestWatcher() {
