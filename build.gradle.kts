@@ -7,10 +7,9 @@ buildscript {
 }
 
 plugins {
-    id("com.android.application") version "8.13.0" apply false
-    id("org.jetbrains.kotlin.android") version "2.2.20" apply false
-    id("org.jetbrains.kotlin.plugin.compose") version "2.2.20" apply false
-    id("com.google.devtools.ksp") version "2.2.20-2.0.4" apply false
-    id("com.google.dagger.hilt.android") version "2.57.2" apply false
-    id("com.mikepenz.aboutlibraries.plugin.android") version "13.1.0" apply false
+    id("com.android.application") version "9.3.1" apply false
+    id("org.jetbrains.kotlin.plugin.compose") version "2.4.10" apply false
+    id("com.google.devtools.ksp") version "2.3.9" apply false
+    id("com.google.dagger.hilt.android") version "2.60.1" apply false
+    id("com.mikepenz.aboutlibraries.plugin.android") version "15.0.4" apply false
 }

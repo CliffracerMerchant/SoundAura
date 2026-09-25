@@ -2,9 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
-    id("org.jetbrains.kotlin.kapt")
     id("dagger.hilt.android.plugin")
     id("com.mikepenz.aboutlibraries.plugin.android")
     id("com.google.devtools.ksp")
@@ -94,7 +92,7 @@ dependencies {
     implementation("com.google.accompanist:accompanist-insets-ui:0.36.0")
     implementation("androidx.media:media:1.7.1")
     implementation("androidx.datastore:datastore-preferences:1.1.7")
-    implementation("com.google.dagger:hilt-android:2.57.2")
+    implementation("com.google.dagger:hilt-android:2.60.1")
     implementation("com.mikepenz:aboutlibraries-core:13.1.0")
     implementation("com.mikepenz:aboutlibraries-compose:13.1.0")
     implementation("androidx.compose.material3:material3-window-size-class:1.4.0")
@@ -104,7 +102,7 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 
     ksp("androidx.room:room-compiler:2.8.3")
-    kapt("com.google.dagger:hilt-compiler:2.57.2")
+    ksp("com.google.dagger:hilt-compiler:2.60.1")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("androidx.test.ext:truth:1.7.0")
@@ -115,6 +113,6 @@ dependencies {
     androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     androidTestImplementation("androidx.room:room-testing:2.8.3")
     androidTestImplementation("androidx.test:rules:1.7.0")
-    androidTestImplementation("com.google.dagger:hilt-android-testing:2.57.2")
-    kaptAndroidTest("com.google.dagger:hilt-android-compiler:2.57.2")
+    androidTestImplementation("com.google.dagger:hilt-android-testing:2.60.1")
+    kspAndroidTest("com.google.dagger:hilt-android-compiler:2.60.1")
 }
