@@ -106,6 +106,7 @@ class PlayerService: LifecycleService() {
 
     private var playInBackground = false
         set(value) {
+            if (field == value) return
             field = value
             notification.useMediaSession = !value
             audioManager.ignoreAudioFocus = value

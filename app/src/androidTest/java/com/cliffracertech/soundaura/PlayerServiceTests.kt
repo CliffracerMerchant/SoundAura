@@ -8,27 +8,45 @@ import android.content.Intent
 import android.support.v4.media.session.PlaybackStateCompat
 import androidx.core.net.toUri
 import androidx.test.core.app.ApplicationProvider
-import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.cliffracertech.soundaura.model.database.DatabaseModule
+import com.cliffracertech.soundaura.model.database.PlaylistDao
+import com.cliffracertech.soundaura.model.database.PresetDao
+import com.cliffracertech.soundaura.model.database.SoundAuraDatabase
 import com.cliffracertech.soundaura.model.database.Track
+import com.cliffracertech.soundaura.service.AudioFocusManager
+import com.cliffracertech.soundaura.service.AudioFocusManagerModule
 import com.cliffracertech.soundaura.service.PlayerService
+import com.cliffracertech.soundaura.service.TestAudioFocusManager
 import com.google.common.truth.Truth.assertThat
+import dagger.hilt.android.testing.BindValue
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
+import dagger.hilt.android.testing.UninstallModules
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
 
-@RunWith(AndroidJUnit4::class)
+@UninstallModules(DatabaseModule::class, AudioFocusManagerModule::class)
+@HiltAndroidTest
 class PlayerServiceTests {
     private val context = ApplicationProvider.getApplicationContext<Context>()
+    @get:Rule val hiltRule = HiltAndroidRule(this)
     @get:Rule val dbTestRule = SoundAuraDbTestRule(context)
 
-    private val dao get() = dbTestRule.db.playlistDao()
+    @BindValue lateinit var audioManager: AudioFocusManager
+    @BindValue lateinit var dao: PlaylistDao
+    @BindValue lateinit var db: SoundAuraDatabase // Not used, but must be declared because of the Hilt DatabaseModule uninstallation
+    @BindValue lateinit var presetDao: PresetDao // Not used, but must be declared because of the Hilt DatabaseModule uninstallation
+
     private val testPlaylistUri = "test playlist 1"
 
     @Before fun init() {
+        audioManager = TestAudioFocusManager()
+        dao = dbTestRule.db.playlistDao()
         // This test track is added so that PlayerService doesn't prevent
         // changes to STATE_PLAYING due to there not being any active playlists.
         runTest {
@@ -37,7 +55,9 @@ class PlayerServiceTests {
                 shuffle = false,
                 tracks = listOf(Track(testPlaylistUri.toUri())))
             dao.toggleIsActive(id)
+            waitUntil { dao.getActivePlaylistsAndTracks().first().isNotEmpty() }
         }
+        hiltRule.inject()
     }
 
     @After fun cleanup() {
@@ -73,9 +93,8 @@ class PlayerServiceTests {
     }
 
     @Test fun stop_intent_while_playing() = runTest {
-        waitUntil { !dao.getNoPlaylistsAreActive().first() }
         context.startService(PlayerService.playIntent(context))
-        waitUntil { PlayerService.playbackState != PlaybackStateCompat.STATE_STOPPED }
+        waitUntil { PlayerService.playbackState == PlaybackStateCompat.STATE_PLAYING }
         context.startService(PlayerService.stopIntent(context))
         waitUntil { PlayerService.playbackState != PlaybackStateCompat.STATE_PLAYING }
         assertThat(PlayerService.playbackState).isEqualTo(PlaybackStateCompat.STATE_STOPPED)
@@ -113,11 +132,15 @@ class PlayerServiceTests {
         val binder = PlayerService.binder
         assertThat(binder?.isPlaying).isFalse()
 
-        binder?.toggleIsPlaying()
-        waitUntil { PlayerService.playbackState != PlaybackStateCompat.STATE_STOPPED }
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            binder?.toggleIsPlaying()
+        }
+        waitUntil { PlayerService.playbackState == PlaybackStateCompat.STATE_PLAYING }
         assertThat(binder?.isPlaying).isTrue()
 
-        binder?.toggleIsPlaying()
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            binder?.toggleIsPlaying()
+        }
         waitUntil { PlayerService.playbackState != PlaybackStateCompat.STATE_PLAYING }
         assertThat(binder?.isPlaying).isFalse()
     }
@@ -125,17 +148,14 @@ class PlayerServiceTests {
     @Test fun service_prevents_playing_with_no_active_playlists() = runTest {
         context.startService(Intent(context, PlayerService::class.java))
         waitUntil { PlayerService.binder != null }
-        waitUntil { PlayerService.playbackState != PlaybackStateCompat.STATE_STOPPED } // should time out
-        assertThat(PlayerService.playbackState).isEqualTo(PlaybackStateCompat.STATE_STOPPED)
+        waitUntil { PlayerService.playbackState != PlaybackStateCompat.STATE_PAUSED } // should time out
+        assertThat(PlayerService.playbackState).isEqualTo(PlaybackStateCompat.STATE_PAUSED)
 
         val id = dao.getPlaylistsSortedByNameAsc().first().first().id
         dao.toggleIsActive(id)
         waitUntil { !dao.getNoPlaylistsAreActive().first() }
 
         context.startService(PlayerService.playIntent(context))
-        waitUntil { PlayerService.playbackState == PlaybackStateCompat.STATE_PLAYING } // should time out
-        assertThat(PlayerService.playbackState).isEqualTo(PlaybackStateCompat.STATE_PAUSED)
-
         waitUntil { PlayerService.playbackState == PlaybackStateCompat.STATE_PLAYING } // should time out
         assertThat(PlayerService.playbackState).isEqualTo(PlaybackStateCompat.STATE_PAUSED)
     }
