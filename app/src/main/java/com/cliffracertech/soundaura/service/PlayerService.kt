@@ -5,8 +5,6 @@ package com.cliffracertech.soundaura.service
 
 import android.content.Context
 import android.content.Intent
-import android.media.AudioManager
-import android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED
 import android.net.Uri
 import android.support.v4.media.session.PlaybackStateCompat
 import android.support.v4.media.session.PlaybackStateCompat.STATE_PAUSED
@@ -20,17 +18,12 @@ import androidx.core.content.ContextCompat
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
-import androidx.media.AudioAttributesCompat
-import androidx.media.AudioAttributesCompat.CONTENT_TYPE_UNKNOWN
-import androidx.media.AudioAttributesCompat.USAGE_MEDIA
-import androidx.media.AudioFocusRequestCompat
-import androidx.media.AudioManagerCompat
-import androidx.media.AudioManagerCompat.AUDIOFOCUS_GAIN
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.model.database.PlaylistDao
 import com.cliffracertech.soundaura.preferenceFlow
 import com.cliffracertech.soundaura.repeatWhenStarted
 import com.cliffracertech.soundaura.service.PlayerService.Companion.addPlaybackChangeListener
+import com.cliffracertech.soundaura.service.PlayerService.Companion.playbackState
 import com.cliffracertech.soundaura.settings.PrefKeys
 import com.cliffracertech.soundaura.settings.dataStore
 import dagger.hilt.android.AndroidEntryPoint
@@ -45,6 +38,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * A service to play the set of playlists marked as active in the app's database.
@@ -95,7 +89,7 @@ class PlayerService: LifecycleService() {
             unpauseLocks, ::autoPauseIf, ::setPlaybackState),
         PhoneStateAwarePlaybackModule(::autoPauseIf))
     @Inject lateinit var playlistDao: PlaylistDao
-    private lateinit var audioManager: AudioManager
+    @Inject lateinit var audioManager: AudioFocusManager
     private lateinit var notification: PlayerNotification
 
     private var autoStopJob: Job? = null
@@ -114,19 +108,11 @@ class PlayerService: LifecycleService() {
         set(value) {
             field = value
             notification.useMediaSession = !value
-            if (value) {
-                abandonAudioFocus()
-                unpauseLocks.remove(autoPauseAudioFocusLossKey)
-                hasAudioFocus = true
-            } else if (isPlaying)
-                hasAudioFocus = requestAudioFocus()
-        }
-
-    private var hasAudioFocus = false
-        set(hasFocus) {
-            if (field == hasFocus) return
-            field = hasFocus
-            autoPauseIf(!hasFocus, autoPauseAudioFocusLossKey)
+            audioManager.ignoreAudioFocus = value
+            if (value)
+                autoPauseIf(false, autoPauseAudioFocusLossKey)
+            else if (isPlaying)
+                autoPauseIf(audioManager.hasAudioFocus, autoPauseAudioFocusLossKey)
         }
 
     private val isPlaying get() = playbackState == STATE_PLAYING
@@ -140,7 +126,6 @@ class PlayerService: LifecycleService() {
 
     override fun onCreate() {
         super.onCreate()
-        audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         playbackState = STATE_PAUSED
 
         val playInBackgroundKey = booleanPreferencesKey(PrefKeys.playInBackground)
@@ -230,18 +215,18 @@ class PlayerService: LifecycleService() {
                 // understands why their, e.g., play button tap didn't do anything.
                 // If the service was moved directly from a stopped to playing
                 // state, then the PlayerSet might be empty because the first new
-                // value for TrackDao's activeTracks hasn't have been collected
-                // yet. The updatePlayers method will handle this edge case.
+                // value for TrackDao's activeTracks hasn't been collected yet.
+                // The updatePlayers method will handle this edge case.
                 showAutoPausePlaybackExplanation()
                 STATE_PAUSED
-            } state == STATE_PLAYING && !hasAudioFocus -> {
-                hasAudioFocus = requestAudioFocus()
-                if (hasAudioFocus) STATE_PLAYING
+            } state == STATE_PLAYING && !audioManager.hasAudioFocus -> {
+                val focusGranted = audioManager.requestAudioFocus()
+                if (focusGranted) STATE_PLAYING
                 else {
                     // autoPauseIf is not called directly here because it calls
-                    // setPlaybackState itself and we don't want to get stuck in
-                    // an infinite loop, but we do want playback to resume if
-                    // audio focus is later gained.
+                    // setPlaybackState itself, and we don't want to get stuck
+                    // in an infinite loop, but we do want playback to resume
+                    // playback if audio focus is later gained.
                     unpauseLocks.add(autoPauseAudioFocusLossKey)
                     STATE_PAUSED
                 }
@@ -255,8 +240,7 @@ class PlayerService: LifecycleService() {
         playbackState = newState
         updateNotification()
         if (newState == STATE_STOPPED) {
-            if (!playInBackground && hasAudioFocus)
-                abandonAudioFocus()
+            audioManager.abandonAudioFocus()
             stopSelf()
         } else when {
             isPlaying ->          playerMap.play()
@@ -275,7 +259,7 @@ class PlayerService: LifecycleService() {
             stopTime = Instant.ofEpochMilli(epochTimeMillis)
             val delayMillis = Instant.now().until(stopTime, ChronoUnit.MILLIS)
             autoStopJob = lifecycleScope.launch {
-                delay(delayMillis)
+                delay(delayMillis.milliseconds)
                 stopTime = null
                 autoStopJob = null
                 // updateNotification() is not needed because setPlaybackState will call it
@@ -340,26 +324,6 @@ class PlayerService: LifecycleService() {
                 setPlaybackState(STATE_PAUSED, clearUnpauseLocks = false)
         } else if (unpauseLocks.remove(key) && unpauseLocks.isEmpty())
             setPlaybackState(STATE_PLAYING, clearUnpauseLocks = false)
-    }
-
-
-    private val audioFocusRequest =
-        AudioFocusRequestCompat.Builder(AUDIOFOCUS_GAIN)
-            .setAudioAttributes(AudioAttributesCompat.Builder()
-                .setContentType(CONTENT_TYPE_UNKNOWN)
-                .setUsage(USAGE_MEDIA).build())
-            .setOnAudioFocusChangeListener { focusChange ->
-                hasAudioFocus = focusChange == AUDIOFOCUS_GAIN
-            }.build()
-
-    /** Request audio focus, and return whether the request was granted. */
-    private fun requestAudioFocus(): Boolean =
-        AudioManagerCompat.requestAudioFocus(
-            audioManager, audioFocusRequest
-        ) == AUDIOFOCUS_REQUEST_GRANTED
-
-    private fun abandonAudioFocus() {
-        AudioManagerCompat.abandonAudioFocusRequest(audioManager, audioFocusRequest)
     }
 
     /**
