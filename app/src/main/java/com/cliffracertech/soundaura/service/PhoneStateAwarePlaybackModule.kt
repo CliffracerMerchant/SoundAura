@@ -35,9 +35,8 @@ fun withClearCallingIdentity(block: () -> Unit) {
  * pointed to by the keys [PrefKeys.playInBackground] and [PrefKeys.autoPauseDuringCalls]
  * being true, automatically pause playback during a phone call and automatically
  * unpause when the call ends. This behavior only occurs when the playInBackground
- * preference is true because it assumes that the app will obey audio focus rules
- * if the playInBackground preference is false (and therefore lose audio focus
- * during phone calls
+ * preference is true, because it assumes that the app will otherwise obey audio
+ * focus rules, and that a call starting will cause the app to lose audio focus.
  */
 class PhoneStateAwarePlaybackModule(
     private val autoPauseIf: (condition: Boolean, key: String) -> Unit,
@@ -57,7 +56,7 @@ class PhoneStateAwarePlaybackModule(
         service.repeatWhenStarted {
             // We want setAutoPauseDuringCallEnabled(true) to be called only
             // if the preference is true AND playInBackground is true. If
-            // playInBackground is false, the phone will be paused anyways
+            // playInBackground is false, the phone will be paused anyway
             // due to the app losing audio focus during calls.
             autoPauseDuringCallsFlow
                 .combine(playInBackgroundFlow) { pauseDuringCalls, playInBackground ->
