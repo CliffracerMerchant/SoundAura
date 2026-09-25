@@ -28,13 +28,22 @@ import javax.inject.Singleton
  *
  * AudioFocusManager tracks the acquisition and loss of audio focus for use in
  * environments (e.g. Android) where audio focus is expected to be acquired to
- * play audio. Audio focus can be requested via [requestAudioFocus], abandoned
- * via [abandonAudioFocus],
+ * play audio. Audio focus can be requested via [requestAudioFocus] or
+ * abandoned via [abandonAudioFocus]. Audio focus can be temporarily ignored by
+ * setting the property [ignoreAudioFocus] to true or false.
+ *
+ * The value of [hasAudioFocus] is intended to reflect whether the app has been
+ * granted audio focus by the app environment (e.g. Android) when
+ * [ignoreAudioFocus] is false, but to always be true when [ignoreAudioFocus]
+ * is true. This allows audio players to always know whether they are allowed
+ * to play audio (i.e. when [hasAudioFocus] is true), regardless of whether it
+ * is because the system has granted audio focus, or because audio focus rules
+ * are being ignored.
  */
 abstract class AudioFocusManager {
     var hasAudioFocus = false
         protected set
-    var ignoringAudioFocus = false
+    var ignoreAudioFocus = false
         set(value) {
             field = value
             if (value) {
@@ -49,16 +58,27 @@ abstract class AudioFocusManager {
     abstract fun abandonAudioFocus()
 }
 
+/**
+ * A sample AudioFocusManager for use in testing. Audio focus requests will be:
+ *   - granted if [ignoreAudioFocus] is true
+ *   - granted if [ignoreAudioFocus] is false and [simulateSystemDenyingRequests] is false
+ *   - not granted if [ignoreAudioFocus] is false and [simulateSystemDenyingRequests] is true
+ */
 class TestAudioFocusManager(): AudioFocusManager() {
+    var simulateSystemDenyingRequests = false
+
     override fun requestAudioFocus(): Boolean {
-        hasAudioFocus = true
-        return true
+        val newValue = ignoreAudioFocus || !simulateSystemDenyingRequests
+        hasAudioFocus = newValue
+        return newValue
     }
+
     override fun abandonAudioFocus() {
         hasAudioFocus = false
     }
 }
 
+/** An implementation of [AudioFocusManager] for use in Android environments. */
 class AndroidAudioFocusManager @Inject constructor(
     @ApplicationContext context: Context
 ): AudioFocusManager() {
@@ -74,16 +94,15 @@ class AndroidAudioFocusManager @Inject constructor(
                 hasAudioFocus = focusChange == AUDIOFOCUS_GAIN
             }.build()
 
-    /** Request audio focus, and return whether the request was granted. */
     override fun requestAudioFocus() =
-        if (ignoringAudioFocus)
+        if (ignoreAudioFocus)
             true
         else AudioManagerCompat.requestAudioFocus(
                 androidAudioManager, audioFocusRequest
             ) == AUDIOFOCUS_REQUEST_GRANTED
 
     override fun abandonAudioFocus() {
-        if (ignoringAudioFocus)
+        if (ignoreAudioFocus)
             return
         AudioManagerCompat.abandonAudioFocusRequest(androidAudioManager, audioFocusRequest)
         hasAudioFocus = false
