@@ -20,7 +20,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
@@ -79,9 +78,7 @@ class TestAudioFocusManager(): AudioFocusManager() {
 }
 
 /** An implementation of [AudioFocusManager] for use in Android environments. */
-class AndroidAudioFocusManager @Inject constructor(
-    @ApplicationContext context: Context
-): AudioFocusManager() {
+class AndroidAudioFocusManager(context: Context): AudioFocusManager() {
     private val androidAudioManager = context.getSystemService(AUDIO_SERVICE) as AudioManager
 
     private val audioFocusRequest =
@@ -95,8 +92,7 @@ class AndroidAudioFocusManager @Inject constructor(
             }.build()
 
     override fun requestAudioFocus() =
-        if (ignoreAudioFocus)
-            true
+        if (ignoreAudioFocus) true
         else AudioManagerCompat.requestAudioFocus(
                 androidAudioManager, audioFocusRequest
             ) == AUDIOFOCUS_REQUEST_GRANTED
@@ -112,6 +108,6 @@ class AndroidAudioFocusManager @Inject constructor(
 @Module @InstallIn(SingletonComponent::class)
 class AudioFocusManagerModule {
     @Singleton @Provides
-    fun provideAudioFocusManager(@ApplicationContext app: Context): AudioManager =
-        app.getSystemService(AUDIO_SERVICE) as AudioManager
+    fun provideAudioFocusManager(@ApplicationContext context: Context): AudioFocusManager =
+        AndroidAudioFocusManager(context)
 }
