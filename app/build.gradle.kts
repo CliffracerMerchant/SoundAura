@@ -100,6 +100,7 @@ dependencies {
     implementation("androidx.compose.material3:material3-window-size-class:1.4.0")
     implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.4.0")
     implementation("sh.calvin.reorderable:reorderable:3.0.0")
+    implementation("androidx.media3:media3-exoplayer:1.9.0")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 
     ksp("androidx.room:room-compiler:2.8.3")
