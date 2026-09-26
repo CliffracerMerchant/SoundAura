@@ -98,6 +98,7 @@ class MediaControllerViewModelTests {
         playlistDao.toggleIsActive(testPlaylistIds[3])
         playlistDao.toggleIsActive(testPlaylistIds[4])
         presetDao.savePreset(testPresetNames[2])
+        waitUntil { currentPresets?.size == 3 }
     }
 
     @Test fun no_dialog_is_initially_shown() {
