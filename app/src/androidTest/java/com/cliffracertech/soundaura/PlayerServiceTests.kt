@@ -55,7 +55,7 @@ class PlayerServiceTests {
                 shuffle = false,
                 tracks = listOf(Track(testPlaylistUri.toUri())))
             dao.toggleIsActive(id)
-            waitUntil { dao.getActivePlaylistsAndTracks().first().isNotEmpty() }
+            waitUntil { !dao.getNoPlaylistsAreActive().first() }
         }
         hiltRule.inject()
     }
@@ -107,7 +107,7 @@ class PlayerServiceTests {
         assertThat(PlayerService.binder).isNotNull()
     }
 
-    @Test fun binder_is_playing_state() = runTest {
+    @Test fun binder_isPlaying_state() = runTest {
         context.startService(Intent(context, PlayerService::class.java))
         waitUntil { PlayerService.binder != null }
         val binder = PlayerService.binder
@@ -158,5 +158,22 @@ class PlayerServiceTests {
         context.startService(PlayerService.playIntent(context))
         waitUntil { PlayerService.playbackState == PlaybackStateCompat.STATE_PLAYING } // should time out
         assertThat(PlayerService.playbackState).isEqualTo(PlaybackStateCompat.STATE_PAUSED)
+    }
+
+    @Test fun playback_respects_audio_focus() = runTest {
+        (audioManager as TestAudioFocusManager).denyFocusRequests = true
+
+        context.startService(PlayerService.playIntent(context))
+        waitUntil { PlayerService.playbackState == PlaybackStateCompat.STATE_PLAYING } // should time out
+        assertThat(PlayerService.playbackState).isEqualTo(PlaybackStateCompat.STATE_PAUSED)
+    }
+
+    @Test fun playback_ignores_audio_focus_with_background_play_turned_on() = runTest {
+        audioManager.ignoreAudioFocus = true
+        (audioManager as TestAudioFocusManager).denyFocusRequests = true
+
+        context.startService(PlayerService.playIntent(context))
+        waitUntil { PlayerService.playbackState == PlaybackStateCompat.STATE_PLAYING }
+        assertThat(PlayerService.playbackState).isEqualTo(PlaybackStateCompat.STATE_PLAYING)
     }
 }

@@ -54,8 +54,9 @@ fun <T: Any> Subject.isInstanceOf(clazz: KClass<T>) = isInstanceOf(clazz.java)
  * testing. The [TestScope] instance will use the constructor provided
  * [CoroutineDispatcher] to override the [Dispatcher] object defaults. As long
  * as the code under test specifies all dispatchers by referencing the
- * [Dispatcher] properties (e.g. [Dispatcher.Main], all code under test will be
+ * [Dispatcher] properties (e.g. [Dispatcher.Main]), all code under test will be
  * run using the provided [dispatcher]. */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class TestScopeRule(
     val dispatcher: CoroutineDispatcher = UnconfinedTestDispatcher()
 ): TestWatcher() {
