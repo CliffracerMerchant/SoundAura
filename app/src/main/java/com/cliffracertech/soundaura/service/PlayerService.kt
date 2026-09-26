@@ -15,6 +15,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
@@ -25,7 +27,6 @@ import com.cliffracertech.soundaura.repeatWhenStarted
 import com.cliffracertech.soundaura.service.PlayerService.Companion.addPlaybackChangeListener
 import com.cliffracertech.soundaura.service.PlayerService.Companion.playbackState
 import com.cliffracertech.soundaura.settings.PrefKeys
-import com.cliffracertech.soundaura.settings.dataStore
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -90,6 +91,7 @@ class PlayerService: LifecycleService() {
         PhoneStateAwarePlaybackModule(::autoPauseIf))
     @Inject lateinit var playlistDao: PlaylistDao
     @Inject lateinit var audioManager: AudioFocusManager
+    @Inject lateinit var dataStore: DataStore<Preferences>
     private lateinit var notification: PlayerNotification
 
     private var autoStopJob: Job? = null
@@ -199,7 +201,7 @@ class PlayerService: LifecycleService() {
      * @param state The desired [PlaybackStateCompat] value. The supported
      *     values are [STATE_PLAYING], [STATE_PAUSED], and [STATE_STOPPED]. Other
      *     values will be ignored.
-     * @param clearUnpauseLocks Whether or not to reset all unpause locks.
+     * @param clearUnpauseLocks Whether to reset all unpause locks.
      *     This should only be false when the playback state is being set
      *     to [STATE_PAUSED] as the result of an [autoPauseIf] call.
      */
@@ -300,7 +302,7 @@ class PlayerService: LifecycleService() {
     private fun showAutoPausePlaybackExplanation() {
         val stringResId = R.string.player_no_active_playlists_warning_message
         // A RuntimeException can be thrown here if the Toast is made outside
-        // of the UI thread. Because this should only occur during testing and
+        // the UI thread. Because this should only occur during testing and
         // the message is non-critical, we ignore it.
         try { Toast.makeText(this, stringResId, Toast.LENGTH_LONG).show() }
         catch(e: RuntimeException) {}
