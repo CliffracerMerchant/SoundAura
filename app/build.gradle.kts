@@ -20,8 +20,8 @@ android {
         applicationId = "com.cliffracertech.soundaura"
         minSdk = 24
         targetSdk = 36
-        versionCode = 13
-        versionName = "1.6.2"
+        versionCode = 14
+        versionName = "1.6.3"
         testInstrumentationRunner = "com.cliffracertech.soundaura.TestRunner"
     }
     buildTypes {
