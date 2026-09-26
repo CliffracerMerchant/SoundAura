@@ -110,7 +110,7 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling:1.12.1")
     androidTestImplementation("androidx.test.ext:truth:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
-    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.0")
     androidTestImplementation("androidx.room:room-testing:2.8.5")
     androidTestImplementation("androidx.test:rules:1.7.0")
     androidTestImplementation("com.google.dagger:hilt-android-testing:2.60.1")
