@@ -23,4 +23,7 @@
     <string name="version_1_6_change_bug_fixes_description">Fixed crash when exceeding the maximum number of allowed tracks.\nFixed the quick settings tile not updating its state.</string>
 
     <string name="version_1_6_2_change_crash_on_adding_media_fix">Fixed (hopefully) a crash some users were experiencing when adding media.</string>
+
+    <string name="version_1_6_3_change_gapless_playback_title">Gapless playback</string>
+    <string name="version_1_6_3_change_gapless_playback_description">Fixed gaps in between track loops</string>
 </resources>
