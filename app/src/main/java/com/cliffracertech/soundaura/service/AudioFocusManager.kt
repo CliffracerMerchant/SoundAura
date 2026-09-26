@@ -60,14 +60,14 @@ abstract class AudioFocusManager {
 /**
  * A sample AudioFocusManager for use in testing. Audio focus requests will be:
  *   - granted if [ignoreAudioFocus] is true
- *   - granted if [ignoreAudioFocus] is false and [simulateSystemDenyingRequests] is false
- *   - not granted if [ignoreAudioFocus] is false and [simulateSystemDenyingRequests] is true
+ *   - granted if [ignoreAudioFocus] is false and [denyFocusRequests] is false
+ *   - not granted if [ignoreAudioFocus] is false and [denyFocusRequests] is true
  */
 class TestAudioFocusManager(): AudioFocusManager() {
-    var simulateSystemDenyingRequests = false
+    var denyFocusRequests = false
 
     override fun requestAudioFocus(): Boolean {
-        val newValue = ignoreAudioFocus || !simulateSystemDenyingRequests
+        val newValue = ignoreAudioFocus || !denyFocusRequests
         hasAudioFocus = newValue
         return newValue
     }
