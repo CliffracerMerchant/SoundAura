@@ -1,0 +1,2 @@
+Fixed any changes to the active mix causing every track/playlist to restart playback.
+Fixed tracks/playlists with a volume boost applied crashing the app when playback begins.
