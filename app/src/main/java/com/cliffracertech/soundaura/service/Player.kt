@@ -7,10 +7,10 @@ import android.content.Context
 import android.media.audiofx.LoudnessEnhancer
 import android.net.Uri
 import android.util.Log
-import androidx.compose.ui.text.input.KeyboardType.Companion.Uri
 import androidx.media3.common.C.WAKE_MODE_LOCAL
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player.COMMAND_PLAY_PAUSE
 import androidx.media3.common.Player.COMMAND_PREPARE
 import androidx.media3.common.Player.COMMAND_SET_REPEAT_MODE
 import androidx.media3.common.Player.COMMAND_SET_SHUFFLE_MODE
@@ -90,6 +90,10 @@ class Player(
                 val uri = _player.currentMediaItem?.localConfiguration?.uri
                 onPlaybackFailure(uri?.let(::listOf) ?: emptyList())
             }
+            override fun onAudioSessionIdChanged(sessionId: Int) {
+                logd("audioSessionId now $sessionId")
+                applyVolumeBoost(sessionId)
+            }
         })
         update(playlist, startImmediately)
     }
@@ -112,16 +116,12 @@ class Player(
     fun update(newPlaylist: ActivePlaylist, startImmediately: Boolean = false) {
         val availableCommands = _player.availableCommands
         if (COMMAND_SET_VOLUME in availableCommands) {
-            _player.volume = playlist.volume
-            val booster = volumeBooster
-            if (playlist.volumeBoostDb == 0)
-                volumeBooster = null
-            else if (booster != null)
-                booster.setTargetGain(playlist.volumeBoostDb * 100)
-            else volumeBooster = LoudnessEnhancer(_player.audioSessionId).apply {
-                setTargetGain(playlist.volumeBoostDb * 100)
-                enabled = true
-            }
+            _player.volume = newPlaylist.volume
+            // If this is the Player's first update, the creation of a LoudnessEnhancer
+            // will fail because the audio session ID will be 0. We will store the
+            // volume boost amount in case we need to apply the LoudnessEnhancer after
+            // the media session ID changes from 0.
+            applyVolumeBoost()
         } else logd("ExoPlayer instance could not set volume")
 
         if (COMMAND_SET_REPEAT_MODE in availableCommands)
@@ -143,15 +143,41 @@ class Player(
         }
         activePlaylist = newPlaylist
     }
+
+    private fun applyVolumeBoost(audioSessionId: Int = _player.audioSessionId) {
+        val booster = volumeBooster
+        val volumeBoostDb = activePlaylist?.volumeBoostDb
+        when {
+            (volumeBoostDb == null || volumeBoostDb <= 0) -> {
+                logd("volume boost <= 0, disabling LoudnessEnhancer")
+                booster?.enabled = false
+                volumeBooster = null
+            } booster != null -> {
+                logd("LoudnessEnhancer already exists, changing gain to $volumeBoostDb")
+                booster.setTargetGain(volumeBoostDb)
+            } _player.audioSessionId == 0 -> {
+                logd("audioSessionId still 0, storing volume boost amount for now")
+                return
+            } else -> try {
+                logd("trying to create LoudnessEnhancer")
+                volumeBooster = LoudnessEnhancer(audioSessionId).apply {
+                    setTargetGain(volumeBoostDb * 100)
+                    enabled = true
+                }
+            } catch (e: java.lang.RuntimeException) {
+                logd("Creation of LoudnessEnhancer audio effect failed")
+            }
+        }
+    }
 }
 
 /**
  * A collection of [Player] instances.
  *
- * [PlayerMap] manages a collection of [Player] instances for a collection
- * of [ActivePlaylist]s. The collection of [Player]s is updated via the
- * method [update]. Whether or not the collection of players is empty can
- * be queried with the property [isEmpty].
+ * [PlayerMap] manages a collection of [Player] instances for a collection of
+ * [ActivePlaylist]s. The collection of [Player]s is updated via the method
+ * [update]. Whether the collection of players is empty can be queried with
+ * the property [isEmpty].
  *
  * The playing/paused/stopped state can be set for all [Player]s at once
  * with the methods [play], [pause], and [stop]. The volume for individual
