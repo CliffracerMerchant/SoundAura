@@ -58,8 +58,8 @@ val ActivePlaylist.tracks get() = value
  *     is held onto for the lifetime of the Player instance, and so should not
  *     be a [Context] that the Player might outlive.
  * @param playlist The [ActivePlaylist] whose contents will be played
- * @param startImmediately Whether or not the Player should start playback
- *     as soon as it is ready
+ * @param startImmediately Whether the Player should start playback as soon as
+ *     it is ready
  * @param onPlaybackFailure A callback that will be invoked if ExoPlayer
  *     creation fails for one or more [Uri]s in the playlist
  */
@@ -92,7 +92,7 @@ class Player(
             }
             override fun onAudioSessionIdChanged(sessionId: Int) {
                 logd("audioSessionId now $sessionId")
-                applyVolumeBoost(sessionId)
+                applyVolumeBoost(activePlaylist?.volumeBoostDb ?: 0, forceUpdate = true)
             }
         })
         update(playlist, startImmediately)
@@ -117,11 +117,7 @@ class Player(
         val availableCommands = _player.availableCommands
         if (COMMAND_SET_VOLUME in availableCommands) {
             _player.volume = newPlaylist.volume
-            // If this is the Player's first update, the creation of a LoudnessEnhancer
-            // will fail because the audio session ID will be 0. We will store the
-            // volume boost amount in case we need to apply the LoudnessEnhancer after
-            // the media session ID changes from 0.
-            applyVolumeBoost()
+            applyVolumeBoost(newPlaylist.volumeBoostDb)
         } else logd("ExoPlayer instance could not set volume")
 
         if (COMMAND_SET_REPEAT_MODE in availableCommands)
@@ -144,28 +140,35 @@ class Player(
         activePlaylist = newPlaylist
     }
 
-    private fun applyVolumeBoost(audioSessionId: Int = _player.audioSessionId) {
+    /** Apply a loudness boost equal to [volumeBoostDb]. If the new
+     * [volumeBoostDb] is the same as the cached value (i.e. activePlaylist.volumeBoostDb),
+     * then no change will occur to prevent releasing and reacquiring system
+     * resources. If [forceUpdate] is true, then this check will be bypassed. */
+    private fun applyVolumeBoost(volumeBoostDb: Int, forceUpdate: Boolean = false) {
         val booster = volumeBooster
-        val volumeBoostDb = activePlaylist?.volumeBoostDb
         when {
-            (volumeBoostDb == null || volumeBoostDb <= 0) -> {
+            volumeBoostDb <= 0 -> {
                 logd("volume boost <= 0, disabling LoudnessEnhancer")
-                booster?.enabled = false
+                booster?.release()
                 volumeBooster = null
-            } booster != null -> {
-                logd("LoudnessEnhancer already exists, changing gain to $volumeBoostDb")
-                booster.setTargetGain(volumeBoostDb)
             } _player.audioSessionId == 0 -> {
-                logd("audioSessionId still 0, storing volume boost amount for now")
+                // If the Player hasn't been prepared, the creation of a LoudnessEnhancer
+                // will fail because the audio session ID will be 0. The internal ExoPlayer's
+                // onAudioSessionId callback can instead apply the volume boost once it has a
+                // valid audio session ID.
+                logd("audioSessionId still 0")
                 return
-            } else -> try {
-                logd("trying to create LoudnessEnhancer")
-                volumeBooster = LoudnessEnhancer(audioSessionId).apply {
-                    setTargetGain(volumeBoostDb * 100)
-                    enabled = true
+            } forceUpdate || volumeBoostDb != activePlaylist?.volumeBoostDb -> {
+                try {
+                    logd("trying to create LoudnessEnhancer with boost = $volumeBoostDb")
+                    volumeBooster?.release()
+                    volumeBooster = LoudnessEnhancer(_player.audioSessionId).apply {
+                        setTargetGain(volumeBoostDb * 100)
+                        enabled = true
+                    }
+                } catch (e: java.lang.RuntimeException) {
+                    logd("Creation of LoudnessEnhancer audio effect failed")
                 }
-            } catch (e: java.lang.RuntimeException) {
-                logd("Creation of LoudnessEnhancer audio effect failed")
             }
         }
     }
