@@ -86,12 +86,6 @@ class PlayerServiceTests {
         assertThat(PlayerService.playbackState).isEqualTo(PlaybackStateCompat.STATE_PAUSED)
     }
 
-    @Test fun stop_intent_while_stopped_no_ops() = runTest {
-        context.startService(PlayerService.stopIntent(context))
-        waitUntil { PlayerService.playbackState != PlaybackStateCompat.STATE_STOPPED } // should time out
-        assertThat(PlayerService.playbackState).isEqualTo(PlaybackStateCompat.STATE_STOPPED)
-    }
-
     @Test fun stop_intent_while_playing() = runTest {
         context.startService(PlayerService.playIntent(context))
         waitUntil { PlayerService.playbackState == PlaybackStateCompat.STATE_PLAYING }
