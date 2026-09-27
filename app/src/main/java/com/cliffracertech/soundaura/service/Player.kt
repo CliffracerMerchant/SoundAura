@@ -72,6 +72,7 @@ class Player(
     private val _player: ExoPlayer = ExoPlayer.Builder(context)
         .setWakeMode(WAKE_MODE_LOCAL)
         .build()
+    private var activePlaylist: ActivePlaylist? = null
     private var volumeBooster: LoudnessEnhancer? = null
 
     init {
@@ -105,10 +106,10 @@ class Player(
 
     /**
      * Set the player's volume, repeat behavior, and shuffle mode to the
-     * corresponding values of [playlist]. If [startImmediately] is true,
+     * corresponding values of [newPlaylist]. If [startImmediately] is true,
      * playback will start immediately.
      */
-    fun update(playlist: ActivePlaylist, startImmediately: Boolean = false) {
+    fun update(newPlaylist: ActivePlaylist, startImmediately: Boolean = false) {
         val availableCommands = _player.availableCommands
         if (COMMAND_SET_VOLUME in availableCommands) {
             _player.volume = playlist.volume
@@ -124,23 +125,23 @@ class Player(
         } else logd("ExoPlayer instance could not set volume")
 
         if (COMMAND_SET_REPEAT_MODE in availableCommands)
-            _player.repeatMode = if (playlist.tracks.size < 2) REPEAT_MODE_ONE
-                                 else                          REPEAT_MODE_ALL
+            _player.repeatMode = if (newPlaylist.tracks.size < 2) REPEAT_MODE_ONE
+                                 else                             REPEAT_MODE_ALL
         else logd("ExoPlayer instance could not set repeat mode")
 
         if (COMMAND_SET_SHUFFLE_MODE in availableCommands)
-            _player.shuffleModeEnabled = playlist.shuffle
+            _player.shuffleModeEnabled = newPlaylist.shuffle
         else logd("ExoPlayer instance could not set shuffle mode")
 
-        _player.clearMediaItems()
-        _player.addMediaItems(playlist.tracks.map(MediaItem::fromUri))
-
-        if(COMMAND_PREPARE in availableCommands)
-            _player.prepare()
-        else logd("ExoPlayer instance could not prepare for playback")
-
-        if (startImmediately)
-            _player.play()
+        if (newPlaylist.tracks != activePlaylist?.tracks) {
+            _player.clearMediaItems()
+            _player.addMediaItems(newPlaylist.tracks.map(MediaItem::fromUri))
+            if(COMMAND_PREPARE in availableCommands)
+                _player.prepare()
+            if (startImmediately && COMMAND_PLAY_PAUSE in availableCommands)
+                _player.playWhenReady = true
+        }
+        activePlaylist = newPlaylist
     }
 }
 
