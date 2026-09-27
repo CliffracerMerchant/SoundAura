@@ -7,10 +7,10 @@ import android.content.Context
 import android.media.audiofx.LoudnessEnhancer
 import android.net.Uri
 import android.util.Log
-import androidx.compose.ui.text.input.KeyboardType.Companion.Uri
 import androidx.media3.common.C.WAKE_MODE_LOCAL
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player.COMMAND_PLAY_PAUSE
 import androidx.media3.common.Player.COMMAND_PREPARE
 import androidx.media3.common.Player.COMMAND_SET_REPEAT_MODE
 import androidx.media3.common.Player.COMMAND_SET_SHUFFLE_MODE
@@ -58,8 +58,8 @@ val ActivePlaylist.tracks get() = value
  *     is held onto for the lifetime of the Player instance, and so should not
  *     be a [Context] that the Player might outlive.
  * @param playlist The [ActivePlaylist] whose contents will be played
- * @param startImmediately Whether or not the Player should start playback
- *     as soon as it is ready
+ * @param startImmediately Whether the Player should start playback as soon as
+ *     it is ready
  * @param onPlaybackFailure A callback that will be invoked if ExoPlayer
  *     creation fails for one or more [Uri]s in the playlist
  */
@@ -72,6 +72,7 @@ class Player(
     private val _player: ExoPlayer = ExoPlayer.Builder(context)
         .setWakeMode(WAKE_MODE_LOCAL)
         .build()
+    private var activePlaylist: ActivePlaylist? = null
     private var volumeBooster: LoudnessEnhancer? = null
 
     init {
@@ -89,6 +90,10 @@ class Player(
                 val uri = _player.currentMediaItem?.localConfiguration?.uri
                 onPlaybackFailure(uri?.let(::listOf) ?: emptyList())
             }
+            override fun onAudioSessionIdChanged(sessionId: Int) {
+                logd("audioSessionId now $sessionId")
+                applyVolumeBoost(activePlaylist?.volumeBoostDb ?: 0, forceUpdate = true)
+            }
         })
         update(playlist, startImmediately)
     }
@@ -105,52 +110,77 @@ class Player(
 
     /**
      * Set the player's volume, repeat behavior, and shuffle mode to the
-     * corresponding values of [playlist]. If [startImmediately] is true,
+     * corresponding values of [newPlaylist]. If [startImmediately] is true,
      * playback will start immediately.
      */
-    fun update(playlist: ActivePlaylist, startImmediately: Boolean = false) {
+    fun update(newPlaylist: ActivePlaylist, startImmediately: Boolean = false) {
         val availableCommands = _player.availableCommands
         if (COMMAND_SET_VOLUME in availableCommands) {
-            _player.volume = playlist.volume
-            val booster = volumeBooster
-            if (playlist.volumeBoostDb == 0)
-                volumeBooster = null
-            else if (booster != null)
-                booster.setTargetGain(playlist.volumeBoostDb * 100)
-            else volumeBooster = LoudnessEnhancer(_player.audioSessionId).apply {
-                setTargetGain(playlist.volumeBoostDb * 100)
-                enabled = true
-            }
+            _player.volume = newPlaylist.volume
+            applyVolumeBoost(newPlaylist.volumeBoostDb)
         } else logd("ExoPlayer instance could not set volume")
 
         if (COMMAND_SET_REPEAT_MODE in availableCommands)
-            _player.repeatMode = if (playlist.tracks.size < 2) REPEAT_MODE_ONE
-                                 else                          REPEAT_MODE_ALL
+            _player.repeatMode = if (newPlaylist.tracks.size < 2) REPEAT_MODE_ONE
+                                 else                             REPEAT_MODE_ALL
         else logd("ExoPlayer instance could not set repeat mode")
 
         if (COMMAND_SET_SHUFFLE_MODE in availableCommands)
-            _player.shuffleModeEnabled = playlist.shuffle
+            _player.shuffleModeEnabled = newPlaylist.shuffle
         else logd("ExoPlayer instance could not set shuffle mode")
 
-        _player.clearMediaItems()
-        _player.addMediaItems(playlist.tracks.map(MediaItem::fromUri))
+        if (newPlaylist.tracks != activePlaylist?.tracks) {
+            _player.clearMediaItems()
+            _player.addMediaItems(newPlaylist.tracks.map(MediaItem::fromUri))
+            if(COMMAND_PREPARE in availableCommands)
+                _player.prepare()
+            if (startImmediately && COMMAND_PLAY_PAUSE in availableCommands)
+                _player.playWhenReady = true
+        }
+        activePlaylist = newPlaylist
+    }
 
-        if(COMMAND_PREPARE in availableCommands)
-            _player.prepare()
-        else logd("ExoPlayer instance could not prepare for playback")
-
-        if (startImmediately)
-            _player.play()
+    /** Apply a loudness boost equal to [volumeBoostDb]. If the new
+     * [volumeBoostDb] is the same as the cached value (i.e. activePlaylist.volumeBoostDb),
+     * then no change will occur to prevent releasing and reacquiring system
+     * resources. If [forceUpdate] is true, then this check will be bypassed. */
+    private fun applyVolumeBoost(volumeBoostDb: Int, forceUpdate: Boolean = false) {
+        val booster = volumeBooster
+        when {
+            volumeBoostDb <= 0 -> {
+                logd("volume boost <= 0, disabling LoudnessEnhancer")
+                booster?.release()
+                volumeBooster = null
+            } _player.audioSessionId == 0 -> {
+                // If the Player hasn't been prepared, the creation of a LoudnessEnhancer
+                // will fail because the audio session ID will be 0. The internal ExoPlayer's
+                // onAudioSessionId callback can instead apply the volume boost once it has a
+                // valid audio session ID.
+                logd("audioSessionId still 0")
+                return
+            } forceUpdate || volumeBoostDb != activePlaylist?.volumeBoostDb -> {
+                try {
+                    logd("trying to create LoudnessEnhancer with boost = $volumeBoostDb")
+                    volumeBooster?.release()
+                    volumeBooster = LoudnessEnhancer(_player.audioSessionId).apply {
+                        setTargetGain(volumeBoostDb * 100)
+                        enabled = true
+                    }
+                } catch (e: java.lang.RuntimeException) {
+                    logd("Creation of LoudnessEnhancer audio effect failed")
+                }
+            }
+        }
     }
 }
 
 /**
  * A collection of [Player] instances.
  *
- * [PlayerMap] manages a collection of [Player] instances for a collection
- * of [ActivePlaylist]s. The collection of [Player]s is updated via the
- * method [update]. Whether or not the collection of players is empty can
- * be queried with the property [isEmpty].
+ * [PlayerMap] manages a collection of [Player] instances for a collection of
+ * [ActivePlaylist]s. The collection of [Player]s is updated via the method
+ * [update]. Whether the collection of players is empty can be queried with
+ * the property [isEmpty].
  *
  * The playing/paused/stopped state can be set for all [Player]s at once
  * with the methods [play], [pause], and [stop]. The volume for individual
