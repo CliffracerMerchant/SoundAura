@@ -72,10 +72,12 @@ import com.cliffracertech.soundaura.dialog.SoundAuraDialog
             13 -> listOf(
                 stringResource(R.string.bug_fixes_section_title) to
                     stringResource(R.string.version_1_6_2_change_crash_on_adding_media_fix))
-            else -> listOf(
+            14 -> listOf(
                 stringResource(R.string.version_1_6_3_change_gapless_playback_title) to
-                    stringResource(R.string.version_1_6_3_change_gapless_playback_description)
-            )
+                    stringResource(R.string.version_1_6_3_change_gapless_playback_description))
+            else -> listOf(
+                stringResource(R.string.bug_fixes_section_title) to
+                    stringResource(R.string.version_1_6_4_bug_fixes_description))
         }
         features.forEach { (title, description) ->
             Text(title, Modifier.align(Alignment.CenterHorizontally))

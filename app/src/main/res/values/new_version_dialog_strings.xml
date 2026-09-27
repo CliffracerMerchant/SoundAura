@@ -20,10 +20,15 @@
 
     <string name="version_1_6_change_storage_permission_title">Exceed track limit</string>
     <string name="version_1_6_change_storage_permission_explanation">If the normal number of allowed tracks is exceeded, granting the app the read storage permission will allow any number of tracks to be added.</string>
-    <string name="version_1_6_change_bug_fixes_description">Fixed crash when exceeding the maximum number of allowed tracks.\nFixed the quick settings tile not updating its state.</string>
+    <string name="version_1_6_change_bug_fixes_description">
+        Fixed crash when exceeding the maximum number of allowed tracks.\n
+        Fixed the quick settings tile not updating its state.</string>
 
     <string name="version_1_6_2_change_crash_on_adding_media_fix">Fixed (hopefully) a crash some users were experiencing when adding media.</string>
 
     <string name="version_1_6_3_change_gapless_playback_title">Gapless playback</string>
     <string name="version_1_6_3_change_gapless_playback_description">Fixed gaps in between track loops</string>
+
+    <string name="version_1_6_4_bug_fixes_description">
+        Fixed a bug introduced in v1.6.3 causing tracks/playlists to always restart from the beginning when the current sound mix is changed.\n\nFixed a crash introduced in v1.6.3 when tracks/playlists with an existing volume boost are added to the sound mix.</string>
 </resources>
