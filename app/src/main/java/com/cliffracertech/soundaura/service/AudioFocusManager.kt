@@ -38,10 +38,16 @@ import javax.inject.Singleton
  * to play audio (i.e. when [hasAudioFocus] is true), regardless of whether it
  * is because the system has granted audio focus, or because audio focus rules
  * are being ignored.
+ *
+ * Focus gained/lost listeners can be added with [addFocusChangedListener] and
+ * [removeFocusChangedListener].
  */
 abstract class AudioFocusManager {
     var hasAudioFocus = false
-        protected set
+        protected set(value) {
+            field = value
+            onFocusChangedListeners.forEach { it(value) }
+        }
     var ignoreAudioFocus = false
         set(value) {
             field = value
@@ -50,6 +56,10 @@ abstract class AudioFocusManager {
                 hasAudioFocus = true
             } else hasAudioFocus = requestAudioFocus()
         }
+
+    private val onFocusChangedListeners = mutableListOf<(Boolean) -> Unit>()
+    fun addFocusChangedListener(listener: (Boolean) -> Unit) = onFocusChangedListeners.add(listener)
+    fun removeFocusChangedListener(listener: (Boolean) -> Unit) = onFocusChangedListeners.remove(listener)
 
     /** Request audio focus, and return whether the request was granted. */
     abstract fun requestAudioFocus(): Boolean
@@ -63,7 +73,7 @@ abstract class AudioFocusManager {
  *   - granted if [ignoreAudioFocus] is false and [denyFocusRequests] is false
  *   - not granted if [ignoreAudioFocus] is false and [denyFocusRequests] is true
  */
-class TestAudioFocusManager(): AudioFocusManager() {
+class TestAudioFocusManager: AudioFocusManager() {
     var denyFocusRequests = false
 
     override fun requestAudioFocus(): Boolean {
