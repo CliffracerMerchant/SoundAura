@@ -164,6 +164,9 @@ class PlayerService: LifecycleService() {
         }
 
         binder = binder ?: Binder()
+        audioManager.addFocusChangedListener { hasFocus ->
+            autoPauseIf(!hasFocus, autoPauseAudioFocusLossKey)
+        }
         playbackModules.forEach { it.onCreate(this) }
         val intent = Intent(this, PlayerService::class.java)
         ContextCompat.startForegroundService(this, intent)

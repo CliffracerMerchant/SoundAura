@@ -17,8 +17,6 @@ import androidx.media3.common.Player.COMMAND_SET_SHUFFLE_MODE
 import androidx.media3.common.Player.COMMAND_SET_VOLUME
 import androidx.media3.common.Player.REPEAT_MODE_ALL
 import androidx.media3.common.Player.REPEAT_MODE_ONE
-import androidx.media3.common.TrackSelectionParameters
-import androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED
 import androidx.media3.exoplayer.ExoPlayer
 import com.cliffracertech.soundaura.logd
 
@@ -76,14 +74,6 @@ class Player(
     private var volumeBooster: LoudnessEnhancer? = null
 
     init {
-        val audioOffloadPreferences = TrackSelectionParameters.AudioOffloadPreferences.Builder()
-            .setAudioOffloadMode(AUDIO_OFFLOAD_MODE_ENABLED)
-            .setIsGaplessSupportRequired(true)
-            .build()
-        _player.trackSelectionParameters = _player.trackSelectionParameters
-            .buildUpon()
-            .setAudioOffloadPreferences(audioOffloadPreferences)
-            .build()
         _player.addListener(object: androidx.media3.common.Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
                 Log.e("", error.message ?: "")
@@ -91,7 +81,6 @@ class Player(
                 onPlaybackFailure(uri?.let(::listOf) ?: emptyList())
             }
             override fun onAudioSessionIdChanged(sessionId: Int) {
-                logd("audioSessionId now $sessionId")
                 applyVolumeBoost(activePlaylist?.volumeBoostDb ?: 0, forceUpdate = true)
             }
         })
@@ -117,8 +106,8 @@ class Player(
         val availableCommands = _player.availableCommands
         if (COMMAND_SET_VOLUME in availableCommands) {
             _player.volume = newPlaylist.volume
-            applyVolumeBoost(newPlaylist.volumeBoostDb)
         } else logd("ExoPlayer instance could not set volume")
+        applyVolumeBoost(newPlaylist.volumeBoostDb)
 
         if (COMMAND_SET_REPEAT_MODE in availableCommands)
             _player.repeatMode = if (newPlaylist.tracks.size < 2) REPEAT_MODE_ONE
@@ -148,7 +137,6 @@ class Player(
         val booster = volumeBooster
         when {
             volumeBoostDb <= 0 -> {
-                logd("volume boost <= 0, disabling LoudnessEnhancer")
                 booster?.release()
                 volumeBooster = null
             } _player.audioSessionId == 0 -> {
@@ -156,11 +144,9 @@ class Player(
                 // will fail because the audio session ID will be 0. The internal ExoPlayer's
                 // onAudioSessionId callback can instead apply the volume boost once it has a
                 // valid audio session ID.
-                logd("audioSessionId still 0")
                 return
             } forceUpdate || volumeBoostDb != activePlaylist?.volumeBoostDb -> {
                 try {
-                    logd("trying to create LoudnessEnhancer with boost = $volumeBoostDb")
                     volumeBooster?.release()
                     volumeBooster = LoudnessEnhancer(_player.audioSessionId).apply {
                         setTargetGain(volumeBoostDb * 100)
