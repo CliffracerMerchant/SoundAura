@@ -413,18 +413,23 @@ class PlaylistDaoTests {
         val ids = listOf(
             dao.insertPlaylist(testPlaylistNames[0], false, listOf(testTracks[0])),
             dao.insertPlaylist(testPlaylistNames[1], false, testTracks.subList(2, 5)))
-        dao.setTracksHaveError(listOf(testUris[0]))
+        dao.setTracksHaveError(testUris[0], true)
         var tracks = dao.getPlaylistTracks(ids[0])
         assertThat(tracks.map(Track::hasError)).containsExactly(true)
 
-        dao.setTracksHaveError(listOf(testUris[2]))
+        dao.setTracksHaveError(testUris[2], true)
         tracks = dao.getPlaylistTracks(ids[1])
         assertThat(tracks.map(Track::hasError))
             .containsExactly(true, false, false).inOrder()
 
-        dao.setTracksHaveError(listOf(testUris[3], testUris[4]))
+        dao.setTracksHaveError(testUris[3], true)
+        dao.setTracksHaveError(testUris[4], true)
         tracks = dao.getPlaylistTracks(ids[1])
         assertThat(tracks.map(Track::hasError)).doesNotContain(false)
+
+        dao.setTracksHaveError(testUris[0], false)
+        tracks = dao.getPlaylistTracks(ids[0])
+        assertThat(tracks.map(Track::hasError)).containsExactly(false)
     }
 
     @Test fun playlist_hasError_updates() = runTest {
@@ -434,22 +439,23 @@ class PlaylistDaoTests {
         var playlists = dao.getPlaylistsSortedByOrderAdded().first()
         assertThat(playlists.map(LibraryPlaylist::hasError)).doesNotContain(true)
 
-        dao.setTracksHaveError(listOf(testUris[0]))
+        dao.setTracksHaveError(testUris[0], true)
         playlists = dao.getPlaylistsSortedByOrderAdded().first()
         assertThat(playlists.map(LibraryPlaylist::hasError))
             .containsExactly(true, false, false).inOrder()
 
-        dao.setTracksHaveError(listOf(testUris[2]))
+        dao.setTracksHaveError(testUris[2], true)
         playlists = dao.getPlaylistsSortedByOrderAdded().first()
         assertThat(playlists.map(LibraryPlaylist::hasError))
             .containsExactly(true, false, false).inOrder()
 
-        dao.setTracksHaveError(listOf(testUris[3], testUris[4]))
+        dao.setTracksHaveError(testUris[3], true)
+        dao.setTracksHaveError(testUris[4], true)
         playlists = dao.getPlaylistsSortedByOrderAdded().first()
         assertThat(playlists.map(LibraryPlaylist::hasError))
             .containsExactly(true, true, false).inOrder()
 
-        dao.setTracksHaveError(listOf(testUris[1]))
+        dao.setTracksHaveError(testUris[1], true)
         playlists = dao.getPlaylistsSortedByOrderAdded().first()
         assertThat(playlists.map(LibraryPlaylist::hasError)).doesNotContain(false)
     }

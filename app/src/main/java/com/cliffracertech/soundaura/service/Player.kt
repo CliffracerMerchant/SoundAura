@@ -48,9 +48,9 @@ val ActivePlaylist.tracks get() = value
  * If there is a problem with one or more [Uri]s within the [ActivePlaylist]'s
  * [tracks], playback of the next track will be attempted until one is found
  * that can be played. If player creation fails for all of the tracks, no
- * playback will occur, and calling [play] will have no effect. When one or
- * more tracks fail to play, the provided callback [onPlaybackFailure] will
- * be invoked.
+ * playback will occur, and calling [play] will have no effect. When playback
+ * fails or succeeds for each track, the provided callback [onPlaybackResult]
+ * will be invoked.
  *
  * @param context A [Context] instance. Note that the provided context instance
  *     is held onto for the lifetime of the Player instance, and so should not
@@ -58,14 +58,15 @@ val ActivePlaylist.tracks get() = value
  * @param playlist The [ActivePlaylist] whose contents will be played
  * @param startImmediately Whether the Player should start playback as soon as
  *     it is ready
- * @param onPlaybackFailure A callback that will be invoked if ExoPlayer
- *     creation fails for one or more [Uri]s in the playlist
+ * @param onPlaybackResult A callback that will be invoked for every track once
+ *     playback successfully starts or fails, with the [Uri] of the track and
+ *     a boolean value indicating whether playback succeeded
  */
 class Player(
     private val context: Context,
     playlist: ActivePlaylist,
     startImmediately: Boolean = false,
-    private val onPlaybackFailure: (List<Uri>) -> Unit,
+    private val onPlaybackResult: (Uri?, success: Boolean) -> Unit,
 ) {
     private val _player: ExoPlayer = ExoPlayer.Builder(context)
         .setWakeMode(WAKE_MODE_LOCAL)
@@ -75,10 +76,16 @@ class Player(
 
     init {
         _player.addListener(object: androidx.media3.common.Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (isPlaying) {
+                    val uri = _player.currentMediaItem?.localConfiguration?.uri
+                    onPlaybackResult(uri, true)
+                }
+            }
             override fun onPlayerError(error: PlaybackException) {
                 Log.e("", error.message ?: "")
                 val uri = _player.currentMediaItem?.localConfiguration?.uri
-                onPlaybackFailure(uri?.let(::listOf) ?: emptyList())
+                onPlaybackResult(uri, false)
             }
             override fun onAudioSessionIdChanged(sessionId: Int) {
                 applyVolumeBoost(activePlaylist?.volumeBoostDb ?: 0, forceUpdate = true)
@@ -175,13 +182,13 @@ class Player(
  * all [Player] instances can be released first.
  *
  * @param context A [Context] instance. Note that the context instance
- *     will be held onto for the lifetime of the [PlayerSet].
- * @param onPlaybackFailure The callback that will be invoked
- *     when playback for the provided list of [Uri]s has failed
+ *     will be held onto for the lifetime of the [PlayerMap].
+ * @param onPlaybackResult The callback that will be invoked
+ *     when playback succeeds or fails for each track
  */
 class PlayerMap(
     private val context: Context,
-    private val onPlaybackFailure: (uris: List<Uri>) -> Unit,
+    private val onPlaybackResult: (uri: Uri?, success: Boolean) -> Unit,
 ) {
     private var playerMap: MutableMap<Long, Player> = hashMapOf()
 
@@ -208,7 +215,7 @@ class PlayerMap(
             existingPlayer?.update(playlist, startPlaying)
 
             playerMap[playlist.id] = existingPlayer ?:
-                Player(context, playlist, startPlaying, onPlaybackFailure)
+                Player(context, playlist, startPlaying, onPlaybackResult)
         }
         oldMap.values.forEach(Player::release)
     }
