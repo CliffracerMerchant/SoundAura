@@ -23,7 +23,6 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.VolumeUp
@@ -52,16 +51,16 @@ import kotlin.math.roundToInt
  *
  * @param id The [Long] value that uniquely identifies the playlist
  * @param name The name of the playlist
- * @param isActive Whether or not the playlist is currently playing
- * @param isSingleTrack Whether or not the playlist has only one track.
+ * @param isActive Whether the playlist is currently playing
+ * @param isSingleTrack Whether the playlist has only one track.
  *     This value can be used in case single-track playlists need to
  *     appear differently from multi-track playlists (e.g. by referring
  *     to them as 'tracks' instead of 'playlists').
  * @param volume The volume of the playlist
  * @param volumeBoostDb The additional volume boost that will be applied
  *     to the playlist before the volume is applied
- * @param hasError Whether or not there is an error (e.g. a playback
- *     problem) with the playlist
+ * @param hasError Whether there is an error (e.g. a playback problem)
+ *     with the playlist
  */
 data class Playlist(
     val id: Long,
@@ -93,6 +92,9 @@ interface PlaylistViewCallback {
     /** The callback that will be invoked when the 'remove'
      * option of the playlist's options menu is clicked */
     fun onRemoveClick(playlist: Playlist)
+    /** The callback that will be invoked when the 'relocate'
+     * option of the playlist's options menu is clicked */
+    fun onRelocateClick(playlist: Playlist) {}
 }
 
 /** Return a remembered [PlaylistViewCallback] implementation. */
@@ -103,7 +105,8 @@ interface PlaylistViewCallback {
     onRenameClick: (Playlist) -> Unit = {},
     onExtraOptionsClick: (Playlist) -> Unit = {},
     onVolumeBoostClick: (Playlist) -> Unit = {},
-    onRemoveClick: (Playlist) -> Unit = {}
+    onRemoveClick: (Playlist) -> Unit = {},
+    onRelocateClick: (Playlist) -> Unit = {}
 ) = remember { object: PlaylistViewCallback {
     override fun onAddRemoveButtonClick(playlist: Playlist) = onAddRemoveButtonClick(playlist)
     override fun onVolumeChange(playlist: Playlist, volume: Float) = onVolumeChange(playlist, volume)
@@ -112,6 +115,7 @@ interface PlaylistViewCallback {
     override fun onExtraOptionsClick(playlist: Playlist) = onExtraOptionsClick(playlist)
     override fun onVolumeBoostClick(playlist: Playlist) = onVolumeBoostClick(playlist)
     override fun onRemoveClick(playlist: Playlist) = onRemoveClick(playlist)
+    override fun onRelocateClick(playlist: Playlist) = onRelocateClick(playlist)
 }}
 
 /**
@@ -132,15 +136,16 @@ interface PlaylistViewCallback {
     modifier: Modifier = Modifier
 ) = Surface(modifier, MaterialTheme.shapes.large) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        AddRemoveButtonOrErrorIcon(
-            showError = playlist.hasError,
-            isAdded = playlist.isActive,
-            contentDescription = if (playlist.hasError) null else {
-                val id = if (playlist.isActive)
-                             R.string.set_playlist_inactive_description
-                         else R.string.set_playlist_active_description
-                stringResource(id, playlist.name)
-            }, onAddRemoveClick = {
+        AddRemoveButton(
+            added = playlist.isActive,
+            contentDescription = stringResource(
+                if (playlist.isActive)
+                    R.string.set_playlist_inactive_description
+                else R.string.set_playlist_active_description,
+                playlist.name),
+            backgroundColor = MaterialTheme.colors.surface,
+            tint = MaterialTheme.colors.primaryVariant,
+            onClick = {
                 callback.onAddRemoveButtonClick(playlist)
             })
 
@@ -173,8 +178,6 @@ interface PlaylistViewCallback {
         }
         PlaylistViewEndContent(
             content = when {
-                playlist.hasError ->
-                    PlaylistViewEndContentType.DeleteButton
                 volumeSliderIsBeingPressed || volumeSliderIsBeingDragged ->
                     PlaylistViewEndContentType.VolumeDisplay
                 else ->
@@ -185,47 +188,9 @@ interface PlaylistViewCallback {
             onPlaylistOptionsClick = { callback.onExtraOptionsClick(playlist) },
             onVolumeBoostClick = { callback.onVolumeBoostClick(playlist) },
             onRemoveClick = { callback.onRemoveClick(playlist) },
+            onRelocateClick = { callback.onRelocateClick(playlist) },
             tint = MaterialTheme.colors.secondaryVariant)
     }
-}
-
-/**
- * Show either an add/remove button or an error icon. The error icon can be
- * shown when some error prevents the added/removed state from being changed.
- *
- * @param showError Whether an error icon will be shown instead of the
- *     add/remove button.
- * @param isAdded Whether the add/remove button will display itself as already
- *     added when it is shown at all.
- * @param contentDescription The content description that will be used for the
- *     error icon or add/remove button.
- * @param backgroundColor The color that is being displayed behind the
- *     [AddRemoveButtonOrErrorIcon]. This is used so that the button can appear
- *     empty when isAdded is false.
- * @param onAddRemoveClick The callback that will be invoked when [showError] is
- *     false and the add/remove button is clicked.
- */
-@Composable private fun AddRemoveButtonOrErrorIcon(
-    showError: Boolean,
-    isAdded: Boolean,
-    contentDescription: String? = null,
-    backgroundColor: Color = MaterialTheme.colors.surface,
-    onAddRemoveClick: () -> Unit
-) = AnimatedContent(
-    targetState = showError,
-    label = "PlaylistView add/remove button / error icon crossfade"
-) {
-    if (it) Icon(
-        imageVector = Icons.Default.Error,
-        contentDescription = contentDescription,
-        modifier = Modifier.size(48.dp).padding(10.dp),
-        tint = MaterialTheme.colors.error)
-    else AddRemoveButton(
-        added = isAdded,
-        contentDescription = contentDescription,
-        backgroundColor = backgroundColor,
-        tint = MaterialTheme.colors.primaryVariant,
-        onClick = onAddRemoveClick)
 }
 
 /**
@@ -262,16 +227,17 @@ interface PlaylistViewCallback {
     // seem to work, so this inner box is necessary to make the error message
     // appear vertically centered in the space where the volume slider would be
     Row(verticalAlignment = Alignment.CenterVertically) {
-        if (hasError) Text(
-            text = errorMessage ?: "",
-            color = MaterialTheme.colors.error,
-            style = MaterialTheme.typography.body1,
-            maxLines = 1, overflow = TextOverflow.Ellipsis,
-            // 1dp start padding is required to make the text
-            // align with where the volume icon would appear if
-            // there were no error message.
-            modifier = Modifier.padding(start = 1.dp))
-        else {
+        if (hasError) {
+            Icon(imageVector = Icons.Default.Error,
+                 contentDescription = null,
+                 modifier = Modifier.size(20.dp),
+                 tint = MaterialTheme.colors.error)
+            Text(text = errorMessage ?: "",
+                 color = MaterialTheme.colors.error,
+                 style = MaterialTheme.typography.body1,
+                 maxLines = 1, overflow = TextOverflow.Ellipsis,
+                 modifier = Modifier.padding(start = 4.dp))
+        } else {
             Icon(imageVector = Icons.Default.VolumeUp,
                  contentDescription = null,
                  modifier = Modifier.size(20.dp),
@@ -296,9 +262,6 @@ private enum class PlaylistViewEndContentType {
     /** The TrackView will display a more options
      * button that opens a popup menu when clicked. */
     MoreOptionsButton,
-    /** The TrackView will display a delete button that calls
-     * the TrackView's callback's onDeleteRequest when clicked. */
-    DeleteButton,
     /** The TrackView will display the track's volume
      * as an integer string in the range of 0 - 100. */
     VolumeDisplay
@@ -319,13 +282,12 @@ private enum class PlaylistViewEndContentType {
  * @param onPlaylistOptionsClick The callback that will be invoked when a
  *     multi-track playlist's 'playlist options' option is clicked or a
  *     single-track playlist's 'create playlist' option is clicked
- * @param onRemoveClick The callback that will be invoked when the playlist's
- *     remove option is clicked, or when the [content] parameter is equal
- *     to [PlaylistViewEndContentType.DeleteButton] and the delete button
- *     is clicked
+ * @param onRemoveClick The callback that will be invoked when the
+ *     playlist's remove option is clicked
+ * @param onRelocateClick The callback that will be invoked when the
+ *     playlist's relocate option is clicked
  * @param tint The tint that will be used for the more options button
- *     and the volume display. The delete button will use the value
- *     of the local theme's MaterialTheme.colors.error value instead.
+ *     and the volume display.
  */
 @Composable private fun PlaylistViewEndContent(
     content: PlaylistViewEndContentType,
@@ -336,6 +298,7 @@ private enum class PlaylistViewEndContentType {
     onPlaylistOptionsClick: () -> Unit,
     onVolumeBoostClick: () -> Unit,
     onRemoveClick: () -> Unit,
+    onRelocateClick: () -> Unit,
     tint: Color = LocalContentColor.current,
 ) = Crossfade(
     targetState = content,
@@ -355,6 +318,12 @@ private enum class PlaylistViewEndContentType {
             expanded = showingOptionsMenu,
             onDismissRequest = { showingOptionsMenu = false }
         ) {
+            if (playlist.hasError)
+                DropdownMenuItem(onClick = {
+                    showingOptionsMenu = false
+                    onRelocateClick()
+                }) { Text(stringResource(R.string.relocate)) }
+
             DropdownMenuItem(onClick = {
                 showingOptionsMenu = false
                 onRenameClick()
@@ -384,14 +353,6 @@ private enum class PlaylistViewEndContentType {
             Text(text = (volume * 100).roundToInt().toString(),
                 color = tint,
                 style = MaterialTheme.typography.subtitle2)
-        }
-    }
-    PlaylistViewEndContentType.DeleteButton -> {
-        IconButton(onRemoveClick) {
-            Icon(imageVector = Icons.Default.Delete,
-                contentDescription = stringResource(
-                    R.string.remove_item_description, playlist.name),
-                tint = MaterialTheme.colors.error)
         }
     }
 }}
