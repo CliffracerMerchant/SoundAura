@@ -144,7 +144,8 @@ interface PlaylistViewCallback {
                 else R.string.set_playlist_active_description,
                 playlist.name),
             backgroundColor = MaterialTheme.colors.surface,
-            tint = MaterialTheme.colors.primaryVariant,
+            tint = if (playlist.hasError) MaterialTheme.colors.error
+                   else MaterialTheme.colors.primaryVariant,
             onClick = {
                 callback.onAddRemoveButtonClick(playlist)
             })
@@ -178,19 +179,16 @@ interface PlaylistViewCallback {
                     stringResource(R.string.playlist_error_message))
         }
         PlaylistViewEndContent(
-            content = when {
-                volumeSliderIsBeingPressed || volumeSliderIsBeingDragged ->
-                    PlaylistViewEndContentType.VolumeDisplay
-                else ->
-                    PlaylistViewEndContentType.MoreOptionsButton
-            }, playlist = playlist,
+            showingVolumeIndicator = volumeSliderIsBeingPressed || volumeSliderIsBeingDragged,
+            playlist = playlist,
             volume = volumeSliderValue,
             onRenameClick = { callback.onRenameClick(playlist) },
             onPlaylistOptionsClick = { callback.onExtraOptionsClick(playlist) },
             onVolumeBoostClick = { callback.onVolumeBoostClick(playlist) },
             onRemoveClick = { callback.onRemoveClick(playlist) },
             onRelocateClick = { callback.onRelocateClick(playlist) },
-            tint = MaterialTheme.colors.secondaryVariant)
+            tint = if (playlist.hasError) MaterialTheme.colors.error
+                   else MaterialTheme.colors.secondaryVariant)
     }
 }
 
@@ -258,24 +256,12 @@ interface PlaylistViewCallback {
     }
 }
 
-/** An enum detailing the possible content for the end of a [PlaylistView]'s layout. */
-private enum class PlaylistViewEndContentType {
-    /** The TrackView will display a more options
-     * button that opens a popup menu when clicked. */
-    MoreOptionsButton,
-    /** The TrackView will display the track's volume
-     * as an integer string in the range of 0 - 100. */
-    VolumeDisplay
-}
-
 /**
- * Show the end content for a [PlaylistView]. This content will change
- * according to the value of the parameter [content] to match one of
- * the possible values for the [PlaylistViewEndContentType] enum.
+ * Show the end content for a [PlaylistView], according to the value of
+ * [showingVolumeIndicator].
  *
- * @param content The value of [PlaylistViewEndContentType] that describes
- *     what will be displayed. The visible content will be cross-faded
- *     between when this value changes.
+ * @param showingVolumeIndicator Whether the numerical volume will
+ *     be shown instead of the three-dot more options menu button.
  * @param playlist The [Playlist] that is being interacted with
  * @param volume The volume of the [Playlist] that is being interacted with
  * @param onRenameClick The callback that will be invoked when the
@@ -291,7 +277,7 @@ private enum class PlaylistViewEndContentType {
  *     and the volume display.
  */
 @Composable private fun PlaylistViewEndContent(
-    content: PlaylistViewEndContentType,
+    showingVolumeIndicator: Boolean,
     playlist: Playlist,
     @FloatRange(from=0.0, to=1.0)
     volume: Float,
@@ -302,10 +288,16 @@ private enum class PlaylistViewEndContentType {
     onRelocateClick: () -> Unit,
     tint: Color = LocalContentColor.current,
 ) = Crossfade(
-    targetState = content,
+    targetState = showingVolumeIndicator,
     label = "PlaylistView end content crossfade"
-) { when(it) {
-    PlaylistViewEndContentType.MoreOptionsButton -> {
+) {
+    if (it) { /* showingVolumeIndicator*/
+        Box(Modifier.minTouchTargetSize(), Alignment.Center) {
+            Text(text = (volume * 100).roundToInt().toString(),
+                 color = tint,
+                 style = MaterialTheme.typography.subtitle2)
+        }
+    } else { /* showing more options menu */
         var showingOptionsMenu by rememberMutableStateOf(false)
 
         IconButton({ showingOptionsMenu = true }) {
@@ -349,14 +341,7 @@ private enum class PlaylistViewEndContentType {
             }) { Text(stringResource(R.string.remove)) }
         }
     }
-    PlaylistViewEndContentType.VolumeDisplay -> {
-        Box(Modifier.minTouchTargetSize(), Alignment.Center) {
-            Text(text = (volume * 100).roundToInt().toString(),
-                color = tint,
-                style = MaterialTheme.typography.subtitle2)
-        }
-    }
-}}
+}
 
 @Preview @Composable
 fun LightTrackViewPreview() = SoundAuraTheme(darkTheme = false) {
