@@ -6,6 +6,7 @@ package com.cliffracertech.soundaura.library
 import androidx.annotation.FloatRange
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -23,9 +24,9 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -41,7 +42,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cliffracertech.soundaura.R
 import com.cliffracertech.soundaura.rememberMutableStateOf
-import com.cliffracertech.soundaura.ui.MarqueeText
 import com.cliffracertech.soundaura.ui.minTouchTargetSize
 import com.cliffracertech.soundaura.ui.theme.SoundAuraTheme
 import kotlin.math.roundToInt
@@ -159,11 +159,12 @@ interface PlaylistViewCallback {
         // the text baseline) with the volume slider to save space.
         Box(Modifier.weight(1f)) {
             // 1dp start padding is required to make the text align with the volume icon
-            MarqueeText(text = playlist.name,
-                        style = MaterialTheme.typography.h5,
-                        modifier = Modifier
-                            .padding(start = 1.dp, top = 10.dp)
-                            .paddingFromBaseline(bottom = 48.dp))
+            Text(text = playlist.name,
+                 style = MaterialTheme.typography.h5,
+                 modifier = Modifier
+                     .padding(start = 1.dp, top = 10.dp)
+                     .paddingFromBaseline(bottom = 48.dp)
+                     .basicMarquee(iterations = Int.MAX_VALUE))
             VolumeSliderOrErrorMessage(
                 volume = volumeSliderValue,
                 onVolumeChange = { volume ->
@@ -238,7 +239,7 @@ interface PlaylistViewCallback {
                  maxLines = 1, overflow = TextOverflow.Ellipsis,
                  modifier = Modifier.padding(start = 4.dp))
         } else {
-            Icon(imageVector = Icons.Default.VolumeUp,
+            Icon(imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                  contentDescription = null,
                  modifier = Modifier.size(20.dp),
                  tint = MaterialTheme.colors.primaryVariant)

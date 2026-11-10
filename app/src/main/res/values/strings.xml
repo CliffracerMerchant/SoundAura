@@ -44,6 +44,7 @@
         \n+\u200930\u2009dB = 8\u00D7 volume</string>
 
     <string name="remove">Remove</string>
+    <string name="relocate">Relocate</string>
     <string name="confirm_remove_title">Remove %1$s?</string>
     <string name="confirm_remove_track_message">This will remove the track from your library
         and any presets it is a part of, but will not delete the file from your device.</string>
